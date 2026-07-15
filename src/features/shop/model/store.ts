@@ -6,7 +6,15 @@ import { makeId } from '@/shared/lib/id';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
 import { getDeal } from './catalog';
-import { PersistedShopSchema, type CartItem, type Deal, type Order } from './schema';
+import {
+  PersistedShopSchema,
+  type Address,
+  type AddressDraft,
+  type CartItem,
+  type Deal,
+  type MerchantApplication,
+  type Order,
+} from './schema';
 
 const DELIVERY_FEE = 0; // Freedoo : livraison offerte pour l'utilisateur.
 const POINTS_PER_EURO = 1;
@@ -20,6 +28,8 @@ type ShopState = {
   points: number;
   /** Exiger la biométrie à l'ouverture. L'empreinte elle-même n'est jamais stockée. */
   biometricEnabled: boolean;
+  addresses: Address[];
+  merchantApplication: MerchantApplication | null;
 
   addToCart: (dealId: string, qty?: number) => void;
   decrement: (dealId: string) => void;
@@ -29,6 +39,12 @@ type ShopState = {
 
   toggleFavorite: (dealId: string) => void;
   setBiometricEnabled: (value: boolean) => void;
+
+  addAddress: (draft: AddressDraft) => string;
+  updateAddress: (id: string, draft: AddressDraft) => void;
+  removeAddress: (id: string) => void;
+  setDefaultAddress: (id: string) => void;
+  submitMerchantApplication: (application: MerchantApplication) => void;
 
   /** Turn the cart into an order, award points, empty the cart. */
   checkout: () => { ok: false } | { ok: true; orderId: string };
@@ -42,6 +58,8 @@ export const useShopStore = create<ShopState>()(
       orders: [],
       points: 120, // solde de démarrage — donne vie à l'écran fidélité
       biometricEnabled: false,
+      addresses: [],
+      merchantApplication: null,
 
       addToCart: (dealId, qty = 1) =>
         set((state) => {
@@ -75,6 +93,42 @@ export const useShopStore = create<ShopState>()(
       clearCart: () => set({ cart: [] }),
 
       setBiometricEnabled: (value) => set({ biometricEnabled: value }),
+
+      addAddress: (draft) => {
+        const id = makeId();
+        set((state) => ({
+          // La première adresse enregistrée devient le défaut : sans ça,
+          // l'utilisateur aurait une adresse et toujours rien de sélectionné.
+          addresses: [
+            ...state.addresses,
+            { ...draft, id, isDefault: state.addresses.length === 0 },
+          ],
+        }));
+        return id;
+      },
+
+      updateAddress: (id, draft) =>
+        set((state) => ({
+          addresses: state.addresses.map((a) => (a.id === id ? { ...a, ...draft } : a)),
+        })),
+
+      removeAddress: (id) =>
+        set((state) => {
+          const rest = state.addresses.filter((a) => a.id !== id);
+          // Supprimer l'adresse par défaut promeut la suivante — sinon plus
+          // aucune adresse n'est sélectionnée et la commande n'a pas de cible.
+          if (rest.length > 0 && !rest.some((a) => a.isDefault)) {
+            return { addresses: rest.map((a, i) => (i === 0 ? { ...a, isDefault: true } : a)) };
+          }
+          return { addresses: rest };
+        }),
+
+      setDefaultAddress: (id) =>
+        set((state) => ({
+          addresses: state.addresses.map((a) => ({ ...a, isDefault: a.id === id })),
+        })),
+
+      submitMerchantApplication: (application) => set({ merchantApplication: application }),
 
       toggleFavorite: (dealId) =>
         set((state) => ({
@@ -123,6 +177,8 @@ export const useShopStore = create<ShopState>()(
         orders: s.orders,
         points: s.points,
         biometricEnabled: s.biometricEnabled,
+        addresses: s.addresses,
+        merchantApplication: s.merchantApplication,
       }),
       // Corrupt storage must never crash the app — validate then fall back.
       merge: (persisted, current) => {

@@ -152,16 +152,22 @@ export function ProfileScreen() {
             onPress={() => router.push('/factures')}
           />
           <Row
+            testID="profile-adresses"
             icon={<Feather name="map-pin" size={17} color={colors.ink} />}
             label="Adresses de livraison"
+            onPress={() => router.push('/adresses')}
           />
           <Row
+            testID="profile-commercant"
             icon={<Feather name="briefcase" size={17} color={colors.ink} />}
             label="Devenir commerçant"
+            onPress={() => router.push('/commercant')}
           />
           <Row
+            testID="profile-aide"
             icon={<Feather name="help-circle" size={17} color={colors.ink} />}
             label="Aide & contact"
+            onPress={() => router.push('/aide')}
           />
           <Row
             icon={<Feather name="log-out" size={17} color={colors.brand600} />}

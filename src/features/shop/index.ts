@@ -10,4 +10,7 @@ export { FavoritesScreen } from './ui/favorites-screen';
 export { ProfileScreen } from './ui/profile-screen';
 export { BiometricsScreen } from './ui/biometrics-screen';
 export { InvoicesScreen } from './ui/invoices-screen';
+export { AddressesScreen } from './ui/addresses-screen';
+export { MerchantScreen } from './ui/merchant-screen';
+export { HelpScreen } from './ui/help-screen';
 export { useShopStore, selectCartCount } from './model/store';

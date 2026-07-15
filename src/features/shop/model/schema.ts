@@ -81,12 +81,51 @@ export const OrderSchema = z.object({
 });
 export type Order = z.infer<typeof OrderSchema>;
 
+/* ---- Adresses de livraison ---- */
+
+export const AddressSchema = z.object({
+  id: z.string().min(1),
+  /** « Maison », « Bureau »… */
+  label: z.string().min(1, 'Donnez un nom à cette adresse'),
+  street: z.string().min(3, 'Indiquez la rue et le numéro'),
+  zip: z.string().regex(/^\d{5}$/, 'Le code postal doit contenir 5 chiffres'),
+  city: z.string().min(2, 'Indiquez la ville'),
+  /** Étage, digicode, instructions livreur. */
+  notes: z.string().optional(),
+  isDefault: z.boolean(),
+});
+export type Address = z.infer<typeof AddressSchema>;
+
+/** Champs saisis par l'utilisateur — l'id et le défaut sont gérés par le store. */
+export const AddressDraftSchema = AddressSchema.omit({ id: true, isDefault: true });
+export type AddressDraft = z.infer<typeof AddressDraftSchema>;
+
+/* ---- Demande « Devenir commerçant » ---- */
+
+export const MerchantApplicationSchema = z.object({
+  shopName: z.string().min(2, 'Indiquez le nom de votre commerce'),
+  category: z.enum(CATEGORIES, { error: 'Choisissez une catégorie' }),
+  contactName: z.string().min(2, 'Indiquez votre nom'),
+  phone: z
+    .string()
+    .regex(
+      /^(?:\+33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/,
+      'Numéro français invalide (ex. 06 12 34 56 78)',
+    ),
+  email: z.email('Adresse e-mail invalide'),
+  area: z.string().min(2, 'Indiquez votre quartier'),
+});
+export type MerchantApplication = z.infer<typeof MerchantApplicationSchema>;
+
 /** Shape persisted to storage — the merge guard validates against this. */
 export const PersistedShopSchema = z.object({
   cart: z.array(CartItemSchema),
   favorites: z.array(z.string()),
   orders: z.array(OrderSchema),
   points: z.number().int().nonnegative(),
+  addresses: z.array(AddressSchema).default([]),
+  /** Demande envoyée localement, en attendant un back-end pour la recevoir. */
+  merchantApplication: MerchantApplicationSchema.nullable().default(null),
   // `.default()` et non un champ requis : l'état déjà stocké sur les téléphones
   // n'a pas cette clé. Sans valeur par défaut, safeParse échouerait et le
   // `merge` du store repartirait de zéro — panier et commandes effacés.
