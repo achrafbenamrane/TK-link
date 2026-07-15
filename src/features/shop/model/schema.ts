@@ -87,5 +87,9 @@ export const PersistedShopSchema = z.object({
   favorites: z.array(z.string()),
   orders: z.array(OrderSchema),
   points: z.number().int().nonnegative(),
+  // `.default()` et non un champ requis : l'état déjà stocké sur les téléphones
+  // n'a pas cette clé. Sans valeur par défaut, safeParse échouerait et le
+  // `merge` du store repartirait de zéro — panier et commandes effacés.
+  biometricEnabled: z.boolean().default(false),
 });
 export type PersistedShop = z.infer<typeof PersistedShopSchema>;

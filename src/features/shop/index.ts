@@ -8,4 +8,6 @@ export { CartScreen } from './ui/cart-screen';
 export { OrdersScreen } from './ui/orders-screen';
 export { FavoritesScreen } from './ui/favorites-screen';
 export { ProfileScreen } from './ui/profile-screen';
+export { BiometricsScreen } from './ui/biometrics-screen';
+export { InvoicesScreen } from './ui/invoices-screen';
 export { useShopStore, selectCartCount } from './model/store';

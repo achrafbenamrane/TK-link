@@ -17,15 +17,20 @@ function Row({
   onPress,
   danger,
   last,
+  testID,
 }: {
   icon: ReactNode;
   label: string;
   onPress?: () => void;
   danger?: boolean;
   last?: boolean;
+  testID?: string;
 }) {
   return (
     <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label}
       onPress={onPress}
       className={cn(
         'flex-row items-center gap-3 py-3.5 active:opacity-60',
@@ -135,12 +140,16 @@ export function ProfileScreen() {
         {/* Menu */}
         <View className="rounded-card border border-line bg-surface px-4">
           <Row
+            testID="profile-empreinte"
             icon={<Ionicons name="finger-print" size={18} color={colors.ink} />}
             label="Empreinte digitale"
+            onPress={() => router.push('/empreinte')}
           />
           <Row
+            testID="profile-factures"
             icon={<Feather name="maximize" size={17} color={colors.ink} />}
             label="Mes factures QR"
+            onPress={() => router.push('/factures')}
           />
           <Row
             icon={<Feather name="map-pin" size={17} color={colors.ink} />}

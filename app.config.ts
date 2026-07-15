@@ -116,6 +116,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     [
+      // Déverrouillage biométrique. L’empreinte elle-même ne quitte JAMAIS le
+      // matériel sécurisé du téléphone : l’OS renvoie seulement « c’est bien le
+      // propriétaire » — aucune app ne peut lire une empreinte.
+      'expo-local-authentication',
+      {
+        faceIDPermission: 'Freedoo utilise Face ID pour déverrouiller votre compte.',
+      },
+    ],
+    [
       // Google Play requires targeting a recent API level (35+ since 2025-08-31;
       // expect 36 ~2026-08). Store-readiness: STORE-GP-TARGETAPI.
       //

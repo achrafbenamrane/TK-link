@@ -18,6 +18,8 @@ type ShopState = {
   favorites: string[];
   orders: Order[];
   points: number;
+  /** Exiger la biométrie à l'ouverture. L'empreinte elle-même n'est jamais stockée. */
+  biometricEnabled: boolean;
 
   addToCart: (dealId: string, qty?: number) => void;
   decrement: (dealId: string) => void;
@@ -26,6 +28,7 @@ type ShopState = {
   clearCart: () => void;
 
   toggleFavorite: (dealId: string) => void;
+  setBiometricEnabled: (value: boolean) => void;
 
   /** Turn the cart into an order, award points, empty the cart. */
   checkout: () => { ok: false } | { ok: true; orderId: string };
@@ -38,6 +41,7 @@ export const useShopStore = create<ShopState>()(
       favorites: [],
       orders: [],
       points: 120, // solde de démarrage — donne vie à l'écran fidélité
+      biometricEnabled: false,
 
       addToCart: (dealId, qty = 1) =>
         set((state) => {
@@ -69,6 +73,8 @@ export const useShopStore = create<ShopState>()(
         set((state) => ({ cart: state.cart.filter((i) => i.dealId !== dealId) })),
 
       clearCart: () => set({ cart: [] }),
+
+      setBiometricEnabled: (value) => set({ biometricEnabled: value }),
 
       toggleFavorite: (dealId) =>
         set((state) => ({
@@ -116,6 +122,7 @@ export const useShopStore = create<ShopState>()(
         favorites: s.favorites,
         orders: s.orders,
         points: s.points,
+        biometricEnabled: s.biometricEnabled,
       }),
       // Corrupt storage must never crash the app — validate then fall back.
       merge: (persisted, current) => {
