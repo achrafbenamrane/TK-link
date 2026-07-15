@@ -18,10 +18,14 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   shopping: 'Shopping',
 };
 
+/** WGS84 point — what Mapbox and the geo helpers speak. */
+export type Coord = { lat: number; lng: number };
+
 export type Merchant = {
   id: string;
   name: string;
   area: string; // quartier de Toulouse
+  coord: Coord; // position réelle du commerçant (vue carte)
   rating: number;
   halal: boolean;
   emoji: string;

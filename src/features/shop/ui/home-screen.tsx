@@ -12,6 +12,8 @@ import { selectCartCount, useShopStore } from '../model/store';
 import { CategoryBar } from './components/category-bar';
 import { Countdown } from './components/countdown';
 import { FlashCard } from './components/flash-card';
+import { ViewSwitch, type HomeView } from './components/view-switch';
+import { DealsMap } from './map-view';
 
 function CartButton() {
   const router = useRouter();
@@ -87,6 +89,7 @@ function FeaturedBanner({ deal }: { deal: Deal }) {
 export function HomeScreen() {
   const [category, setCategory] = useState<Category | null>(null);
   const [query, setQuery] = useState('');
+  const [view, setView] = useState<HomeView>('liste');
 
   const deals = useMemo(() => {
     let list = dealsByCategory(category);
@@ -101,7 +104,6 @@ export function HomeScreen() {
     return list;
   }, [category, query]);
 
-  const showFeatured = category === null && query.trim() === '';
   const featured = getDeal(FEATURED_DEAL_ID);
 
   return (
@@ -118,66 +120,75 @@ export function HomeScreen() {
             </AppText>
           </View>
         </View>
-        <CartButton />
+        <View className="flex-row items-center gap-2">
+          <ViewSwitch value={view} onChange={setView} />
+          <CartButton />
+        </View>
       </View>
 
-      <FlatList
-        data={deals}
-        keyExtractor={(d) => d.id}
-        renderItem={({ item }) => (
-          <View className="px-5">
-            <FlashCard deal={item} />
+      {/* Vue carte : même état de filtre que la liste, un seul `deals`. */}
+      {view === 'carte' ? (
+        <View className="flex-1">
+          <CategoryBar value={category} onChange={setCategory} />
+          <View className="mt-2 flex-1 overflow-hidden">
+            <DealsMap deals={deals} category={category} />
           </View>
-        )}
-        showsVerticalScrollIndicator={false}
-        contentContainerClassName="pb-28"
-        keyboardShouldPersistTaps="handled"
-        ListHeaderComponent={
-          <View className="pb-1">
-            <View className="mx-5 mb-4 flex-row items-center gap-2 rounded-control border border-line bg-surface-muted px-3">
-              <Feather name="search" size={18} color={colors.inkFaint} />
-              <TextField
-                testID="home-search"
-                placeholder="Je sais ce que je veux…"
-                value={query}
-                onChangeText={setQuery}
-                returnKeyType="search"
-                className="border-0 bg-transparent px-0"
-              />
+        </View>
+      ) : (
+        <FlatList
+          data={deals}
+          keyExtractor={(d) => d.id}
+          renderItem={({ item }) => (
+            <View className="px-5">
+              <FlashCard deal={item} />
             </View>
-
-            <CategoryBar value={category} onChange={setCategory} />
-
-            {showFeatured && featured ? (
-              <View className="mt-4">
-                <FeaturedBanner deal={featured} />
+          )}
+          showsVerticalScrollIndicator={false}
+          contentContainerClassName="pb-28"
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <View className="pb-1">
+              <View className="mx-5 mb-4 flex-row items-center gap-2 rounded-control border border-line bg-surface-muted px-3">
+                <Feather name="search" size={18} color={colors.inkFaint} />
+                <TextField
+                  testID="home-search"
+                  placeholder="Je sais ce que je veux…"
+                  value={query}
+                  onChangeText={setQuery}
+                  returnKeyType="search"
+                  className="border-0 bg-transparent px-0"
+                />
               </View>
-            ) : (
-              <View className="h-4" />
-            )}
 
-            <View className="mb-3 flex-row items-end justify-between px-5">
-              <AppText variant="title" className="text-lg">
-                Ventes flash près de vous
+              {/* Ad card sits above the filter and stays visible whatever the
+                selected category — it advertises the deal, it isn't a result. */}
+              {featured ? <FeaturedBanner deal={featured} /> : null}
+
+              <CategoryBar value={category} onChange={setCategory} />
+
+              <View className="mb-3 mt-4 flex-row items-end justify-between px-5">
+                <AppText variant="title" className="text-lg">
+                  Ventes flash près de vous
+                </AppText>
+                <AppText variant="caption" className="text-ink-faint">
+                  {deals.length} offres
+                </AppText>
+              </View>
+            </View>
+          }
+          ListEmptyComponent={
+            <View className="items-center px-10 pt-16" testID="home-empty">
+              <Feather name="search" size={30} color={colors.inkFaint} />
+              <AppText variant="title" className="mt-3 text-center text-ink-faint">
+                Aucune offre pour cette recherche
               </AppText>
-              <AppText variant="caption" className="text-ink-faint">
-                {deals.length} offres
+              <AppText variant="caption" className="mt-1 text-center">
+                Essayez une autre catégorie ou un autre mot-clé.
               </AppText>
             </View>
-          </View>
-        }
-        ListEmptyComponent={
-          <View className="items-center px-10 pt-16" testID="home-empty">
-            <Feather name="search" size={30} color={colors.inkFaint} />
-            <AppText variant="title" className="mt-3 text-center text-ink-faint">
-              Aucune offre pour cette recherche
-            </AppText>
-            <AppText variant="caption" className="mt-1 text-center">
-              Essayez une autre catégorie ou un autre mot-clé.
-            </AppText>
-          </View>
-        }
-      />
+          }
+        />
+      )}
     </Screen>
   );
 }

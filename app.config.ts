@@ -100,6 +100,22 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // @/shared/lib/storage is backed by it. See docs/security/checklist.md.
     'expo-secure-store',
     [
+      // Vue carte. Le jeton de TÉLÉCHARGEMENT (sk.*, scope DOWNLOADS:READ) sert
+      // uniquement à récupérer le SDK natif pendant le build : c'est un vrai
+      // secret, il vit dans les secrets EAS et jamais dans le dépôt.
+      '@rnmapbox/maps',
+      {
+        RNMapboxMapsDownloadToken: process.env.MAPBOX_DOWNLOADS_TOKEN,
+      },
+    ],
+    [
+      'expo-location',
+      {
+        locationWhenInUsePermission:
+          'Freedoo utilise votre position pour afficher les ventes flash autour de vous et calculer le trajet jusqu’au commerçant.',
+      },
+    ],
+    [
       // Google Play requires targeting a recent API level (35+ since 2025-08-31;
       // expect 36 ~2026-08). Store-readiness: STORE-GP-TARGETAPI.
       //
@@ -131,5 +147,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     eas: {
       projectId: 'f8fd49f4-15e2-480c-9bf3-0a7e52f8566f',
     },
+    /**
+     * Jeton Mapbox PUBLIC (pk.*) — conçu pour être livré dans l’app ; il rend la
+     * carte et appelle l’API Directions. Lu ici au moment du build, donc SANS
+     * préfixe EXPO_PUBLIC_ : `scripts/check-secrets.mjs` rejette tout nom
+     * EXPO_PUBLIC_* contenant « TOKEN ». Ne jamais y mettre un jeton sk.*.
+     */
+    mapboxPublicToken: process.env.MAPBOX_PUBLIC_TOKEN ?? '',
   },
 });
