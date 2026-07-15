@@ -13,4 +13,6 @@ export { InvoicesScreen } from './ui/invoices-screen';
 export { AddressesScreen } from './ui/addresses-screen';
 export { MerchantScreen } from './ui/merchant-screen';
 export { HelpScreen } from './ui/help-screen';
-export { useShopStore, selectCartCount } from './model/store';
+export { ChatListScreen } from './ui/chat-list-screen';
+export { ChatThreadScreen } from './ui/chat-thread-screen';
+export { useShopStore, selectCartCount, selectTotalUnread } from './model/store';

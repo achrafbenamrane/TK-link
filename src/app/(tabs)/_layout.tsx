@@ -1,9 +1,12 @@
 import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
+import { selectTotalUnread, useShopStore } from '@/features/shop';
 import { colors } from '@/shared/theme/colors';
 
 export default function TabsLayout() {
+  const unread = useShopStore(selectTotalUnread);
+
   return (
     <Tabs
       screenOptions={{
@@ -45,6 +48,17 @@ export default function TabsLayout() {
         options={{
           title: 'Profil',
           tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Chat',
+          tabBarIcon: ({ color }) => <Feather name="message-circle" size={22} color={color} />,
+          // Les non-lus se voient depuis n'importe quel onglet — sinon personne
+          // ne pense à ouvrir la messagerie.
+          tabBarBadge: unread > 0 ? unread : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.brand500, fontSize: 10 },
         }}
       />
     </Tabs>

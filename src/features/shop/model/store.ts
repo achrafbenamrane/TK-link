@@ -6,9 +6,13 @@ import { makeId } from '@/shared/lib/id';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
 import { getDeal } from './catalog';
+import { CHAT_SEED } from './chat-seed';
 import {
+  ME,
   PersistedShopSchema,
   type Address,
+  type ChatMessage,
+  type Conversation,
   type Coord,
   type AddressDraft,
   type CartItem,
@@ -33,6 +37,8 @@ type ShopState = {
   merchantApplication: MerchantApplication | null;
   /** Position de l'utilisateur — éphémère, jamais persistée (elle change). */
   userCoord: Coord | null;
+  conversations: Conversation[];
+  messages: ChatMessage[];
 
   addToCart: (dealId: string, qty?: number) => void;
   decrement: (dealId: string) => void;
@@ -50,6 +56,10 @@ type ShopState = {
   submitMerchantApplication: (application: MerchantApplication) => void;
   setUserCoord: (coord: Coord | null) => void;
 
+  sendMessage: (conversationId: string, body: string) => void;
+  receiveMessage: (conversationId: string, senderId: string, body: string) => void;
+  markConversationRead: (conversationId: string) => void;
+
   /** Turn the cart into an order, award points, empty the cart. */
   checkout: () => { ok: false } | { ok: true; orderId: string };
 };
@@ -65,6 +75,8 @@ export const useShopStore = create<ShopState>()(
       addresses: [],
       merchantApplication: null,
       userCoord: null,
+      conversations: CHAT_SEED.conversations,
+      messages: CHAT_SEED.messages,
 
       addToCart: (dealId, qty = 1) =>
         set((state) => {
@@ -137,6 +149,48 @@ export const useShopStore = create<ShopState>()(
 
       setUserCoord: (coord) => set({ userCoord: coord }),
 
+      sendMessage: (conversationId, body) => {
+        const text = body.trim();
+        if (!text) return; // pas de bulle vide
+        set((state) => ({
+          messages: [
+            ...state.messages,
+            {
+              id: makeId(),
+              conversation_id: conversationId,
+              sender_id: ME,
+              body: text,
+              created_at: new Date().toISOString(),
+            },
+          ],
+          // Ce qu'on vient d'écrire est lu par définition.
+          conversations: state.conversations.map((c) =>
+            c.id === conversationId ? { ...c, lastReadAt: Date.now() } : c,
+          ),
+        }));
+      },
+
+      receiveMessage: (conversationId, senderId, body) =>
+        set((state) => ({
+          messages: [
+            ...state.messages,
+            {
+              id: makeId(),
+              conversation_id: conversationId,
+              sender_id: senderId,
+              body,
+              created_at: new Date().toISOString(),
+            },
+          ],
+        })),
+
+      markConversationRead: (conversationId) =>
+        set((state) => ({
+          conversations: state.conversations.map((c) =>
+            c.id === conversationId ? { ...c, lastReadAt: Date.now() } : c,
+          ),
+        })),
+
       toggleFavorite: (dealId) =>
         set((state) => ({
           favorites: state.favorites.includes(dealId)
@@ -186,6 +240,8 @@ export const useShopStore = create<ShopState>()(
         biometricEnabled: s.biometricEnabled,
         addresses: s.addresses,
         merchantApplication: s.merchantApplication,
+        conversations: s.conversations,
+        messages: s.messages,
       }),
       // Corrupt storage must never crash the app — validate then fall back.
       merge: (persisted, current) => {
@@ -219,3 +275,28 @@ export const selectCartSubtotal = (s: ShopState) =>
   cartLines(s.cart).reduce((sum, l) => sum + l.lineTotal, 0);
 
 export const DELIVERY_FEE_EUR: number = DELIVERY_FEE;
+
+/* ---- messagerie ---- */
+
+export const selectConversations = (s: ShopState) => s.conversations;
+
+export function messagesOf(state: ShopState, conversationId: string): ChatMessage[] {
+  return state.messages.filter((m) => m.conversation_id === conversationId);
+}
+
+export function lastMessageOf(state: ShopState, conversationId: string): ChatMessage | undefined {
+  const list = messagesOf(state, conversationId);
+  return list[list.length - 1];
+}
+
+/** Non lus = messages des autres arrivés après le dernier passage. */
+export function unreadCount(state: ShopState, conversationId: string): number {
+  const conv = state.conversations.find((c) => c.id === conversationId);
+  if (!conv) return 0;
+  return messagesOf(state, conversationId).filter(
+    (m) => m.sender_id !== ME && Date.parse(m.created_at) > conv.lastReadAt,
+  ).length;
+}
+
+export const selectTotalUnread = (s: ShopState) =>
+  s.conversations.reduce((n, c) => n + unreadCount(s, c.id), 0);
