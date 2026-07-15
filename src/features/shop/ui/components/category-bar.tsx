@@ -41,6 +41,12 @@ export function CategoryBar({ value, onChange }: Props) {
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerClassName="gap-3 px-5 py-1"
+      // `flexGrow: 0` est indispensable : un ScrollView horizontal placé dans
+      // une colonne flex s'étire verticalement pour occuper toute la hauteur
+      // libre. En vue liste ça ne se voyait pas (il est dans l'en-tête d'une
+      // FlatList, qui ne l'étire pas) ; en vue carte il mangeait la moitié de
+      // l'écran et écrasait la carte en bas.
+      style={{ flexGrow: 0 }}
     >
       {ITEMS.map((item) => {
         const active = value === item.key;

@@ -66,6 +66,8 @@ export function DealsMap({ deals, category }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [route, setRoute] = useState<Route | null>(null);
   const [routing, setRouting] = useState(false);
+  /** Taille réelle du conteneur — la carte attend de la connaître pour se monter. */
+  const [box, setBox] = useState<{ width: number; height: number } | null>(null);
 
   // Un changement de filtre invalide la sélection : garder une route vers une
   // bulle qui vient de disparaître n'aurait aucun sens.
@@ -111,73 +113,96 @@ export function DealsMap({ deals, category }: Props) {
     );
   }
 
-  const center = me ?? TOULOUSE_CENTER;
+  // La caméra s'ouvre sur les OFFRES, pas sur l'utilisateur. Tous les
+  // commerçants sont à Toulouse : centrer sur la position réelle affichait une
+  // carte vide à qui n'est pas sur place (test fait depuis Constantine → zéro
+  // bulle). Le point bleu reste affiché si l'utilisateur est dans la zone.
   const selectedMerchant = selected ? getMerchant(selected.merchantId) : null;
 
   return (
-    <View className="flex-1" testID="deals-map">
-      <Mapbox.MapView
-        style={{ flex: 1 }}
-        styleURL={Mapbox.StyleURL.Light}
-        // Android : TextureView plutôt que GLSurfaceView (le défaut). Une
-        // SurfaceView vit dans sa propre couche et se place en coordonnées
-        // FENÊTRE — elle ignore la position que React Native lui a donnée, d'où
-        // la carte décalée vers le bas avec du blanc au-dessus. La TextureView
-        // se compose normalement dans la hiérarchie de vues.
-        surfaceView={false}
-        scaleBarEnabled={false}
-        logoPosition={{ bottom: 96, left: 12 }}
-        attributionPosition={{ bottom: 96, left: 92 }}
-        onPress={() => {
-          setSelectedId(null);
-          setRoute(null);
-        }}
-      >
-        <Mapbox.Camera
-          ref={cameraRef}
-          defaultSettings={{ centerCoordinate: [center.lng, center.lat], zoomLevel: 12.5 }}
-        />
-        {me ? <Mapbox.UserLocation visible androidRenderMode="normal" /> : null}
+    <View
+      className="flex-1"
+      testID="deals-map"
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        // Ne re-rendre que si la taille change vraiment : onLayout se déclenche
+        // à chaque passe et setState en boucle repartirait sans fin.
+        setBox((prev) =>
+          prev && prev.width === width && prev.height === height ? prev : { width, height },
+        );
+      }}
+    >
+      {/* La carte n'est montée qu'une fois la taille connue, et reçoit des
+          dimensions en PIXELS. Avec `flex: 1` seul, elle se mesurait avant la
+          fin du layout, figeait son viewport GL sur cette taille-là et ne le
+          remettait jamais à jour quand le conteneur grandissait — d'où la carte
+          reléguée en bas avec du blanc au-dessus. */}
+      {box ? (
+        <Mapbox.MapView
+          style={{ width: box.width, height: box.height }}
+          styleURL={Mapbox.StyleURL.Light}
+          // Android : TextureView plutôt que GLSurfaceView. La SurfaceView vit
+          // dans sa propre couche et ignore le clipping/la position que React
+          // Native lui donne — mauvais compagnon pour la carte de détail qu'on
+          // superpose ici.
+          surfaceView={false}
+          scaleBarEnabled={false}
+          logoPosition={{ bottom: 96, left: 12 }}
+          attributionPosition={{ bottom: 96, left: 92 }}
+          onPress={() => {
+            setSelectedId(null);
+            setRoute(null);
+          }}
+        >
+          <Mapbox.Camera
+            ref={cameraRef}
+            defaultSettings={{
+              centerCoordinate: [TOULOUSE_CENTER.lng, TOULOUSE_CENTER.lat],
+              zoomLevel: 12.5,
+            }}
+          />
+          {me ? <Mapbox.UserLocation visible androidRenderMode="normal" /> : null}
 
-        {route ? (
-          <Mapbox.ShapeSource id="route-source" shape={routeToGeoJSON(route)}>
-            <Mapbox.LineLayer
-              id="route-line"
-              style={{
-                lineColor: colors.brand500,
-                lineWidth: 4.5,
-                lineCap: 'round',
-                lineJoin: 'round',
-                // Pointillés quand c'est une ligne droite : on ne fait pas
-                // passer une approximation pour un vrai trajet.
-                lineDasharray: route.approximate ? [2, 2] : [1],
-              }}
-            />
-          </Mapbox.ShapeSource>
-        ) : null}
+          {route ? (
+            <Mapbox.ShapeSource id="route-source" shape={routeToGeoJSON(route)}>
+              <Mapbox.LineLayer
+                id="route-line"
+                style={{
+                  lineColor: colors.brand500,
+                  lineWidth: 4.5,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                  // Pointillés quand c'est une ligne droite : on ne fait pas
+                  // passer une approximation pour un vrai trajet.
+                  lineDasharray: route.approximate ? [2, 2] : [1],
+                }}
+              />
+            </Mapbox.ShapeSource>
+          ) : null}
 
-        {deals.map((deal) => {
-          const merchant = getMerchant(deal.merchantId);
-          if (!merchant) return null;
-          return (
-            <Mapbox.MarkerView
-              key={deal.id}
-              id={deal.id}
-              coordinate={[merchant.coord.lng, merchant.coord.lat]}
-              allowOverlap={false}
-            >
-              <Pressable
-                testID={`bubble-${deal.id}`}
-                accessibilityRole="button"
-                accessibilityLabel={`${deal.title} chez ${merchant.name}, ${deal.price.toFixed(2)} euros`}
-                onPress={() => onSelect(deal)}
+          {deals.map((deal) => {
+            const merchant = getMerchant(deal.merchantId);
+            if (!merchant) return null;
+            return (
+              <Mapbox.MarkerView
+                key={deal.id}
+                id={deal.id}
+                coordinate={[merchant.coord.lng, merchant.coord.lat]}
+                allowOverlap={false}
               >
-                <PriceBubble deal={deal} active={deal.id === selectedId} />
-              </Pressable>
-            </Mapbox.MarkerView>
-          );
-        })}
-      </Mapbox.MapView>
+                <Pressable
+                  testID={`bubble-${deal.id}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${deal.title} chez ${merchant.name}, ${deal.price.toFixed(2)} euros`}
+                  onPress={() => onSelect(deal)}
+                >
+                  <PriceBubble deal={deal} active={deal.id === selectedId} />
+                </Pressable>
+              </Mapbox.MarkerView>
+            );
+          })}
+        </Mapbox.MapView>
+      ) : null}
 
       {/* Carte de détail — remonte l'essentiel sans quitter la carte. */}
       {selected && selectedMerchant ? (
