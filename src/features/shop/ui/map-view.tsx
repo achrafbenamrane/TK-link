@@ -14,6 +14,7 @@ import type { Category, Deal } from '../model/schema';
 import { fetchRoute, routeToGeoJSON, type Route } from '../lib/directions';
 import { formatDistance, TOULOUSE_CENTER } from '../lib/geo';
 import { hasMapboxToken, MAPBOX_PUBLIC_TOKEN } from '../lib/mapbox';
+import { ProductImage } from './components/product-image';
 
 Mapbox.setAccessToken(MAPBOX_PUBLIC_TOKEN);
 
@@ -223,7 +224,7 @@ export function DealsMap({ deals, category }: Props) {
               className="h-16 w-16 items-center justify-center rounded-control"
               style={{ backgroundColor: selected.tint }}
             >
-              <AppText style={{ fontSize: 34, lineHeight: 42 }}>{selected.emoji}</AppText>
+              <ProductImage deal={selected} emojiSize={34} />
             </View>
             <View className="flex-1 gap-0.5">
               <AppText variant="caption" className="font-sans-medium text-ink-muted">

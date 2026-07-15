@@ -10,6 +10,7 @@ import { colors } from '@/shared/theme/colors';
 import { getDeal, getMerchant } from '../model/catalog';
 import { useShopStore } from '../model/store';
 import { Countdown } from './components/countdown';
+import { ProductImage } from './components/product-image';
 import { QtyStepper } from './components/qty-stepper';
 
 type Props = { dealId: string };
@@ -62,7 +63,7 @@ export function ProductScreen({ dealId }: Props) {
       >
         {/* Hero */}
         <View className="h-80 items-center justify-center" style={{ backgroundColor: deal.tint }}>
-          <AppText style={{ fontSize: 128, lineHeight: 150 }}>{deal.emoji}</AppText>
+          <ProductImage deal={deal} emojiSize={128} />
 
           <View
             className="absolute left-4 flex-row items-center gap-1.5 rounded-control bg-ink px-3 py-2"

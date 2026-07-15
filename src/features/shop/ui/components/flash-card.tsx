@@ -11,6 +11,7 @@ import { distanceKm, formatDistance } from '../../lib/geo';
 import type { Deal } from '../../model/schema';
 import { useShopStore } from '../../model/store';
 import { Countdown } from './countdown';
+import { ProductImage } from './product-image';
 
 type Props = { deal: Deal };
 
@@ -37,7 +38,7 @@ export function FlashCard({ deal }: Props) {
       className="mb-4 overflow-hidden rounded-card border border-line bg-surface"
     >
       <View className="h-44 items-center justify-center" style={{ backgroundColor: deal.tint }}>
-        <AppText style={{ fontSize: 72, lineHeight: 84 }}>{deal.emoji}</AppText>
+        <ProductImage deal={deal} emojiSize={72} />
 
         <View className="absolute left-3 top-3 flex-row items-center gap-1.5 rounded-control bg-ink px-2.5 py-1.5">
           <Feather name="clock" size={12} color={colors.inkInverse} />

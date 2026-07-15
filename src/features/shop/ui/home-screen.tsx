@@ -13,6 +13,7 @@ import { selectCartCount, useShopStore } from '../model/store';
 import { CategoryBar } from './components/category-bar';
 import { Countdown } from './components/countdown';
 import { FlashCard } from './components/flash-card';
+import { ProductImage } from './components/product-image';
 import { ViewSwitch, type HomeView } from './components/view-switch';
 import { DealsMap } from './map-view';
 
@@ -51,7 +52,7 @@ function FeaturedBanner({ deal }: { deal: Deal }) {
           className="h-20 w-20 items-center justify-center rounded-control"
           style={{ backgroundColor: deal.tint }}
         >
-          <AppText style={{ fontSize: 42, lineHeight: 50 }}>{deal.emoji}</AppText>
+          <ProductImage deal={deal} emojiSize={42} />
         </View>
         <View className="flex-1 gap-1">
           <View className="flex-row items-center gap-2">
