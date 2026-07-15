@@ -13,21 +13,22 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 const IS_DEV = process.env.APP_VARIANT === 'development';
 const IS_PREVIEW = process.env.APP_VARIANT === 'preview';
 
-const name = IS_DEV ? 'Skeleton (Dev)' : IS_PREVIEW ? 'Skeleton (Preview)' : 'Skeleton';
+const name = IS_DEV ? 'Freedoo (Dev)' : IS_PREVIEW ? 'Freedoo (Preview)' : 'Freedoo';
 const bundleId = IS_DEV
-  ? 'com.yourcompany.skeleton.dev'
+  ? 'com.progix.freedoo.dev'
   : IS_PREVIEW
-    ? 'com.yourcompany.skeleton.preview'
-    : 'com.yourcompany.skeleton';
+    ? 'com.progix.freedoo.preview'
+    : 'com.progix.freedoo';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name,
-  slug: 'expo-skeleton',
+  slug: 'freedoo',
+  owner: 'achrafbenamrane',
   version: '0.1.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  scheme: 'skeleton',
+  scheme: 'freedoo',
   userInterfaceStyle: 'automatic',
   ios: {
     bundleIdentifier: bundleId,
@@ -69,7 +70,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: bundleId,
     adaptiveIcon: {
-      backgroundColor: '#E6F4FE',
+      backgroundColor: '#F6F2EA',
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
@@ -87,7 +88,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#0F172A',
+        backgroundColor: '#17140F',
         android: {
           image: './assets/images/splash-icon.png',
           imageWidth: 76,
@@ -120,8 +121,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     eas: {
-      // TODO(company): set after `eas init`
-      // projectId: '<EAS_PROJECT_ID>',
+      projectId: 'f8fd49f4-15e2-480c-9bf3-0a7e52f8566f',
     },
   },
 });

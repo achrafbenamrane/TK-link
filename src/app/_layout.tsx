@@ -1,43 +1,38 @@
 import '../global.css';
 
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  useFonts,
-} from '@expo-google-fonts/inter';
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+} from '@expo-google-fonts/manrope';
+import { Unbounded_700Bold, Unbounded_800ExtraBold } from '@expo-google-fonts/unbounded';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { useAuthStore, useProtectedRoute } from '@/features/auth';
-import '@/shared/lib/env'; // fail fast on invalid environment
-import { registerSupabaseAutoRefresh } from '@/shared/lib/supabase';
+import '@/shared/lib/env'; // fail fast on invalid environment (has safe defaults)
+import { colors } from '@/shared/theme/colors';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Unbounded_700Bold,
+    Unbounded_800ExtraBold,
   });
 
-  // Load the session once, keep it fresh while foregrounded, and route-guard.
-  useEffect(() => {
-    const unsubscribe = useAuthStore.getState().init();
-    const stopAutoRefresh = registerSupabaseAutoRefresh();
-    return () => {
-      unsubscribe();
-      stopAutoRefresh();
-    };
-  }, []);
-
-  useProtectedRoute();
+  // NOTE (demo): the auth route-guard + Supabase session are intentionally
+  // disabled here so the client preview boots straight into the app. Re-enable
+  // useProtectedRoute()/useAuthStore().init() from '@/features/auth' for prod.
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
@@ -51,8 +46,15 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView className="flex-1">
-      <Stack screenOptions={{ headerShown: false }} />
-      <StatusBar style="auto" />
+      <SafeAreaProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.surface },
+          }}
+        />
+        <StatusBar style="dark" />
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

@@ -5,7 +5,7 @@ import { cn } from '@/shared/lib/cn';
 type Variant = 'display' | 'title' | 'body' | 'caption' | 'label';
 
 const variantClasses: Record<Variant, string> = {
-  display: 'font-sans-bold text-3xl text-ink',
+  display: 'font-display text-3xl leading-tight text-ink',
   title: 'font-sans-semibold text-xl text-ink',
   body: 'font-sans text-base text-ink',
   caption: 'font-sans text-sm text-ink-muted',
