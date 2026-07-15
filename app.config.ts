@@ -96,13 +96,21 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-font',
+    // Required by expo-secure-store ≥56 — the secrets/PII half of
+    // @/shared/lib/storage is backed by it. See docs/security/checklist.md.
+    'expo-secure-store',
     [
       // Google Play requires targeting a recent API level (35+ since 2025-08-31;
       // expect 36 ~2026-08). Store-readiness: STORE-GP-TARGETAPI.
+      //
+      // compileSdk is 36 while targetSdk stays 35 on purpose: androidx.core 1.18
+      // and androidx.browser 1.9 (pulled in by expo-dev-client) refuse to link
+      // against anything below 36, but raising targetSdk would opt the app into
+      // Android 16 runtime behavior — a separate change that needs its own QA pass.
       'expo-build-properties',
       {
         android: {
-          compileSdkVersion: 35,
+          compileSdkVersion: 36,
           targetSdkVersion: 35,
         },
       },
