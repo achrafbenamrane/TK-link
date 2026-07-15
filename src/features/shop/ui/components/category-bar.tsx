@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
-import { Pressable, ScrollView } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
@@ -30,12 +30,17 @@ type Props = {
   onChange: (value: Category | null) => void;
 };
 
+/**
+ * Category filter: a rounded icon tile with the label stacked underneath.
+ * Resting state is a red line icon on cream; the selected tile inverts to
+ * solid red so the current filter reads at a glance while scrolling.
+ */
 export function CategoryBar({ value, onChange }: Props) {
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerClassName="gap-2 px-5 py-1"
+      contentContainerClassName="gap-3 px-5 py-1"
     >
       {ITEMS.map((item) => {
         const active = value === item.key;
@@ -46,20 +51,25 @@ export function CategoryBar({ value, onChange }: Props) {
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
             onPress={() => onChange(item.key)}
-            className={cn(
-              'flex-row items-center gap-1.5 rounded-pill border px-4 py-2',
-              active ? 'border-ink bg-ink' : 'border-line bg-surface',
-            )}
+            className="w-[68px] items-center gap-1.5 active:opacity-70"
           >
-            <Feather
-              name={item.icon}
-              size={14}
-              color={active ? colors.inkInverse : colors.inkMuted}
-            />
-            <AppText
+            <View
               className={cn(
-                'font-sans-semibold text-sm',
-                active ? 'text-ink-inverse' : 'text-ink-muted',
+                'h-14 w-14 items-center justify-center rounded-card border',
+                active ? 'border-brand-500 bg-brand-500' : 'border-line bg-surface-muted',
+              )}
+            >
+              <Feather
+                name={item.icon}
+                size={22}
+                color={active ? colors.inkInverse : colors.brand500}
+              />
+            </View>
+            <AppText
+              numberOfLines={1}
+              className={cn(
+                'text-xs',
+                active ? 'font-sans-bold text-ink' : 'font-sans-medium text-ink-muted',
               )}
             >
               {item.label}

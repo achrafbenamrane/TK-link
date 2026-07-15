@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { AppText } from '@/shared/ui';
+import { AppText, PushButton } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { getMerchant } from '../../model/catalog';
@@ -111,8 +111,9 @@ export function FlashCard({ deal }: Props) {
           </AppText>
         </View>
 
-        <View className="mt-1 flex-row items-end justify-between">
-          <View className="flex-row items-baseline gap-1.5">
+        {/* Price left, signature push button centred in the row (client's mark-up). */}
+        <View className="mt-1 flex-row items-center">
+          <View className="flex-1 flex-row items-baseline gap-1.5">
             <AppText className="font-display text-xl text-ink">{deal.price.toFixed(2)}€</AppText>
             {deal.oldPrice ? (
               <AppText variant="caption" className="text-ink-faint line-through">
@@ -120,15 +121,15 @@ export function FlashCard({ deal }: Props) {
               </AppText>
             ) : null}
           </View>
-          <Pressable
+          <PushButton
             testID={`add-${deal.id}`}
-            accessibilityLabel={`Ajouter ${deal.title} au panier`}
             onPress={() => addToCart(deal.id)}
-            className="h-10 flex-row items-center gap-1.5 rounded-control bg-brand-500 px-4 active:bg-brand-600"
-          >
-            <Feather name="plus" size={16} color={colors.inkInverse} />
-            <AppText className="font-sans-bold text-sm text-ink-inverse">Ajouter</AppText>
-          </Pressable>
+            icon="plus"
+            sublabel="AJOUTER"
+            size={80}
+            accessibilityLabel={`Ajouter ${deal.title} au panier`}
+          />
+          <View className="flex-1" />
         </View>
       </View>
     </Pressable>

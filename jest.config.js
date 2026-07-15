@@ -11,8 +11,12 @@ module.exports = {
   // The feature-pack library is parked, opt-in code — don't run its tests as part
   // of the app suite (they run once a pack is installed into src/).
   testPathIgnorePatterns: ['/node_modules/', '/packs/'],
+  // SDK 56 ships expo-* packages as untranspiled ESM, so they must be transformed
+  // rather than ignored. Match `expo-*` as a family: listing them one by one only
+  // fails again the next time a package is upgraded (expo-secure-store did exactly
+  // that when it moved 15.x → 56.x).
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|expo-router|expo-modules-core|react-native-css-interop|nativewind|@react-native-async-storage/.*|react-native-.*|zustand)/)',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?(-.*)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-native-css-interop|nativewind|@react-native-async-storage/.*|react-native-.*|zustand)/)',
   ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

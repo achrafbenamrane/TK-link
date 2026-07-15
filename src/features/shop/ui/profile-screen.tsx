@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, Share, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { AppText, PushButton, Screen } from '@/shared/ui';
+import { AppText, Screen } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { selectPoints, useShopStore } from '../model/store';
@@ -112,25 +112,24 @@ export function ProfileScreen() {
           </Pressable>
         </View>
 
-        {/* Invite — le bouton signature (demandé par le client) */}
-        <View className="mb-5 items-center gap-2 rounded-card border border-line bg-surface-muted px-6 pb-7 pt-6">
-          <AppText variant="title" className="text-center text-lg">
+        {/* Invite — bouton simple ; le bouton signature vit désormais sur les fiches produit. */}
+        <View className="mb-5 gap-2 rounded-card border border-line bg-surface-muted p-5">
+          <AppText variant="title" className="text-lg">
             Partagez Freedoo
           </AppText>
-          <AppText variant="caption" className="mb-2 text-center">
+          <AppText variant="caption" className="mb-1">
             Un proche rejoint le quartier ? Offrez-lui l’app d’un simple geste.
           </AppText>
-          <PushButton
+          <Pressable
             testID="invite-button"
-            onPress={invite}
-            label="OBTENIR"
-            sublabel="L’APP"
-            icon="arrow-down"
+            accessibilityRole="button"
             accessibilityLabel="Partager l’application Freedoo"
-          />
-          <AppText variant="caption" className="mt-3 text-ink-faint">
-            Appuyez — il s’enfonce vraiment.
-          </AppText>
+            onPress={invite}
+            className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
+          >
+            <Feather name="share-2" size={15} color={colors.inkInverse} />
+            <AppText className="font-sans-bold text-ink-inverse">Partager l’app</AppText>
+          </Pressable>
         </View>
 
         {/* Menu */}
