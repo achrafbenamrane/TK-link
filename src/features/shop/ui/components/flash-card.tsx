@@ -64,11 +64,6 @@ export function FlashCard({ deal }: Props) {
             <AppText className="font-sans-bold text-xs text-ink-inverse">-{discount}%</AppText>
           </View>
         ) : null}
-        {deal.flag ? (
-          <AppText className="absolute bottom-2 right-3" style={{ fontSize: 20 }}>
-            {deal.flag}
-          </AppText>
-        ) : null}
       </View>
 
       <View className="gap-2 p-3.5">

@@ -99,7 +99,6 @@ export const DEALS: Deal[] = [
     description: 'Viande fraîche, découpe du jour. Halal, origine France.',
     perk: '50 % sur le 2ᵉ',
     origin: 'Origine France',
-    flag: '🇫🇷',
   },
   {
     id: 'd_cassoulet',
@@ -151,7 +150,6 @@ export const DEALS: Deal[] = [
     endsInSeconds: 3600,
     description: 'Producteurs du Sud-Ouest, cueilli ce matin.',
     origin: 'Sud-Ouest',
-    flag: '🇫🇷',
   },
   {
     id: 'd_pizza',

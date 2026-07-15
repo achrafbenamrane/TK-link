@@ -139,7 +139,6 @@ export function ProductScreen({ dealId }: Props) {
               ) : null}
               {deal.origin ? (
                 <View className="flex-row items-center gap-1 rounded-pill bg-surface-muted px-2.5 py-1">
-                  {deal.flag ? <AppText style={{ fontSize: 12 }}>{deal.flag}</AppText> : null}
                   <AppText className="font-sans-semibold text-xs text-ink-muted">
                     {deal.origin}
                   </AppText>

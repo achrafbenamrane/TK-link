@@ -48,7 +48,6 @@ export type Deal = {
   description: string;
   perk?: string; // « 50 % sur le 2ᵉ »
   origin?: string;
-  flag?: string;
 };
 
 /* ---- State that hits storage → validated with Zod ---- */
