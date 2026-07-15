@@ -31,10 +31,10 @@ describe('shop store', () => {
 
   it('toggles favorites on and off', () => {
     const { toggleFavorite } = useShopStore.getState();
-    toggleFavorite('d_sushi');
-    expect(useShopStore.getState().favorites).toContain('d_sushi');
-    toggleFavorite('d_sushi');
-    expect(useShopStore.getState().favorites).not.toContain('d_sushi');
+    toggleFavorite('d_pizza');
+    expect(useShopStore.getState().favorites).toContain('d_pizza');
+    toggleFavorite('d_pizza');
+    expect(useShopStore.getState().favorites).not.toContain('d_pizza');
   });
 
   it('checkout creates an order, awards points and empties the cart', () => {

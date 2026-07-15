@@ -6,8 +6,11 @@
  * compilation, une clé dynamique ne marcherait pas. D'où cette table écrite à
  * la main plutôt qu'un `require(`...${id}.jpg`)`.
  *
- * Un deal sans entrée ici retombe sur son emoji — voir `ProductImage`. C'est
- * volontaire : mieux vaut une tuile emoji cohérente qu'une image absente.
+ * Le catalogue ne contient QUE des produits ayant un visuel propre : sushi et
+ * chocolat ont été retirés faute d'image utilisable (filigranes / marques
+ * tierces). Le repli emoji de `ProductImage` reste par sécurité, mais aucun
+ * produit ne doit s'y trouver — un visuel manquant se corrige, il ne se cache
+ * pas derrière un emoji.
  *
  * ⚠️ PROVISOIRE — ces images viennent de Pinterest et ne sont pas sous licence
  * commerciale. Bon pour la démo, à remplacer par les photos réelles des
@@ -22,6 +25,4 @@ export const PRODUCT_IMAGES: Record<string, number | undefined> = {
   d_fromage: require('../../../../assets/images/products/d_fromage.jpg'),
   d_fruits: require('../../../../assets/images/products/d_fruits.jpg'),
   d_brunch: require('../../../../assets/images/products/d_brunch.jpg'),
-  // d_sushi et d_chocolat : pas d'image (visuels trouvés filigranés / de marque)
-  // → ils gardent leur emoji jusqu'à réception d'un visuel propre.
 };
