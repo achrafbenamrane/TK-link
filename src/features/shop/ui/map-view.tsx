@@ -119,6 +119,12 @@ export function DealsMap({ deals, category }: Props) {
       <Mapbox.MapView
         style={{ flex: 1 }}
         styleURL={Mapbox.StyleURL.Light}
+        // Android : TextureView plutôt que GLSurfaceView (le défaut). Une
+        // SurfaceView vit dans sa propre couche et se place en coordonnées
+        // FENÊTRE — elle ignore la position que React Native lui a donnée, d'où
+        // la carte décalée vers le bas avec du blanc au-dessus. La TextureView
+        // se compose normalement dans la hiérarchie de vues.
+        surfaceView={false}
         scaleBarEnabled={false}
         logoPosition={{ bottom: 96, left: 12 }}
         attributionPosition={{ bottom: 96, left: 92 }}

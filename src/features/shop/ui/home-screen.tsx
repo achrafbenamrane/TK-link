@@ -144,7 +144,10 @@ export function HomeScreen() {
       {view === 'carte' ? (
         <View className="flex-1">
           <CategoryBar value={category} onChange={setCategory} />
-          <View className="mt-2 flex-1 overflow-hidden">
+          {/* Pas d'`overflow-hidden` ici : il ne servait à rien (aucun arrondi)
+              et le clipping RN ne s'applique de toute façon pas à la surface
+              GL d'Android. */}
+          <View className="mt-2 flex-1">
             <DealsMap deals={deals} category={category} />
           </View>
         </View>
