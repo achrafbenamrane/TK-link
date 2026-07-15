@@ -12,9 +12,10 @@ const minutesAgo = (n: number) => new Date(Date.now() - n * 60_000).toISOString(
 
 export const CHAT_SEED: { conversations: Conversation[]; messages: ChatMessage[] } = {
   conversations: [
-    { id: 'c_hammamet', partnerId: 'm_hammamet', lastReadAt: 0 },
-    { id: 'c_petit', partnerId: 'm_petit', lastReadAt: Date.now() },
-    { id: 'c_support', partnerId: SUPPORT, lastReadAt: Date.now() },
+    // s3 non lu → l'onglet Chat porte une pastille dès l'ouverture.
+    { id: 'c_hammamet', partnerId: 'm_hammamet', lastReadMessageId: 's2' },
+    { id: 'c_petit', partnerId: 'm_petit', lastReadMessageId: 's4' },
+    { id: 'c_support', partnerId: SUPPORT, lastReadMessageId: 's5' },
   ],
   messages: [
     {

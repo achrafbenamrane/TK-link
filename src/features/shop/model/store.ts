@@ -152,11 +152,12 @@ export const useShopStore = create<ShopState>()(
       sendMessage: (conversationId, body) => {
         const text = body.trim();
         if (!text) return; // pas de bulle vide
+        const id = makeId();
         set((state) => ({
           messages: [
             ...state.messages,
             {
-              id: makeId(),
+              id,
               conversation_id: conversationId,
               sender_id: ME,
               body: text,
@@ -165,7 +166,7 @@ export const useShopStore = create<ShopState>()(
           ],
           // Ce qu'on vient d'écrire est lu par définition.
           conversations: state.conversations.map((c) =>
-            c.id === conversationId ? { ...c, lastReadAt: Date.now() } : c,
+            c.id === conversationId ? { ...c, lastReadMessageId: id } : c,
           ),
         }));
       },
@@ -185,11 +186,16 @@ export const useShopStore = create<ShopState>()(
         })),
 
       markConversationRead: (conversationId) =>
-        set((state) => ({
-          conversations: state.conversations.map((c) =>
-            c.id === conversationId ? { ...c, lastReadAt: Date.now() } : c,
-          ),
-        })),
+        set((state) => {
+          const thread = state.messages.filter((m) => m.conversation_id === conversationId);
+          const last = thread[thread.length - 1];
+          if (!last) return state;
+          return {
+            conversations: state.conversations.map((c) =>
+              c.id === conversationId ? { ...c, lastReadMessageId: last.id } : c,
+            ),
+          };
+        }),
 
       toggleFavorite: (dealId) =>
         set((state) => ({
@@ -289,13 +295,20 @@ export function lastMessageOf(state: ShopState, conversationId: string): ChatMes
   return list[list.length - 1];
 }
 
-/** Non lus = messages des autres arrivés après le dernier passage. */
+/**
+ * Non lus = messages des autres situés APRÈS le dernier message vu.
+ *
+ * Compté par position, pas par date : deux messages peuvent partager la même
+ * milliseconde, leur ordre non.
+ */
 export function unreadCount(state: ShopState, conversationId: string): number {
   const conv = state.conversations.find((c) => c.id === conversationId);
   if (!conv) return 0;
-  return messagesOf(state, conversationId).filter(
-    (m) => m.sender_id !== ME && Date.parse(m.created_at) > conv.lastReadAt,
-  ).length;
+  const thread = messagesOf(state, conversationId);
+  const seen = conv.lastReadMessageId
+    ? thread.findIndex((m) => m.id === conv.lastReadMessageId)
+    : -1;
+  return thread.slice(seen + 1).filter((m) => m.sender_id !== ME).length;
 }
 
 export const selectTotalUnread = (s: ShopState) =>

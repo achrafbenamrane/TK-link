@@ -5,7 +5,7 @@ const CONV = 'c_test';
 
 beforeEach(() => {
   useShopStore.setState({
-    conversations: [{ id: CONV, partnerId: 'm_hammamet', lastReadAt: 0 }],
+    conversations: [{ id: CONV, partnerId: 'm_hammamet', lastReadMessageId: null }],
     messages: [],
   });
 });
@@ -56,11 +56,29 @@ describe('unreadCount', () => {
     expect(unreadCount(useShopStore.getState(), CONV)).toBe(0);
   });
 
-  it('counts again for messages arriving after that', () => {
+  // Régression : la lecture était datée avec Date.now() et comparée à
+  // `created_at`. Dans la même milliseconde, les deux étaient à égalité et le
+  // message suivant était avalé — un commerçant répondant à l'instant où l'on
+  // ferme le fil n'aurait jamais été signalé. La lecture suit maintenant
+  // l'ordre des messages, qui lui n'est jamais ambigu.
+  it('counts again for messages arriving after that, even within the same millisecond', () => {
     useShopStore.getState().receiveMessage(CONV, 'm_hammamet', 'Un');
     useShopStore.getState().markConversationRead(CONV);
     useShopStore.getState().receiveMessage(CONV, 'm_hammamet', 'Deux');
     expect(unreadCount(useShopStore.getState(), CONV)).toBe(1);
+  });
+
+  it('counts the whole thread when nothing has been read yet', () => {
+    useShopStore.getState().receiveMessage(CONV, 'm_hammamet', 'Un');
+    useShopStore.getState().receiveMessage(CONV, 'm_hammamet', 'Deux');
+    expect(unreadCount(useShopStore.getState(), CONV)).toBe(2);
+  });
+
+  // Envoyer, c'est avoir lu ce qui précède.
+  it('clears unread when I reply', () => {
+    useShopStore.getState().receiveMessage(CONV, 'm_hammamet', 'Coucou');
+    useShopStore.getState().sendMessage(CONV, 'Bonjour');
+    expect(unreadCount(useShopStore.getState(), CONV)).toBe(0);
   });
 
   it('is zero for a conversation that does not exist', () => {

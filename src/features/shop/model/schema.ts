@@ -137,7 +137,18 @@ export const ConversationSchema = z.object({
   id: z.string().min(1),
   /** Id du commerçant, ou 'support' pour l'équipe Freedoo. */
   partnerId: z.string().min(1),
-  lastReadAt: z.number().int().nonnegative(),
+  /**
+   * Dernier message VU, par identité — pas par horloge.
+   *
+   * Une date de lecture se compare à `created_at` à la milliseconde près : un
+   * message arrivé dans la même milliseconde que l'ouverture du fil est à
+   * égalité, et selon le sens de la comparaison on l'avale (jamais notifié) ou
+   * on le re-notifie alors qu'il est à l'écran. L'ordre des messages, lui, n'a
+   * pas d'ambiguïté.
+   *
+   * `null` = rien de lu (tout le fil est non lu).
+   */
+  lastReadMessageId: z.string().nullable().default(null),
 });
 export type Conversation = z.infer<typeof ConversationSchema>;
 
