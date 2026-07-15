@@ -7,6 +7,7 @@ import { AppText, PushButton } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { getMerchant } from '../../model/catalog';
+import { distanceKm, formatDistance } from '../../lib/geo';
 import type { Deal } from '../../model/schema';
 import { useShopStore } from '../../model/store';
 import { Countdown } from './countdown';
@@ -19,6 +20,10 @@ export function FlashCard({ deal }: Props) {
   const addToCart = useShopStore((s) => s.addToCart);
   const toggleFavorite = useShopStore((s) => s.toggleFavorite);
   const isFav = useShopStore((s) => s.favorites.includes(deal.id));
+  // Une seule position pour toute la liste — la demande vit dans HomeScreen,
+  // pas ici : 10 cartes = 10 demandes de permission.
+  const userCoord = useShopStore((s) => s.userCoord);
+  const distance = userCoord && merchant ? distanceKm(userCoord, merchant.coord) : null;
 
   const discount = deal.oldPrice ? Math.round((1 - deal.price / deal.oldPrice) * 100) : null;
   const stockPct = Math.round((deal.stockLeft / deal.stockTotal) * 100);
@@ -111,9 +116,10 @@ export function FlashCard({ deal }: Props) {
           </AppText>
         </View>
 
-        {/* Price left, signature push button centred in the row (client's mark-up). */}
+        {/* Prix à gauche, bouton signature au centre (marquage client), distance
+            à droite pour équilibrer la ligne avec une info utile. */}
         <View className="mt-1 flex-row items-center">
-          <View className="flex-1 flex-row items-baseline gap-1.5">
+          <View className="flex-1">
             <AppText className="font-display text-xl text-ink">{deal.price.toFixed(2)}€</AppText>
             {deal.oldPrice ? (
               <AppText variant="caption" className="text-ink-faint line-through">
@@ -121,15 +127,28 @@ export function FlashCard({ deal }: Props) {
               </AppText>
             ) : null}
           </View>
+
           <PushButton
             testID={`add-${deal.id}`}
             onPress={() => addToCart(deal.id)}
             icon="plus"
             sublabel="AJOUTER"
-            size={80}
+            size={62}
             accessibilityLabel={`Ajouter ${deal.title} au panier`}
           />
-          <View className="flex-1" />
+
+          <View className="flex-1 items-end">
+            <Feather name={distance ? 'navigation' : 'map-pin'} size={13} color={colors.inkFaint} />
+            <AppText
+              variant="caption"
+              className="mt-0.5 text-right text-ink-faint"
+              numberOfLines={1}
+            >
+              {/* Position refusée ou indisponible → on affiche le quartier :
+                  toujours quelque chose de vrai, jamais une distance inventée. */}
+              {distance ? formatDistance(distance) : (merchant?.area ?? '')}
+            </AppText>
+          </View>
         </View>
       </View>
     </Pressable>

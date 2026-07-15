@@ -1,6 +1,5 @@
 import { Feather } from '@expo/vector-icons';
 import Mapbox from '@rnmapbox/maps';
-import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
@@ -10,7 +9,8 @@ import { AppText } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { getMerchant } from '../model/catalog';
-import type { Category, Coord, Deal } from '../model/schema';
+import { useShopStore } from '../model/store';
+import type { Category, Deal } from '../model/schema';
 import { fetchRoute, routeToGeoJSON, type Route } from '../lib/directions';
 import { formatDistance, TOULOUSE_CENTER } from '../lib/geo';
 import { hasMapboxToken, MAPBOX_PUBLIC_TOKEN } from '../lib/mapbox';
@@ -60,31 +60,12 @@ export function DealsMap({ deals, category }: Props) {
   const router = useRouter();
   const cameraRef = useRef<Mapbox.Camera>(null);
 
-  const [me, setMe] = useState<Coord | null>(null);
+  // Position partagée : demandée une seule fois par HomeScreen. Sans position,
+  // la carte s'affiche quand même, centrée sur Toulouse.
+  const me = useShopStore((s) => s.userCoord);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [route, setRoute] = useState<Route | null>(null);
   const [routing, setRouting] = useState(false);
-
-  // Position réelle, sinon centre de Toulouse : la carte s'affiche toujours,
-  // même si l'utilisateur refuse la localisation.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') return;
-        const pos = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        if (!cancelled) setMe({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      } catch {
-        // localisation indisponible — on reste sur le centre de Toulouse
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // Un changement de filtre invalide la sélection : garder une route vers une
   // bulle qui vient de disparaître n'aurait aucun sens.

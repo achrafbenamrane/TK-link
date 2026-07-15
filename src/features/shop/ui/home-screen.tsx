@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 
 import { AppText, Screen, TextField } from '@/shared/ui';
@@ -8,6 +8,7 @@ import { colors } from '@/shared/theme/colors';
 
 import { dealsByCategory, getDeal, getMerchant, FEATURED_DEAL_ID } from '../model/catalog';
 import type { Category, Deal } from '../model/schema';
+import { getUserCoord } from '../lib/location';
 import { selectCartCount, useShopStore } from '../model/store';
 import { CategoryBar } from './components/category-bar';
 import { Countdown } from './components/countdown';
@@ -90,6 +91,19 @@ export function HomeScreen() {
   const [category, setCategory] = useState<Category | null>(null);
   const [query, setQuery] = useState('');
   const [view, setView] = useState<HomeView>('liste');
+  const setUserCoord = useShopStore((s) => s.setUserCoord);
+
+  // Position demandée UNE fois pour tout l'écran : les cartes et la carte
+  // géographique lisent ensuite la même valeur dans le store.
+  useEffect(() => {
+    let alive = true;
+    getUserCoord().then((coord) => {
+      if (alive && coord) setUserCoord(coord);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [setUserCoord]);
 
   const deals = useMemo(() => {
     let list = dealsByCategory(category);

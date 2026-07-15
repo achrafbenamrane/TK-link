@@ -9,6 +9,7 @@ import { getDeal } from './catalog';
 import {
   PersistedShopSchema,
   type Address,
+  type Coord,
   type AddressDraft,
   type CartItem,
   type Deal,
@@ -30,6 +31,8 @@ type ShopState = {
   biometricEnabled: boolean;
   addresses: Address[];
   merchantApplication: MerchantApplication | null;
+  /** Position de l'utilisateur — éphémère, jamais persistée (elle change). */
+  userCoord: Coord | null;
 
   addToCart: (dealId: string, qty?: number) => void;
   decrement: (dealId: string) => void;
@@ -45,6 +48,7 @@ type ShopState = {
   removeAddress: (id: string) => void;
   setDefaultAddress: (id: string) => void;
   submitMerchantApplication: (application: MerchantApplication) => void;
+  setUserCoord: (coord: Coord | null) => void;
 
   /** Turn the cart into an order, award points, empty the cart. */
   checkout: () => { ok: false } | { ok: true; orderId: string };
@@ -60,6 +64,7 @@ export const useShopStore = create<ShopState>()(
       biometricEnabled: false,
       addresses: [],
       merchantApplication: null,
+      userCoord: null,
 
       addToCart: (dealId, qty = 1) =>
         set((state) => {
@@ -129,6 +134,8 @@ export const useShopStore = create<ShopState>()(
         })),
 
       submitMerchantApplication: (application) => set({ merchantApplication: application }),
+
+      setUserCoord: (coord) => set({ userCoord: coord }),
 
       toggleFavorite: (dealId) =>
         set((state) => ({
