@@ -96,7 +96,13 @@ export function ProfileScreen() {
             <AppText className="font-sans-semibold text-ink-inverse">Fidélité Freedoo</AppText>
           </View>
           <View className="flex-row items-baseline gap-2">
-            <AppText className="font-display text-ink-inverse" style={{ fontSize: 40 }}>
+            {/* lineHeight obligatoire : sans lui AppText garde la hauteur de
+                ligne de sa variante par défaut (24 px), et un chiffre de 40 px
+                en police Unbounded — qui a de longues hampes — se fait rogner. */}
+            <AppText
+              className="font-display text-ink-inverse"
+              style={{ fontSize: 40, lineHeight: 50 }}
+            >
               {points}
             </AppText>
             <AppText className="text-ink-inverse/70">points</AppText>
