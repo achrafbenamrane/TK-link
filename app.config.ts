@@ -24,7 +24,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name,
   slug: 'freedoo',
-  owner: 'achrafbenamrane',
+  owner: 'freedoo',
   version: '0.1.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
@@ -154,7 +154,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     eas: {
-      projectId: 'f8fd49f4-15e2-480c-9bf3-0a7e52f8566f',
+      // Projet sous l'organisation « freedoo » (compte borzvalor). L'ancien
+      // projet (f8fd49f4…, compte achrafbenamrane) garde l'historique des
+      // premiers builds mais n'est plus utilisé.
+      projectId: '329bcddd-d9a7-404c-9325-523290072a8f',
     },
     /**
      * Jeton Mapbox PUBLIC (pk.*) — conçu pour être livré dans l’app ; il rend la
