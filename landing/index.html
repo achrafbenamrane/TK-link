@@ -99,36 +99,15 @@ header.stuck{background:rgba(255,255,255,.92);backdrop-filter:blur(6px);border-b
 .phone{width:280px;background:#fff;border-radius:34px;padding:11px;border:1px solid var(--line-2);box-shadow:0 34px 60px -34px rgba(23,20,15,.4)}
 .phone::before{content:"";position:absolute}
 .screen{border-radius:25px;overflow:hidden;background:#fff;border:1px solid var(--line)}
-.app-top{display:flex;align-items:center;justify-content:space-between;padding:20px 15px 9px;font-size:12px;color:var(--ink-3);font-weight:500}
-.app-top b{color:var(--ink);font-weight:600}
-.app-cats{display:flex;gap:6px;padding:2px 12px 12px}
-.cm{font-size:10.5px;font-weight:600;padding:6px 10px;border-radius:7px;background:var(--cream);color:var(--ink-2);white-space:nowrap}
-.cm.on{background:var(--ink);color:#fff}
-.product{margin:0 12px 14px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.p-scene{height:150px;position:relative;display:grid;place-items:center;background:#efe6d6}
-.p-emoji{font-size:82px;filter:drop-shadow(0 12px 16px rgba(90,50,10,.28))}
-.p-timer{position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:5px;background:var(--ink);color:#fff;padding:6px 10px;border-radius:7px;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums}
-.p-stock{position:absolute;top:10px;right:10px;background:var(--red);color:#fff;padding:6px 9px;border-radius:7px;font-weight:700;font-size:11px}
-.p-flag{position:absolute;bottom:10px;left:10px;font-size:19px}
-.p-badge{position:absolute;bottom:8px;right:10px;text-align:right;line-height:1}
-.p-badge b{font-family:"Unbounded";font-weight:700;font-size:19px;color:var(--ink)}
-.p-badge span{display:block;font-size:9px;color:var(--red-ink);font-weight:700;letter-spacing:.06em;margin-top:2px}
-.p-info{padding:12px 14px 15px}
-.p-info .m{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-3);font-weight:600}
-.p-info .m .star{color:var(--red)}
-.p-info h4{font-family:"Unbounded";font-weight:700;font-size:13.5px;line-height:1.2;margin:5px 0 3px}
-.p-info .d{font-size:11px;color:var(--ink-3);line-height:1.35;margin-bottom:11px}
-.p-bar{height:5px;border-radius:3px;background:var(--line);overflow:hidden;margin-bottom:12px}
-.p-bar i{display:block;height:100%;width:0;background:var(--red);border-radius:3px;transition:width 1s ease}
-/* Ligne prix · bouton signature · distance — le miroir de la vraie fiche de l'app */
-.p-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.p-price{font-family:"Unbounded";font-weight:700;font-size:15px;color:var(--ink)}
-.p-price s{display:block;font-family:"Manrope";font-weight:500;font-size:10px;color:var(--ink-3)}
-.p-add-round{display:flex;flex-direction:column;align-items:center;justify-content:center;width:54px;height:54px;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;box-shadow:0 5px 0 var(--red-dark);transition:.1s;line-height:1}
-.p-add-round span{font-size:15px;font-weight:700}
-.p-add-round b{font-family:"Unbounded";font-size:6.5px;letter-spacing:.04em;margin-top:1px}
-.p-add-round:active{transform:translateY(4px);box-shadow:0 1px 0 var(--red-dark)}
-.p-dist{font-size:10px;font-weight:600;color:var(--ink-3);text-align:right}
+.screen img{display:block;width:100%;height:auto}
+/* Galerie de captures : défilement horizontal, une capture bien en face à la fois */
+.shots{display:flex;gap:22px;padding:8px max(24px,calc((100vw - 1120px)/2)) 18px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.shots::-webkit-scrollbar{display:none}
+.shot{flex:0 0 auto;width:216px;margin:0;scroll-snap-align:center;transition:transform .25s}
+.shot:hover{transform:translateY(-6px)}
+.shot img{width:100%;height:auto;display:block;border-radius:20px;border:1px solid var(--line-2);box-shadow:0 24px 44px -28px rgba(23,20,15,.38);background:#fff}
+.shot figcaption{margin-top:12px;text-align:center;font-size:13px;font-weight:600;color:var(--ink-2)}
+
 
 /* ---------- Figures band ---------- */
 .figures{border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -308,33 +287,9 @@ footer{padding:60px 0 42px;border-top:1px solid var(--line)}
       </div>
 
       <div class="hero-visual up" style="animation-delay:.3s">
-        <span class="tagpin"><span class="live"></span> En direct à Toulouse</span>
+        <span class="tagpin"><span class="live"></span> Capturé sur téléphone · 16/07</span>
         <div class="phone">
-          <div class="screen">
-            <div class="app-top"><span>Bonjour · <b>Toulouse</b></span><span>Panier</span></div>
-            <div class="app-cats">
-              <span class="cm on">Tous</span><span class="cm">Restos</span><span class="cm">Artisans</span><span class="cm">Courses</span><span class="cm">Shopping</span>
-            </div>
-            <div class="product">
-              <div class="p-scene">
-                <div class="p-emoji">🥩</div>
-                <div class="p-timer">⏱ <span id="cardTimer">00:04:45</span></div>
-                <div class="p-stock">Reste <span id="cardStock">25</span></div>
-                <div class="p-badge"><b>−50%</b><span>SUR LE 2ᵉ</span></div>
-              </div>
-              <div class="p-info">
-                <div class="m"><span class="star">★</span> 5,0 · Maison Hammamet · Halal</div>
-                <h4>Gigot d’agneau entier</h4>
-                <div class="d">Pièce de 2,2 à 3,4 kg · viande origine France</div>
-                <div class="p-bar"><i id="cardBar"></i></div>
-                <div class="p-row">
-                  <span class="p-price">24.90€ <s>34.90€</s></span>
-                  <button class="p-add-round" aria-label="Ajouter au panier"><span>＋</span><b>AJOUTER</b></button>
-                  <span class="p-dist">📍 1,2 km</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <div class="screen"><img src="img/accueil.jpg" width="540" height="1168" alt="Accueil de l’app Freedoo : ventes flash près de vous, gigot d’agneau à 24,90 €"></div>
         </div>
       </div>
     </div>
@@ -398,6 +353,30 @@ footer{padding:60px 0 42px;border-top:1px solid var(--line)}
       <div class="feat r" data-d="1"><div class="fi"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg></div><h3>Facture QR par commande</h3><p>Chaque commande génère son QR scannable — la preuve d’achat, en un geste.</p></div>
       <div class="feat r" data-d="2"><div class="fi"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 8l3-4h12l3 4M12 8v13"/></svg></div><h3>Fidélité qui se partage</h3><p>Un point par euro, un bon d’achat à 200 points — et des points à offrir à vos proches.</p></div>
     </div>
+  </div>
+</section>
+
+<!-- Écrans réels -->
+<section id="ecrans" style="padding-top:10px">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="lead r">
+        <span class="eyebrow">Captures réelles</span>
+        <h2>L’app, écran par écran.</h2>
+        <p>Rien n’est maquetté : ces captures sortent du téléphone. Faites défiler.</p>
+      </div>
+      <span class="sec-index r" data-d="1">03 — La preuve</span>
+    </div>
+  </div>
+  <div class="shots r" data-d="1" aria-label="Captures d’écran de l’application">
+    <figure class="shot"><img src="img/carte.jpg" loading="lazy" width="540" height="1168" alt="La carte du quartier : offres en bulles de prix et itinéraire vers le commerçant"><figcaption>La carte + l’itinéraire réel</figcaption></figure>
+    <figure class="shot"><img src="img/panier.jpg" loading="lazy" width="540" height="1168" alt="Le panier : 4 articles, livraison offerte, paiement validé par empreinte"><figcaption>Le panier — livraison offerte</figcaption></figure>
+    <figure class="shot"><img src="img/factures.jpg" loading="lazy" width="540" height="1168" alt="Les factures QR : un code scannable par commande avec le détail"><figcaption>Une facture QR par commande</figcaption></figure>
+    <figure class="shot"><img src="img/chat.jpg" loading="lazy" width="540" height="1168" alt="La messagerie : conversations avec les commerçants et l’équipe Freedoo"><figcaption>Le chat commerçant</figcaption></figure>
+    <figure class="shot"><img src="img/empreinte.jpg" loading="lazy" width="540" height="1168" alt="Le déverrouillage par empreinte digitale"><figcaption>L’empreinte — qui reste chez vous</figcaption></figure>
+    <figure class="shot"><img src="img/profil.jpg" loading="lazy" width="540" height="1168" alt="Le profil : 217 points de fidélité et le menu complet"><figcaption>La fidélité qui se partage</figcaption></figure>
+    <figure class="shot"><img src="img/favoris.jpg" loading="lazy" width="540" height="1168" alt="Les favoris : la brunch box à −38 %"><figcaption>Les favoris</figcaption></figure>
+    <figure class="shot"><img src="img/commandes.jpg" loading="lazy" width="540" height="1168" alt="Le suivi des commandes en préparation"><figcaption>Le suivi de commande</figcaption></figure>
   </div>
 </section>
 
@@ -511,16 +490,6 @@ footer{padding:60px 0 42px;border-top:1px solid var(--line)}
     }, {threshold:.16, rootMargin:"0px 0px -6% 0px"});
     rs.forEach(function(el){ io.observe(el); });
   } else { rs.forEach(function(el){ el.classList.add("in"); }); }
-
-  /* live countdown */
-  var total=285, t=total;
-  var ct=document.getElementById("cardTimer");
-  function fmt(s){var h=(s/3600|0),m=((s%3600)/60|0),ss=s%60;function p(n){return(n<10?"0":"")+n}return p(h)+":"+p(m)+":"+p(ss);}
-  setInterval(function(){ t--; if(t<0)t=total; if(ct)ct.textContent=fmt(t); },1000);
-
-  /* stock bar */
-  var bar=document.getElementById("cardBar");
-  if(bar) setTimeout(function(){ bar.style.width="50%"; },500);
 
   /* red button */
   var btn=document.getElementById("pushBtn");
