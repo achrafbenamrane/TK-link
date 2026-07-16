@@ -31,6 +31,9 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+/* Header fixe : sans cette marge, cliquer un lien du menu enterre le titre de
+   section sous la barre de navigation. */
+section,.figures,.manifesto{scroll-margin-top:86px}
 html,body{max-width:100%;overflow-x:hidden}
 body{
   background:var(--paper);color:var(--ink);
@@ -101,7 +104,12 @@ header.stuck{background:rgba(255,255,255,.92);backdrop-filter:blur(6px);border-b
 .screen{border-radius:25px;overflow:hidden;background:#fff;border:1px solid var(--line)}
 .screen img{display:block;width:100%;height:auto}
 /* Galerie de captures : défilement horizontal, une capture bien en face à la fois */
-.shots{display:flex;gap:22px;padding:8px max(24px,calc((100vw - 1120px)/2)) 18px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.shots{display:flex;gap:22px;padding:8px max(24px,calc((100vw - 1120px)/2)) 18px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;cursor:grab}
+.shots.drag{scroll-snap-type:none;cursor:grabbing;user-select:none}
+.shots.drag .shot{pointer-events:none}
+.snav-row{display:flex;gap:10px;margin-top:14px;justify-content:flex-end}
+.snav{width:42px;height:42px;border-radius:50%;border:1px solid var(--line-2);background:#fff;color:var(--ink);font-size:17px;cursor:pointer;transition:.2s;display:inline-flex;align-items:center;justify-content:center}
+.snav:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
 .shots::-webkit-scrollbar{display:none}
 .shot{flex:0 0 auto;width:216px;margin:0;scroll-snap-align:center;transition:transform .25s}
 .shot:hover{transform:translateY(-6px)}
@@ -365,7 +373,13 @@ footer{padding:60px 0 42px;border-top:1px solid var(--line)}
         <h2>L’app, écran par écran.</h2>
         <p>Rien n’est maquetté : ces captures sortent du téléphone. Faites défiler.</p>
       </div>
-      <span class="sec-index r" data-d="1">03 — La preuve</span>
+      <div class="r" data-d="1" style="text-align:right">
+        <span class="sec-index">03 — La preuve</span>
+        <div class="snav-row">
+          <button class="snav" id="shotsPrev" aria-label="Captures précédentes">←</button>
+          <button class="snav" id="shotsNext" aria-label="Captures suivantes">→</button>
+        </div>
+      </div>
     </div>
   </div>
   <div class="shots r" data-d="1" aria-label="Captures d’écran de l’application">
@@ -490,6 +504,19 @@ footer{padding:60px 0 42px;border-top:1px solid var(--line)}
     }, {threshold:.16, rootMargin:"0px 0px -6% 0px"});
     rs.forEach(function(el){ io.observe(el); });
   } else { rs.forEach(function(el){ el.classList.add("in"); }); }
+
+  /* galerie de captures : flèches + glisser à la souris */
+  var sh=document.querySelector(".shots");
+  if(sh){
+    var step=function(){var c=sh.querySelector(".shot");return c?c.getBoundingClientRect().width+22:300;};
+    var pv=document.getElementById("shotsPrev"),nx=document.getElementById("shotsNext");
+    if(pv)pv.addEventListener("click",function(){sh.scrollBy({left:-step()*2,behavior:"smooth"})});
+    if(nx)nx.addEventListener("click",function(){sh.scrollBy({left:step()*2,behavior:"smooth"})});
+    var down=false,sx=0,sl=0;
+    sh.addEventListener("pointerdown",function(e){if(e.pointerType!=="mouse")return;down=true;sx=e.clientX;sl=sh.scrollLeft;});
+    window.addEventListener("pointermove",function(e){if(!down)return;var dx=e.clientX-sx;if(Math.abs(dx)>4)sh.classList.add("drag");sh.scrollLeft=sl-dx;});
+    window.addEventListener("pointerup",function(){down=false;sh.classList.remove("drag");});
+  }
 
   /* red button */
   var btn=document.getElementById("pushBtn");
