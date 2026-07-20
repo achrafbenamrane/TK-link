@@ -10,6 +10,7 @@ import { colors } from '@/shared/theme/colors';
 
 import type { Order, OrderStatus } from '../model/schema';
 import { useShopStore } from '../model/store';
+import { DeliveryTracker } from './components/delivery-tracker';
 
 const STEPS: {
   key: OrderStatus;
@@ -145,6 +146,12 @@ export function OrderDetailScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-5 pb-10">
+        {/* La carte n'a de sens qu'en course : avant, il n'y a rien à suivre ;
+            après, le trajet est terminé. */}
+        {order.status === 'en_livraison' && address ? (
+          <DeliveryTracker order={order} address={address} />
+        ) : null}
+
         <View className="mb-4 rounded-card border border-line bg-surface p-4">
           <Timeline status={order.status} />
         </View>
