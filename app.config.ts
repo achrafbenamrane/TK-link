@@ -33,7 +33,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     bundleIdentifier: bundleId,
     supportsTablet: false,
-    icon: './assets/expo.icon',
+    // Pas de surcharge iOS : `assets/expo.icon` est le bundle Icon Composer
+    // livré par le squelette — il contient le symbole EXPO, pas le nôtre. Sans
+    // cette ligne, iOS reprend l'icône Freedoo commune définie plus haut.
     // Answers the App Store export-compliance prompt automatically (set true
     // only if you add non-exempt encryption). Store-readiness: STORE-APL-EXPORT.
     config: {
@@ -70,7 +72,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: bundleId,
     adaptiveIcon: {
-      backgroundColor: '#F6F2EA',
+      // Ink, comme android-icon-background.png : l'image l'emporte, mais laisser
+      // une couleur contradictoire ici induit en erreur le prochain lecteur.
+      backgroundColor: '#17140F',
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
@@ -91,7 +95,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         backgroundColor: '#17140F',
         android: {
           image: './assets/images/splash-icon.png',
-          imageWidth: 76,
+          imageWidth: 140,
         },
       },
     ],
