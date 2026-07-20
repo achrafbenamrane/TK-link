@@ -16,12 +16,12 @@ export function AccountScreen() {
 
   const confirmDelete = () => {
     Alert.alert(
-      'Delete account?',
-      'This permanently deletes your account and all your data. This cannot be undone.',
+      'Supprimer le compte ?',
+      'Votre compte, vos commandes et vos points seront définitivement effacés. Cette action est irréversible.',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Annuler', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Supprimer',
           style: 'destructive',
           onPress: () => {
             void deleteAccount();
@@ -37,17 +37,17 @@ export function AccountScreen() {
         <Button
           testID="account-sign-out"
           variant="secondary"
-          label="Sign out"
+          label="Se déconnecter"
           onPress={() => void signOut()}
         />
         <Button
           testID="account-delete"
           variant="destructive"
-          label="Delete account"
+          label="Supprimer mon compte"
           onPress={confirmDelete}
         />
         <AppText variant="caption" className="text-center">
-          Deleting your account removes all your data permanently.
+          La suppression du compte efface définitivement toutes vos données.
         </AppText>
       </View>
     </Screen>

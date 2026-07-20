@@ -5,8 +5,8 @@ import { z } from 'zod';
  * docs/security/checklist.md SEC-INPUT-001.
  */
 export const CredentialsSchema = z.object({
-  email: z.email({ error: 'Enter a valid email address' }),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  email: z.email({ error: 'Entrez une adresse e-mail valide.' }),
+  password: z.string().min(8, 'Le mot de passe doit faire au moins 8 caractères.'),
 });
 
 export type Credentials = z.infer<typeof CredentialsSchema>;
