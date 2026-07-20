@@ -83,7 +83,7 @@ npm run docs:lint     # docs integrity: links, orphans, taste rules
 | `docs/runbooks/`                                | Setup, release, agentic QA operations                 |
 | `docs/process/`                                 | How the team works: the two tracks, DoD, R2R          |
 | `docs/templates/`                               | Human-facing artifacts skills instantiate             |
-| `docs/reports/`                                 | Feature + daily evidence reports (Markdown)           |
+| `docs/reports/`                                 | Feature + daily evidence reports — local, untracked   |
 | `docs/research/`                                | Cited 2025–2026 research grounding the upgrade        |
 | `docs/security/`                                | Auth, storage, secrets, deep links, network, payments |
 | `docs/store/`                                   | App Store / Play compliance + submission runbook      |

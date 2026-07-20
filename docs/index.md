@@ -76,7 +76,11 @@ docs-lint keeps every page linked and every link alive.
 
 ## Reports
 
-- [Reports](reports/README.md) — feature evidence reports + daily activity reports (Markdown)
+`docs/reports/` — feature evidence reports (`/feature-report`) + daily activity reports
+(`/daily-report`), in Markdown. **Deliberately untracked**: `reports/` is gitignored, so these are
+local working artifacts, not shared knowledge. Not linked from here on purpose — a link would resolve
+on the machine that generated the report and break everywhere else. `scripts/docs-lint.mjs` skips the
+directory for the same reason.
 
 ## Specs & governance
 
