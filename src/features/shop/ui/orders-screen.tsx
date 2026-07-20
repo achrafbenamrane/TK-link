@@ -1,7 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import { useRouter } from 'expo-router';
-import { ScrollView, View } from 'react-native';
+import { useEffect } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { AppText, Button, EmptyState, Screen } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
@@ -29,6 +30,15 @@ function formatDate(ts: number): string {
 
 export function OrdersScreen() {
   const router = useRouter();
+  const sync = useShopStore((st) => st.syncOrderStatuses);
+
+  // DÉMO : les commandes avancent avec le temps — la liste doit le refléter
+  // sans qu'on ait à quitter puis revenir sur l'écran.
+  useEffect(() => {
+    sync();
+    const t = setInterval(sync, 5000);
+    return () => clearInterval(t);
+  }, [sync]);
   const orders = useShopStore(selectOrders);
 
   return (
@@ -51,10 +61,15 @@ export function OrdersScreen() {
           {orders.map((order) => {
             const s = STATUS[order.status];
             return (
-              <View
+              <Pressable
                 key={order.id}
                 testID={`order-${order.id}`}
-                className="mb-3 gap-3 rounded-card border border-line bg-surface p-4"
+                accessibilityRole="button"
+                accessibilityLabel={`Commande ${order.id.slice(0, 6).toUpperCase()}, ${s.label}`}
+                onPress={() =>
+                  router.push({ pathname: '/commande/[id]', params: { id: order.id } })
+                }
+                className="mb-3 gap-3 rounded-card border border-line bg-surface p-4 active:opacity-70"
               >
                 <View className="flex-row items-center justify-between">
                   <View>
@@ -94,6 +109,7 @@ export function OrdersScreen() {
                     <AppText variant="caption" className="font-sans-medium text-ink">
                       Facture QR
                     </AppText>
+                    <Feather name="chevron-right" size={14} color={colors.inkFaint} />
                   </View>
                   <View className="flex-row items-center gap-3">
                     <View className="flex-row items-center gap-1">
@@ -107,7 +123,7 @@ export function OrdersScreen() {
                     </AppText>
                   </View>
                 </View>
-              </View>
+              </Pressable>
             );
           })}
         </ScrollView>

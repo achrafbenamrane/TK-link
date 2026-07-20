@@ -6,6 +6,7 @@ export { HomeScreen } from './ui/home-screen';
 export { ProductScreen } from './ui/product-screen';
 export { CartScreen } from './ui/cart-screen';
 export { OrdersScreen } from './ui/orders-screen';
+export { OrderDetailScreen } from './ui/order-detail-screen';
 export { FavoritesScreen } from './ui/favorites-screen';
 export { ProfileScreen } from './ui/profile-screen';
 export { BiometricsScreen } from './ui/biometrics-screen';

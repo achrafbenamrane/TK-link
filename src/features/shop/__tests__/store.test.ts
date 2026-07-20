@@ -86,3 +86,41 @@ describe('checkout et adresse de livraison', () => {
     expect(useShopStore.getState().checkout('adr_1').ok).toBe(false);
   });
 });
+
+describe('progression de commande (démo)', () => {
+  const orderAgedBy = (seconds: number) => ({
+    id: 'o_1',
+    createdAt: Date.now() - seconds * 1000,
+    addressId: null,
+    items: [{ dealId: 'd_cote', title: 'Côte', emoji: '🥩', qty: 1, price: 24.9 }],
+    total: 24.9,
+    deliveryFee: 0,
+    status: 'en_preparation' as const,
+    pointsEarned: 24,
+  });
+
+  it('reste en préparation juste après la commande', () => {
+    useShopStore.setState({ orders: [orderAgedBy(5)] });
+    useShopStore.getState().syncOrderStatuses();
+    expect(useShopStore.getState().orders[0]?.status).toBe('en_preparation');
+  });
+
+  it('passe en livraison puis livrée avec le temps', () => {
+    useShopStore.setState({ orders: [orderAgedBy(90)] });
+    useShopStore.getState().syncOrderStatuses();
+    expect(useShopStore.getState().orders[0]?.status).toBe('en_livraison');
+
+    useShopStore.setState({ orders: [orderAgedBy(300)] });
+    useShopStore.getState().syncOrderStatuses();
+    expect(useShopStore.getState().orders[0]?.status).toBe('livree');
+  });
+
+  // Le tableau ne doit être remplacé que s'il change vraiment : sinon chaque
+  // tick notifie les abonnés et l'écran se re-rend en boucle.
+  it('ne remplace pas le tableau quand rien ne change', () => {
+    useShopStore.setState({ orders: [orderAgedBy(5)] });
+    const before = useShopStore.getState().orders;
+    useShopStore.getState().syncOrderStatuses();
+    expect(useShopStore.getState().orders).toBe(before);
+  });
+});

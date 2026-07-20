@@ -78,6 +78,9 @@ type ShopState = {
   /** Offre des points à un proche. Renvoie le code à partager. */
   sharePoints: (amount: number) => { ok: false } | { ok: true; code: string };
 
+  /** DÉMO : aligne les statuts sur le temps écoulé (voir demoStatusFor). */
+  syncOrderStatuses: () => void;
+
   sendMessage: (conversationId: string, body: string) => void;
   receiveMessage: (conversationId: string, senderId: string, body: string) => void;
   markConversationRead: (conversationId: string) => void;
@@ -198,6 +201,17 @@ export const useShopStore = create<ShopState>()(
         return { ok: true as const, code: makeCode() };
       },
 
+      syncOrderStatuses: () =>
+        set((state) => {
+          const next = state.orders.map((o) => {
+            const status = demoStatusFor(o);
+            return status === o.status ? o : { ...o, status };
+          });
+          // Ne remplacer le tableau que s'il change vraiment, sinon chaque appel
+          // notifie les abonnés et relance le rendu en boucle.
+          return next.some((o, i) => o !== state.orders[i]) ? { orders: next } : state;
+        }),
+
       sendMessage: (conversationId, body) => {
         const text = body.trim();
         if (!text) return; // pas de bulle vide
@@ -308,6 +322,26 @@ export const useShopStore = create<ShopState>()(
     },
   ),
 );
+
+/**
+ * DÉMO — progression d'une commande dans le temps.
+ *
+ * Sans back-end, une commande resterait « en préparation » indéfiniment et le
+ * suivi n'aurait rien à montrer. Le statut est DÉRIVÉ de l'heure de commande
+ * plutôt que planifié par un minuteur : ça survit à la fermeture de l'app, là
+ * où un setTimeout serait perdu.
+ *
+ * À SUPPRIMER quand le back-end poussera les vrais statuts.
+ */
+export const DEMO_SHIPPING_AFTER_S = 60;
+export const DEMO_DELIVERED_AFTER_S = 240;
+
+export function demoStatusFor(order: Order): Order['status'] {
+  const elapsed = (Date.now() - order.createdAt) / 1000;
+  if (elapsed >= DEMO_DELIVERED_AFTER_S) return 'livree';
+  if (elapsed >= DEMO_SHIPPING_AFTER_S) return 'en_livraison';
+  return 'en_preparation';
+}
 
 /* ---- pure helpers + selectors (subscribe to slices, never the whole store) ---- */
 
