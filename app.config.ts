@@ -72,9 +72,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: bundleId,
     adaptiveIcon: {
-      // Ink, comme android-icon-background.png : l'image l'emporte, mais laisser
-      // une couleur contradictoire ici induit en erreur le prochain lecteur.
-      backgroundColor: '#17140F',
+      // Blanc, comme android-icon-background.png : l'image l'emporte, mais une
+      // couleur contradictoire ici induirait en erreur le prochain lecteur.
+      backgroundColor: '#FFFFFF',
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',

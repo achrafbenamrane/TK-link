@@ -1,165 +1,203 @@
 """
-Génère le jeu d'icônes Freedoo depuis la marque : un F en Unbounded Black,
-crème sur ink, suivi du point rouge du wordmark « Freedoo. ».
+Génère toute l'identité visuelle Freedoo depuis une seule géométrie : un sac de
+courses portant le F de la marque.
 
     python scripts/generate-icons.py        (nécessite Pillow)
 
-Pourquoi un script plutôt que des PNG posés là : l'icône se redessine quand la
-marque bouge, à l'identique, sans rouvrir un outil de dessin. La typo vient de
-node_modules — la même que l'app affiche à l'écran.
+Pourquoi un script plutôt que des PNG posés là : l'identité se redessine à
+l'identique quand la marque bouge, sans rouvrir un outil de dessin. La typo vient
+de node_modules — exactement celle que l'app affiche à l'écran.
 
-⚠ ZONE DE SÉCURITÉ ANDROID. Une icône adaptative est rognée par le masque du
-constructeur (cercle, carré arrondi, goutte…). Seuls les 66 dp centraux sur 108
-sont garantis visibles, soit 61 % de la largeur. Un logo dessiné plein cadre se
-fait donc amputer sur la moitié des téléphones. Le premier plan est mis à
-l'échelle pour tenir dans cette zone.
+── LE SYSTÈME ──────────────────────────────────────────────────────────────────
+La marque existe en DEUX versions, parce qu'un sac noir disparaît sur un fond
+noir :
+  • `mark_on_light` — sac noir, F blanc : l'icône principale, sur fond clair ;
+  • `mark_on_dark`  — sac crème, F ink  : écran de démarrage, carte de partage.
+Deux fonctions plutôt qu'un paramètre qu'on oublie de passer.
+
+── ZONE DE SÉCURITÉ ANDROID ────────────────────────────────────────────────────
+Une icône adaptative est rognée par le masque du constructeur (cercle, carré
+arrondi, goutte…). Seuls les 66 dp centraux sur 108 sont garantis visibles, soit
+61 % de la largeur : un logo plein cadre se fait amputer sur la moitié des
+téléphones. Le premier plan est réduit pour tenir dans cette zone, et
+`verify_safe_zone()` le VÉRIFIE au lieu de le supposer.
 """
 
 from pathlib import Path
+
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'assets' / 'images'
+WEB = ROOT / 'landing' / 'img'
 FONT_PATH = (
     ROOT / 'node_modules' / '@expo-google-fonts' / 'unbounded' / '900Black' / 'Unbounded_900Black.ttf'
+)
+BODY_FONT = (
+    ROOT / 'node_modules' / '@expo-google-fonts' / 'manrope' / '500Medium' / 'Manrope_500Medium.ttf'
 )
 
 INK = (23, 20, 15)
 CREAM = (246, 242, 234)
 RED = (245, 49, 29)
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
 
-# Part de la largeur occupée par le F, et diamètre du point relatif à ce F.
-LETTER_RATIO = 0.60
-DOT_RATIO = 0.20
-# 66/108 : la fraction garantie visible d'une icône adaptative Android.
+# Proportions du sac, en fraction du côté du canevas. Plus HAUT que large :
+# c'est ce rapport qui distingue un sac de courses d'une mallette.
+BAG_W, BAG_H, BAG_CY = 0.40, 0.46, 0.56
+HANDLE_R = 0.26
+HANDLE_W = 0.048
+LETTER = 0.21
+SS = 4  # suréchantillonnage : on dessine 4x puis on réduit (bords nets)
 ANDROID_SAFE = 66 / 108
-# Échelle du premier plan : réglée pour REMPLIR cette zone sûre plutôt que de
-# s'y perdre au centre. Vérifiée par `npm run icons:check`.
 ANDROID_FG_SCALE = 0.92
 
 
-def draw_mark(size: int, fg, bg, scale: float = 1.0, dot=RED):
-    """Le F suivi de son point, centré optiquement sur l'ensemble."""
-    img = Image.new('RGBA', (size, size), (*bg, 255) if bg else (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
+def _draw_mark(size, bg, bag_colour, letter_colour, scale=1.0, punch_letter=False):
+    """Le sac et son F. `punch_letter` ÉVIDE la lettre au lieu de la colorer —
+    indispensable pour l'icône monochrome, que le système recolore en aplat."""
+    big = size * SS
+    canvas = Image.new('RGBA', (big, big), (*bg, 255) if bg else (0, 0, 0, 0))
 
-    font = ImageFont.truetype(str(FONT_PATH), int(size * LETTER_RATIO * scale))
+    layer = Image.new('RGBA', (big, big), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    cx, cy = big / 2, big * BAG_CY
+    w, h = big * BAG_W * scale, big * BAG_H * scale
+    top, bot = cy - h / 2, cy + h / 2
+
+    # L'anse d'abord : son ancrage disparaît ensuite sous le corps du sac.
+    hr = w * HANDLE_R
+    d.arc(
+        [cx - hr, top - hr * 1.25, cx + hr, top + hr * 0.75],
+        start=180,
+        end=360,
+        fill=(*bag_colour, 255),
+        width=max(1, int(big * HANDLE_W * scale)),
+    )
+    d.rounded_rectangle([cx - w / 2, top, cx + w / 2, bot], radius=w * 0.14, fill=(*bag_colour, 255))
+
+    font = ImageFont.truetype(str(FONT_PATH), max(1, int(big * LETTER * scale)))
     box = d.textbbox((0, 0), 'F', font=font)
-    lw, lh = box[2] - box[0], box[3] - box[1]
+    lx = cx - (box[2] - box[0]) / 2 - box[0]
+    ly = cy + big * 0.01 * scale - (box[3] - box[1]) / 2 - box[1]
 
-    dot_d = lh * DOT_RATIO
-    gap = dot_d * 0.55
-    # On centre le bloc COMPLET (lettre + espace + point), sinon l'ensemble
-    # penche à gauche alors que la lettre seule paraissait centrée.
-    total_w = lw + gap + dot_d
-    x = (size - total_w) / 2
-    y = (size - lh) / 2
+    if punch_letter:
+        hole = Image.new('L', (big, big), 255)
+        ImageDraw.Draw(hole).text((lx, ly), 'F', font=font, fill=0)
+        layer.putalpha(Image.composite(layer.split()[3], Image.new('L', (big, big), 0), hole))
+    else:
+        d.text((lx, ly), 'F', font=font, fill=(*letter_colour, 255))
 
-    d.text((x - box[0], y - box[1]), 'F', font=font, fill=(*fg, 255))
-    if dot is not None:
-        # Le point s'aligne sur la ligne de base du F, comme dans « Freedoo. ».
-        dot_top = y + lh - dot_d
-        d.ellipse([x + lw + gap, dot_top, x + lw + gap + dot_d, dot_top + dot_d], fill=(*dot, 255))
-    return img
+    canvas.alpha_composite(layer)
+    return canvas.resize((size, size), Image.LANCZOS)
 
 
-def landing_assets() -> None:
-    """Favicon + carte de partage de la landing, tirés de la même marque."""
-    web = ROOT / 'landing' / 'img'
-    web.mkdir(parents=True, exist_ok=True)
+def mark_on_light(size, bg=WHITE, scale=1.0, punch=False):
+    """Version principale : sac noir, F blanc. Pour fonds clairs."""
+    return _draw_mark(size, bg, BLACK, WHITE, scale, punch)
 
-    # Favicons. 32 px pour l'onglet, 180 px pour l'écran d'accueil iOS.
-    draw_mark(180, CREAM, INK).convert('RGB').save(web / 'favicon-180.png')
-    draw_mark(32, CREAM, INK).convert('RGB').save(web / 'favicon-32.png')
 
-    # Carte Open Graph : ce que voit le destinataire quand on lui envoie le lien
-    # sur WhatsApp ou LinkedIn. Sans elle, un lien nu, sans marque ni promesse.
+def mark_on_dark(size, bg=INK, scale=1.0):
+    """Version inverse : sac crème, F ink. Pour fonds sombres."""
+    return _draw_mark(size, bg, CREAM, INK, scale)
+
+
+def verify_safe_zone(img, label):
+    """La marque survit-elle au rognage d'un masque adaptatif ?"""
+    box = img.split()[3].getbbox()
+    size = img.size[0]
+    safe = size * ANDROID_SAFE
+    lo, hi = (size - safe) / 2, (size + safe) / 2
+    ok = bool(box) and box[0] >= lo and box[1] >= lo and box[2] <= hi and box[3] <= hi
+    # On rapporte la dimension LIMITANTE : le sac est plus haut que large, donc
+    # mesurer la largeur seule laisserait croire qu'il reste de la marge.
+    w_fill = (box[2] - box[0]) / safe * 100 if box else 0
+    h_fill = (box[3] - box[1]) / safe * 100 if box else 0
+    print(
+        f'  {label:32s} {"OK" if ok else "DÉBORDE — sera rognée"}  '
+        f'(zone sûre remplie à {max(w_fill, h_fill):.0f} %)'
+    )
+    return ok
+
+
+def app_icons():
+    mark_on_light(1024).convert('RGB').save(OUT / 'icon.png')
+
+    Image.new('RGB', (512, 512), WHITE).save(OUT / 'android-icon-background.png')
+    fg = mark_on_light(512, bg=None, scale=ANDROID_FG_SCALE)
+    fg.save(OUT / 'android-icon-foreground.png')
+
+    # Monochrome : le système applique UNE couleur. Le F doit donc être un trou,
+    # sinon il se noie dans l'aplat du sac.
+    mono = mark_on_light(432, bg=None, scale=ANDROID_FG_SCALE, punch=True)
+    mono.save(OUT / 'android-icon-monochrome.png')
+
+    mark_on_light(48).convert('RGB').save(OUT / 'favicon.png')
+    # Écran de démarrage : fond ink, donc version claire de la marque.
+    mark_on_dark(512, bg=None).save(OUT / 'splash-icon.png')
+
+    verify_safe_zone(fg, 'android-icon-foreground')
+    verify_safe_zone(mono, 'android-icon-monochrome')
+
+
+def landing_assets():
+    WEB.mkdir(parents=True, exist_ok=True)
+    mark_on_light(180).convert('RGB').save(WEB / 'favicon-180.png')
+    mark_on_light(32).convert('RGB').save(WEB / 'favicon-32.png')
+
     W, H = 1200, 630
     card = Image.new('RGB', (W, H), INK)
     d = ImageDraw.Draw(card)
 
-    title_font = ImageFont.truetype(str(FONT_PATH), 92)
-    box = d.textbbox((0, 0), 'Freedoo', font=title_font)
-    d.text((72 - box[0], 150 - box[1]), 'Freedoo', font=title_font, fill=CREAM)
-    dot_d = 26
+    title = ImageFont.truetype(str(FONT_PATH), 92)
+    box = d.textbbox((0, 0), 'Freedoo', font=title)
+    d.text((72 - box[0], 150 - box[1]), 'Freedoo', font=title, fill=CREAM)
+    dot = 26
     d.ellipse(
-        [72 + (box[2] - box[0]) + 14, 150 + (box[3] - box[1]) - dot_d,
-         72 + (box[2] - box[0]) + 14 + dot_d, 150 + (box[3] - box[1])],
+        [
+            72 + (box[2] - box[0]) + 14,
+            150 + (box[3] - box[1]) - dot,
+            72 + (box[2] - box[0]) + 14 + dot,
+            150 + (box[3] - box[1]),
+        ],
         fill=RED,
     )
 
-    body = ROOT / 'node_modules' / '@expo-google-fonts' / 'manrope' / '500Medium' / 'Manrope_500Medium.ttf'
-    sub_font = ImageFont.truetype(str(body), 34) if body.exists() else ImageFont.truetype(str(FONT_PATH), 28)
-    for i, line in enumerate([
-        'Les ventes flash de votre quartier,',
-        'livrées avant qu’elles ne s’envolent.',
-    ]):
-        d.text((74, 300 + i * 48), line, font=sub_font, fill=(196, 190, 180))
+    sub = ImageFont.truetype(str(BODY_FONT), 34) if BODY_FONT.exists() else title
+    for i, line in enumerate(
+        ['Les ventes flash de votre quartier,', 'livrées avant qu’elles ne s’envolent.']
+    ):
+        d.text((74, 300 + i * 48), line, font=sub, fill=(196, 190, 180))
 
-    # La pastille se dimensionne sur le texte mesuré : une largeur en dur
-    # déborde dès qu'on change un mot ou la police.
-    tag_font = ImageFont.truetype(str(body), 26) if body.exists() else sub_font
+    tag_font = ImageFont.truetype(str(BODY_FONT), 26) if BODY_FONT.exists() else sub
     label = 'Lancé à Toulouse'
     tb = d.textbbox((0, 0), label, font=tag_font)
-    pad_x, pad_y = 30, 16
-    x0, y0 = 74, 452
-    x1 = x0 + (tb[2] - tb[0]) + pad_x * 2
-    y1 = y0 + (tb[3] - tb[1]) + pad_y * 2
+    px, py, x0, y0 = 30, 16, 74, 452
+    x1, y1 = x0 + (tb[2] - tb[0]) + px * 2, y0 + (tb[3] - tb[1]) + py * 2
     d.rounded_rectangle([x0, y0, x1, y1], radius=(y1 - y0) / 2, fill=RED)
-    d.text((x0 + pad_x - tb[0], y0 + pad_y - tb[1]), label, font=tag_font, fill=CREAM)
+    d.text((x0 + px - tb[0], y0 + py - tb[1]), label, font=tag_font, fill=CREAM)
 
-    # La capture réelle à droite : la carte montre le produit, pas une promesse.
-    shot = ROOT / 'landing' / 'img' / 'accueil.jpg'
+    shot = WEB / 'accueil.jpg'
     if shot.exists():
         phone = Image.open(shot).convert('RGB')
-        # Tient entièrement dans la carte, centré : une capture tronquée au ras
-        # du bord se lit comme un bug d'export, pas comme un parti pris.
         target_h = H - 120
         ratio = target_h / phone.size[1]
         phone = phone.resize((int(phone.size[0] * ratio), target_h), Image.LANCZOS)
         card.paste(phone, (W - phone.size[0] - 96, (H - target_h) // 2))
 
-    card.save(web / 'og-card.png')
-    for n in ('favicon-32.png', 'favicon-180.png', 'og-card.png'):
-        f = web / n
-        print(f'  landing/img/{n:22s} {Image.open(f).size[0]}x{Image.open(f).size[1]}  {f.stat().st_size // 1024} Ko')
+    card.save(WEB / 'og-card.png')
 
 
 def main() -> None:
     if not FONT_PATH.exists():
         raise SystemExit(f'Police introuvable : {FONT_PATH}\nLancez `npm install` d’abord.')
-
-    # Icône principale : plein cadre, l'OS applique son propre masque.
-    draw_mark(1024, CREAM, INK).convert('RGB').save(OUT / 'icon.png')
-
-    # Android adaptatif : fond et premier plan séparés, premier plan réduit pour
-    # survivre au rognage du masque.
-    Image.new('RGB', (512, 512), INK).save(OUT / 'android-icon-background.png')
-    draw_mark(512, CREAM, None, scale=ANDROID_FG_SCALE).save(OUT / 'android-icon-foreground.png')
-
-    # Icône monochrome (thème Material You) : une silhouette, pas de couleur —
-    # le système la recolore. Le point rouge disparaîtrait donc en aplat.
-    draw_mark(432, (255, 255, 255), None, scale=ANDROID_FG_SCALE, dot=(255, 255, 255)).save(
-        OUT / 'android-icon-monochrome.png'
-    )
-
-    draw_mark(48, CREAM, INK).convert('RGB').save(OUT / 'favicon.png')
-
-    # Splash : le logo seul sur fond transparent, Expo pose le fond ink.
-    draw_mark(512, CREAM, None).save(OUT / 'splash-icon.png')
-
-    for name in (
-        'icon.png',
-        'android-icon-background.png',
-        'android-icon-foreground.png',
-        'android-icon-monochrome.png',
-        'favicon.png',
-        'splash-icon.png',
-    ):
-        p = OUT / name
-        print(f'  {name:32s} {Image.open(p).size[0]}x{Image.open(p).size[1]}  {p.stat().st_size // 1024} Ko')
-
+    app_icons()
     landing_assets()
+    print()
+    for p in sorted(OUT.glob('*.png')) + sorted(WEB.glob('favicon*.png')) + [WEB / 'og-card.png']:
+        im = Image.open(p)
+        print(f'  {p.name:32s} {im.size[0]}x{im.size[1]}  {p.stat().st_size // 1024} Ko')
 
 
 if __name__ == '__main__':
