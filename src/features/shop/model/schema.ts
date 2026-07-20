@@ -116,6 +116,20 @@ export const MerchantApplicationSchema = z.object({
 });
 export type MerchantApplication = z.infer<typeof MerchantApplicationSchema>;
 
+/* ---- Fidélité ---- */
+
+/** Un bon d'achat obtenu en échangeant des points. */
+export const VoucherSchema = z.object({
+  id: z.string().min(1),
+  /** Code présenté au commerçant — lisible à voix haute, sans caractères ambigus. */
+  code: z.string().min(4),
+  /** Valeur en euros. */
+  value: z.number().positive(),
+  createdAt: z.number().int().positive(),
+  usedAt: z.number().int().positive().nullable(),
+});
+export type Voucher = z.infer<typeof VoucherSchema>;
+
 /* ---- Messagerie ---- */
 
 /**
@@ -164,6 +178,7 @@ export const PersistedShopSchema = z.object({
   addresses: z.array(AddressSchema).default([]),
   /** Demande envoyée localement, en attendant un back-end pour la recevoir. */
   merchantApplication: MerchantApplicationSchema.nullable().default(null),
+  vouchers: z.array(VoucherSchema).default([]),
   conversations: z.array(ConversationSchema).default([]),
   messages: z.array(ChatMessageSchema).default([]),
   // `.default()` et non un champ requis : l'état déjà stocké sur les téléphones

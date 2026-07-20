@@ -19,10 +19,26 @@ import {
   type Deal,
   type MerchantApplication,
   type Order,
+  type Voucher,
 } from './schema';
 
 const DELIVERY_FEE = 0; // Freedoo : livraison offerte pour l'utilisateur.
 const POINTS_PER_EURO = 1;
+
+/** Palier de récompense : 200 points = un bon d'achat de 5 €. */
+export const REWARD_POINTS = 200;
+export const REWARD_VALUE_EUR = 5;
+
+/** Code lisible à voix haute : ni 0/O ni 1/I, qu'on confond au téléphone. */
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function makeCode(): string {
+  let out = '';
+  for (let i = 0; i < 8; i++) {
+    out += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+    if (i === 3) out += '-';
+  }
+  return out;
+}
 
 export type CartLine = { deal: Deal; qty: number; lineTotal: number };
 
@@ -35,6 +51,7 @@ type ShopState = {
   biometricEnabled: boolean;
   addresses: Address[];
   merchantApplication: MerchantApplication | null;
+  vouchers: Voucher[];
   /** Position de l'utilisateur — éphémère, jamais persistée (elle change). */
   userCoord: Coord | null;
   conversations: Conversation[];
@@ -56,6 +73,11 @@ type ShopState = {
   submitMerchantApplication: (application: MerchantApplication) => void;
   setUserCoord: (coord: Coord | null) => void;
 
+  /** Échange REWARD_POINTS contre un bon d'achat. Refuse si le solde est court. */
+  claimReward: () => { ok: false } | { ok: true; voucher: Voucher };
+  /** Offre des points à un proche. Renvoie le code à partager. */
+  sharePoints: (amount: number) => { ok: false } | { ok: true; code: string };
+
   sendMessage: (conversationId: string, body: string) => void;
   receiveMessage: (conversationId: string, senderId: string, body: string) => void;
   markConversationRead: (conversationId: string) => void;
@@ -74,6 +96,7 @@ export const useShopStore = create<ShopState>()(
       biometricEnabled: false,
       addresses: [],
       merchantApplication: null,
+      vouchers: [],
       userCoord: null,
       conversations: CHAT_SEED.conversations,
       messages: CHAT_SEED.messages,
@@ -148,6 +171,32 @@ export const useShopStore = create<ShopState>()(
       submitMerchantApplication: (application) => set({ merchantApplication: application }),
 
       setUserCoord: (coord) => set({ userCoord: coord }),
+
+      claimReward: () => {
+        if (get().points < REWARD_POINTS) return { ok: false as const };
+        const voucher: Voucher = {
+          id: makeId(),
+          code: makeCode(),
+          value: REWARD_VALUE_EUR,
+          createdAt: Date.now(),
+          usedAt: null,
+        };
+        set((state) => ({
+          points: state.points - REWARD_POINTS,
+          vouchers: [voucher, ...state.vouchers],
+        }));
+        return { ok: true as const, voucher };
+      },
+
+      sharePoints: (amount) => {
+        // On ne crée pas de points à partir de rien, et on n'en retire pas
+        // plus qu'il n'y en a : le solde est la seule source de vérité.
+        if (!Number.isInteger(amount) || amount <= 0 || amount > get().points) {
+          return { ok: false as const };
+        }
+        set((state) => ({ points: state.points - amount }));
+        return { ok: true as const, code: makeCode() };
+      },
 
       sendMessage: (conversationId, body) => {
         const text = body.trim();
@@ -246,6 +295,7 @@ export const useShopStore = create<ShopState>()(
         biometricEnabled: s.biometricEnabled,
         addresses: s.addresses,
         merchantApplication: s.merchantApplication,
+        vouchers: s.vouchers,
         conversations: s.conversations,
         messages: s.messages,
       }),
@@ -274,6 +324,8 @@ export const selectCart = (s: ShopState) => s.cart;
 export const selectFavorites = (s: ShopState) => s.favorites;
 export const selectOrders = (s: ShopState) => s.orders;
 export const selectPoints = (s: ShopState) => s.points;
+export const selectVouchers = (s: ShopState) => s.vouchers;
+export const selectUnusedVouchers = (s: ShopState) => s.vouchers.filter((v) => v.usedAt === null);
 
 export const selectCartCount = (s: ShopState) => s.cart.reduce((n, i) => n + i.qty, 0);
 export const selectCartLines = (s: ShopState) => cartLines(s.cart);

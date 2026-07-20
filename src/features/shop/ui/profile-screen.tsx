@@ -1,15 +1,14 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import type { ReactNode } from 'react';
-import { Pressable, ScrollView, Share, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Alert, Pressable, ScrollView, Share, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
-import { selectPoints, useShopStore } from '../model/store';
-
-const REWARD_TARGET = 200;
+import { REWARD_POINTS, selectPoints, selectUnusedVouchers, useShopStore } from '../model/store';
+import { SharePointsSheet } from './components/share-points-sheet';
 
 function Row({
   icon,
@@ -51,8 +50,13 @@ function Row({
 export function ProfileScreen() {
   const router = useRouter();
   const points = useShopStore(selectPoints);
-  const remaining = Math.max(0, REWARD_TARGET - points);
-  const pct = Math.min(100, Math.round((points / REWARD_TARGET) * 100));
+  const vouchers = useShopStore(selectUnusedVouchers);
+  const claim = useShopStore((s) => s.claimReward);
+  const [shareOpen, setShareOpen] = useState(false);
+
+  const remaining = Math.max(0, REWARD_POINTS - points);
+  const pct = Math.min(100, Math.round((points / REWARD_POINTS) * 100));
+  const canClaim = points >= REWARD_POINTS;
 
   const invite = async () => {
     try {
@@ -117,10 +121,52 @@ export function ProfileScreen() {
                 : 'Un bon d’achat de 5€ vous attend 🎉'}
             </AppText>
           </View>
-          <Pressable className="mt-1 flex-row items-center justify-center gap-2 rounded-control bg-surface py-3 active:opacity-90">
+          {/* À 200 points la carte félicitait sans rien proposer : le palier
+              s'échange maintenant vraiment contre un bon d'achat. */}
+          {canClaim ? (
+            <Pressable
+              testID="claim-reward"
+              accessibilityRole="button"
+              accessibilityLabel={`Échanger ${REWARD_POINTS} points contre un bon d’achat`}
+              onPress={() => {
+                const r = claim();
+                if (r.ok) {
+                  Alert.alert(
+                    'Bon d’achat obtenu 🎉',
+                    `Votre code : ${r.voucher.code}
+Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
+                  );
+                }
+              }}
+              className="mt-1 flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-3 active:bg-brand-600"
+            >
+              <Feather name="gift" size={15} color={colors.inkInverse} />
+              <AppText className="font-sans-bold text-ink-inverse">
+                Échanger contre un bon de 5€
+              </AppText>
+            </Pressable>
+          ) : null}
+
+          <Pressable
+            testID="share-points"
+            accessibilityRole="button"
+            accessibilityLabel="Offrir des points à un proche"
+            onPress={() => setShareOpen(true)}
+            className="mt-1 flex-row items-center justify-center gap-2 rounded-control bg-surface py-3 active:opacity-90"
+          >
             <Feather name="share-2" size={15} color={colors.ink} />
             <AppText className="font-sans-bold text-ink">Partager mes points</AppText>
           </Pressable>
+
+          {vouchers.length > 0 ? (
+            <View className="mt-1 flex-row items-center gap-2 rounded-control bg-ink-inverse/10 px-3 py-2.5">
+              <Feather name="tag" size={14} color={colors.brand500} />
+              <AppText className="flex-1 text-xs text-ink-inverse">
+                {vouchers.length} bon{vouchers.length > 1 ? 's' : ''} d’achat disponible
+                {vouchers.length > 1 ? 's' : ''} · {vouchers[0]?.code}
+              </AppText>
+            </View>
+          ) : null}
         </View>
 
         {/* Invite — bouton simple ; le bouton signature vit désormais sur les fiches produit. */}
@@ -188,6 +234,8 @@ export function ProfileScreen() {
           Freedoo v0.1 · Conçu par PROGIX
         </AppText>
       </ScrollView>
+
+      <SharePointsSheet visible={shareOpen} onClose={() => setShareOpen(false)} />
     </Screen>
   );
 }
