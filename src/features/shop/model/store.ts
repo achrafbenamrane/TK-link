@@ -83,7 +83,7 @@ type ShopState = {
   markConversationRead: (conversationId: string) => void;
 
   /** Turn the cart into an order, award points, empty the cart. */
-  checkout: () => { ok: false } | { ok: true; orderId: string };
+  checkout: (addressId?: string | null) => { ok: false } | { ok: true; orderId: string };
 };
 
 export const useShopStore = create<ShopState>()(
@@ -253,7 +253,7 @@ export const useShopStore = create<ShopState>()(
             : [dealId, ...state.favorites],
         })),
 
-      checkout: () => {
+      checkout: (addressId = null) => {
         const { cart } = get();
         const lines = cartLines(cart);
         if (lines.length === 0) return { ok: false as const };
@@ -263,6 +263,7 @@ export const useShopStore = create<ShopState>()(
         const order: Order = {
           id: makeId(),
           createdAt: Date.now(),
+          addressId,
           items: lines.map((l) => ({
             dealId: l.deal.id,
             title: l.deal.title,

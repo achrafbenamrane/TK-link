@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, Button } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
+import { authenticate } from '../lib/biometrics';
 import { cartLines, DELIVERY_FEE_EUR, selectCart, useShopStore } from '../model/store';
 import { QtyStepper } from './components/qty-stepper';
 
@@ -21,11 +22,28 @@ export function CartScreen() {
   const decrement = useShopStore((s) => s.decrement);
   const removeFromCart = useShopStore((s) => s.removeFromCart);
   const checkout = useShopStore((s) => s.checkout);
+  const addresses = useShopStore((s) => s.addresses);
+  const biometricEnabled = useShopStore((s) => s.biometricEnabled);
 
   const points = Math.round(subtotal);
+  // L'adresse par défaut est la cible de livraison ; sans adresse, on ne peut
+  // pas commander — une app de livraison doit savoir où aller.
+  const address = addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
 
-  const handleCheckout = () => {
-    const res = checkout();
+  const handleCheckout = async () => {
+    if (!address) {
+      router.push('/adresses');
+      return;
+    }
+
+    // L'écran promet « validation par empreinte » : tant que l'option est
+    // active, on la tient vraiment plutôt que de l'afficher.
+    if (biometricEnabled) {
+      const auth = await authenticate('Confirmez votre commande');
+      if (!auth.ok && auth.reason !== 'indisponible') return;
+    }
+
+    const res = checkout(address.id);
     if (res.ok) router.replace('/commandes');
   };
 
@@ -124,6 +142,42 @@ export function CartScreen() {
         className="absolute inset-x-0 bottom-0 gap-3 rounded-t-card border-t border-line bg-surface px-5 pt-4"
         style={{ paddingBottom: insets.bottom + 12 }}
       >
+        <Pressable
+          testID="cart-address"
+          accessibilityRole="button"
+          accessibilityLabel={
+            address ? `Livrer à ${address.label}, modifier` : 'Ajouter une adresse de livraison'
+          }
+          onPress={() => router.push('/adresses')}
+          className="flex-row items-center gap-3 rounded-control border border-line bg-surface-muted px-3 py-2.5"
+        >
+          <Feather name="map-pin" size={15} color={address ? colors.brand500 : colors.inkFaint} />
+          <View className="flex-1">
+            {address ? (
+              <>
+                <AppText className="font-sans-bold text-xs text-ink">
+                  Livrer à {address.label}
+                </AppText>
+                <AppText variant="caption" className="text-xs text-ink-faint" numberOfLines={1}>
+                  {address.street}, {address.zip} {address.city}
+                </AppText>
+              </>
+            ) : (
+              <>
+                <AppText className="font-sans-bold text-xs text-brand-600">
+                  Adresse de livraison manquante
+                </AppText>
+                <AppText variant="caption" className="text-xs text-ink-faint">
+                  Ajoutez une adresse pour être livré.
+                </AppText>
+              </>
+            )}
+          </View>
+          <AppText variant="caption" className="font-sans-semibold text-xs text-ink-muted">
+            {address ? 'Changer' : 'Ajouter'}
+          </AppText>
+        </Pressable>
+
         <View className="gap-1.5">
           <View className="flex-row items-center justify-between">
             <AppText variant="caption" className="text-ink-muted">
@@ -154,13 +208,15 @@ export function CartScreen() {
         >
           <Feather name="lock" size={16} color={colors.inkInverse} />
           <AppText className="font-sans-bold text-ink-inverse">
-            Payer · {subtotal.toFixed(2)}€
+            {address ? `Payer · ${subtotal.toFixed(2)}€` : 'Choisir une adresse'}
           </AppText>
         </Pressable>
         <View className="flex-row items-center justify-center gap-1.5">
           <Feather name="shield" size={12} color={colors.inkFaint} />
           <AppText variant="caption" className="text-xs text-ink-faint">
-            Paiement sécurisé · validation par empreinte
+            {biometricEnabled
+              ? 'Paiement sécurisé · validation par empreinte'
+              : 'Paiement sécurisé'}
           </AppText>
         </View>
       </View>

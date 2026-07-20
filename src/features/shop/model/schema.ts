@@ -72,6 +72,12 @@ export const OrderLineSchema = z.object({
 export const OrderSchema = z.object({
   id: z.string().min(1),
   createdAt: z.number().int().positive(),
+  /**
+   * Où livrer. `.default(null)` : les commandes déjà stockées sur les
+   * téléphones n'ont pas cette clé, et un champ requis ferait échouer la
+   * validation — donc effacerait tout l'historique au prochain lancement.
+   */
+  addressId: z.string().nullable().default(null),
   items: z.array(OrderLineSchema),
   total: z.number(),
   deliveryFee: z.number(),

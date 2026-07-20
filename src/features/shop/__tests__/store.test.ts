@@ -57,3 +57,32 @@ describe('shop store', () => {
     expect(useShopStore.getState().orders).toHaveLength(0);
   });
 });
+
+describe('checkout et adresse de livraison', () => {
+  const DRAFT = { label: 'Maison', street: '12 rue des Filatiers', zip: '31000', city: 'Toulouse' };
+
+  beforeEach(() => {
+    useShopStore.setState({ cart: [], orders: [], addresses: [], points: 0 });
+  });
+
+  it('retient l’adresse de livraison sur la commande', () => {
+    const addressId = useShopStore.getState().addAddress(DRAFT);
+    useShopStore.getState().addToCart('d_cote');
+    const res = useShopStore.getState().checkout(addressId);
+
+    expect(res.ok).toBe(true);
+    expect(useShopStore.getState().orders[0]?.addressId).toBe(addressId);
+  });
+
+  // Les commandes déjà stockées n'ont pas ce champ : il doit rester facultatif
+  // côté modèle, sinon la validation efface tout l'historique au lancement.
+  it('accepte une commande sans adresse au niveau du modèle', () => {
+    useShopStore.getState().addToCart('d_cote');
+    expect(useShopStore.getState().checkout().ok).toBe(true);
+    expect(useShopStore.getState().orders[0]?.addressId).toBeNull();
+  });
+
+  it('refuse toujours un panier vide', () => {
+    expect(useShopStore.getState().checkout('adr_1').ok).toBe(false);
+  });
+});
