@@ -1,7 +1,44 @@
-import { REWARD_POINTS, REWARD_VALUE_EUR, useShopStore } from '../model/store';
+import {
+  ASSUMED_COMMISSION_RATE,
+  netMarginRate,
+  rewardRate,
+  REWARD_POINTS,
+  REWARD_VALUE_EUR,
+} from '../model/loyalty';
+import { useShopStore } from '../model/store';
 
 beforeEach(() => {
   useShopStore.setState({ points: 0, vouchers: [] });
+});
+
+/**
+ * Le garde-fou économique. Ces tests ne vérifient pas du code : ils vérifient
+ * une décision d'affaires. Baisser le seuil ou gonfler le bon fait échouer la
+ * suite — c'est voulu, ça force à revoir la commission d'abord.
+ */
+describe('économie du programme', () => {
+  it('rend moins que ce que la commission encaisse', () => {
+    expect(rewardRate()).toBeLessThan(ASSUMED_COMMISSION_RATE);
+  });
+
+  it('laisse une marge positive une fois la fidélité payée', () => {
+    expect(netMarginRate()).toBeGreaterThan(0);
+  });
+
+  // Le programme ne doit pas dépendre des points oubliés : s'il est rentable
+  // à 100 % d'utilisation, le partage entre proches ne coûte rien de plus.
+  it('reste rentable si 100 % des points sont utilisés', () => {
+    const revenue = 10_000;
+    const pointsIssued = revenue * 1; // POINTS_PER_EURO
+    const vouchersIfAllRedeemed = Math.floor(pointsIssued / REWARD_POINTS) * REWARD_VALUE_EUR;
+    expect(vouchersIfAllRedeemed).toBeLessThan(revenue * ASSUMED_COMMISSION_RATE);
+  });
+
+  it('garde un seuil atteignable pour un panier de ventes flash', () => {
+    // Au-delà de ~300 € de dépense avant la moindre récompense, le client
+    // décroche : le programme cesse de fidéliser.
+    expect(REWARD_POINTS).toBeLessThanOrEqual(300);
+  });
 });
 
 describe('claimReward', () => {

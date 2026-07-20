@@ -7,7 +7,13 @@ import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
-import { REWARD_POINTS, selectPoints, selectUnusedVouchers, useShopStore } from '../model/store';
+import {
+  REWARD_POINTS,
+  REWARD_VALUE_EUR,
+  selectPoints,
+  selectUnusedVouchers,
+  useShopStore,
+} from '../model/store';
 import { SharePointsSheet } from './components/share-points-sheet';
 
 function Row({
@@ -117,8 +123,8 @@ export function ProfileScreen() {
             </View>
             <AppText className="text-xs text-ink-inverse/70">
               {remaining > 0
-                ? `Encore ${remaining} points pour un bon d’achat de 5€`
-                : 'Un bon d’achat de 5€ vous attend 🎉'}
+                ? `Encore ${remaining} points pour un bon d’achat de ${REWARD_VALUE_EUR}€`
+                : `Un bon d’achat de ${REWARD_VALUE_EUR}€ vous attend 🎉`}
             </AppText>
           </View>
           {/* À 200 points la carte félicitait sans rien proposer : le palier
@@ -142,7 +148,7 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
             >
               <Feather name="gift" size={15} color={colors.inkInverse} />
               <AppText className="font-sans-bold text-ink-inverse">
-                Échanger contre un bon de 5€
+                Échanger contre un bon de {REWARD_VALUE_EUR}€
               </AppText>
             </Pressable>
           ) : null}

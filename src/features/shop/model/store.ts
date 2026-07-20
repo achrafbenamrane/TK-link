@@ -6,6 +6,7 @@ import { makeId } from '@/shared/lib/id';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
 import { getDeal } from './catalog';
+import { POINTS_PER_EURO, REWARD_POINTS, REWARD_VALUE_EUR } from './loyalty';
 import { CHAT_SEED } from './chat-seed';
 import {
   ME,
@@ -23,11 +24,10 @@ import {
 } from './schema';
 
 const DELIVERY_FEE = 0; // Freedoo : livraison offerte pour l'utilisateur.
-const POINTS_PER_EURO = 1;
 
-/** Palier de récompense : 200 points = un bon d'achat de 5 €. */
-export const REWARD_POINTS = 200;
-export const REWARD_VALUE_EUR = 5;
+// L'économie du programme vit dans model/loyalty.ts — un seul endroit à régler
+// avec le client, et un test qui refuse un taux plus cher que la commission.
+export { POINTS_PER_EURO, REWARD_POINTS, REWARD_VALUE_EUR } from './loyalty';
 
 /** Code lisible à voix haute : ni 0/O ni 1/I, qu'on confond au téléphone. */
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

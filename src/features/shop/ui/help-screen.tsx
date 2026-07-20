@@ -20,7 +20,7 @@ const FAQ = [
   },
   {
     q: 'Comment fonctionnent les points de fidélité ?',
-    a: 'Chaque euro dépensé vous rapporte un point. À 200 points, vous recevez un bon d’achat de 5 €. Vos points sont partageables avec vos proches.',
+    a: 'Chaque euro dépensé vous rapporte un point. À 200 points, vous recevez un bon d’achat de 2 €. Vos points sont partageables avec vos proches.',
   },
   {
     q: 'Qui me livre ?',
