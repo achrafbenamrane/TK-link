@@ -83,15 +83,15 @@ export const MERCHANTS: Record<string, Merchant> = {
 
 export const DEALS: Deal[] = [
   {
-    id: 'd_gigot',
-    title: 'Gigot d’agneau entier',
+    id: 'd_cote',
+    title: 'Côte de bœuf maturée',
     merchantId: 'm_hammamet',
     category: 'courses',
     emoji: '🥩',
     tint: '#F7E0D6',
     price: 24.9,
     oldPrice: 34.9,
-    unit: 'la pièce · 2,2–3,4 kg',
+    unit: 'la pièce · 1,2–1,6 kg',
     rating: 5.0,
     stockTotal: 50,
     stockLeft: 25,
@@ -234,4 +234,4 @@ export function dealsByCategory(category: Category | null): Deal[] {
 }
 
 /** The hero flash sale surfaced at the top of the feed. */
-export const FEATURED_DEAL_ID = 'd_gigot';
+export const FEATURED_DEAL_ID = 'd_cote';

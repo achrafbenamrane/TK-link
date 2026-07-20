@@ -17,7 +17,7 @@
  * commerçants (ou une banque sous licence) avant publication sur les stores.
  */
 export const PRODUCT_IMAGES: Record<string, number | undefined> = {
-  d_gigot: require('../../../../assets/images/products/d_gigot.jpg'),
+  d_cote: require('../../../../assets/images/products/d_cote.jpg'),
   d_cassoulet: require('../../../../assets/images/products/d_cassoulet.jpg'),
   d_viennoiseries: require('../../../../assets/images/products/d_viennoiseries.jpg'),
   d_legumes: require('../../../../assets/images/products/d_legumes.jpg'),

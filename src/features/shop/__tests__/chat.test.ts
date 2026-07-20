@@ -40,7 +40,7 @@ describe('sendMessage', () => {
 
 describe('unreadCount', () => {
   it('counts only what the other side sent after the last read', () => {
-    useShopStore.getState().receiveMessage(CONV, 'm_hammamet', 'Votre gigot est prêt');
+    useShopStore.getState().receiveMessage(CONV, 'm_hammamet', 'Votre côte de bœuf est prête');
     expect(unreadCount(useShopStore.getState(), CONV)).toBe(1);
   });
 

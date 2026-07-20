@@ -8,8 +8,8 @@ describe('shop store', () => {
 
   it('adds items and increments quantity for the same deal', () => {
     const { addToCart } = useShopStore.getState();
-    addToCart('d_gigot');
-    addToCart('d_gigot');
+    addToCart('d_cote');
+    addToCart('d_cote');
     addToCart('d_pizza');
     const state = useShopStore.getState();
     expect(state.cart).toHaveLength(2);
@@ -18,14 +18,14 @@ describe('shop store', () => {
 
   it('decrements and drops the line when quantity hits zero', () => {
     const { addToCart, decrement } = useShopStore.getState();
-    addToCart('d_gigot');
-    decrement('d_gigot');
+    addToCart('d_cote');
+    decrement('d_cote');
     expect(useShopStore.getState().cart).toHaveLength(0);
   });
 
   it('computes the subtotal from catalog prices', () => {
-    useShopStore.getState().addToCart('d_gigot', 2);
-    const price = getDeal('d_gigot')!.price;
+    useShopStore.getState().addToCart('d_cote', 2);
+    const price = getDeal('d_cote')!.price;
     expect(selectCartSubtotal(useShopStore.getState())).toBeCloseTo(price * 2);
   });
 
@@ -39,7 +39,7 @@ describe('shop store', () => {
 
   it('checkout creates an order, awards points and empties the cart', () => {
     const { addToCart, checkout } = useShopStore.getState();
-    addToCart('d_gigot', 2);
+    addToCart('d_cote', 2);
     const pointsBefore = useShopStore.getState().points;
 
     const result = checkout();
@@ -48,7 +48,7 @@ describe('shop store', () => {
     const state = useShopStore.getState();
     expect(state.cart).toHaveLength(0);
     expect(state.orders).toHaveLength(1);
-    expect(state.orders[0]?.items[0]?.dealId).toBe('d_gigot');
+    expect(state.orders[0]?.items[0]?.dealId).toBe('d_cote');
     expect(state.points).toBeGreaterThan(pointsBefore);
   });
 

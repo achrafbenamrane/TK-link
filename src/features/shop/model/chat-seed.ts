@@ -22,7 +22,7 @@ export const CHAT_SEED: { conversations: Conversation[]; messages: ChatMessage[]
       id: 's1',
       conversation_id: 'c_hammamet',
       sender_id: 'm_hammamet',
-      body: 'Bonjour ! Votre gigot est réservé, je le prépare à la découpe.',
+      body: 'Bonjour ! Votre côte de bœuf est réservée, je la prépare à la découpe.',
       created_at: minutesAgo(48),
     },
     {
