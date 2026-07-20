@@ -50,3 +50,8 @@ reports/
 !.env.example
 ._*
 .DS_Store
+
+# Captures brutes envoyées depuis le téléphone (WhatsApp, etc.).
+# Les visuels réellement utilisés sont traités et versionnés dans landing/img/.
+# Ce dossier reste local : c'est un dépôt de travail, pas un asset du produit.
+assets/screenshots mobile app/
