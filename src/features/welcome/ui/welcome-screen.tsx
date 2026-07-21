@@ -10,7 +10,7 @@ import { AppText } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { useWelcomeStore } from '../model/store';
-import { AnimatedLogo } from './animated-logo';
+import { LogoHero } from './logo-hero';
 
 const INK = '#17140F';
 
@@ -59,7 +59,7 @@ export function WelcomeScreen() {
       {/* Fond ink → icônes de statut claires, sinon elles disparaissent. */}
       <StatusBar style="light" />
       <View className="flex-1 items-center justify-center px-8">
-        <AnimatedLogo size={128} variant="onDark" onSettled={() => setRevealed(true)} />
+        <LogoHero onSettled={() => setRevealed(true)} />
 
         {revealed ? (
           <Animated.View entering={FadeInDown.duration(500)} className="mt-10 items-center">
