@@ -26,3 +26,14 @@ export const PRODUCT_IMAGES: Record<string, number | undefined> = {
   d_fruits: require('../../../../assets/images/products/d_fruits.jpg'),
   d_brunch: require('../../../../assets/images/products/d_brunch.jpg'),
 };
+
+/**
+ * Réservoir d'images pour les jeux : chaque offre ayant un visuel devient une
+ * carte. Une nouvelle offre avec image apparaît donc automatiquement dans les
+ * jeux, sans configuration — c'est le lien « offres du commerçant → cartes ».
+ */
+export function dealImagePool(): { id: string; source: number }[] {
+  return Object.entries(PRODUCT_IMAGES)
+    .filter(([, src]) => src != null)
+    .map(([id, src]) => ({ id, source: src as number }));
+}

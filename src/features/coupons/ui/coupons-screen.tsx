@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
@@ -18,18 +19,10 @@ const FAILURE_FR: Record<RedeemFailure, string> = {
   cap_reached: 'Ce code a atteint sa limite d’utilisations.',
 };
 
-/** Les lots possibles d'un jeu gagné. Les jeux ne sont pas encore développés :
- *  cette table sert à la fois de démo et de contrat pour le jour où ils le seront. */
-const GAME_REWARDS = [
-  { discount: { kind: 'amount' as const, cents: 200 }, label: 'Victoire au quiz' },
-  { discount: { kind: 'percent' as const, pct: 10 }, label: 'Roue de la chance' },
-  { discount: { kind: 'amount' as const, cents: 500 }, label: 'Jackpot du jour' },
-];
-
 export function CouponsScreen() {
+  const router = useRouter();
   const wallet = useCouponsStore(selectWallet);
   const redeemPromo = useCouponsStore((s) => s.redeemPromo);
-  const grant = useCouponsStore((s) => s.grantEarnedCoupon);
 
   const [code, setCode] = useState('');
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -45,14 +38,6 @@ export function CouponsScreen() {
     } else {
       setFeedback({ ok: false, msg: FAILURE_FR[res.reason] });
     }
-  };
-
-  // DÉMO — tant que les jeux n'existent pas, on simule une victoire pour montrer
-  // la source « coupon gagné ». À remplacer par l'appel réel du jeu.
-  const simulateWin = () => {
-    const reward = GAME_REWARDS[Math.floor(Math.random() * GAME_REWARDS.length)]!;
-    grant(reward.discount, reward.label);
-    setFeedback({ ok: true, msg: `${reward.label} — nouveau coupon gagné !` });
   };
 
   return (
@@ -131,11 +116,11 @@ export function CouponsScreen() {
             ) : null}
           </View>
 
-          {/* SOURCE 1 — jouer pour gagner (jeux à venir) */}
+          {/* SOURCE 1 — jouer pour gagner : ouvre les jeux */}
           <Pressable
             testID="coupon-play"
             accessibilityRole="button"
-            onPress={simulateWin}
+            onPress={() => router.push('/jeux')}
             className="mb-5 flex-row items-center gap-3 rounded-card bg-ink p-4 active:opacity-90"
           >
             <View className="h-11 w-11 items-center justify-center rounded-pill bg-brand-500">
@@ -146,7 +131,7 @@ export function CouponsScreen() {
                 Jouez, gagnez des coupons
               </AppText>
               <AppText variant="caption" className="text-ink-inverse/60">
-                Démo : simuler une victoire pour recevoir un coupon.
+                Cartes mémoire, quiz… un coupon à gagner.
               </AppText>
             </View>
             <Feather name="chevron-right" size={20} color={colors.inkInverse} />

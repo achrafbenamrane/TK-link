@@ -17,3 +17,4 @@ export { HelpScreen } from './ui/help-screen';
 export { ChatListScreen } from './ui/chat-list-screen';
 export { ChatThreadScreen } from './ui/chat-thread-screen';
 export { useShopStore, selectCartCount, selectTotalUnread } from './model/store';
+export { dealImagePool } from './model/product-images';
