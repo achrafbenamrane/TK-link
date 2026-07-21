@@ -1,6 +1,6 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Alert, Pressable, ScrollView, Share, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
@@ -11,7 +11,7 @@ import {
   REWARD_POINTS,
   REWARD_VALUE_EUR,
   selectPoints,
-  selectUnusedVouchers,
+  selectVouchers,
   useShopStore,
 } from '../model/store';
 import { SharePointsSheet } from './components/share-points-sheet';
@@ -56,7 +56,11 @@ function Row({
 export function ProfileScreen() {
   const router = useRouter();
   const points = useShopStore(selectPoints);
-  const vouchers = useShopStore(selectUnusedVouchers);
+  // On s'abonne à la référence STABLE (`s.vouchers`) puis on filtre en mémo :
+  // un sélecteur qui renvoie `.filter(...)` crée un nouveau tableau à chaque
+  // rendu, ce que Zustand 5 lit comme un changement → boucle infinie, crash.
+  const allVouchers = useShopStore(selectVouchers);
+  const vouchers = useMemo(() => allVouchers.filter((v) => v.usedAt === null), [allVouchers]);
   const claim = useShopStore((s) => s.claimReward);
   const [shareOpen, setShareOpen] = useState(false);
 

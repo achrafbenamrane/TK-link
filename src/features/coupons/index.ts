@@ -4,6 +4,6 @@
  */
 export { CouponsScreen } from './ui/coupons-screen';
 export { AdminCouponsScreen } from './ui/admin-coupons-screen';
-export { useCouponsStore, selectAvailableCoupons } from './model/store';
+export { useCouponsStore, selectWallet, selectAvailableCoupons } from './model/store';
 export type { HeldCoupon, Discount } from './model/schema';
 export { discountAmountCents, formatDiscount } from './lib/coupons';
