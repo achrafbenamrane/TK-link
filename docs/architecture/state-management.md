@@ -12,6 +12,11 @@
   (`{ ok: true } | { ok: false; error }`) instead of throwing for expected
   failures.
 - **No derived data in state.** Compute in selectors (`selectPendingCount`).
+  But a selector you _subscribe_ to must return a stable reference or a
+  primitive — Zustand 5 has no `equalityFn`, so `s.items.filter(…)` (a fresh
+  array each render) triggers an infinite loop and crashes the screen.
+  Subscribe to the raw slice and derive with `useMemo`, or use `useShallow`.
+  `selectPendingCount` is safe because it returns a number (`.length`).
 - Persistence uses `persist` + `createJSONStorage(() => AsyncStorage)` with a
   versioned key (`tasks-store-v1`) and a custom `merge` that Zod-validates
   rehydrated data — corrupt storage resets cleanly instead of crashing.

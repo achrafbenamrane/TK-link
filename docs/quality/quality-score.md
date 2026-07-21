@@ -7,6 +7,10 @@ or deletes stale ones. Newest first; keep entries one line each:
 
 ## Current assessment
 
+- 2026-07-21 · shop · Fixed a Profil crash: `useShopStore(selectUnusedVouchers)`
+  subscribed to a filtering selector (new array each call) → Zustand v5
+  infinite loop. Swept all subscriptions; the twin site was the cart route.
+  Guarded with a ProfileScreen render test. · (opus)
 - 2026-06-06 · overall · Fresh skeleton: verify suite green, boundaries
   enforced, reference feature complete. Debt: none known yet. · (bootstrap)
 
@@ -20,6 +24,11 @@ or deletes stale ones. Newest first; keep entries one line each:
   ADR exists.
 - Reanimated/worklets babel wiring is automatic via `babel-preset-expo` —
   adding the old manual plugin breaks builds.
+- Zustand v5 has no built-in `equalityFn`: a selector you subscribe to
+  (`useStore(select…)`) MUST return a stable reference or a primitive.
+  `s.items.filter(…)`/`.map(…)` returns a fresh array each render → infinite
+  loop → crash. Subscribe to the raw slice and derive with `useMemo`, or wrap
+  with `useShallow`. Selectors returning `.length`/`.reduce` (a number) are safe.
 
 ## Wishlist (pull when convenient)
 
