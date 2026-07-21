@@ -24,3 +24,4 @@ export {
   selectTotalUnread,
 } from './model/store';
 export { dealImagePool } from './model/product-images';
+export { dealQuizPool } from './model/catalog';

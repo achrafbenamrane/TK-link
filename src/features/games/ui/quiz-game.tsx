@@ -1,0 +1,187 @@
+import { Feather } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
+import { Pressable, View } from 'react-native';
+
+import { cn } from '@/shared/lib/cn';
+import { AppText } from '@/shared/ui';
+import { colors } from '@/shared/theme/colors';
+
+import {
+  answerCurrent,
+  correctCount,
+  currentQuestion,
+  isAnswered,
+  newQuiz,
+  next,
+  type QuizGame as Game,
+  type QuizItem,
+} from '../model/quiz';
+
+type Props = {
+  pool: QuizItem[];
+  onWin: () => void;
+  onExit: () => void;
+};
+
+const eur = (v: number) => `${v.toFixed(2).replace('.', ',')} €`;
+
+export function QuizGame({ pool, onWin, onExit }: Props) {
+  const [game, setGame] = useState<Game>(() => newQuiz(pool));
+  const [wonNotified, setWonNotified] = useState(false);
+
+  // Victoire signalée une seule fois (récompense côté appelant).
+  useEffect(() => {
+    if (game.status === 'won' && !wonNotified) {
+      setWonNotified(true);
+      onWin();
+    }
+  }, [game.status, wonNotified, onWin]);
+
+  const restart = () => {
+    setWonNotified(false);
+    // Questions FRAÎCHES à chaque relance (tirage aléatoire dans le pool).
+    setGame(newQuiz(pool));
+  };
+
+  const total = game.questions.length;
+  const score = correctCount(game);
+
+  if (game.status !== 'playing') {
+    const won = game.status === 'won';
+    return (
+      <View className="flex-1 justify-center">
+        <View
+          testID="quiz-result"
+          className="items-center gap-3 rounded-card border border-line bg-surface-muted p-6"
+        >
+          <View
+            className={cn(
+              'h-14 w-14 items-center justify-center rounded-pill',
+              won ? 'bg-brand-50' : 'bg-surface-sunken',
+            )}
+          >
+            <Feather
+              name={won ? 'gift' : 'refresh-ccw'}
+              size={26}
+              color={won ? colors.brand500 : colors.inkMuted}
+            />
+          </View>
+          <AppText variant="title" className="text-center text-xl">
+            {won ? 'Bravo ! Coupon débloqué 🎉' : 'Presque — on retente ?'}
+          </AppText>
+          <AppText variant="caption" className="text-center">
+            {score}/{total} bonne{score > 1 ? 's' : ''} réponse{score > 1 ? 's' : ''}
+            {won ? ' · votre coupon vous attend dans « Mes coupons ».' : '.'}
+          </AppText>
+          <View className="mt-1 w-full gap-2">
+            <Pressable
+              testID="quiz-restart"
+              accessibilityRole="button"
+              onPress={restart}
+              className="items-center rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
+            >
+              <AppText className="font-sans-bold text-ink-inverse">
+                {won ? 'Rejouer' : 'Nouveau quiz'}
+              </AppText>
+            </Pressable>
+            <Pressable
+              testID="quiz-exit"
+              accessibilityRole="button"
+              onPress={onExit}
+              className="py-2"
+            >
+              <AppText variant="caption" className="text-center text-ink-muted">
+                Retour aux jeux
+              </AppText>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  const q = currentQuestion(game);
+  if (!q) return null;
+  const answered = isAnswered(game);
+  const pick = game.picks[game.current];
+  const isLast = game.current === total - 1;
+
+  return (
+    <View className="flex-1">
+      {/* Progression + score */}
+      <View className="mb-4 flex-row items-center justify-between">
+        <AppText className="font-sans-bold text-ink">
+          Question {game.current + 1}/{total}
+        </AppText>
+        <View className="flex-row items-center gap-1.5">
+          <Feather name="check-circle" size={16} color={colors.success} />
+          <AppText variant="caption" className="text-ink-muted">
+            {score} · seuil {game.passMark}
+          </AppText>
+        </View>
+      </View>
+
+      {/* La carte offre */}
+      <View className="items-center gap-2 rounded-card border border-line bg-surface-muted p-6">
+        <AppText style={{ fontSize: 56, lineHeight: 64 }}>{q.emoji}</AppText>
+        <AppText variant="title" className="text-center text-lg" numberOfLines={2}>
+          {q.title}
+        </AppText>
+        <AppText variant="caption" className="text-ink-faint">
+          Quel est son prix flash ?
+        </AppText>
+      </View>
+
+      {/* Propositions */}
+      <View className="mt-4 flex-row flex-wrap justify-between gap-y-3">
+        {q.choices.map((c, i) => {
+          const isCorrect = i === q.correctIndex;
+          const isPicked = pick === i;
+          // Après réponse : la bonne en vert, le mauvais choix en rouge.
+          const tone = !answered
+            ? 'border-line bg-surface'
+            : isCorrect
+              ? 'border-success bg-success/10'
+              : isPicked
+                ? 'border-danger bg-danger/10'
+                : 'border-line bg-surface opacity-60';
+          return (
+            <Pressable
+              key={i}
+              testID={`quiz-choice-${i}`}
+              accessibilityRole="button"
+              disabled={answered}
+              onPress={() => setGame((g) => answerCurrent(g, i))}
+              className={cn(
+                'w-[48%] flex-row items-center justify-between rounded-card border px-4 py-4',
+                tone,
+              )}
+            >
+              <AppText className="font-display text-base">{eur(c)}</AppText>
+              {answered && isCorrect ? (
+                <Feather name="check" size={18} color={colors.success} />
+              ) : answered && isPicked ? (
+                <Feather name="x" size={18} color={colors.danger} />
+              ) : null}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Suite */}
+      {answered ? (
+        <Pressable
+          testID="quiz-next"
+          accessibilityRole="button"
+          onPress={() => setGame((g) => next(g))}
+          className="mt-6 flex-row items-center justify-center gap-2 rounded-control bg-ink py-4 active:opacity-90"
+        >
+          <AppText className="font-sans-bold text-ink-inverse">
+            {isLast ? 'Voir le résultat' : 'Question suivante'}
+          </AppText>
+          <Feather name="arrow-right" size={18} color={colors.inkInverse} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}

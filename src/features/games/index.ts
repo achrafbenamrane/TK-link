@@ -5,4 +5,6 @@
  */
 export { GamesScreen } from './ui/games-screen';
 export { MemoryGame } from './ui/memory-game';
+export { QuizGame } from './ui/quiz-game';
 export type { CardImage } from './model/memory';
+export type { QuizItem } from './model/quiz';

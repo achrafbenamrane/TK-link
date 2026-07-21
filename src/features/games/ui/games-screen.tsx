@@ -8,46 +8,69 @@ import { AppText, Screen } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import type { CardImage } from '../model/memory';
+import type { QuizItem } from '../model/quiz';
 import { MemoryGame } from './memory-game';
+import { QuizGame } from './quiz-game';
 
 type Props = {
   /** Réservoir d'images, injecté par la route depuis les offres du catalogue. */
   imagePool: CardImage[];
+  /** Offres (titre + prix) pour le quiz, injectées par la route. */
+  quizPool: QuizItem[];
   /** Appelé quand un jeu est gagné — la route accorde alors le coupon. */
   onWin: () => void;
 };
 
+type Mode = 'menu' | 'memory' | 'quiz';
+
 /** Feuille de route : les autres jeux vus en inspiration, à venir. */
-const SOON: { icon: 'grid' | 'hash' | 'type' | 'zap'; label: string }[] = [
+const SOON: { icon: 'grid' | 'hash' | 'type'; label: string }[] = [
   { icon: 'grid', label: 'Labyrinthe' },
-  { icon: 'zap', label: 'Quiz express' },
   { icon: 'type', label: 'Mots mêlés' },
   { icon: 'hash', label: 'Morpion' },
 ];
 
-export function GamesScreen({ imagePool, onWin }: Props) {
+/** En-tête d'une partie : retour au menu des jeux. */
+function GameHeader({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <View className="flex-row items-center gap-3 pb-3 pt-1">
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Retour"
+        hitSlop={10}
+        onPress={onBack}
+      >
+        <Feather name="chevron-left" size={26} color={colors.ink} />
+      </Pressable>
+      <AppText variant="title" className="text-lg">
+        {title}
+      </AppText>
+    </View>
+  );
+}
+
+export function GamesScreen({ imagePool, quizPool, onWin }: Props) {
   const router = useRouter();
-  const [playing, setPlaying] = useState(false);
+  const [mode, setMode] = useState<Mode>('menu');
 
-  const canPlay = imagePool.length >= 3;
+  const canPlayMemory = imagePool.length >= 3;
+  const canPlayQuiz = quizPool.length >= 3;
+  const back = () => setMode('menu');
 
-  if (playing) {
+  if (mode === 'memory') {
     return (
       <Screen testID="games-screen">
-        <View className="flex-row items-center gap-3 pb-3 pt-1">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Retour"
-            hitSlop={10}
-            onPress={() => setPlaying(false)}
-          >
-            <Feather name="chevron-left" size={26} color={colors.ink} />
-          </Pressable>
-          <AppText variant="title" className="text-lg">
-            Cartes mémoire
-          </AppText>
-        </View>
-        <MemoryGame images={imagePool} onWin={onWin} onExit={() => setPlaying(false)} />
+        <GameHeader title="Cartes mémoire" onBack={back} />
+        <MemoryGame images={imagePool} onWin={onWin} onExit={back} />
+      </Screen>
+    );
+  }
+
+  if (mode === 'quiz') {
+    return (
+      <Screen testID="games-screen">
+        <GameHeader title="Le juste prix" onBack={back} />
+        <QuizGame pool={quizPool} onWin={onWin} onExit={back} />
       </Screen>
     );
   }
@@ -75,15 +98,15 @@ export function GamesScreen({ imagePool, onWin }: Props) {
           </View>
         </View>
 
-        {/* Jeu jouable — les cartes sont les vraies images des offres. */}
+        {/* Cartes mémoire — les cartes sont les vraies images des offres. */}
         <Pressable
           testID="game-memory"
           accessibilityRole="button"
-          onPress={() => canPlay && setPlaying(true)}
-          disabled={!canPlay}
+          onPress={() => canPlayMemory && setMode('memory')}
+          disabled={!canPlayMemory}
           className={cn(
-            'mb-5 mt-4 overflow-hidden rounded-card bg-ink p-5',
-            !canPlay && 'opacity-60',
+            'mb-3 mt-4 overflow-hidden rounded-card bg-ink p-5',
+            !canPlayMemory && 'opacity-60',
           )}
         >
           <View className="flex-row items-center gap-3">
@@ -100,9 +123,41 @@ export function GamesScreen({ imagePool, onWin }: Props) {
             </View>
             <Feather name="play" size={20} color={colors.brand500} />
           </View>
-          {!canPlay ? (
+          {!canPlayMemory ? (
             <AppText variant="caption" className="mt-3 text-ink-inverse/60">
               Il faut au moins 3 offres avec photo pour jouer.
+            </AppText>
+          ) : null}
+        </Pressable>
+
+        {/* Le juste prix — devinez le prix flash des offres. */}
+        <Pressable
+          testID="game-quiz"
+          accessibilityRole="button"
+          onPress={() => canPlayQuiz && setMode('quiz')}
+          disabled={!canPlayQuiz}
+          className={cn(
+            'mb-5 overflow-hidden rounded-card bg-ink p-5',
+            !canPlayQuiz && 'opacity-60',
+          )}
+        >
+          <View className="flex-row items-center gap-3">
+            <View className="h-12 w-12 items-center justify-center rounded-control bg-brand-500">
+              <Feather name="zap" size={22} color={colors.inkInverse} />
+            </View>
+            <View className="flex-1">
+              <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 17 }}>
+                Le juste prix
+              </AppText>
+              <AppText variant="caption" className="text-ink-inverse/60">
+                Devinez le prix flash des offres. Un coupon à gagner.
+              </AppText>
+            </View>
+            <Feather name="play" size={20} color={colors.brand500} />
+          </View>
+          {!canPlayQuiz ? (
+            <AppText variant="caption" className="mt-3 text-ink-inverse/60">
+              Il faut au moins 3 offres pour jouer.
             </AppText>
           ) : null}
         </Pressable>

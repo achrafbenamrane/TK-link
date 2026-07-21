@@ -4,23 +4,24 @@ import { Alert } from 'react-native';
 
 import { useCouponsStore } from '@/features/coupons';
 import { GamesScreen } from '@/features/games';
-import { dealImagePool } from '@/features/shop';
+import { dealImagePool, dealQuizPool } from '@/features/shop';
 
 /**
- * Racine de composition des jeux : les images viennent des OFFRES (shop), la
+ * Racine de composition des jeux : le contenu vient des OFFRES (shop), la
  * récompense va aux COUPONS. La feature `games` ne connaît ni l'un ni l'autre —
  * elle reçoit tout en props, ce qui la garde sans dépendance croisée.
  */
 const REWARDS = [
-  { discount: { kind: 'amount' as const, cents: 200 }, label: 'Victoire aux cartes' },
-  { discount: { kind: 'percent' as const, pct: 10 }, label: 'Cartes mémoire' },
-  { discount: { kind: 'amount' as const, cents: 300 }, label: 'Paires parfaites' },
+  { discount: { kind: 'amount' as const, cents: 200 }, label: 'Victoire au jeu' },
+  { discount: { kind: 'percent' as const, pct: 10 }, label: 'Bien joué' },
+  { discount: { kind: 'amount' as const, cents: 300 }, label: 'Score parfait' },
 ];
 
 export default function GamesRoute() {
   const router = useRouter();
   const grant = useCouponsStore((s) => s.grantEarnedCoupon);
-  const pool = useMemo(() => dealImagePool(), []);
+  const imagePool = useMemo(() => dealImagePool(), []);
+  const quizPool = useMemo(() => dealQuizPool(), []);
 
   const onWin = () => {
     const reward = REWARDS[Math.floor(Math.random() * REWARDS.length)]!;
@@ -35,5 +36,5 @@ export default function GamesRoute() {
     );
   };
 
-  return <GamesScreen imagePool={pool} onWin={onWin} />;
+  return <GamesScreen imagePool={imagePool} quizPool={quizPool} onWin={onWin} />;
 }

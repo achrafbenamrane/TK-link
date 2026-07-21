@@ -235,3 +235,12 @@ export function dealsByCategory(category: Category | null): Deal[] {
 
 /** The hero flash sale surfaced at the top of the feed. */
 export const FEATURED_DEAL_ID = 'd_cote';
+
+/**
+ * Réservoir pour le quiz « Le juste prix » : chaque offre donne une question
+ * (titre + vrai prix). Comme le pool d'images, il se remplit tout seul quand un
+ * commerçant ajoute une offre — le lien « offres → jeux ».
+ */
+export function dealQuizPool(): { id: string; title: string; price: number; emoji: string }[] {
+  return DEALS.map((d) => ({ id: d.id, title: d.title, price: d.price, emoji: d.emoji }));
+}
