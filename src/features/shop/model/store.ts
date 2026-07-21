@@ -42,6 +42,16 @@ function makeCode(): string {
 
 export type CartLine = { deal: Deal; qty: number; lineTotal: number };
 
+/**
+ * Remise coupon transmise à la commande. Le coupon lui-même vit dans la feature
+ * `coupons` : le shop n'en connaît que le montant déjà calculé et le code, pour
+ * ne pas créer de dépendance croisée. La composition se fait dans la route.
+ */
+export type AppliedDiscount = { discountEur: number; couponCode: string };
+
+/** Arrondi aux centimes — évite la poussière flottante (24,9 − 4,98 = 19,92). */
+const roundEur = (v: number): number => Math.round(v * 100) / 100;
+
 type ShopState = {
   cart: CartItem[];
   favorites: string[];
@@ -85,8 +95,15 @@ type ShopState = {
   receiveMessage: (conversationId: string, senderId: string, body: string) => void;
   markConversationRead: (conversationId: string) => void;
 
-  /** Turn the cart into an order, award points, empty the cart. */
-  checkout: (addressId?: string | null) => { ok: false } | { ok: true; orderId: string };
+  /**
+   * Turn the cart into an order, award points, empty the cart. `applied` porte
+   * une remise coupon (déjà calculée et bornée par l'appelant) ; le shop la
+   * réapplique et l'enregistre, sans jamais toucher le portefeuille de coupons.
+   */
+  checkout: (
+    addressId?: string | null,
+    applied?: AppliedDiscount | null,
+  ) => { ok: false } | { ok: true; orderId: string };
 };
 
 export const useShopStore = create<ShopState>()(
@@ -267,12 +284,19 @@ export const useShopStore = create<ShopState>()(
             : [dealId, ...state.favorites],
         })),
 
-      checkout: (addressId = null) => {
+      checkout: (addressId = null, applied = null) => {
         const { cart } = get();
         const lines = cartLines(cart);
         if (lines.length === 0) return { ok: false as const };
 
-        const total = lines.reduce((sum, l) => sum + l.lineTotal, 0);
+        const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
+        // La remise ne dépasse jamais le sous-total : l'appelant la borne déjà,
+        // on la reborne ici par sûreté (le montant vient du client en démo).
+        const discount = applied
+          ? roundEur(Math.min(Math.max(applied.discountEur, 0), subtotal))
+          : 0;
+        const total = roundEur(subtotal - discount);
+        // Les points récompensent ce qui est réellement payé, pas la remise.
         const pointsEarned = Math.round(total * POINTS_PER_EURO);
         const order: Order = {
           id: makeId(),
@@ -286,6 +310,8 @@ export const useShopStore = create<ShopState>()(
             price: l.deal.price,
           })),
           total,
+          discount,
+          couponCode: applied?.couponCode ?? null,
           deliveryFee: DELIVERY_FEE,
           status: 'en_preparation',
           pointsEarned,

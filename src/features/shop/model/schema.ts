@@ -79,7 +79,16 @@ export const OrderSchema = z.object({
    */
   addressId: z.string().nullable().default(null),
   items: z.array(OrderLineSchema),
+  /** Ce qui est facturé pour les articles : sous-total MOINS la remise coupon. */
   total: z.number(),
+  /**
+   * Remise appliquée par un coupon (euros). `.default(0)` : les commandes déjà
+   * stockées n'ont pas ce champ, et un champ requis les effacerait à la
+   * réhydratation — même piège que `addressId`.
+   */
+  discount: z.number().nonnegative().default(0),
+  /** Code du coupon utilisé, pour le reçu ; `null` si aucun. */
+  couponCode: z.string().nullable().default(null),
   deliveryFee: z.number(),
   status: OrderStatusSchema,
   pointsEarned: z.number().int().nonnegative(),

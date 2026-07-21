@@ -197,6 +197,16 @@ export function OrderDetailScreen() {
           ))}
 
           <View className="mt-1 gap-1.5 border-t border-line pt-3">
+            {order.discount > 0 ? (
+              <View className="flex-row justify-between" testID="order-discount">
+                <AppText variant="caption" className="text-ink-muted">
+                  Réduction {order.couponCode ? `(${order.couponCode})` : ''}
+                </AppText>
+                <AppText className="font-sans-bold text-sm text-brand-600">
+                  −{order.discount.toFixed(2)}€
+                </AppText>
+              </View>
+            ) : null}
             <View className="flex-row justify-between">
               <AppText variant="caption" className="text-ink-muted">
                 Livraison

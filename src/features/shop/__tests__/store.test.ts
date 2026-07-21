@@ -56,6 +56,34 @@ describe('shop store', () => {
     expect(useShopStore.getState().checkout()).toEqual({ ok: false });
     expect(useShopStore.getState().orders).toHaveLength(0);
   });
+
+  it('applique la remise d’un coupon au total et aux points', () => {
+    const { addToCart, checkout } = useShopStore.getState();
+    addToCart('d_cote');
+    const price = getDeal('d_cote')!.price;
+
+    const res = checkout(null, { discountEur: 5, couponCode: 'TEST5' });
+    expect(res.ok).toBe(true);
+
+    const order = useShopStore.getState().orders[0]!;
+    expect(order.discount).toBeCloseTo(5);
+    expect(order.couponCode).toBe('TEST5');
+    expect(order.total).toBeCloseTo(price - 5);
+    // Points sur le montant réellement payé, pas sur le sous-total.
+    expect(order.pointsEarned).toBe(Math.round(price - 5));
+  });
+
+  it('plafonne la remise au sous-total (jamais de total négatif)', () => {
+    const { addToCart, checkout } = useShopStore.getState();
+    addToCart('d_cote');
+    const price = getDeal('d_cote')!.price;
+
+    checkout(null, { discountEur: price + 100, couponCode: 'HUGE' });
+    const order = useShopStore.getState().orders[0]!;
+    expect(order.discount).toBeCloseTo(price);
+    expect(order.total).toBe(0);
+    expect(order.pointsEarned).toBe(0);
+  });
 });
 
 describe('checkout et adresse de livraison', () => {
@@ -94,6 +122,8 @@ describe('progression de commande (démo)', () => {
     addressId: null,
     items: [{ dealId: 'd_cote', title: 'Côte', emoji: '🥩', qty: 1, price: 24.9 }],
     total: 24.9,
+    discount: 0,
+    couponCode: null,
     deliveryFee: 0,
     status: 'en_preparation' as const,
     pointsEarned: 24,

@@ -16,6 +16,8 @@ const orderAgedBy = (seconds: number): Order => ({
   addressId: 'a_1',
   items: [{ dealId: 'd_cote', title: 'Côte', emoji: '🥩', qty: 1, price: 24.9 }],
   total: 24.9,
+  discount: 0,
+  couponCode: null,
   deliveryFee: 0,
   status: 'en_livraison',
   pointsEarned: 24,
