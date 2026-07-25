@@ -20,7 +20,7 @@ type Props = {
 type Dir = 'up' | 'down' | 'left' | 'right';
 
 /** Temps imparti (secondes) pour atteindre l'offre — sinon, perdu. */
-const BUDGET = 60;
+const BUDGET = 20;
 const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 function DirButton({
@@ -88,7 +88,7 @@ export function MazeGame({ goalImage, onWin, onExit }: Props) {
   };
 
   const size = game.size;
-  const low = remaining <= 10;
+  const low = remaining <= 8;
 
   return (
     <GameShell
