@@ -21,14 +21,44 @@ function fixedMaze(): Maze {
   return { size: 2, walls, player: 0, goal: 3, status: 'playing' };
 }
 
+/**
+ * Compte les ouvertures internes = paires de cases voisines SANS mur entre
+ * elles. On ne regarde que le mur droit et le mur bas de chaque case pour ne
+ * compter chaque passage qu'une seule fois. Un labyrinthe « parfait » (arbre
+ * couvrant) en a exactement size*size-1 ; au-delà, il y a des cycles.
+ */
+function countOpenings(m: Maze): number {
+  const { size, walls } = m;
+  let openings = 0;
+  for (let i = 0; i < walls.length; i++) {
+    const w = walls[i]!;
+    const col = i % size;
+    const row = Math.floor(i / size);
+    if (col < size - 1 && !w.right) openings++;
+    if (row < size - 1 && !w.bottom) openings++;
+  }
+  return openings;
+}
+
 describe('newMaze', () => {
   it('crée size*size cases et reste toujours résoluble', () => {
     for (let i = 0; i < 20; i++) {
       const m = newMaze();
-      expect(m.walls).toHaveLength(6 * 6);
+      expect(m.walls).toHaveLength(9 * 9);
       expect(m.player).toBe(0);
-      expect(m.goal).toBe(35);
+      expect(m.goal).toBe(80);
       expect(m.status).toBe('playing');
+      expect(hasPath(m)).toBe(true);
+    }
+  });
+
+  it('est tressé : plus d’ouvertures qu’un arbre couvrant (donc des boucles)', () => {
+    // Un labyrinthe parfait a exactement size*size-1 ouvertures internes. Le
+    // tressage en ajoute → strictement plus, de façon fiable à chaque tirage.
+    for (let i = 0; i < 30; i++) {
+      const m = newMaze();
+      const perfectTreeOpenings = m.size * m.size - 1;
+      expect(countOpenings(m)).toBeGreaterThan(perfectTreeOpenings);
       expect(hasPath(m)).toBe(true);
     }
   });

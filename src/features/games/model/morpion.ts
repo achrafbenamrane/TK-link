@@ -1,10 +1,17 @@
 /**
  * Morpion (tic-tac-toe) 3×3 — logique pure, sans UI ni aléa caché.
  *
- * Le joueur est « me », l'application est « ai ». Aligner trois cases → coupon,
- * donc l'IA doit rester BATTABLE : elle n'est PAS un minimax parfait.
- *  • si un coup gagnant immédiat existe pour elle, elle le joue ;
- *  • sinon elle joue une case libre AU HASARD (elle ne bloque pas toujours).
+ * Le joueur est « me », l'application est « ai ». Aligner trois cases → coupon.
+ * L'IA est plus maligne qu'un simple hasard, mais reste BATTABLE : elle ne
+ * calcule pas de minimax et ne se construit jamais de double menace
+ * (fourchette). Ordre de priorité de son coup :
+ *  1. jouer un gain immédiat s'il existe ;
+ *  2. sinon bloquer un gain immédiat du joueur ;
+ *  3. sinon prendre le centre (case 4) s'il est libre ;
+ *  4. sinon un coin libre au hasard ;
+ *  5. sinon n'importe quelle case libre au hasard.
+ * Un joueur habile qui monte une fourchette (deux menaces simultanées) peut
+ * donc toujours l'emporter : l'IA ne pourra en bloquer qu'une.
  *
  * Le plateau est un tableau plat de 9 cases (indices 0..8, en lignes) :
  *     0 | 1 | 2
@@ -21,6 +28,9 @@ export type Morpion = {
 
 /** Côté de la grille : 3×3 ⇒ board.length === 9. */
 export const SIZE = 3;
+
+/** Les quatre coins, préférés au reste quand le centre est déjà pris. */
+const CORNERS: readonly number[] = [0, 2, 6, 8];
 
 /** Les 8 alignements possibles (3 lignes, 3 colonnes, 2 diagonales). */
 const LINES: readonly [number, number, number][] = [
@@ -77,12 +87,31 @@ function findWinningMove(board: (Mark | null)[], mark: Mark): number | null {
 }
 
 /**
- * Coup de l'IA : gagner tout de suite si possible, sinon une case libre au
- * hasard. `null` s'il ne reste plus rien à jouer.
+ * Coup de l'IA, par ordre de priorité : gain immédiat → blocage d'un gain du
+ * joueur → centre → coin libre au hasard → case libre au hasard. `null` s'il ne
+ * reste plus rien à jouer. Volontairement sans minimax ni fourchette, pour
+ * rester battable par un joueur qui monte une double menace.
  */
 function aiMove(board: (Mark | null)[]): number | null {
+  // 1) saisir un gain immédiat.
   const win = findWinningMove(board, 'ai');
   if (win != null) return win;
+
+  // 2) sinon bloquer le gain immédiat du joueur (une seule menace à la fois).
+  const block = findWinningMove(board, 'me');
+  if (block != null) return block;
+
+  // 3) sinon prendre le centre s'il est libre.
+  if (board[4] == null) return 4;
+
+  // 4) sinon un coin libre au hasard.
+  const freeCorners = CORNERS.filter((i) => board[i] == null);
+  if (freeCorners.length > 0) {
+    const pick = freeCorners[Math.floor(Math.random() * freeCorners.length)];
+    if (pick != null) return pick;
+  }
+
+  // 5) sinon n'importe quelle case libre au hasard.
   const cells = emptyCells(board);
   if (cells.length === 0) return null;
   const pick = cells[Math.floor(Math.random() * cells.length)];
@@ -95,7 +124,7 @@ function aiMove(board: (Mark | null)[]): number | null {
  *
  * Enchaînement :
  *  • après le coup du joueur : alignement ⇒ « won » ; sinon plateau plein ⇒ « draw » ;
- *  • sinon l'IA joue (gain immédiat, sinon hasard) : alignement ⇒ « lost » ;
+ *  • sinon l'IA joue (gain, blocage, centre, coin, hasard) : alignement ⇒ « lost » ;
  *    plateau plein ⇒ « draw » ; sinon on continue à jouer.
  */
 export function playAt(game: Morpion, index: number): Morpion {

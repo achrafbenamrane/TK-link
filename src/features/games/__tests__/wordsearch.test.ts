@@ -25,6 +25,30 @@ function fixedGame(): WordSearch {
   };
 }
 
+/**
+ * Grille déterministe avec deux mots en DIAGONALE. Taille 4×4 :
+ *
+ *   0:S 1:Z 2:Z 3:I
+ *   4:Z 5:U 6:C 7:Z
+ *   8:Z 9:E 10:N 11:Z
+ *  12:Z 13:Z 14:Z 15:Z
+ *
+ * « SUN » en diagonale ↘ (0,5,10) ; « ICE » en diagonale ↙ (3,6,9).
+ */
+function fixedDiagonalGame(): WordSearch {
+  const grid = ['S', 'Z', 'Z', 'I', 'Z', 'U', 'C', 'Z', 'Z', 'E', 'N', 'Z', 'Z', 'Z', 'Z', 'Z'];
+  return {
+    size: 4,
+    grid,
+    placed: [
+      { word: 'SUN', cells: [0, 5, 10] },
+      { word: 'ICE', cells: [3, 6, 9] },
+    ],
+    found: [],
+    status: 'playing',
+  };
+}
+
 describe('straightLine', () => {
   it('renvoie les indices contigus d’une sélection horizontale', () => {
     expect(straightLine(4, 0, 2)).toEqual([0, 1, 2]);
@@ -38,12 +62,23 @@ describe('straightLine', () => {
     expect(straightLine(4, 2, 0)).toEqual([2, 1, 0]);
   });
 
-  it('renvoie null pour une diagonale', () => {
-    expect(straightLine(4, 0, 5)).toBeNull();
+  it('renvoie les indices d’une diagonale descendante-droite (↘)', () => {
+    // (0,0) → (3,3) : pas de +(size+1)
+    expect(straightLine(4, 0, 15)).toEqual([0, 5, 10, 15]);
   });
 
-  it('renvoie null pour deux cases non alignées', () => {
-    expect(straightLine(4, 1, 6)).toBeNull();
+  it('renvoie les indices d’une diagonale descendante-gauche (↙)', () => {
+    // (0,3) → (3,0) : pas de +(size-1)
+    expect(straightLine(4, 3, 12)).toEqual([3, 6, 9, 12]);
+  });
+
+  it('renvoie l’ordre inverse d’une diagonale quand on part de l’arrivée', () => {
+    expect(straightLine(4, 15, 0)).toEqual([15, 10, 5, 0]);
+  });
+
+  it('renvoie null pour deux cases non alignées (saut de cavalier)', () => {
+    // (0,0) → (1,2) : |Δligne|=1 ≠ |Δcolonne|=2
+    expect(straightLine(4, 0, 6)).toBeNull();
   });
 
   it('renvoie [from] pour une case seule', () => {
@@ -74,6 +109,21 @@ describe('selectLine', () => {
     expect(g.found).toEqual(['DOG']);
   });
 
+  it('trouve un mot en diagonale ↘', () => {
+    const g = selectLine(fixedDiagonalGame(), 0, 10); // S → U → N
+    expect(g.found).toEqual(['SUN']);
+  });
+
+  it('trouve un mot en diagonale ↙', () => {
+    const g = selectLine(fixedDiagonalGame(), 3, 9); // I → C → E
+    expect(g.found).toEqual(['ICE']);
+  });
+
+  it('trouve un mot en diagonale même sélectionné à l’envers', () => {
+    const g = selectLine(fixedDiagonalGame(), 10, 0); // N → U → S
+    expect(g.found).toEqual(['SUN']);
+  });
+
   it('gagne une fois tous les mots placés trouvés', () => {
     let g = fixedGame();
     g = selectLine(g, 0, 2); // CAT
@@ -83,14 +133,24 @@ describe('selectLine', () => {
     expect(g.status).toBe('won');
   });
 
+  it('gagne en trouvant les deux mots diagonaux', () => {
+    let g = fixedDiagonalGame();
+    g = selectLine(g, 0, 10); // SUN ↘
+    expect(g.status).toBe('playing');
+    g = selectLine(g, 9, 3); // ICE ↙ à l’envers
+    expect(g.found).toEqual(['SUN', 'ICE']);
+    expect(g.status).toBe('won');
+  });
+
   it('renvoie la partie inchangée sur une sélection non concordante', () => {
     const g = fixedGame();
     const after = selectLine(g, 13, 15); // ligne valide mais aucun mot
     expect(after).toBe(g);
   });
 
-  it('renvoie la partie inchangée sur une diagonale', () => {
+  it('renvoie la partie inchangée sur une diagonale non concordante', () => {
     const g = fixedGame();
+    // (0,0) → (1,1) : diagonale valide mais « CZ » ne correspond à aucun mot
     expect(selectLine(g, 0, 5)).toBe(g);
   });
 
@@ -118,8 +178,8 @@ describe('newWordSearch — placement auto-cohérent', () => {
     const words = ['chat', 'chien', 'oiseau', 'poisson'];
     for (let i = 0; i < 25; i++) {
       const g = newWordSearch(words);
-      // taille par défaut = max(plus long mot, 8) ; ici POISSON = 7 → 8
-      expect(g.size).toBe(8);
+      // taille par défaut = max(plus long mot, 10) ; ici POISSON = 7 → 10
+      expect(g.size).toBe(10);
       expect(g.grid).toHaveLength(g.size * g.size);
       expect(g.grid.every((ch) => /^[A-Z]$/.test(ch))).toBe(true);
       expect(g.status).toBe('playing');
@@ -159,5 +219,26 @@ describe('newWordSearch — placement auto-cohérent', () => {
     expect(g.placed).toEqual([]);
     expect(g.status).toBe('playing');
     expect(g.grid).toHaveLength(g.size * g.size);
+  });
+
+  it('utilise réellement les diagonales (la propriété de difficulté)', () => {
+    // Le placement auto-cohérent ci-dessus passerait même si le moteur ne posait
+    // QUE des mots H/V. On garde donc explicitement la nouvelle difficulté :
+    // sur un grand nombre de grilles, au moins un mot doit être posé en diagonale
+    // (Δligne ≠ 0 ET Δcolonne ≠ 0 entre deux cases consécutives). Non-flaky :
+    // ~4 mots × 40 grilles, chaque direction ~équiprobable parmi 4.
+    const words = ['CHAT', 'CHIEN', 'OISEAU', 'POISSON', 'LAPIN'];
+    let diagonalPlacements = 0;
+    for (let i = 0; i < 40; i++) {
+      const g = newWordSearch(words);
+      for (const p of g.placed) {
+        const a = p.cells[0]!;
+        const b = p.cells[1]!; // tous ces mots font ≥ 4 lettres
+        const dr = Math.floor(b / g.size) - Math.floor(a / g.size);
+        const dc = (b % g.size) - (a % g.size);
+        if (dr !== 0 && dc !== 0) diagonalPlacements++;
+      }
+    }
+    expect(diagonalPlacements).toBeGreaterThan(0);
   });
 });

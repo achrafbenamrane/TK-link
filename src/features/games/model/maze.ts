@@ -5,11 +5,18 @@
  * droite (case size*size-1) en se déplaçant d'une case dans une direction, à
  * condition qu'aucun mur ne barre le passage.
  *
- * Génération par « recursive backtracker » : on creuse un chemin en profondeur
- * en abattant les murs au fur et à mesure, en reculant dès qu'une case n'a plus
- * de voisin neuf. Chaque case est visitée exactement une fois → labyrinthe
- * « parfait » : un seul chemin entre deux cases, aucune case isolée, donc
- * TOUJOURS résoluble.
+ * Génération en deux temps :
+ *  1. « Recursive backtracker » — on creuse un chemin en profondeur en abattant
+ *     les murs au fur et à mesure, en reculant dès qu'une case n'a plus de
+ *     voisin neuf. Chaque case est visitée exactement une fois → labyrinthe
+ *     « parfait » (arbre couvrant) : un seul chemin entre deux cases.
+ *  2. « Tressage » (braiding) — on abat ensuite une bonne fraction de murs
+ *     internes supplémentaires pour ouvrir des BOUCLES : plusieurs chemins entre
+ *     deux cases, culs-de-sac transformés en passages. Un vrai labyrinthe, plus
+ *     difficile à lire d'un coup d'œil.
+ *
+ * Le tressage n'ABAT que des murs (jamais n'en pose), donc la grille reste
+ * connexe : le labyrinthe est TOUJOURS résoluble.
  *
  * Les cases sont indexées en row-major (ligne par ligne), de 0 à size*size-1.
  */
@@ -25,7 +32,7 @@ export type Maze = {
   status: 'playing' | 'won';
 };
 
-export const DEFAULT_SIZE = 6;
+export const DEFAULT_SIZE = 9;
 
 type Dir = 'up' | 'down' | 'left' | 'right';
 
@@ -74,9 +81,73 @@ function carve(w: Walls, dir: Dir): void {
   else w.right = false;
 }
 
+/** Nombre de murs encore debout autour d'une case (0 à 4). */
+function wallCount(w: Walls): number {
+  return (w.top ? 1 : 0) + (w.right ? 1 : 0) + (w.bottom ? 1 : 0) + (w.left ? 1 : 0);
+}
+
 /**
- * Nouvelle partie : grille pleine de murs, puis on creuse par backtracking.
- * Fraîche à chaque appel (l'ordre des directions est tiré au hasard).
+ * Ouvre le mur `dir` de la case `i` ET le mur opposé du voisin (symétrie) si ce
+ * passage était encore fermé et mène à une case dans la grille. Renvoie `true`
+ * quand une NOUVELLE ouverture a été créée, `false` sinon.
+ */
+function openWall(walls: Walls[], i: number, dir: Dir, size: number): boolean {
+  const w = walls[i];
+  if (!w || !wallAt(w, dir)) return false; // hors état ou déjà ouvert
+  const n = neighbourOf(i, dir, size);
+  if (n == null) return false; // bord de grille : pas de mur interne à abattre
+  const nw = walls[n];
+  if (!nw) return false;
+  carve(w, dir);
+  carve(nw, opposite(dir));
+  return true;
+}
+
+/**
+ * Passe de tressage : après l'arbre couvrant, on abat des murs internes en plus
+ * pour créer des boucles (plusieurs chemins entre deux cases). On vise ~35 % des
+ * cases et on attaque D'ABORD les culs-de-sac (3 murs) pour les transformer en
+ * passages traversants, puis n'importe quel mur interne fermé jusqu'à l'objectif
+ * — ce qui garantit des cycles à chaque génération. N'abat que des murs → reste
+ * connexe donc résoluble.
+ */
+function braid(walls: Walls[], size: number): void {
+  const count = size * size;
+  const indices = Array.from({ length: count }, (_, i) => i);
+  // Une poignée d'ouvertures au minimum, sinon ~35 % des cases.
+  const target = Math.max(4, Math.floor(count * 0.35));
+
+  // Un mur interne encore fermé de la case `i`, tiré au hasard (ou undefined).
+  const closedInteriorDir = (i: number): Dir | undefined =>
+    shuffle(DIRS).find((d) => {
+      const w = walls[i];
+      return w != null && wallAt(w, d) && neighbourOf(i, d, size) != null;
+    });
+
+  let opened = 0;
+
+  // 1) Priorité aux culs-de-sac : on les perce pour supprimer les impasses.
+  for (const i of shuffle(indices)) {
+    if (opened >= target) break;
+    const w = walls[i];
+    if (!w || wallCount(w) < 3) continue;
+    const dir = closedInteriorDir(i);
+    if (dir && openWall(walls, i, dir, size)) opened++;
+  }
+
+  // 2) Complément : n'importe quel mur interne fermé jusqu'à l'objectif, pour
+  //    garantir un nombre d'ouvertures supérieur à l'arbre couvrant (boucles).
+  for (const i of shuffle(indices)) {
+    if (opened >= target) break;
+    const dir = closedInteriorDir(i);
+    if (dir && openWall(walls, i, dir, size)) opened++;
+  }
+}
+
+/**
+ * Nouvelle partie : grille pleine de murs, on creuse par backtracking, puis on
+ * tresse pour ouvrir des boucles. Fraîche à chaque appel (directions tirées au
+ * hasard).
  */
 export function newMaze(size = DEFAULT_SIZE): Maze {
   const count = size * size;
@@ -108,6 +179,9 @@ export function newMaze(size = DEFAULT_SIZE): Maze {
     visited[step.n] = true;
     stack.push(step.n);
   }
+
+  // Tressage : on ouvre des murs en plus → boucles, culs-de-sac en moins.
+  braid(walls, size);
 
   return { size, walls, player: 0, goal: count - 1, status: 'playing' };
 }

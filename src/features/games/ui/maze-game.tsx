@@ -41,9 +41,15 @@ function DirButton({
   );
 }
 
+const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
 export function MazeGame({ goalImage, onWin, onExit }: Props) {
   const [game, setGame] = useState<Maze>(() => newMaze());
   const [wonNotified, setWonNotified] = useState(false);
+  const [startTs, setStartTs] = useState(() => Date.now());
+  const [elapsed, setElapsed] = useState(0);
+
+  const won = game.status === 'won';
 
   useEffect(() => {
     if (game.status === 'won' && !wonNotified) {
@@ -52,24 +58,42 @@ export function MazeGame({ goalImage, onWin, onExit }: Props) {
     }
   }, [game.status, wonNotified, onWin]);
 
+  // Chronomètre : compte tant qu'on cherche, se fige à l'arrivée.
+  useEffect(() => {
+    if (won) return;
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - startTs) / 1000)), 500);
+    return () => clearInterval(id);
+  }, [won, startTs]);
+
   const go = (d: Dir) => setGame((g) => move(g, d));
   const restart = () => {
     setWonNotified(false);
+    setStartTs(Date.now());
+    setElapsed(0);
     setGame(newMaze());
   };
 
   const size = game.size;
-  const won = game.status === 'won';
 
   return (
     <GameShell
       title="TROUVEZ LE"
       accent="CHEMIN"
-      subtitle="Guidez le point jusqu’à l’offre."
+      subtitle="Chemins multiples — trouvez le plus court."
       onBack={onExit}
     >
+      {/* Chronomètre */}
+      <View className="mb-3 self-center rounded-pill bg-ink-inverse/15 px-4 py-1.5">
+        <AppText
+          className="font-display text-ink-inverse"
+          style={{ fontSize: 15, letterSpacing: 1 }}
+        >
+          {`⏱ ${fmtTime(elapsed)}`}
+        </AppText>
+      </View>
+
       {/* Labyrinthe : murs blancs sur rouge */}
-      <View className="mt-2 self-center" style={{ width: '100%', maxWidth: 330, aspectRatio: 1 }}>
+      <View className="mt-1 self-center" style={{ width: '100%', maxWidth: 330, aspectRatio: 1 }}>
         {Array.from({ length: size }).map((_, r) => (
           <View key={r} className="flex-1 flex-row">
             {Array.from({ length: size }).map((_, c) => {
@@ -119,10 +143,10 @@ export function MazeGame({ goalImage, onWin, onExit }: Props) {
             <Feather name="gift" size={26} color={colors.brand500} />
           </View>
           <AppText variant="title" className="text-center text-xl">
-            Arrivé ! Coupon débloqué 🎉
+            Arrivé en {fmtTime(elapsed)} ! 🎉
           </AppText>
           <AppText variant="caption" className="text-center">
-            Votre coupon vous attend dans « Mes coupons ».
+            Coupon débloqué — dans « Mes coupons ».
           </AppText>
           <View className="mt-1 w-full gap-2">
             <Pressable

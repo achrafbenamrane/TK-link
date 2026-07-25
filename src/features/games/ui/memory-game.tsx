@@ -89,7 +89,7 @@ function FlipCard({
 }
 
 export function MemoryGame({ images, onWin, onExit }: Props) {
-  const [game, setGame] = useState<Game>(() => newGame(images));
+  const [game, setGame] = useState<Game>(() => newGame(images, 4));
   const [wonNotified, setWonNotified] = useState(false);
 
   // Erreur : on montre les deux cartes ~900 ms, puis on les referme.
@@ -109,7 +109,7 @@ export function MemoryGame({ images, onWin, onExit }: Props) {
 
   const restart = () => {
     setWonNotified(false);
-    setGame(newGame(images));
+    setGame(newGame(images, 4));
   };
 
   const tries = triesLeft(game);
@@ -118,7 +118,7 @@ export function MemoryGame({ images, onWin, onExit }: Props) {
     <GameShell
       title="TROUVEZ LES"
       accent="PAIRES"
-      subtitle={`${game.matched.length}/${game.pairs} trouvées · retrouvez les 3 paires`}
+      subtitle={`${game.matched.length}/${game.pairs} trouvées · ${game.pairs} paires, ${game.maxMistakes} essais`}
       onBack={onExit}
     >
       {/* Cœurs = essais restants */}

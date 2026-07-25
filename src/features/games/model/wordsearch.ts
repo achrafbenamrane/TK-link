@@ -2,10 +2,11 @@
  * Mots mêlés (« word search ») — logique pure, sans UI ni aléa caché.
  *
  * Le principe : on cache une liste de mots dans une grille carrée, placés à
- * l'horizontale ou à la verticale (dans un sens ou dans l'autre), puis on
- * comble le reste avec des lettres A-Z tirées au hasard. Le joueur sélectionne
- * une ligne droite (d'une case de départ à une case d'arrivée) ; si elle couvre
- * exactement un mot, il est trouvé.
+ * l'horizontale, à la verticale OU en diagonale (dans un sens ou dans l'autre),
+ * puis on comble le reste avec des lettres A-Z tirées au hasard. Le joueur
+ * sélectionne une ligne droite (d'une case de départ à une case d'arrivée) ; si
+ * elle couvre exactement un mot, il est trouvé. Les diagonales rendent la
+ * recherche nettement plus difficile.
  *
  * Comme les autres jeux, le contenu n'est PAS codé ici : les mots arrivent en
  * paramètre. Ils sont normalisés (majuscules, sans accents ni espaces) — un mot
@@ -29,7 +30,7 @@ export type WordSearch = {
   status: 'playing' | 'won';
 };
 
-export const DEFAULT_MIN_SIZE = 8;
+export const DEFAULT_MIN_SIZE = 10;
 
 /** Case en cours de remplissage : une lettre posée, ou `null` si encore vide. */
 type Cell = string | null;
@@ -57,29 +58,51 @@ function computeStatus(foundCount: number, placedCount: number): 'playing' | 'wo
 }
 
 /**
- * Tente de poser un mot dans la grille : orientation (H/V) et sens tirés au
- * hasard, sur plusieurs essais. Un placement est valide si chaque case visée
- * est vide OU porte déjà la même lettre (les croisements sont permis). Renvoie
- * les indices dans l'ordre de lecture du mot, ou `null` si aucun essai n'a
- * abouti.
+ * Vecteurs de base des quatre orientations : horizontale, verticale, diagonale
+ * descendante-droite et diagonale descendante-gauche. Le sens arrière (mot
+ * écrit à l'envers) s'obtient en niant le vecteur, ce qui couvre les huit
+ * directions de lecture possibles.
+ */
+const DIRECTIONS: readonly { dr: number; dc: number }[] = [
+  { dr: 0, dc: 1 }, // horizontale
+  { dr: 1, dc: 0 }, // verticale
+  { dr: 1, dc: 1 }, // diagonale ↘
+  { dr: 1, dc: -1 }, // diagonale ↙
+];
+
+/**
+ * Tente de poser un mot dans la grille : orientation (H / V / diagonale) et sens
+ * tirés au hasard, sur plusieurs essais. Un placement est valide si chaque case
+ * visée reste dans la grille et est vide OU porte déjà la même lettre (les
+ * croisements sont permis). Renvoie les indices dans l'ordre de lecture du mot,
+ * ou `null` si aucun essai n'a abouti.
  */
 function placeWord(cells: Cell[], size: number, word: string): number[] | null {
   const len = word.length;
   if (len === 0 || len > size) return null;
 
-  const ATTEMPTS = 80;
+  const ATTEMPTS = 120;
+  const span = len - 1;
   for (let t = 0; t < ATTEMPTS; t++) {
-    const horizontal = Math.random() < 0.5;
+    const base = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)]!;
     const backward = Math.random() < 0.5;
-    const maxStart = size - len; // dernière position de départ où le mot tient
-    const line = Math.floor(Math.random() * size); // ligne (H) ou colonne (V)
-    const start = Math.floor(Math.random() * (maxStart + 1));
+    // sens arrière : on nie le vecteur, le mot s'écrit de la fin vers le début
+    const dr = backward ? -base.dr : base.dr;
+    const dc = backward ? -base.dc : base.dc;
+
+    // Bornes de la case de départ (première lettre) pour que le mot tienne.
+    const rMin = dr < 0 ? span : 0;
+    const rMax = dr > 0 ? size - 1 - span : size - 1;
+    const cMin = dc < 0 ? span : 0;
+    const cMax = dc > 0 ? size - 1 - span : size - 1;
+    const r0 = rMin + Math.floor(Math.random() * (rMax - rMin + 1));
+    const c0 = cMin + Math.floor(Math.random() * (cMax - cMin + 1));
 
     const target: number[] = [];
     for (let k = 0; k < len; k++) {
-      // sens arrière : on écrit le mot de la fin vers le début
-      const offset = backward ? start + len - 1 - k : start + k;
-      target.push(horizontal ? line * size + offset : offset * size + line);
+      const r = r0 + k * dr;
+      const c = c0 + k * dc;
+      target.push(r * size + c);
     }
 
     let ok = true;
@@ -100,7 +123,7 @@ function placeWord(cells: Cell[], size: number, word: string): number[] | null {
 
 /**
  * Nouvelle grille. Les mots sont normalisés puis dédupliqués ; la taille par
- * défaut vaut max(longueur du plus long mot, 8). On ne garde que les mots qui
+ * défaut vaut max(longueur du plus long mot, 10). On ne garde que les mots qui
  * tiennent (longueur ≤ taille) ET que le placement a réussi à poser. Le reste
  * de la grille est comblé de lettres aléatoires.
  */
@@ -128,9 +151,11 @@ export function newWordSearch(words: string[], size?: number): WordSearch {
 }
 
 /**
- * Indices « row-major » de `from` à `to` si les deux cases sont sur la MÊME
- * ligne ou la MÊME colonne (parcours contigu, dans l'ordre from → to). Sinon,
- * ou hors bornes, renvoie `null`. Une case seule (from === to) renvoie `[from]`.
+ * Indices « row-major » de `from` à `to` si les deux cases sont alignées en
+ * ligne droite : MÊME ligne, MÊME colonne, ou l'une des deux DIAGONALES
+ * (|Δligne| === |Δcolonne|). Le parcours est contigu, dans l'ordre from → to.
+ * Toute paire non alignée (saut de cavalier) ou hors bornes renvoie `null`.
+ * Une case seule (from === to) renvoie `[from]`.
  */
 export function straightLine(size: number, from: number, to: number): number[] | null {
   const total = size * size;
@@ -141,25 +166,25 @@ export function straightLine(size: number, from: number, to: number): number[] |
   const tr = Math.floor(to / size);
   const tc = to % size;
 
-  if (fr === tr) {
-    const step = tc >= fc ? 1 : -1;
-    const out: number[] = [];
-    for (let c = fc; ; c += step) {
-      out.push(fr * size + c);
-      if (c === tc) break;
-    }
-    return out;
+  const dr = tr - fr;
+  const dc = tc - fc;
+  if (dr === 0 && dc === 0) return [from];
+
+  // Alignement requis : horizontal (Δr=0), vertical (Δc=0) ou diagonal (|Δr|=|Δc|).
+  if (dr !== 0 && dc !== 0 && Math.abs(dr) !== Math.abs(dc)) return null;
+
+  const rowStep = Math.sign(dr);
+  const colStep = Math.sign(dc);
+  const indexStep = rowStep * size + colStep;
+  const steps = Math.max(Math.abs(dr), Math.abs(dc));
+
+  const out: number[] = [];
+  let idx = from;
+  for (let k = 0; k <= steps; k++) {
+    out.push(idx);
+    idx += indexStep;
   }
-  if (fc === tc) {
-    const step = tr >= fr ? 1 : -1;
-    const out: number[] = [];
-    for (let r = fr; ; r += step) {
-      out.push(r * size + fc);
-      if (r === tr) break;
-    }
-    return out;
-  }
-  return null;
+  return out;
 }
 
 /**

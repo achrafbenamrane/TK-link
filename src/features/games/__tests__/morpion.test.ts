@@ -98,23 +98,56 @@ describe('playAt — l’IA saisit un gain immédiat', () => {
   });
 });
 
-describe('playAt — l’IA est BATTABLE (ne bloque pas toujours)', () => {
-  it('ignore une menace du joueur quand elle n’a pas de gain immédiat', () => {
-    // Le joueur menace en 2 ([0,1,2]) ; l'IA n'a aucun gain immédiat. Une IA
-    // parfaite bloquerait en 2 — celle-ci joue au hasard. On force le hasard
-    // vers une autre case pour prouver qu'elle NE bloque PAS toujours.
-    const spy = jest.spyOn(Math, 'random').mockReturnValue(0.2); // → cells[1], pas la case 2
+describe('playAt — l’IA bloque une menace immédiate', () => {
+  it('remplit la case bloquante quand le joueur menace un alignement', () => {
+    // Le joueur pose 1 → « me » en 0,1 menace la ligne [0,1,2]. L'IA n'a aucun
+    // gain immédiat : sa priorité est désormais de BLOQUER en 2, pas le hasard.
+    // prettier-ignore
+    const g = game(['me', _, _, 'ai', _, _, _, _, _]);
+    const after = playAt(g, 1);
+    expect(after.status).toBe('playing');
+    expect(after.board[2]).toBe('ai'); // la menace est bel et bien bloquée
+    expect(winningLine(after.board)).toBeNull();
+  });
+});
+
+describe('playAt — l’IA préfère SON gain au blocage', () => {
+  it('complète son propre alignement plutôt que de bloquer le joueur (« lost »)', () => {
+    // L'IA aligne 3,4 (gagne en 5) ET le joueur menace [0,1,2] (gagne en 2).
+    // Le joueur pose 8 (neutre) : l'IA doit choisir SON gain en 5, pas le
+    // blocage en 2 — le gain immédiat prime sur le blocage.
+    // prettier-ignore
+    const g = game(['me', 'me', _, 'ai', 'ai', _, _, _, _]);
+    const after = playAt(g, 8);
+    expect(after.status).toBe('lost');
+    expect(after.board[5]).toBe('ai'); // l'IA a bien conclu son alignement
+    expect(after.board[2]).toBeNull(); // …sans bloquer la menace du joueur
+    expect(winningLine(after.board)).toEqual([3, 4, 5]);
+  });
+});
+
+describe('playAt — l’IA reste BATTABLE par une fourchette', () => {
+  it('perd face à une double menace montée coup après coup (« won »)', () => {
+    // On force le seul coup aléatoire de l'IA (choix d'un coin) pour piloter
+    // toute la séquence. Le joueur monte une fourchette : deux menaces
+    // simultanées que l'IA, qui ne bloque qu'une case, ne peut pas parer.
+    const spy = jest.spyOn(Math, 'random').mockReturnValue(0.2); // coin le plus bas
     try {
-      // prettier-ignore
-      const g = game(['me', _, _, 'ai', _, _, _, _, _]);
-      const after = playAt(g, 1); // menace 'me' en 0,1 → gagne en 2
-      expect(after.status).toBe('playing'); // l'IA n'a ni gagné ni conclu
-      expect(after.board[2]).toBeNull(); // la case bloquante reste LIBRE
-      expect(after.board[4]).toBe('ai'); // l'IA a joué ailleurs
-      // la menace est intacte : le joueur peut conclure et gagner
-      const win = playAt(after, 2);
-      expect(win.status).toBe('won');
-      expect(winningLine(win.board)).toEqual([0, 1, 2]);
+      const g0 = newMorpion();
+      const g1 = playAt(g0, 0); // « me » en 0 → l'IA prend le centre 4
+      expect(g1.board[4]).toBe('ai');
+
+      const g2 = playAt(g1, 8); // « me » en 0,8 (pas de menace) → l'IA prend le coin 2
+      expect(g2.board[2]).toBe('ai');
+
+      const g3 = playAt(g2, 6); // « me » en 0,6,8 → DOUBLE menace : 3 ([0,3,6]) et 7 ([6,7,8])
+      expect(g3.status).toBe('playing');
+      expect(g3.board[3]).toBe('ai'); // l'IA n'a pu bloquer qu'une menace (3)…
+      expect(g3.board[7]).toBeNull(); // …l'autre (7) reste ouverte
+
+      const g4 = playAt(g3, 7); // le joueur conclut la seconde menace
+      expect(g4.status).toBe('won');
+      expect(winningLine(g4.board)).toEqual([6, 7, 8]);
     } finally {
       spy.mockRestore();
     }
