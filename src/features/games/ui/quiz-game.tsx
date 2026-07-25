@@ -16,7 +16,8 @@ import {
   type QuizGame as Game,
   type QuizItem,
 } from '../model/quiz';
-import { GameShell, gameTheme } from './game-shell';
+import { GameShell, TimerPill, gameTheme } from './game-shell';
+import { useCountdown } from './use-countdown';
 
 type Props = {
   pool: QuizItem[];
@@ -26,9 +27,28 @@ type Props = {
 
 const eur = (v: number) => `${v.toFixed(2).replace('.', ',')} €`;
 
+/** Secondes pour répondre à CHAQUE question — sinon, comptée fausse. */
+const PER_Q = 10;
+
 export function QuizGame({ pool, onWin, onExit }: Props) {
   const [game, setGame] = useState<Game>(() => newQuiz(pool));
   const [wonNotified, setWonNotified] = useState(false);
+
+  const answered = isAnswered(game);
+
+  // Minuteur par question : à zéro, on répond « faux » à sa place.
+  const remaining = useCountdown(
+    PER_Q,
+    game.status === 'playing' && !answered,
+    () =>
+      setGame((g) => {
+        const q = currentQuestion(g);
+        if (!q || isAnswered(g)) return g;
+        const wrong = q.choices.findIndex((_, i) => i !== q.correctIndex);
+        return wrong >= 0 ? answerCurrent(g, wrong) : g;
+      }),
+    game.current,
+  );
 
   // Victoire signalée une seule fois (récompense côté appelant).
   useEffect(() => {
@@ -97,7 +117,6 @@ export function QuizGame({ pool, onWin, onExit }: Props) {
 
   const q = currentQuestion(game);
   if (!q) return null;
-  const answered = isAnswered(game);
   const pick = game.picks[game.current];
   const isLast = game.current === total - 1;
 
@@ -108,6 +127,8 @@ export function QuizGame({ pool, onWin, onExit }: Props) {
       subtitle={`Question ${game.current + 1}/${total} · ${score} bonne(s) · seuil ${game.passMark}`}
       onBack={onExit}
     >
+      <TimerPill remaining={remaining} low={remaining <= 3} />
+
       {/* La carte offre (crème sur rouge) */}
       <View className="items-center gap-2 rounded-card bg-ink-inverse p-6">
         <AppText style={{ fontSize: 56, lineHeight: 64 }}>{q.emoji}</AppText>

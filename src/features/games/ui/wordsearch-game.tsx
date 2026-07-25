@@ -7,7 +7,8 @@ import { AppText } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { newWordSearch, selectLine, type WordSearch } from '../model/wordsearch';
-import { GameShell, gameTheme } from './game-shell';
+import { GameShell, TimerPill, gameTheme } from './game-shell';
+import { useCountdown } from './use-countdown';
 
 type Props = {
   /** Mots à cacher (mots courts de nourriture). */
@@ -16,20 +17,32 @@ type Props = {
   onExit: () => void;
 };
 
+/** Temps imparti (secondes) pour trouver tous les mots. */
+const BUDGET = 60;
+
 export function WordSearchGame({ words, onWin, onExit }: Props) {
   const [game, setGame] = useState<WordSearch>(() => newWordSearch(words));
   const [first, setFirst] = useState<number | null>(null);
   const [wonNotified, setWonNotified] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
+  const [round, setRound] = useState(0);
+
+  const won = game.status === 'won';
+  const over = won || timedOut;
+
+  const remaining = useCountdown(BUDGET, !over, () => setTimedOut(true), round);
 
   useEffect(() => {
-    if (game.status === 'won' && !wonNotified) {
+    if (won && !wonNotified) {
       setWonNotified(true);
       onWin();
     }
-  }, [game.status, wonNotified, onWin]);
+  }, [won, wonNotified, onWin]);
 
   const restart = () => {
     setWonNotified(false);
+    setTimedOut(false);
+    setRound((r) => r + 1);
     setFirst(null);
     setGame(newWordSearch(words));
   };
@@ -41,6 +54,7 @@ export function WordSearchGame({ words, onWin, onExit }: Props) {
     .forEach((p) => p.cells.forEach((c) => foundCells.add(c)));
 
   const onCell = (i: number) => {
+    if (over) return;
     if (first === null) {
       setFirst(i);
       return;
@@ -54,15 +68,16 @@ export function WordSearchGame({ words, onWin, onExit }: Props) {
   };
 
   const size = game.size;
-  const won = game.status === 'won';
 
   return (
     <GameShell
       title="MOTS"
       accent="MÊLÉS"
-      subtitle={`${game.found.length}/${game.placed.length} trouvés · touchez le début puis la fin d’un mot`}
+      subtitle={`${game.found.length}/${game.placed.length} trouvés · ligne, colonne ou diagonale`}
       onBack={onExit}
     >
+      <TimerPill remaining={remaining} low={remaining <= 10} />
+
       {/* Grille de lettres */}
       <View className="mt-1 self-center" style={{ width: '100%', maxWidth: 360 }}>
         {Array.from({ length: size }).map((_, r) => (
@@ -123,19 +138,23 @@ export function WordSearchGame({ words, onWin, onExit }: Props) {
         })}
       </View>
 
-      {won ? (
+      {over ? (
         <View
           testID="ws-result"
           className="mt-6 items-center gap-3 rounded-card bg-ink-inverse p-6"
         >
           <View
             className="h-14 w-14 items-center justify-center rounded-pill"
-            style={{ backgroundColor: colors.brand50 }}
+            style={{ backgroundColor: won ? colors.brand50 : colors.surfaceSunken }}
           >
-            <Feather name="gift" size={26} color={colors.brand500} />
+            <Feather
+              name={won ? 'gift' : 'clock'}
+              size={26}
+              color={won ? colors.brand500 : colors.inkMuted}
+            />
           </View>
           <AppText variant="title" className="text-center text-xl">
-            Tous trouvés ! Coupon débloqué 🎉
+            {won ? 'Tous trouvés ! Coupon débloqué 🎉' : 'Temps écoulé — on retente ?'}
           </AppText>
           <View className="mt-1 w-full gap-2">
             <Pressable

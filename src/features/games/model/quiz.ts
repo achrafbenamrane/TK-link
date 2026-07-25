@@ -54,9 +54,12 @@ export function passMarkFor(questionCount: number): number {
  * tirés des prix des AUTRES offres (dédupliqués, jamais égaux au bon prix).
  */
 function buildQuestion(item: QuizItem, pool: QuizItem[]): QuizQuestion {
-  const distractors = shuffle(
-    [...new Set(pool.map((d) => d.price))].filter((p) => p !== item.price),
-  ).slice(0, CHOICES_PER_QUESTION - 1);
+  // Distracteurs = les prix des AUTRES offres les PLUS PROCHES du bon prix :
+  // des propositions serrées rendent le choix plus difficile.
+  const distractors = [...new Set(pool.map((d) => d.price))]
+    .filter((p) => p !== item.price)
+    .sort((a, b) => Math.abs(a - item.price) - Math.abs(b - item.price))
+    .slice(0, CHOICES_PER_QUESTION - 1);
 
   const choices = shuffle([item.price, ...distractors]);
   return {

@@ -23,7 +23,11 @@ import {
   type CardImage,
   type MemoryGame as Game,
 } from '../model/memory';
-import { GameShell, gameTheme } from './game-shell';
+import { GameShell, TimerPill, gameTheme } from './game-shell';
+import { useCountdown } from './use-countdown';
+
+/** Temps imparti (secondes) pour retrouver toutes les paires. */
+const BUDGET = 45;
 
 type Props = {
   images: CardImage[];
@@ -89,8 +93,15 @@ function FlipCard({
 }
 
 export function MemoryGame({ images, onWin, onExit }: Props) {
-  const [game, setGame] = useState<Game>(() => newGame(images, 4));
+  const [game, setGame] = useState<Game>(() => newGame(images, 5));
   const [wonNotified, setWonNotified] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
+  const [round, setRound] = useState(0);
+
+  const won = game.status === 'won';
+  const over = game.status !== 'playing' || timedOut;
+
+  const remaining = useCountdown(BUDGET, !over, () => setTimedOut(true), round);
 
   // Erreur : on montre les deux cartes ~900 ms, puis on les referme.
   useEffect(() => {
@@ -101,15 +112,17 @@ export function MemoryGame({ images, onWin, onExit }: Props) {
 
   // Victoire signalée une seule fois (récompense côté appelant).
   useEffect(() => {
-    if (game.status === 'won' && !wonNotified) {
+    if (won && !wonNotified) {
       setWonNotified(true);
       onWin();
     }
-  }, [game.status, wonNotified, onWin]);
+  }, [won, wonNotified, onWin]);
 
   const restart = () => {
     setWonNotified(false);
-    setGame(newGame(images, 4));
+    setTimedOut(false);
+    setRound((r) => r + 1);
+    setGame(newGame(images, 5));
   };
 
   const tries = triesLeft(game);
@@ -121,6 +134,8 @@ export function MemoryGame({ images, onWin, onExit }: Props) {
       subtitle={`${game.matched.length}/${game.pairs} trouvées · ${game.pairs} paires, ${game.maxMistakes} essais`}
       onBack={onExit}
     >
+      <TimerPill remaining={remaining} low={remaining <= 8} />
+
       {/* Cœurs = essais restants */}
       <View className="mb-4 flex-row items-center gap-1.5">
         {Array.from({ length: game.maxMistakes }).map((_, i) => (
@@ -141,34 +156,36 @@ export function MemoryGame({ images, onWin, onExit }: Props) {
             card={c}
             label={String(i + 1)}
             revealed={isRevealed(game, c)}
-            onPress={() => setGame((g) => flipCard(g, c.id))}
+            onPress={() => !over && setGame((g) => flipCard(g, c.id))}
           />
         ))}
       </View>
 
       {/* Fin de partie */}
-      {game.status !== 'playing' ? (
+      {over ? (
         <View
           testID="memory-result"
           className="mt-4 items-center gap-3 rounded-card bg-ink-inverse p-6"
         >
           <View
             className="h-14 w-14 items-center justify-center rounded-pill"
-            style={{
-              backgroundColor: game.status === 'won' ? colors.brand50 : colors.surfaceSunken,
-            }}
+            style={{ backgroundColor: won ? colors.brand50 : colors.surfaceSunken }}
           >
             <Feather
-              name={game.status === 'won' ? 'gift' : 'refresh-ccw'}
+              name={won ? 'gift' : timedOut ? 'clock' : 'refresh-ccw'}
               size={26}
-              color={game.status === 'won' ? colors.brand500 : colors.inkMuted}
+              color={won ? colors.brand500 : colors.inkMuted}
             />
           </View>
           <AppText variant="title" className="text-center text-xl">
-            {game.status === 'won' ? 'Gagné ! Coupon débloqué 🎉' : 'Perdu — on retente ?'}
+            {won
+              ? 'Gagné ! Coupon débloqué 🎉'
+              : timedOut
+                ? 'Temps écoulé — on retente ?'
+                : 'Perdu — on retente ?'}
           </AppText>
           <AppText variant="caption" className="text-center">
-            {game.status === 'won'
+            {won
               ? 'Votre coupon vous attend dans « Mes coupons ».'
               : 'De nouvelles images vous attendent.'}
           </AppText>

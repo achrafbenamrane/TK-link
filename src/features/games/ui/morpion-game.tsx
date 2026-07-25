@@ -8,7 +8,8 @@ import { colors } from '@/shared/theme/colors';
 
 import type { CardImage } from '../model/memory';
 import { newMorpion, playAt, winningLine, type Morpion } from '../model/morpion';
-import { GameShell } from './game-shell';
+import { GameShell, TimerPill } from './game-shell';
+import { useCountdown } from './use-countdown';
 
 type Props = {
   /** Deux visuels d'offres : le premier est VOTRE pion, le second celui de l'app. */
@@ -17,27 +18,37 @@ type Props = {
   onExit: () => void;
 };
 
+/** Secondes pour jouer CHAQUE coup — sinon, la partie est perdue. */
+const PER_MOVE = 7;
+
 export function MorpionGame({ images, onWin, onExit }: Props) {
   const [game, setGame] = useState<Morpion>(() => newMorpion());
   const [wonNotified, setWonNotified] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
 
   const me = images[0];
   const ai = images[1] ?? images[0];
 
+  const won = game.status === 'won';
+  const done = game.status !== 'playing' || timedOut;
+  // Réarme le minuteur à chaque coup (nombre de cases occupées).
+  const filled = game.board.filter(Boolean).length;
+  const remaining = useCountdown(PER_MOVE, !done, () => setTimedOut(true), filled);
+
   useEffect(() => {
-    if (game.status === 'won' && !wonNotified) {
+    if (won && !wonNotified) {
       setWonNotified(true);
       onWin(); // seule VOTRE victoire donne un coupon
     }
-  }, [game.status, wonNotified, onWin]);
+  }, [won, wonNotified, onWin]);
 
   const restart = () => {
     setWonNotified(false);
+    setTimedOut(false);
     setGame(newMorpion());
   };
 
   const line = winningLine(game.board);
-  const done = game.status !== 'playing';
 
   return (
     <GameShell
@@ -46,8 +57,10 @@ export function MorpionGame({ images, onWin, onExit }: Props) {
       subtitle="Trois plats en ligne — avant l’app."
       onBack={onExit}
     >
+      <TimerPill remaining={remaining} low={remaining <= 3} />
+
       {/* Plateau 3×3, lignes blanches façon affiche */}
-      <View className="mt-2 self-center" style={{ width: '100%', maxWidth: 340, aspectRatio: 1 }}>
+      <View className="mt-1 self-center" style={{ width: '100%', maxWidth: 340, aspectRatio: 1 }}>
         <View className="flex-1 flex-row flex-wrap">
           {game.board.map((mark, i) => {
             const col = i % 3;
@@ -96,17 +109,21 @@ export function MorpionGame({ images, onWin, onExit }: Props) {
             }}
           >
             <Feather
-              name={game.status === 'won' ? 'gift' : game.status === 'lost' ? 'x' : 'refresh-ccw'}
+              name={
+                won ? 'gift' : timedOut ? 'clock' : game.status === 'lost' ? 'x' : 'refresh-ccw'
+              }
               size={26}
-              color={game.status === 'won' ? colors.brand500 : colors.inkMuted}
+              color={won ? colors.brand500 : colors.inkMuted}
             />
           </View>
           <AppText variant="title" className="text-center text-xl">
-            {game.status === 'won'
+            {won
               ? 'Gagné ! Coupon débloqué 🎉'
-              : game.status === 'lost'
-                ? 'L’app a gagné — on retente ?'
-                : 'Match nul — rejouez !'}
+              : timedOut
+                ? 'Trop lent — temps écoulé !'
+                : game.status === 'lost'
+                  ? 'L’app a gagné — on retente ?'
+                  : 'Match nul — rejouez !'}
           </AppText>
           <View className="mt-1 w-full gap-2">
             <Pressable

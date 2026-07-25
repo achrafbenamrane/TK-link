@@ -18,7 +18,7 @@ const REWARDS = [
 ];
 
 /** Mots à cacher dans « Mots mêlés » — nourriture + marque, courts et sans accents. */
-const GAME_WORDS = ['PIZZA', 'SUSHI', 'BURGER', 'SALADE', 'COUPON', 'FLASH'];
+const GAME_WORDS = ['PIZZA', 'SUSHI', 'BURGER', 'SALADE', 'COUPON', 'FLASH', 'TACOS', 'GLACE'];
 
 export default function GamesRoute() {
   const router = useRouter();

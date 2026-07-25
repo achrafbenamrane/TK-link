@@ -6,6 +6,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
+import { fmtCountdown } from './use-countdown';
+
+/** Pastille de compte à rebours — rouge quand il reste peu de temps. */
+export function TimerPill({ remaining, low }: { remaining: number; low?: boolean }) {
+  return (
+    <View
+      className="mb-3 self-center rounded-pill px-4 py-1.5"
+      style={{ backgroundColor: low ? colors.danger : 'rgba(246,242,234,0.16)' }}
+    >
+      <AppText className="font-display text-ink-inverse" style={{ fontSize: 15, letterSpacing: 1 }}>
+        {`⏱ ${fmtCountdown(remaining)}`}
+      </AppText>
+    </View>
+  );
+}
+
 /**
  * Coquille « affiche » des jeux — le look des posts que les marques food
  * publient (fond rouge de marque, gros titre, la photo du produit en pièce de
