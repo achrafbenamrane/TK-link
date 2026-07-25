@@ -36,7 +36,10 @@ export type Deal = {
   title: string;
   merchantId: string;
   category: Category;
-  emoji: string; // placeholder produit (remplacé par une vraie photo plus tard)
+  emoji: string; // repli si aucune photo
+  /** Photo réelle uploadée par le commerçant (URL). Prioritaire sur le visuel
+   *  embarqué ; alimentée par le back-end quand il existera. */
+  imageUrl?: string;
   tint: string; // couleur de fond de la vignette
   price: number; // prix flash (€)
   oldPrice?: number;

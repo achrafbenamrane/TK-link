@@ -23,5 +23,5 @@ export {
   selectCartSubtotal,
   selectTotalUnread,
 } from './model/store';
-export { dealImagePool } from './model/product-images';
-export { dealQuizPool } from './model/catalog';
+export { dealImagePool, dealQuizPool } from './model/catalog';
+export type { GameImageSource } from './model/catalog';

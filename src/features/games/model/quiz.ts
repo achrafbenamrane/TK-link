@@ -10,12 +10,22 @@
  * distracteurs tirés des autres offres.
  */
 
-export type QuizItem = { id: string; title: string; price: number; emoji: string };
+import type { GameImageSource } from './memory';
+
+export type QuizItem = {
+  id: string;
+  title: string;
+  price: number;
+  emoji: string;
+  /** Photo de l'offre (uploadée), affichée à la place de l'emoji si présente. */
+  image?: GameImageSource;
+};
 
 export type QuizQuestion = {
   id: string;
   title: string;
   emoji: string;
+  image?: GameImageSource;
   /** Propositions de prix (euros), mélangées ; une seule est correcte. */
   choices: number[];
   correctIndex: number;
@@ -66,6 +76,7 @@ function buildQuestion(item: QuizItem, pool: QuizItem[]): QuizQuestion {
     id: item.id,
     title: item.title,
     emoji: item.emoji,
+    image: item.image,
     choices,
     correctIndex: choices.indexOf(item.price),
   };

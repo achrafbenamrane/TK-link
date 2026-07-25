@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -129,9 +130,17 @@ export function QuizGame({ pool, onWin, onExit }: Props) {
     >
       <TimerPill remaining={remaining} low={remaining <= 3} />
 
-      {/* La carte offre (crème sur rouge) */}
+      {/* La carte offre (crème sur rouge) — la vraie photo si dispo, sinon l'emoji */}
       <View className="items-center gap-2 rounded-card bg-ink-inverse p-6">
-        <AppText style={{ fontSize: 56, lineHeight: 64 }}>{q.emoji}</AppText>
+        {q.image != null ? (
+          <Image
+            source={q.image}
+            style={{ width: 104, height: 104, borderRadius: 18 }}
+            contentFit="cover"
+          />
+        ) : (
+          <AppText style={{ fontSize: 56, lineHeight: 64 }}>{q.emoji}</AppText>
+        )}
         <AppText variant="title" className="text-center text-lg" numberOfLines={2}>
           {q.title}
         </AppText>

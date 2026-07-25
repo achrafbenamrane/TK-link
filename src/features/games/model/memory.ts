@@ -11,13 +11,19 @@
  * devient donc automatiquement une carte, sans rien toucher au jeu.
  */
 
-export type CardImage = { id: string; source: number };
+/**
+ * Source d'un visuel de jeu : asset embarqué (`number`) OU photo distante
+ * (`{ uri }`, uploadée par le commerçant). expo-image accepte les deux.
+ */
+export type GameImageSource = number | { uri: string };
+
+export type CardImage = { id: string; source: GameImageSource };
 
 export type Card = {
   /** Unique par carte (deux cartes partagent le même `imageId`). */
   id: string;
   imageId: string;
-  source: number;
+  source: GameImageSource;
 };
 
 export type MemoryGame = {
