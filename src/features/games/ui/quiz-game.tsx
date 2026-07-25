@@ -16,6 +16,7 @@ import {
   type QuizGame as Game,
   type QuizItem,
 } from '../model/quiz';
+import { GameShell, gameTheme } from './game-shell';
 
 type Props = {
   pool: QuizItem[];
@@ -39,7 +40,6 @@ export function QuizGame({ pool, onWin, onExit }: Props) {
 
   const restart = () => {
     setWonNotified(false);
-    // Questions FRAÎCHES à chaque relance (tirage aléatoire dans le pool).
     setGame(newQuiz(pool));
   };
 
@@ -49,16 +49,11 @@ export function QuizGame({ pool, onWin, onExit }: Props) {
   if (game.status !== 'playing') {
     const won = game.status === 'won';
     return (
-      <View className="flex-1 justify-center">
-        <View
-          testID="quiz-result"
-          className="items-center gap-3 rounded-card border border-line bg-surface-muted p-6"
-        >
+      <GameShell title="LE JUSTE" accent="PRIX" onBack={onExit} scroll={false}>
+        <View testID="quiz-result" className="items-center gap-3 rounded-card bg-ink-inverse p-6">
           <View
-            className={cn(
-              'h-14 w-14 items-center justify-center rounded-pill',
-              won ? 'bg-brand-50' : 'bg-surface-sunken',
-            )}
+            className="h-14 w-14 items-center justify-center rounded-pill"
+            style={{ backgroundColor: won ? colors.brand50 : colors.surfaceSunken }}
           >
             <Feather
               name={won ? 'gift' : 'refresh-ccw'}
@@ -96,7 +91,7 @@ export function QuizGame({ pool, onWin, onExit }: Props) {
             </Pressable>
           </View>
         </View>
-      </View>
+      </GameShell>
     );
   }
 
@@ -107,22 +102,14 @@ export function QuizGame({ pool, onWin, onExit }: Props) {
   const isLast = game.current === total - 1;
 
   return (
-    <View className="flex-1">
-      {/* Progression + score */}
-      <View className="mb-4 flex-row items-center justify-between">
-        <AppText className="font-sans-bold text-ink">
-          Question {game.current + 1}/{total}
-        </AppText>
-        <View className="flex-row items-center gap-1.5">
-          <Feather name="check-circle" size={16} color={colors.success} />
-          <AppText variant="caption" className="text-ink-muted">
-            {score} · seuil {game.passMark}
-          </AppText>
-        </View>
-      </View>
-
-      {/* La carte offre */}
-      <View className="items-center gap-2 rounded-card border border-line bg-surface-muted p-6">
+    <GameShell
+      title="LE JUSTE"
+      accent="PRIX"
+      subtitle={`Question ${game.current + 1}/${total} · ${score} bonne(s) · seuil ${game.passMark}`}
+      onBack={onExit}
+    >
+      {/* La carte offre (crème sur rouge) */}
+      <View className="items-center gap-2 rounded-card bg-ink-inverse p-6">
         <AppText style={{ fontSize: 56, lineHeight: 64 }}>{q.emoji}</AppText>
         <AppText variant="title" className="text-center text-lg" numberOfLines={2}>
           {q.title}
@@ -137,14 +124,15 @@ export function QuizGame({ pool, onWin, onExit }: Props) {
         {q.choices.map((c, i) => {
           const isCorrect = i === q.correctIndex;
           const isPicked = pick === i;
-          // Après réponse : la bonne en vert, le mauvais choix en rouge.
+          // Sur fond rouge : crème par défaut, vert si bon, sombre si mauvais choix.
           const tone = !answered
-            ? 'border-line bg-surface'
+            ? 'bg-ink-inverse'
             : isCorrect
-              ? 'border-success bg-success/10'
+              ? 'bg-success'
               : isPicked
-                ? 'border-danger bg-danger/10'
-                : 'border-line bg-surface opacity-60';
+                ? 'bg-ink'
+                : 'bg-ink-inverse/50';
+          const textTone = answered && (isCorrect || isPicked) ? 'text-ink-inverse' : 'text-ink';
           return (
             <Pressable
               key={i}
@@ -153,15 +141,15 @@ export function QuizGame({ pool, onWin, onExit }: Props) {
               disabled={answered}
               onPress={() => setGame((g) => answerCurrent(g, i))}
               className={cn(
-                'w-[48%] flex-row items-center justify-between rounded-card border px-4 py-4',
+                'w-[48%] flex-row items-center justify-between rounded-card px-4 py-4',
                 tone,
               )}
             >
-              <AppText className="font-display text-base">{eur(c)}</AppText>
+              <AppText className={cn('font-display text-base', textTone)}>{eur(c)}</AppText>
               {answered && isCorrect ? (
-                <Feather name="check" size={18} color={colors.success} />
+                <Feather name="check" size={18} color={colors.inkInverse} />
               ) : answered && isPicked ? (
-                <Feather name="x" size={18} color={colors.danger} />
+                <Feather name="x" size={18} color={colors.inkInverse} />
               ) : null}
             </Pressable>
           );
@@ -174,14 +162,15 @@ export function QuizGame({ pool, onWin, onExit }: Props) {
           testID="quiz-next"
           accessibilityRole="button"
           onPress={() => setGame((g) => next(g))}
-          className="mt-6 flex-row items-center justify-center gap-2 rounded-control bg-ink py-4 active:opacity-90"
+          className="mt-6 flex-row items-center justify-center gap-2 rounded-control py-4"
+          style={{ backgroundColor: gameTheme.gold }}
         >
-          <AppText className="font-sans-bold text-ink-inverse">
+          <AppText className="font-sans-bold text-ink">
             {isLast ? 'Voir le résultat' : 'Question suivante'}
           </AppText>
-          <Feather name="arrow-right" size={18} color={colors.inkInverse} />
+          <Feather name="arrow-right" size={18} color={colors.ink} />
         </Pressable>
       ) : null}
-    </View>
+    </GameShell>
   );
 }

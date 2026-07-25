@@ -9,7 +9,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
@@ -24,6 +23,7 @@ import {
   type CardImage,
   type MemoryGame as Game,
 } from '../model/memory';
+import { GameShell, gameTheme } from './game-shell';
 
 type Props = {
   images: CardImage[];
@@ -31,13 +31,15 @@ type Props = {
   onExit: () => void;
 };
 
-/** Une carte qui se retourne (rotateY). Deux faces, dos de marque / visuel. */
+/** Pastille circulaire qui se retourne : dos numéroté (crème), face = la photo. */
 function FlipCard({
   card,
+  label,
   revealed,
   onPress,
 }: {
   card: Card;
+  label: string;
   revealed: boolean;
   onPress: () => void;
 }) {
@@ -62,21 +64,23 @@ function FlipCard({
     <Pressable
       testID={`card-${card.id}`}
       accessibilityRole="button"
-      accessibilityLabel={revealed ? 'Carte retournée' : 'Carte face cachée'}
+      accessibilityLabel={revealed ? 'Carte retournée' : `Carte ${label}`}
       onPress={onPress}
-      className="aspect-square w-[31%]"
+      className="mb-3 aspect-square w-[30%]"
     >
-      {/* Dos : tuile ink avec le point rouge de la marque. */}
+      {/* Dos : pastille crème numérotée, façon « trouvez les paires ». */}
       <Animated.View
         style={back}
-        className="absolute inset-0 items-center justify-center rounded-card bg-ink"
+        className="absolute inset-0 items-center justify-center rounded-full border-4 border-ink-inverse/30 bg-ink-inverse"
       >
-        <View className="h-4 w-4 rounded-pill bg-brand-500" />
+        <AppText className="font-display text-ink" style={{ fontSize: 22 }}>
+          {label}
+        </AppText>
       </Animated.View>
-      {/* Face : le visuel de l'offre. */}
+      {/* Face : le visuel de l'offre, en médaillon. */}
       <Animated.View
         style={front}
-        className="absolute inset-0 overflow-hidden rounded-card border border-line bg-surface"
+        className="absolute inset-0 overflow-hidden rounded-full border-4 border-ink-inverse"
       >
         <Image source={card.source} style={{ flex: 1 }} contentFit="cover" />
       </Animated.View>
@@ -105,40 +109,37 @@ export function MemoryGame({ images, onWin, onExit }: Props) {
 
   const restart = () => {
     setWonNotified(false);
-    // Images FRAÎCHES à chaque relance (tirage aléatoire dans le pool).
     setGame(newGame(images));
   };
 
   const tries = triesLeft(game);
 
   return (
-    <View className="flex-1">
-      {/* En-tête : consigne + essais restants */}
-      <View className="mb-4 flex-row items-center justify-between">
-        <View>
-          <AppText className="font-sans-bold text-ink">Retrouvez les 3 paires</AppText>
-          <AppText variant="caption" className="text-ink-faint">
-            {game.matched.length}/{game.pairs} trouvées
-          </AppText>
-        </View>
-        <View className="flex-row items-center gap-1.5">
-          {Array.from({ length: game.maxMistakes }).map((_, i) => (
-            <Feather
-              key={i}
-              name="heart"
-              size={18}
-              color={i < tries ? colors.brand500 : colors.line}
-            />
-          ))}
-        </View>
+    <GameShell
+      title="TROUVEZ LES"
+      accent="PAIRES"
+      subtitle={`${game.matched.length}/${game.pairs} trouvées · retrouvez les 3 paires`}
+      onBack={onExit}
+    >
+      {/* Cœurs = essais restants */}
+      <View className="mb-4 flex-row items-center gap-1.5">
+        {Array.from({ length: game.maxMistakes }).map((_, i) => (
+          <Feather
+            key={i}
+            name="heart"
+            size={20}
+            color={i < tries ? gameTheme.gold : 'rgba(246,242,234,0.35)'}
+          />
+        ))}
       </View>
 
-      {/* Plateau */}
-      <View className="flex-row flex-wrap justify-between gap-y-3">
-        {game.cards.map((c) => (
+      {/* Plateau de pastilles */}
+      <View className="flex-row flex-wrap justify-between">
+        {game.cards.map((c, i) => (
           <FlipCard
             key={c.id}
             card={c}
+            label={String(i + 1)}
             revealed={isRevealed(game, c)}
             onPress={() => setGame((g) => flipCard(g, c.id))}
           />
@@ -149,13 +150,13 @@ export function MemoryGame({ images, onWin, onExit }: Props) {
       {game.status !== 'playing' ? (
         <View
           testID="memory-result"
-          className="mt-6 items-center gap-3 rounded-card border border-line bg-surface-muted p-6"
+          className="mt-4 items-center gap-3 rounded-card bg-ink-inverse p-6"
         >
           <View
-            className={cn(
-              'h-14 w-14 items-center justify-center rounded-pill',
-              game.status === 'won' ? 'bg-brand-50' : 'bg-surface-sunken',
-            )}
+            className="h-14 w-14 items-center justify-center rounded-pill"
+            style={{
+              backgroundColor: game.status === 'won' ? colors.brand50 : colors.surfaceSunken,
+            }}
           >
             <Feather
               name={game.status === 'won' ? 'gift' : 'refresh-ccw'}
@@ -195,6 +196,6 @@ export function MemoryGame({ images, onWin, onExit }: Props) {
           </View>
         </View>
       ) : null}
-    </View>
+    </GameShell>
   );
 }

@@ -17,6 +17,9 @@ const REWARDS = [
   { discount: { kind: 'amount' as const, cents: 300 }, label: 'Score parfait' },
 ];
 
+/** Mots à cacher dans « Mots mêlés » — nourriture + marque, courts et sans accents. */
+const GAME_WORDS = ['PIZZA', 'SUSHI', 'BURGER', 'SALADE', 'COUPON', 'FLASH'];
+
 export default function GamesRoute() {
   const router = useRouter();
   const grant = useCouponsStore((s) => s.grantEarnedCoupon);
@@ -36,5 +39,5 @@ export default function GamesRoute() {
     );
   };
 
-  return <GamesScreen imagePool={imagePool} quizPool={quizPool} onWin={onWin} />;
+  return <GamesScreen imagePool={imagePool} quizPool={quizPool} words={GAME_WORDS} onWin={onWin} />;
 }
