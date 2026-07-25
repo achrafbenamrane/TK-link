@@ -19,6 +19,10 @@ type Props = {
 
 type Dir = 'up' | 'down' | 'left' | 'right';
 
+/** Temps imparti (secondes) pour atteindre l'offre — sinon, perdu. */
+const BUDGET = 60;
+const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
 function DirButton({
   dir,
   icon,
@@ -41,54 +45,68 @@ function DirButton({
   );
 }
 
-const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-
 export function MazeGame({ goalImage, onWin, onExit }: Props) {
   const [game, setGame] = useState<Maze>(() => newMaze());
   const [wonNotified, setWonNotified] = useState(false);
   const [startTs, setStartTs] = useState(() => Date.now());
-  const [elapsed, setElapsed] = useState(0);
+  const [remaining, setRemaining] = useState(BUDGET);
+  const [timedOut, setTimedOut] = useState(false);
 
   const won = game.status === 'won';
+  const over = won || timedOut;
 
   useEffect(() => {
-    if (game.status === 'won' && !wonNotified) {
+    if (won && !wonNotified) {
       setWonNotified(true);
       onWin();
     }
-  }, [game.status, wonNotified, onWin]);
+  }, [won, wonNotified, onWin]);
 
-  // Chronomètre : compte tant qu'on cherche, se fige à l'arrivée.
+  // Compte à REBOURS : chaque partie a BUDGET secondes ; à 0, c'est perdu.
   useEffect(() => {
-    if (won) return;
-    const id = setInterval(() => setElapsed(Math.floor((Date.now() - startTs) / 1000)), 500);
+    if (over) return;
+    const id = setInterval(() => {
+      const rem = Math.max(0, BUDGET - Math.floor((Date.now() - startTs) / 1000));
+      setRemaining(rem);
+      if (rem <= 0) setTimedOut(true);
+    }, 250);
     return () => clearInterval(id);
-  }, [won, startTs]);
+  }, [over, startTs]);
 
-  const go = (d: Dir) => setGame((g) => move(g, d));
+  const go = (d: Dir) => {
+    if (!over) setGame((g) => move(g, d));
+  };
+
+  // Nouveau labyrinthe ALÉATOIRE à chaque partie → rien à mémoriser d'une fois
+  // sur l'autre. (newMaze est aussi rappelé à chaque entrée dans le jeu.)
   const restart = () => {
     setWonNotified(false);
     setStartTs(Date.now());
-    setElapsed(0);
+    setRemaining(BUDGET);
+    setTimedOut(false);
     setGame(newMaze());
   };
 
   const size = game.size;
+  const low = remaining <= 10;
 
   return (
     <GameShell
       title="TROUVEZ LE"
       accent="CHEMIN"
-      subtitle="Chemins multiples — trouvez le plus court."
+      subtitle="Chemins multiples — arrivez avant la fin du temps."
       onBack={onExit}
     >
-      {/* Chronomètre */}
-      <View className="mb-3 self-center rounded-pill bg-ink-inverse/15 px-4 py-1.5">
+      {/* Compte à rebours (rouge quand il reste peu) */}
+      <View
+        className="mb-3 self-center rounded-pill px-4 py-1.5"
+        style={{ backgroundColor: low ? colors.danger : 'rgba(246,242,234,0.16)' }}
+      >
         <AppText
           className="font-display text-ink-inverse"
           style={{ fontSize: 15, letterSpacing: 1 }}
         >
-          {`⏱ ${fmtTime(elapsed)}`}
+          {`⏱ ${fmtTime(remaining)}`}
         </AppText>
       </View>
 
@@ -131,22 +149,28 @@ export function MazeGame({ goalImage, onWin, onExit }: Props) {
         ))}
       </View>
 
-      {won ? (
+      {over ? (
         <View
           testID="maze-result"
           className="mt-6 items-center gap-3 rounded-card bg-ink-inverse p-6"
         >
           <View
             className="h-14 w-14 items-center justify-center rounded-pill"
-            style={{ backgroundColor: colors.brand50 }}
+            style={{ backgroundColor: won ? colors.brand50 : colors.surfaceSunken }}
           >
-            <Feather name="gift" size={26} color={colors.brand500} />
+            <Feather
+              name={won ? 'gift' : 'clock'}
+              size={26}
+              color={won ? colors.brand500 : colors.inkMuted}
+            />
           </View>
           <AppText variant="title" className="text-center text-xl">
-            Arrivé en {fmtTime(elapsed)} ! 🎉
+            {won ? `Arrivé ! Coupon débloqué 🎉` : 'Temps écoulé — on retente ?'}
           </AppText>
           <AppText variant="caption" className="text-center">
-            Coupon débloqué — dans « Mes coupons ».
+            {won
+              ? `Avec ${fmtTime(remaining)} d’avance · dans « Mes coupons ».`
+              : 'Un nouveau labyrinthe vous attend.'}
           </AppText>
           <View className="mt-1 w-full gap-2">
             <Pressable
@@ -155,7 +179,9 @@ export function MazeGame({ goalImage, onWin, onExit }: Props) {
               onPress={restart}
               className="items-center rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
             >
-              <AppText className="font-sans-bold text-ink-inverse">Nouveau labyrinthe</AppText>
+              <AppText className="font-sans-bold text-ink-inverse">
+                {won ? 'Rejouer' : 'Nouveau labyrinthe'}
+              </AppText>
             </Pressable>
             <Pressable
               testID="maze-exit"
