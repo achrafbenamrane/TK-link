@@ -16,7 +16,7 @@ import { AppText } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import type { CardImage } from '../model/memory';
-import { newPacGame, tick, type Dir, type PacGame, type Walls } from '../model/pacman';
+import { newPacGame, tick, type PacGame, type Walls } from '../model/pacman';
 import { GameShell, gameTheme } from './game-shell';
 
 type Props = {
@@ -181,16 +181,17 @@ export function PacmanGame({ images, onWin, onExit }: Props) {
 
   const [game, setGame] = useState<PacGame>(() => newPacGame(COLS, ROWS));
   const [wonNotified, setWonNotified] = useState(false);
-  const desired = useSharedValue<Dir>({ dx: 0, dy: 0 });
+  const dDx = useSharedValue(0); // direction voulue (joystick) — x
+  const dDy = useSharedValue(0); // direction voulue (joystick) — y
   const knobX = useSharedValue(0);
   const knobY = useSharedValue(0);
 
   // Boucle de jeu : un pas toutes les STEP ms tant qu'on joue.
   useEffect(() => {
     if (game.status !== 'playing') return;
-    const id = setInterval(() => setGame((g) => tick(g, desired.value)), STEP);
+    const id = setInterval(() => setGame((g) => tick(g, { dx: dDx.value, dy: dDy.value })), STEP);
     return () => clearInterval(id);
-  }, [game.status, desired]);
+  }, [game.status, dDx, dDy]);
 
   // Victoire signalée une fois (coupon côté route).
   useEffect(() => {
@@ -202,7 +203,8 @@ export function PacmanGame({ images, onWin, onExit }: Props) {
 
   const restart = () => {
     setWonNotified(false);
-    desired.value = { dx: 0, dy: 0 };
+    dDx.value = 0;
+    dDy.value = 0;
     setGame(newPacGame(COLS, ROWS));
   };
 
@@ -222,9 +224,11 @@ export function PacmanGame({ images, onWin, onExit }: Props) {
       knobY.value = dy;
       if (Math.hypot(e.translationX, e.translationY) > 8) {
         if (Math.abs(e.translationX) > Math.abs(e.translationY)) {
-          desired.value = { dx: e.translationX > 0 ? 1 : -1, dy: 0 };
+          dDx.value = e.translationX > 0 ? 1 : -1;
+          dDy.value = 0;
         } else {
-          desired.value = { dx: 0, dy: e.translationY > 0 ? 1 : -1 };
+          dDx.value = 0;
+          dDy.value = e.translationY > 0 ? 1 : -1;
         }
       }
     })

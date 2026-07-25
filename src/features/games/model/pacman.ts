@@ -165,7 +165,7 @@ function moveGhost(walls: Walls[], cols: number, g: Ghost): Ghost {
 /**
  * Un pas de jeu. `desired` = direction voulue (joystick). Le perso tourne si
  * c'est ouvert, sinon continue tout droit, sinon s'arrête. Les fantômes vont à
- * ~2/3 de la vitesse. Fonction PURE (n'altère pas l'entrée).
+ * MI-VITESSE (une case sur deux) — la partie reste gagnable. Fonction PURE.
  */
 export function tick(game: PacGame, desired: Dir): PacGame {
   if (game.status !== 'playing') return game;
@@ -194,7 +194,7 @@ export function tick(game: PacGame, desired: Dir): PacGame {
   }
 
   const prevG = game.ghosts.map((g) => ({ c: g.c, r: g.r }));
-  const moveGhosts = game.frame % 3 !== 0;
+  const moveGhosts = game.frame % 2 === 1; // mi-vitesse ; frame 0 = repos
   let ghosts = moveGhosts ? game.ghosts.map((g) => moveGhost(walls, cols, g)) : game.ghosts;
 
   let lives = game.lives;

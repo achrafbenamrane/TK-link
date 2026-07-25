@@ -108,6 +108,22 @@ describe('tick — fantômes & vies', () => {
     expect(g2.pac.c).toBe(1);
   });
 
+  it('les fantômes vont à mi-vitesse (repos aux frames paires)', () => {
+    // ghost en (1,0) orienté à droite, grille 3×1 ouverte, pac à l’écart
+    const g0 = mkGame(3, 1, {
+      pac: { c: 0, r: 0, dx: 0, dy: 0 },
+      ghosts: [{ c: 1, r: 0, dx: 1, dy: 0 }],
+      frame: 0,
+    });
+    expect(tick(g0, NONE).ghosts[0]!.c).toBe(1); // frame 0 → repos
+    const g1 = mkGame(3, 1, {
+      pac: { c: 0, r: 0, dx: 0, dy: 0 },
+      ghosts: [{ c: 1, r: 0, dx: 1, dy: 0 }],
+      frame: 1,
+    });
+    expect(tick(g1, NONE).ghosts[0]!.c).toBe(2); // frame 1 → avance d’une case
+  });
+
   it('perd la partie à la dernière vie', () => {
     const ghost: Ghost = { c: 2, r: 0, dx: 0, dy: 0 };
     const g = mkGame(3, 1, {
