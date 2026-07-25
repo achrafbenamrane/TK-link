@@ -12,6 +12,7 @@ import type { QuizItem } from '../model/quiz';
 import { MazeGame } from './maze-game';
 import { MemoryGame } from './memory-game';
 import { MorpionGame } from './morpion-game';
+import { PacmanGame } from './pacman-game';
 import { QuizGame } from './quiz-game';
 import { WordSearchGame } from './wordsearch-game';
 
@@ -26,13 +27,13 @@ type Props = {
   onWin: () => void;
 };
 
-type Mode = 'menu' | 'memory' | 'quiz' | 'morpion' | 'maze' | 'wordsearch';
+type Mode = 'menu' | 'memory' | 'quiz' | 'morpion' | 'maze' | 'wordsearch' | 'pacman';
 
 type Tile = {
   key: Exclude<Mode, 'menu'>;
   name: string;
   tagline: string;
-  icon: 'grid' | 'zap' | 'hash' | 'navigation' | 'type';
+  icon: 'grid' | 'zap' | 'hash' | 'navigation' | 'type' | 'disc';
   /** Fond de la tuile : rouge de marque (false) ou ink (true). */
   dark: boolean;
 };
@@ -61,6 +62,13 @@ const TILES: Tile[] = [
     icon: 'zap',
     dark: false,
   },
+  {
+    key: 'pacman',
+    name: 'PacFreedoo',
+    tagline: 'Croquez tout au joystick',
+    icon: 'disc',
+    dark: true,
+  },
 ];
 
 export function GamesScreen({ imagePool, quizPool, words, onWin }: Props) {
@@ -75,6 +83,7 @@ export function GamesScreen({ imagePool, quizPool, words, onWin }: Props) {
     maze: imagePool.length >= 1,
     wordsearch: words.length >= 3,
     quiz: quizPool.length >= 3,
+    pacman: imagePool.length >= 1,
   };
 
   // Chaque jeu ouvre sa propre coquille « affiche » plein écran.
@@ -83,6 +92,7 @@ export function GamesScreen({ imagePool, quizPool, words, onWin }: Props) {
   if (mode === 'maze' && goal) return <MazeGame goalImage={goal} onWin={onWin} onExit={back} />;
   if (mode === 'wordsearch') return <WordSearchGame words={words} onWin={onWin} onExit={back} />;
   if (mode === 'quiz') return <QuizGame pool={quizPool} onWin={onWin} onExit={back} />;
+  if (mode === 'pacman') return <PacmanGame images={imagePool} onWin={onWin} onExit={back} />;
 
   return (
     <Screen testID="games-screen">
