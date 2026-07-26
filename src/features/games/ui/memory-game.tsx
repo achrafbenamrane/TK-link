@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, useWindowDimensions, View } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -28,6 +28,8 @@ import { useCountdown } from './use-countdown';
 
 /** Temps imparti (secondes) pour retrouver toutes les paires. */
 const BUDGET = 45;
+/** Paires par partie — 4 → grille propre 4×2, cartes bien lisibles. */
+const PAIRS = 4;
 
 type Props = {
   images: CardImage[];
@@ -35,22 +37,34 @@ type Props = {
   onExit: () => void;
 };
 
-/** Pastille circulaire qui se retourne : dos numéroté (crème), face = la photo. */
+/**
+ * Carte qui se retourne : dos crème avec emblème doré (identique pour toutes,
+ * comme un vrai jeu de mémoire), face = la photo de l'offre en médaillon.
+ * Taille NUMÉRIQUE (pas d'`aspect-ratio` sur une feuille à enfants absolus, qui
+ * s'effondrait en barre).
+ */
 function FlipCard({
   card,
   label,
+  size,
   revealed,
+  matched,
   onPress,
 }: {
   card: Card;
   label: string;
+  size: number;
   revealed: boolean;
+  matched: boolean;
   onPress: () => void;
 }) {
   const p = useSharedValue(revealed ? 1 : 0);
   useEffect(() => {
-    p.value = withTiming(revealed ? 1 : 0, { duration: 320 });
+    p.value = withTiming(revealed ? 1 : 0, { duration: 300 });
   }, [revealed, p]);
+
+  const radius = size * 0.24;
+  const face = { position: 'absolute' as const, top: 0, left: 0, width: size, height: size };
 
   const back = useAnimatedStyle(() => ({
     transform: [{ perspective: 800 }, { rotateY: `${interpolate(p.value, [0, 1], [0, 180])}deg` }],
@@ -70,30 +84,76 @@ function FlipCard({
       accessibilityRole="button"
       accessibilityLabel={revealed ? 'Carte retournée' : `Carte ${label}`}
       onPress={onPress}
-      className="mb-3 aspect-square w-[30%]"
+      disabled={revealed}
+      style={{ width: size, height: size }}
     >
-      {/* Dos : pastille crème numérotée, façon « trouvez les paires ». */}
+      {/* Dos : carte crème + emblème doré (toutes identiques). */}
       <Animated.View
-        style={back}
-        className="absolute inset-0 items-center justify-center rounded-full border-4 border-ink-inverse/30 bg-ink-inverse"
+        style={[
+          face,
+          back,
+          {
+            borderRadius: radius,
+            backgroundColor: colors.inkInverse,
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+        ]}
       >
-        <AppText className="font-display text-ink" style={{ fontSize: 22 }}>
-          {label}
-        </AppText>
+        <View
+          style={{
+            width: size * 0.46,
+            height: size * 0.46,
+            borderRadius: size * 0.23,
+            backgroundColor: 'rgba(255,194,75,0.18)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Feather name="gift" size={size * 0.24} color={gameTheme.gold} />
+        </View>
       </Animated.View>
-      {/* Face : le visuel de l'offre, en médaillon. */}
+
+      {/* Face : la photo de l'offre, médaillon. Anneau doré si paire trouvée. */}
       <Animated.View
-        style={front}
-        className="absolute inset-0 overflow-hidden rounded-full border-4 border-ink-inverse"
+        style={[
+          face,
+          front,
+          {
+            borderRadius: radius,
+            overflow: 'hidden',
+            backgroundColor: colors.inkInverse,
+            borderWidth: matched ? 3 : 0,
+            borderColor: gameTheme.gold,
+          },
+        ]}
       >
         <Image source={card.source} style={{ flex: 1 }} contentFit="cover" />
+        {matched ? (
+          <View
+            style={{
+              position: 'absolute',
+              top: 4,
+              right: 4,
+              width: size * 0.3,
+              height: size * 0.3,
+              borderRadius: size * 0.15,
+              backgroundColor: gameTheme.gold,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Feather name="check" size={size * 0.18} color={colors.ink} />
+          </View>
+        ) : null}
       </Animated.View>
     </Pressable>
   );
 }
 
 export function MemoryGame({ images, onWin, onExit }: Props) {
-  const [game, setGame] = useState<Game>(() => newGame(images, 5));
+  const { width } = useWindowDimensions();
+  const [game, setGame] = useState<Game>(() => newGame(images, PAIRS));
   const [wonNotified, setWonNotified] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const [round, setRound] = useState(0);
@@ -122,50 +182,75 @@ export function MemoryGame({ images, onWin, onExit }: Props) {
     setWonNotified(false);
     setTimedOut(false);
     setRound((r) => r + 1);
-    setGame(newGame(images, 5));
+    setGame(newGame(images, PAIRS));
   };
 
   const tries = triesLeft(game);
+
+  // Grille : `pairs` colonnes × 2 lignes — toujours un rectangle net.
+  const cols = Math.max(2, game.pairs);
+  const GAP = 12;
+  const CARD = Math.floor((width - 40 - GAP * (cols - 1)) / cols);
 
   return (
     <GameShell
       title="TROUVEZ LES"
       accent="PAIRES"
-      subtitle={`${game.matched.length}/${game.pairs} trouvées · ${game.pairs} paires, ${game.maxMistakes} essais`}
+      subtitle={`${game.matched.length}/${game.pairs} paires trouvées`}
       onBack={onExit}
+      footer={
+        <View className="flex-row items-center justify-center gap-2">
+          <Feather name="gift" size={15} color={gameTheme.gold} />
+          <AppText variant="caption" className="text-ink-inverse/70">
+            Retournez deux cartes identiques. Chaque victoire donne un coupon.
+          </AppText>
+        </View>
+      }
     >
-      <TimerPill remaining={remaining} low={remaining <= 8} />
+      <View className="mt-2 items-center">
+        <TimerPill remaining={remaining} low={remaining <= 8} />
 
-      {/* Cœurs = essais restants */}
-      <View className="mb-4 flex-row items-center gap-1.5">
-        {Array.from({ length: game.maxMistakes }).map((_, i) => (
-          <Feather
-            key={i}
-            name="heart"
-            size={20}
-            color={i < tries ? gameTheme.gold : 'rgba(246,242,234,0.35)'}
-          />
-        ))}
-      </View>
+        {/* Cœurs = essais restants */}
+        <View className="mb-6 mt-1 flex-row items-center gap-2">
+          {Array.from({ length: game.maxMistakes }).map((_, i) => (
+            <Feather
+              key={i}
+              name="heart"
+              size={22}
+              color={i < tries ? gameTheme.gold : 'rgba(246,242,234,0.3)'}
+            />
+          ))}
+        </View>
 
-      {/* Plateau de pastilles */}
-      <View className="flex-row flex-wrap justify-between">
-        {game.cards.map((c, i) => (
-          <FlipCard
-            key={c.id}
-            card={c}
-            label={String(i + 1)}
-            revealed={isRevealed(game, c)}
-            onPress={() => !over && setGame((g) => flipCard(g, c.id))}
-          />
-        ))}
+        {/* Plateau de cartes */}
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: GAP,
+            maxWidth: width - 40,
+          }}
+        >
+          {game.cards.map((c, i) => (
+            <FlipCard
+              key={c.id}
+              card={c}
+              label={String(i + 1)}
+              size={CARD}
+              revealed={isRevealed(game, c)}
+              matched={game.matched.includes(c.imageId)}
+              onPress={() => !over && setGame((g) => flipCard(g, c.id))}
+            />
+          ))}
+        </View>
       </View>
 
       {/* Fin de partie */}
       {over ? (
         <View
           testID="memory-result"
-          className="mt-4 items-center gap-3 rounded-card bg-ink-inverse p-6"
+          className="mt-8 items-center gap-3 rounded-card bg-ink-inverse p-6"
         >
           <View
             className="h-14 w-14 items-center justify-center rounded-pill"
@@ -197,7 +282,7 @@ export function MemoryGame({ images, onWin, onExit }: Props) {
               className="items-center rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
             >
               <AppText className="font-sans-bold text-ink-inverse">
-                {game.status === 'won' ? 'Rejouer' : 'Nouvelle partie'}
+                {won ? 'Rejouer' : 'Nouvelle partie'}
               </AppText>
             </Pressable>
             <Pressable

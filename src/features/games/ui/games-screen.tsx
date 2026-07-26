@@ -42,7 +42,7 @@ const TILES: Tile[] = [
   {
     key: 'memory',
     name: 'Trouvez les paires',
-    tagline: '3 paires · 3 essais',
+    tagline: 'Retrouvez les duos',
     icon: 'grid',
     dark: false,
   },
