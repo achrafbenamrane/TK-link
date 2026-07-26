@@ -44,9 +44,9 @@ describe('newMaze', () => {
   it('crée size*size cases et reste toujours résoluble', () => {
     for (let i = 0; i < 20; i++) {
       const m = newMaze();
-      expect(m.walls).toHaveLength(9 * 9);
+      expect(m.walls).toHaveLength(11 * 11);
       expect(m.player).toBe(0);
-      expect(m.goal).toBe(80);
+      expect(m.goal).toBe(120);
       expect(m.status).toBe('playing');
       expect(hasPath(m)).toBe(true);
     }

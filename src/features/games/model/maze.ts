@@ -32,7 +32,7 @@ export type Maze = {
   status: 'playing' | 'won';
 };
 
-export const DEFAULT_SIZE = 9;
+export const DEFAULT_SIZE = 11;
 
 type Dir = 'up' | 'down' | 'left' | 'right';
 
@@ -104,18 +104,21 @@ function openWall(walls: Walls[], i: number, dir: Dir, size: number): boolean {
 }
 
 /**
- * Passe de tressage : après l'arbre couvrant, on abat des murs internes en plus
- * pour créer des boucles (plusieurs chemins entre deux cases). On vise ~35 % des
- * cases et on attaque D'ABORD les culs-de-sac (3 murs) pour les transformer en
- * passages traversants, puis n'importe quel mur interne fermé jusqu'à l'objectif
- * — ce qui garantit des cycles à chaque génération. N'abat que des murs → reste
- * connexe donc résoluble.
+ * Passe de tressage : après l'arbre couvrant, on abat quelques murs internes en
+ * plus pour créer des boucles (plusieurs chemins entre deux cases). On vise
+ * ~15 % des cases seulement — assez pour garantir des cycles (donc des
+ * raccourcis qui gardent la partie gagnable), mais assez PEU pour laisser plein
+ * d'impasses : ce sont elles qui rendent le labyrinthe difficile. On attaque
+ * d'abord les culs-de-sac (3 murs), puis n'importe quel mur interne fermé.
+ * N'abat que des murs → reste connexe donc résoluble.
  */
 function braid(walls: Walls[], size: number): void {
   const count = size * size;
   const indices = Array.from({ length: count }, (_, i) => i);
-  // Une poignée d'ouvertures au minimum, sinon ~35 % des cases.
-  const target = Math.max(4, Math.floor(count * 0.35));
+  // Peu de boucles (~15 %) : le labyrinthe reste surtout « parfait », donc plein
+  // d'impasses qui punissent les mauvais virages — c'est ce qui le rend DIFFICILE.
+  // On en garde une poignée pour offrir des raccourcis (partie gagnable).
+  const target = Math.max(4, Math.floor(count * 0.15));
 
   // Un mur interne encore fermé de la case `i`, tiré au hasard (ou undefined).
   const closedInteriorDir = (i: number): Dir | undefined =>

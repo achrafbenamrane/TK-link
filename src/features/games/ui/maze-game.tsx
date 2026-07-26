@@ -20,7 +20,7 @@ type Props = {
 type Dir = 'up' | 'down' | 'left' | 'right';
 
 /** Temps imparti (secondes) pour atteindre l'offre — sinon, perdu. */
-const BUDGET = 20;
+const BUDGET = 22;
 const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 function DirButton({
@@ -94,7 +94,7 @@ export function MazeGame({ goalImage, onWin, onExit }: Props) {
     <GameShell
       title="TROUVEZ LE"
       accent="CHEMIN"
-      subtitle="Chemins multiples — arrivez avant la fin du temps."
+      subtitle="Plus corsé — évitez les impasses, arrivez à temps."
       onBack={onExit}
     >
       {/* Compte à rebours (rouge quand il reste peu) */}
