@@ -216,7 +216,7 @@ function DotsLayer({
  * (`eatenKey`) : ne se redessine QUE lorsqu'une photo est mangée — sinon les
  * `expo-image` se reconcilieraient à chaque pas (churn/scintillement).
  */
-const FoodLayer = memo(function FoodLayer({
+export const FoodLayer = memo(function FoodLayer({
   food,
   images,
   eatenKey,
@@ -238,6 +238,7 @@ const FoodLayer = memo(function FoodLayer({
         return (
           <View
             key={cellIdx}
+            testID={`pacman-food-${cellIdx}`}
             style={{
               position: 'absolute',
               left: c * cell,

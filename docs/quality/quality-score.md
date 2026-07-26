@@ -29,6 +29,16 @@ or deletes stale ones. Newest first; keep entries one line each:
   `s.items.filter(…)`/`.map(…)` returns a fresh array each render → infinite
   loop → crash. Subscribe to the raw slice and derive with `useMemo`, or wrap
   with `useShallow`. Selectors returning `.length`/`.reduce` (a number) are safe.
+- PacFreedoo (`features/games/ui/pacman-game.tsx`) re-renders ~7×/s from its
+  `setInterval` game loop. The manual `useMemo`/`memo` there (gesture, `FoodLayer`,
+  `foodSet`, single-SVG `DotsLayer`) are NOT redundant despite React Compiler
+  being on (`app.config.ts: reactCompiler`) — they keep the hot loop off the JS
+  thread so step cadence stays regular (irregular cadence = visible movement
+  jank). Don't strip them. They rely on `tick()` returning `{...game}` and never
+  rebuilding `walls`/`food` — those refs are stable per game, which is what makes
+  the memo keys (and the `eatenKey`↔`food[k]` alignment) sound. Any change that
+  re-creates `game.food` per tick silently breaks `FoodLayer` memoization and
+  shows the wrong offer photo; the `FoodLayer` render test guards the alignment.
 
 ## Wishlist (pull when convenient)
 
