@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { memo, useEffect, useState, type ReactNode } from 'react';
+import { memo, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -28,7 +28,10 @@ type Props = {
 
 const COLS = 9;
 const ROWS = 9;
-const STEP = 150; // ms par pas
+const STEP = 150; // ms par pas (cadence logique)
+// La glissade dure un peu plus qu'un pas : quand le pas suivant arrive, l'ancien
+// mouvement est encore en cours → on redirige sans figer. Zéro micro-arrêt.
+const TWEEN = STEP + 26;
 const GHOST_COLORS = ['#ff6b5b', '#5bd6ff', '#c58bff'];
 
 /** Une entité qui glisse doucement de case en case (Reanimated). */
@@ -53,8 +56,8 @@ function Mover({
       x.value = tx;
       y.value = ty;
     } else {
-      x.value = withTiming(tx, { duration: STEP, easing: Easing.linear });
-      y.value = withTiming(ty, { duration: STEP, easing: Easing.linear });
+      x.value = withTiming(tx, { duration: TWEEN, easing: Easing.linear });
+      y.value = withTiming(ty, { duration: TWEEN, easing: Easing.linear });
     }
   }, [col, row, cell, x, y]);
   const st = useAnimatedStyle(() => ({
@@ -85,8 +88,8 @@ function PacSprite({ cell, angle, open }: { cell: number; angle: number; open: b
   );
 }
 
-/** Un fantôme (corps + yeux). */
-function GhostSprite({ cell, color }: { cell: number; color: string }) {
+/** Un fantôme (corps + yeux). Mémoïsé : le dessin ne change pas d'un pas à l'autre. */
+const GhostSprite = memo(function GhostSprite({ cell, color }: { cell: number; color: string }) {
   const R = cell * 0.38;
   const cx = cell / 2;
   const cy = cell / 2 + cell * 0.04;
@@ -100,7 +103,7 @@ function GhostSprite({ cell, color }: { cell: number; color: string }) {
       <Circle cx={cx + R * 0.42} cy={cy - R * 0.06} r={R * 0.1} fill="#241436" />
     </Svg>
   );
-}
+});
 
 /** Les murs — statiques pendant une partie, donc mémoïsés. */
 const WallsLayer = memo(function WallsLayer({ walls, cell }: { walls: Walls[]; cell: number }) {
@@ -173,6 +176,89 @@ const WallsLayer = memo(function WallsLayer({ walls, cell }: { walls: Walls[]; c
   );
 });
 
+/**
+ * Toutes les pastilles dans UN seul SVG. Avant : ~75 vues natives recréées à
+ * chaque pas, ce qui saturait le thread JS et rendait la cadence irrégulière
+ * (→ à-coups). Un seul SVG rend chaque pas quasi gratuit côté natif.
+ */
+function DotsLayer({
+  eaten,
+  foodSet,
+  cell,
+}: {
+  eaten: boolean[];
+  foodSet: Set<number>;
+  cell: number;
+}) {
+  const dots: ReactNode[] = [];
+  for (let i = 0; i < eaten.length; i++) {
+    if (eaten[i] || foodSet.has(i)) continue;
+    const c = i % COLS;
+    const r = (i / COLS) | 0;
+    dots.push(
+      <Circle key={i} cx={c * cell + cell / 2} cy={r * cell + cell / 2} r={2} fill="#f6efe0" />,
+    );
+  }
+  return (
+    <Svg
+      width={cell * COLS}
+      height={cell * ROWS}
+      style={{ position: 'absolute' }}
+      pointerEvents="none"
+    >
+      {dots}
+    </Svg>
+  );
+}
+
+/**
+ * Les photos des offres (« food »). Mémoïsé sur une signature stable
+ * (`eatenKey`) : ne se redessine QUE lorsqu'une photo est mangée — sinon les
+ * `expo-image` se reconcilieraient à chaque pas (churn/scintillement).
+ */
+const FoodLayer = memo(function FoodLayer({
+  food,
+  images,
+  eatenKey,
+  cell,
+}: {
+  food: number[];
+  images: CardImage[];
+  eatenKey: string;
+  cell: number;
+}) {
+  return (
+    <>
+      {food.map((cellIdx, k) => {
+        if (eatenKey[k] === '1') return null;
+        const img = images[k % Math.max(1, images.length)];
+        if (!img) return null;
+        const c = cellIdx % COLS;
+        const r = (cellIdx / COLS) | 0;
+        return (
+          <View
+            key={cellIdx}
+            style={{
+              position: 'absolute',
+              left: c * cell,
+              top: r * cell,
+              width: cell,
+              height: cell,
+              padding: cell * 0.12,
+            }}
+          >
+            <Image
+              source={img.source}
+              style={{ flex: 1, borderRadius: cell * 0.3 }}
+              contentFit="cover"
+            />
+          </View>
+        );
+      })}
+    </>
+  );
+});
+
 export function PacmanGame({ images, onWin, onExit }: Props) {
   const { width, height } = useWindowDimensions();
   const CELL = Math.floor(Math.min((width - 48) / COLS, (height * 0.44) / ROWS));
@@ -209,34 +295,40 @@ export function PacmanGame({ images, onWin, onExit }: Props) {
   };
 
   const STICK = Math.min(130, width * 0.34);
-  const pan = Gesture.Pan()
-    .onUpdate((e) => {
-      'worklet';
-      const max = STICK * 0.3;
-      let dx = e.translationX;
-      let dy = e.translationY;
-      const mag = Math.hypot(dx, dy);
-      if (mag > max) {
-        dx = (dx / mag) * max;
-        dy = (dy / mag) * max;
-      }
-      knobX.value = dx;
-      knobY.value = dy;
-      if (Math.hypot(e.translationX, e.translationY) > 8) {
-        if (Math.abs(e.translationX) > Math.abs(e.translationY)) {
-          dDx.value = e.translationX > 0 ? 1 : -1;
-          dDy.value = 0;
-        } else {
-          dDx.value = 0;
-          dDy.value = e.translationY > 0 ? 1 : -1;
-        }
-      }
-    })
-    .onEnd(() => {
-      'worklet';
-      knobX.value = withSpring(0);
-      knobY.value = withSpring(0);
-    });
+  // Mémoïsé : sinon le geste serait reconstruit ~7×/s (à chaque pas de jeu) et le
+  // GestureDetector se ré-attacherait → joystick qui « accroche ».
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .onUpdate((e) => {
+          'worklet';
+          const max = STICK * 0.3;
+          let dx = e.translationX;
+          let dy = e.translationY;
+          const mag = Math.hypot(dx, dy);
+          if (mag > max) {
+            dx = (dx / mag) * max;
+            dy = (dy / mag) * max;
+          }
+          knobX.value = dx;
+          knobY.value = dy;
+          if (Math.hypot(e.translationX, e.translationY) > 8) {
+            if (Math.abs(e.translationX) > Math.abs(e.translationY)) {
+              dDx.value = e.translationX > 0 ? 1 : -1;
+              dDy.value = 0;
+            } else {
+              dDx.value = 0;
+              dDy.value = e.translationY > 0 ? 1 : -1;
+            }
+          }
+        })
+        .onEnd(() => {
+          'worklet';
+          knobX.value = withSpring(0);
+          knobY.value = withSpring(0);
+        }),
+    [STICK, dDx, dDy, knobX, knobY],
+  );
   const knobStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: knobX.value }, { translateY: knobY.value }],
   }));
@@ -244,7 +336,10 @@ export function PacmanGame({ images, onWin, onExit }: Props) {
   const p = game.pac;
   const angle = p.dx === 1 ? 0 : p.dx === -1 ? 180 : p.dy === 1 ? 90 : p.dy === -1 ? 270 : 0;
   const mouthOpen = game.frame % 2 === 0;
-  const foodSet = new Set(game.food);
+  // Réf. stable tant que `game.food` ne change pas (il est figé pour la partie).
+  const foodSet = useMemo(() => new Set(game.food), [game.food]);
+  // Signature « quelle food est mangée » — 6 caractères, recalcul quasi gratuit.
+  const eatenKey = game.food.map((f) => (game.eaten[f] ? '1' : '0')).join('');
   const over = game.status !== 'playing';
   const won = game.status === 'won';
 
@@ -317,54 +412,11 @@ export function PacmanGame({ images, onWin, onExit }: Props) {
       >
         <WallsLayer walls={game.walls} cell={CELL} />
 
-        {/* pastilles */}
-        {game.eaten.map((e, i) => {
-          if (e || foodSet.has(i)) return null;
-          const c = i % COLS;
-          const r = (i / COLS) | 0;
-          return (
-            <View
-              key={i}
-              style={{
-                position: 'absolute',
-                left: c * CELL + CELL / 2 - 2,
-                top: r * CELL + CELL / 2 - 2,
-                width: 4,
-                height: 4,
-                borderRadius: 2,
-                backgroundColor: '#f6efe0',
-              }}
-            />
-          );
-        })}
+        {/* pastilles — un seul SVG */}
+        <DotsLayer eaten={game.eaten} foodSet={foodSet} cell={CELL} />
 
-        {/* food = photos des offres */}
-        {game.food.map((cell, k) => {
-          if (game.eaten[cell]) return null;
-          const img = images[k % Math.max(1, images.length)];
-          if (!img) return null;
-          const c = cell % COLS;
-          const r = (cell / COLS) | 0;
-          return (
-            <View
-              key={cell}
-              style={{
-                position: 'absolute',
-                left: c * CELL,
-                top: r * CELL,
-                width: CELL,
-                height: CELL,
-                padding: CELL * 0.12,
-              }}
-            >
-              <Image
-                source={img.source}
-                style={{ flex: 1, borderRadius: CELL * 0.3 }}
-                contentFit="cover"
-              />
-            </View>
-          );
-        })}
+        {/* food = photos des offres (mémoïsé) */}
+        <FoodLayer food={game.food} images={images} eatenKey={eatenKey} cell={CELL} />
 
         {/* fantômes */}
         {game.ghosts.map((g, k) => (
