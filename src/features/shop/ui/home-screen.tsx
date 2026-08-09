@@ -10,35 +10,14 @@ import { activeFilterCount, applyPreferences } from '../lib/preferences';
 import { dealsByCategory, getDeal, getMerchant, FEATURED_DEAL_ID } from '../model/catalog';
 import type { Category, Deal } from '../model/schema';
 import { getUserCoord } from '../lib/location';
-import { selectCartCount, useShopStore } from '../model/store';
+import { useShopStore } from '../model/store';
+import { CartButton } from './components/cart-button';
 import { CategoryBar } from './components/category-bar';
 import { Countdown } from './components/countdown';
 import { FlashCard } from './components/flash-card';
 import { ProductImage } from './components/product-image';
 import { ViewSwitch, type HomeView } from './components/view-switch';
 import { DealsMap } from './map-view';
-
-function CartButton() {
-  const router = useRouter();
-  const count = useShopStore(selectCartCount);
-  return (
-    <Pressable
-      testID="home-cart"
-      accessibilityLabel="Voir le panier"
-      onPress={() => router.push('/panier')}
-      className="h-10 w-10 items-center justify-center rounded-pill bg-surface-muted"
-    >
-      <Feather name="shopping-bag" size={19} color={colors.ink} />
-      {count > 0 ? (
-        <View className="absolute -right-1 -top-1 h-5 min-w-[20px] items-center justify-center rounded-pill bg-brand-500 px-1">
-          <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 10 }}>
-            {count}
-          </AppText>
-        </View>
-      ) : null}
-    </Pressable>
-  );
-}
 
 /** Accès à « Ma Fan Zone » — la pastille compte les filtres actifs. */
 function PreferencesButton() {
