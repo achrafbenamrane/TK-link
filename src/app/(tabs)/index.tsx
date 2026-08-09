@@ -1,12 +1,23 @@
+import { useCallback } from 'react';
+
+import { HunterBar, useGameStore } from '@/features/gamification';
 import { HomeScreen } from '@/features/shop';
 
 /**
- * ACCUEIL — les ventes flash, comme dans la maquette du client : compte à
- * rebours, stock restant, et le bouton d'ajout au panier.
+ * ACCUEIL — les ventes flash, triées par ce qui va disparaître en premier.
  *
- * (Le portefeuille de tickets TK LINK n'est PAS l'accueil : il vit dans le
- * compte. Le parcours de la maquette reste la référence.)
+ * C'est ici que la boutique et la progression se rencontrent : la feature
+ * « shop » laisse une place en tête de liste, la feature « gamification »
+ * la remplit. Aucune des deux ne dépend de l'autre.
  */
 export default function AccueilRoute() {
-  return <HomeScreen />;
+  const markVisit = useGameStore((s) => s.markVisit);
+  const onVisit = useCallback(() => markVisit(), [markVisit]);
+
+  return (
+    <HomeScreen
+      onVisit={onVisit}
+      renderBanner={(criticalCount) => <HunterBar criticalCount={criticalCount} />}
+    />
+  );
 }

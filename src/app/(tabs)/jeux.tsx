@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 
 import { useCouponsStore } from '@/features/coupons';
 import { GamesScreen } from '@/features/games';
+import { useGameStore } from '@/features/gamification';
 import { useLoyaltyStore } from '@/features/loyalty';
 import { dealImagePool, dealQuizPool } from '@/features/shop';
 
@@ -26,6 +27,7 @@ export default function GamesRoute() {
   const router = useRouter();
   const grant = useCouponsStore((s) => s.grantEarnedCoupon);
   const earn = useLoyaltyStore((s) => s.earn);
+  const recordXp = useGameStore((s) => s.record);
   const imagePool = useMemo(() => dealImagePool(), []);
   const quizPool = useMemo(() => dealQuizPool(), []);
 
@@ -33,6 +35,8 @@ export default function GamesRoute() {
     const reward = REWARDS[Math.floor(Math.random() * REWARDS.length)]!;
     const coupon = grant(reward.discount, reward.label);
     earn(reward.points, reward.label, 'jeu');
+    // La victoire nourrit aussi la progression du chasseur (XP, missions).
+    recordXp('game');
     Alert.alert(
       'Gagné 🎉',
       `+${reward.points} points\nCoupon ${coupon.code}\n\nRetrouvez-les sur votre carte.`,

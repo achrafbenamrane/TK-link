@@ -1,12 +1,13 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 
 import { AppText, Screen, TextField } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { activeFilterCount, applyPreferences } from '../lib/preferences';
+import { countCritical, sortByUrgency } from '../lib/urgency';
 import { dealsByCategory, getDeal, getMerchant, FEATURED_DEAL_ID } from '../model/catalog';
 import type { Category, Deal } from '../model/schema';
 import { getUserCoord } from '../lib/location';
@@ -96,9 +97,17 @@ function FeaturedBanner({ deal }: { deal: Deal }) {
 type HomeScreenProps = {
   /** Vue d'ouverture : « Parcourir » entre directement sur la carte. */
   initialView?: HomeView;
+  /**
+   * Bandeau posé en tête de liste, rendu par la ROUTE. La progression vit dans
+   * sa propre feature ; la boutique ne l'importe pas, elle lui laisse une
+   * place et lui passe le nombre d'offres en dernière chance.
+   */
+  renderBanner?: (criticalCount: number) => ReactNode;
+  /** Signalé une fois au montage — sert la série et les missions du jour. */
+  onVisit?: () => void;
 };
 
-export function HomeScreen({ initialView = 'liste' }: HomeScreenProps = {}) {
+export function HomeScreen({ initialView = 'liste', renderBanner, onVisit }: HomeScreenProps = {}) {
   const [category, setCategory] = useState<Category | null>(null);
   const [query, setQuery] = useState('');
   const [view, setView] = useState<HomeView>(initialView);
@@ -130,10 +139,19 @@ export function HomeScreen({ initialView = 'liste' }: HomeScreenProps = {}) {
       );
     }
     // « Ma Fan Zone » agit ici : régimes et rayon écartent réellement des offres.
-    return applyPreferences(list, getMerchant, preferences, userCoord);
+    const kept = applyPreferences(list, getMerchant, preferences, userCoord);
+    // Ce qui va disparaître passe DEVANT : c'est un déstockage, pas un
+    // catalogue. Trier par urgence est ce qui change la nature de l'écran.
+    return sortByUrgency(kept);
   }, [category, query, preferences, userCoord]);
 
+  const critical = useMemo(() => countCritical(deals), [deals]);
   const featured = getDeal(FEATURED_DEAL_ID);
+
+  // Une visite par jour compte pour la série et les missions.
+  useEffect(() => {
+    onVisit?.();
+  }, [onVisit]);
 
   return (
     <Screen padded={false} testID="home-screen">
@@ -193,6 +211,9 @@ export function HomeScreen({ initialView = 'liste' }: HomeScreenProps = {}) {
                 />
               </View>
 
+              {/* Bandeau fourni par la route (progression du chasseur). */}
+              {renderBanner ? <View className="mb-4">{renderBanner(critical)}</View> : null}
+
               {/* Ad card sits above the filter and stays visible whatever the
                 selected category — it advertises the deal, it isn't a result. */}
               {featured ? <FeaturedBanner deal={featured} /> : null}
@@ -201,10 +222,10 @@ export function HomeScreen({ initialView = 'liste' }: HomeScreenProps = {}) {
 
               <View className="mb-3 mt-4 flex-row items-end justify-between px-5">
                 <AppText variant="title" className="text-lg">
-                  Ventes flash près de vous
+                  Ça part maintenant
                 </AppText>
                 <AppText variant="caption" className="text-ink-faint">
-                  {deals.length} offres
+                  {deals.length} invendu{deals.length > 1 ? 's' : ''} à sauver
                 </AppText>
               </View>
             </View>
