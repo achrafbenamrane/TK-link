@@ -1,12 +1,12 @@
-import { useRouter } from 'expo-router';
-
-import { ReceiptsScreen } from '@/features/receipts';
+import { HomeScreen } from '@/features/shop';
 
 /**
- * L'accueil de TK LINK, c'est le portefeuille de tickets : ce que l'utilisateur
- * vient chercher en priorité, c'est son dernier ticket de caisse.
+ * ACCUEIL — les ventes flash, comme dans la maquette du client : compte à
+ * rebours, stock restant, et le bouton d'ajout au panier.
+ *
+ * (Le portefeuille de tickets TK LINK n'est PAS l'accueil : il vit dans le
+ * compte. Le parcours de la maquette reste la référence.)
  */
-export default function TicketsRoute() {
-  const router = useRouter();
-  return <ReceiptsScreen onOpenReceipt={(id) => router.push(`/ticket/${id}`)} />;
+export default function AccueilRoute() {
+  return <HomeScreen />;
 }

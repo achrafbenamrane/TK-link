@@ -88,10 +88,15 @@ function FeaturedBanner({ deal }: { deal: Deal }) {
   );
 }
 
-export function HomeScreen() {
+type HomeScreenProps = {
+  /** Vue d'ouverture : « Parcourir » entre directement sur la carte. */
+  initialView?: HomeView;
+};
+
+export function HomeScreen({ initialView = 'liste' }: HomeScreenProps = {}) {
   const [category, setCategory] = useState<Category | null>(null);
   const [query, setQuery] = useState('');
-  const [view, setView] = useState<HomeView>('liste');
+  const [view, setView] = useState<HomeView>(initialView);
   const setUserCoord = useShopStore((s) => s.setUserCoord);
 
   // Position demandée UNE fois pour tout l'écran : les cartes et la carte

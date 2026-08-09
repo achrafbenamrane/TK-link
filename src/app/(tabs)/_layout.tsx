@@ -1,22 +1,22 @@
 import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
+import { selectTotalUnread, useShopStore } from '@/features/shop';
 import { colors } from '@/shared/theme/colors';
 
 /**
- * La navigation de TK LINK, dans l'ordre où l'on s'en sert :
+ * La navigation reprend EXACTEMENT le parcours de la maquette du client :
  *
- *  Tickets — le portefeuille, la raison d'être du produit
- *  Carte   — ce qu'on ouvre devant le lecteur en caisse
- *  Offres  — PROMO + CATALOGUE du menu de la vidéo
- *  Jeux    — la gamification, qui alimente les points
- *  Profil  — compte, cadeaux, réglages
+ *   Accueil · Favoris · Parcourir · Commandes · Compte
  *
- * Les écrans hérités de la place de marché (favoris, commandes, messagerie)
- * restent des routes accessibles, mais quittent la barre d'onglets : TK LINK
- * n'est pas une boutique, on n'y passe pas commande.
+ * L'accueil, ce sont les ventes flash — pas le portefeuille de tickets. Les
+ * apports TK LINK (tickets dématérialisés, carte de fidélité, cadeaux, jeux)
+ * se rejoignent depuis le compte et les fiches commerçant, sans déplacer les
+ * cinq entrées que le client a validées.
  */
 export default function TabsLayout() {
+  const unread = useShopStore(selectTotalUnread);
+
   return (
     <Tabs
       screenOptions={{
@@ -35,43 +35,52 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Tickets',
-          tabBarIcon: ({ color }) => <Feather name="file-text" size={22} color={color} />,
+          title: 'Accueil',
+          tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="carte"
+        name="favoris"
         options={{
-          title: 'Ma carte',
-          tabBarIcon: ({ color }) => <Feather name="credit-card" size={22} color={color} />,
+          title: 'Favoris',
+          tabBarIcon: ({ color }) => <Feather name="heart" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="offres"
+        name="parcourir"
         options={{
-          title: 'Offres',
-          tabBarIcon: ({ color }) => <Feather name="tag" size={22} color={color} />,
+          title: 'Parcourir',
+          tabBarIcon: ({ color }) => <Feather name="search" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="jeux"
+        name="commandes"
         options={{
-          title: 'Jeux',
-          tabBarIcon: ({ color }) => <Feather name="target" size={22} color={color} />,
+          title: 'Commandes',
+          tabBarIcon: ({ color }) => <Feather name="clipboard" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profil"
         options={{
-          title: 'Profil',
-          tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} />,
+          title: 'Compte',
+          tabBarIcon: ({ color }) => <Feather name="settings" size={22} color={color} />,
         }}
       />
 
-      {/* Routes conservées, hors barre d'onglets. */}
-      <Tabs.Screen name="favoris" options={{ href: null }} />
-      <Tabs.Screen name="commandes" options={{ href: null }} />
-      <Tabs.Screen name="chat" options={{ href: null }} />
+      {/* Routes conservées, hors barre d'onglets — on y accède depuis le compte,
+          les fiches commerçant ou l'accueil. */}
+      <Tabs.Screen
+        name="chat"
+        options={{
+          href: null,
+          tabBarBadge: unread > 0 ? unread : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.brand500, fontSize: 10 },
+        }}
+      />
+      <Tabs.Screen name="carte" options={{ href: null }} />
+      <Tabs.Screen name="offres" options={{ href: null }} />
+      <Tabs.Screen name="jeux" options={{ href: null }} />
     </Tabs>
   );
 }
