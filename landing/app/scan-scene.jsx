@@ -106,11 +106,124 @@ function TkTree({ width = 84, leaf = '#6ea82f' }) {
 }
 
 /**
- * Tranches d'extrusion du boîtier — 0 = le dessus.
- * Les six premières forment la coque blanche, la septième la ligne de joint,
- * les suivantes le socle gris, comme sur l'appareil.
+ * Le lecteur, dessiné en un seul SVG.
+ *
+ * Première tentative : un empilement de « tranches » en CSS 3D. Résultat, des
+ * bandes visibles sur la tranche et un socle qui se décrochait du corps. La
+ * 3D CSS ne sait pas arrondir un volume.
+ *
+ * Ici, la géométrie est peinte : le dessus est un trapèze (la perspective
+ * réduit l'arête arrière), le corps descend sous l'arête avant. Ce sont les
+ * DÉGRADÉS qui font le volume — c'est la technique des visuels produit, et
+ * elle donne une matière que la 3D CSS n'atteint pas.
  */
-const EDGE_SLICES = Array.from({ length: 14 }, (_, i) => i);
+function Reader() {
+  // Sommets du dessus : arrière resserré, avant élargi.
+  const TOP =
+    'M132,72 L308,72 Q328,72 336.2,90.2 L373.8,173.8 Q382,192 362,192 ' +
+    'L78,192 Q58,192 66.2,173.8 L103.8,90.2 Q112,72 132,72 Z';
+  // Silhouette complète : le dessus, prolongé de 34 px sous l'arête avant.
+  const BODY =
+    'M132,72 L308,72 Q328,72 336.2,90.2 L373.8,173.8 Q382,192 382,206 ' +
+    'L382,210 Q382,226 366,226 L74,226 Q58,226 58,210 L58,206 ' +
+    'Q58,192 66.2,173.8 L103.8,90.2 Q112,72 132,72 Z';
+
+  return (
+    <svg viewBox="0 0 440 300" className="reader-svg" aria-hidden="true">
+      <defs>
+        {/* Coque : lumière rasante venue du haut-gauche. */}
+        <linearGradient id="tkTop" x1="0.1" y1="0" x2="0.85" y2="1">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="0.45" stopColor="#f8faf5" />
+          <stop offset="1" stopColor="#e4e8dd" />
+        </linearGradient>
+        {/* Socle : plus sombre en descendant, avec un rebond de lumière en bas. */}
+        <linearGradient id="tkBody" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#e9ece2" />
+          <stop offset="0.42" stopColor="#c2c8b9" />
+          <stop offset="0.86" stopColor="#98a08e" />
+          <stop offset="1" stopColor="#aab19f" />
+        </linearGradient>
+        {/* Reflet doux sur le dessus. */}
+        <linearGradient id="tkGloss" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#ffffff" stopOpacity="0.95" />
+          <stop offset="0.55" stopColor="#ffffff" stopOpacity="0.12" />
+          <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="tkPort" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#15180f" />
+          <stop offset="1" stopColor="#3b4034" />
+        </linearGradient>
+        {/* Ombre au sol. */}
+        <radialGradient id="tkShadow" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stopColor="#04180b" stopOpacity="0.5" />
+          <stop offset="0.6" stopColor="#04180b" stopOpacity="0.22" />
+          <stop offset="1" stopColor="#04180b" stopOpacity="0" />
+        </radialGradient>
+        {/* Occlusion : le contact assombrit le sol juste sous l'appareil. */}
+        <filter id="tkBlur" x="-30%" y="-60%" width="160%" height="220%">
+          <feGaussianBlur stdDeviation="7" />
+        </filter>
+        <clipPath id="tkTopClip">
+          <path d={TOP} />
+        </clipPath>
+      </defs>
+
+      {/* Ombre portée */}
+      <ellipse cx="222" cy="236" rx="185" ry="34" fill="url(#tkShadow)" />
+      <ellipse
+        cx="222"
+        cy="228"
+        rx="150"
+        ry="15"
+        fill="#04180b"
+        opacity="0.3"
+        filter="url(#tkBlur)"
+      />
+
+      {/* Corps */}
+      <path d={BODY} fill="url(#tkBody)" />
+      {/* Arête vive entre le socle et la coque */}
+      <path
+        d="M66.2,173.8 Q58,192 58,206 L58,210 Q58,226 74,226 L366,226 Q382,226 382,210 L382,206 Q382,192 373.8,173.8"
+        fill="none"
+        stroke="#ffffff"
+        strokeOpacity="0.28"
+        strokeWidth="1.2"
+      />
+
+      {/* Port USB-C, centré sur la face avant */}
+      <rect x="200" y="203" width="44" height="13" rx="6.5" fill="url(#tkPort)" />
+      <rect x="200" y="203" width="44" height="2" rx="1" fill="#ffffff" opacity="0.22" />
+
+      {/* Dessus */}
+      <path d={TOP} fill="url(#tkTop)" />
+      {/* Liseré clair sur l'arête haute : ce qui « allume » le bord */}
+      <path
+        d="M132,72 L308,72 Q328,72 336.2,90.2"
+        fill="none"
+        stroke="#ffffff"
+        strokeWidth="1.6"
+        strokeOpacity="0.9"
+      />
+
+      <g clipPath="url(#tkTopClip)">
+        {/* Reflet en écharpe */}
+        <path d="M40,60 L240,60 L120,210 L-10,210 Z" fill="url(#tkGloss)" />
+        {/* Sigle et arbre, aplatis pour suivre le plan du dessus */}
+        <g transform="translate(96,120) scale(1,0.66)">
+          <TkMark width={126} />
+        </g>
+        <g transform="translate(258,74) scale(1,0.66)">
+          <TkTree width={104} />
+        </g>
+      </g>
+
+      {/* Témoin lumineux */}
+      <circle className="reader-led-dot" cx="102" cy="112" r="5" />
+    </svg>
+  );
+}
 
 export default function ScanScene() {
   return (
@@ -122,38 +235,8 @@ export default function ScanScene() {
       <div className="scene-stage">
         {/* ------------------------------------------------------- lecteur */}
         <div className="reader">
-          {/*
-           * Épaisseur du boîtier : on empile des tranches en profondeur plutôt
-           * que de poser une seule face. C'est ce qui donne un vrai volume —
-           * les deux premières sont légèrement rentrées pour former le chanfrein
-           * du dessus, comme sur l'appareil réel.
-           */}
-          {EDGE_SLICES.map((i) => (
-            <span key={i} className="reader-slice" style={{ '--i': i }} />
-          ))}
-
-          <div className="reader-face">
-            <span className="reader-sheen" />
-            {/* Sigle en bas à gauche, arbre à droite — comme sur l'appareil */}
-            <span className="reader-mark">
-              <TkMark width={98} />
-            </span>
-            <span className="reader-tree">
-              <TkTree width={86} />
-            </span>
-            {/* Témoin lumineux : vert au repos, citron au passage de la carte */}
-            <span className="reader-led" />
-          </div>
-
-          {/* La face avant : le socle gris et son port USB-C */}
-          <div className="reader-front">
-            <span className="reader-port" />
-          </div>
-
-          {/* Ombre portée sur le comptoir */}
-          <span className="reader-cast" />
-
-          {/* Ondes émises au moment du passage */}
+          <Reader />
+          {/* Ondes émises au moment du passage, au-dessus du dessus */}
           <span className="ping ping-1" />
           <span className="ping ping-2" />
           <span className="ping ping-3" />

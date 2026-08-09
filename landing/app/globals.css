@@ -295,179 +295,54 @@ img {
 .reader {
   position: absolute;
   left: 50%;
-  bottom: 30px;
-  /* Proportions de l'appareil réel : large, plat, coins très arrondis. */
-  width: 250px;
-  height: 138px;
-  margin-left: -125px;
-  transform-style: preserve-3d;
-  transform: rotateX(60deg) rotateZ(-22deg);
+  bottom: 18px;
+  width: 330px;
+  margin-left: -165px;
 }
-/*
- * Le corps du boîtier : douze tranches empilées en profondeur. Une seule face
- * plus une « tranche » se voyait tout de suite ; là, le volume tient sous
- * n'importe quel angle. Les deux premières sont rentrées de 2 px : c'est le
- * chanfrein du dessus.
- */
-.reader-slice {
-  position: absolute;
-  inset: 0;
-  border-radius: 26px;
-  transform: translateZ(calc(var(--i) * -2.2px));
-  /* Coque blanche : la lumière tombe du dessus, la tranche s'assombrit à peine. */
-  background: hsl(72 14% calc(97% - var(--i) * 1.5%));
-}
-/* Les deux tranches du haut forment le chanfrein (positions, pas attributs :
-   la sérialisation de `--i` par React n'est pas garantie — elle sort « --i:0 »). */
-.reader-slice:nth-child(1),
-.reader-slice:nth-child(2) {
-  inset: 2px;
-}
-/* La ligne de joint entre la coque et le socle. */
-.reader-slice:nth-child(7) {
-  background: #9aa294;
-}
-/* Le socle, gris, plus foncé que la coque. */
-.reader-slice:nth-child(n + 8) {
-  background: hsl(96 6% calc(76% - (var(--i) - 7) * 2.6%));
-}
-/* La dernière tranche ferme le dessous. */
-.reader-slice:nth-child(14) {
-  background: #5f665b;
-  box-shadow: 0 0 0 1px rgba(18, 58, 34, 0.2);
+.reader-svg {
+  width: 100%;
+  display: block;
+  overflow: visible;
 }
 
-.reader-face {
-  position: absolute;
-  inset: 2px;
-  border-radius: 24px;
-  overflow: hidden;
-  /* Coque légèrement bombée : la lumière frappe en haut à gauche. */
-  background: radial-gradient(130% 100% at 26% 12%, #ffffff 0%, #fafbf6 46%, #eceee4 100%), #f7f8f2;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.95) inset,
-    0 -1px 0 rgba(18, 58, 34, 0.05) inset,
-    0 0 0 1px rgba(18, 58, 34, 0.06);
-}
-
-/* Sigle en bas à gauche, arbre à droite — la disposition de l'appareil. */
-.reader-mark {
-  position: absolute;
-  left: 18px;
-  bottom: 16px;
-  z-index: 2;
-}
-.reader-tree {
-  position: absolute;
-  right: 16px;
-  top: 10px;
-  z-index: 2;
-}
-
-/* Reflet spéculaire : une bande de lumière en travers du plastique. */
-.reader-sheen {
-  position: absolute;
-  inset: -40% -10%;
-  background: linear-gradient(
-    104deg,
-    transparent 34%,
-    rgba(255, 255, 255, 0.85) 46%,
-    rgba(255, 255, 255, 0.5) 52%,
-    transparent 62%
-  );
-  transform: translateX(-14%);
-  pointer-events: none;
-}
-
-/*
- * La face avant du socle, et son port USB-C.
- *
- * Posée sur l'arête basse puis rabattue : origine en haut + rotateX(-90deg)
- * envoie le panneau vers le bas, dans l'épaisseur du boîtier. C'est un vrai
- * mur avant — sans lui, le port aurait l'air posé à plat sur le comptoir.
- */
-.reader-front {
-  position: absolute;
-  left: 2px;
-  right: 2px;
-  top: 100%;
-  height: 30px;
-  transform-origin: top center;
-  transform: rotateX(-90deg);
-  background: linear-gradient(#b7bfb1 0%, #9aa294 46%, #838b7e 100%);
-  border-radius: 0 0 12px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45) inset;
-}
-.reader-port {
-  width: 34px;
-  height: 11px;
-  border-radius: 6px;
-  background: linear-gradient(#1c201a, #343930);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.3),
-    0 1px 3px rgba(0, 0, 0, 0.55) inset;
-}
-
-/* Témoin : vert discret au repos, citron vif pendant le passage. */
-.reader-led {
-  position: absolute;
-  top: 14px;
-  left: 18px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #b7c6ae;
-  z-index: 2;
+/* Le témoin passe au citron pendant le passage de la carte. */
+.reader-led-dot {
+  fill: #b7c6ae;
   animation: led 7s ease-out infinite;
 }
 @keyframes led {
   0%,
   28% {
-    background: #b7c6ae;
-    box-shadow: none;
+    fill: #b7c6ae;
+    filter: none;
   }
   32%,
   46% {
-    background: var(--lime);
-    box-shadow: 0 0 10px 2px rgba(195, 245, 60, 0.85);
+    fill: #c3f53c;
+    filter: drop-shadow(0 0 6px rgba(195, 245, 60, 0.95));
   }
   56%,
   100% {
-    background: #b7c6ae;
-    box-shadow: none;
+    fill: #b7c6ae;
+    filter: none;
   }
 }
 
-/* Ombre portée : serrée sous l'appareil, diffuse autour. */
-.reader-cast {
-  position: absolute;
-  inset: 6% -6% -10% -6%;
-  border-radius: 50%;
-  background: radial-gradient(
-    closest-side,
-    rgba(4, 26, 12, 0.5),
-    rgba(4, 26, 12, 0.22) 62%,
-    transparent 100%
-  );
-  transform: translateZ(-25px);
-  filter: blur(11px);
-}
-
-/* Ondes du sans-contact — synchronisées avec le contact de la carte. */
+/*
+ * Ondes du sans-contact : posées sur le plan du dessus, donc écrasées
+ * verticalement pour suivre la perspective du boîtier.
+ */
 .ping {
   position: absolute;
   left: 50%;
-  top: 50%;
-  width: 120px;
-  height: 120px;
-  margin: -60px 0 0 -60px;
+  top: 42%;
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
   border-radius: 50%;
   border: 2.5px solid var(--lime);
   opacity: 0;
-  transform: scale(0.3);
+  transform: scaleY(0.42) scale(0.3);
   animation: ping 7s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
 }
 .ping-2 {
@@ -480,18 +355,18 @@ img {
   0%,
   30% {
     opacity: 0;
-    transform: scale(0.3);
+    transform: scaleY(0.42) scale(0.3);
   }
   34% {
     opacity: 0.85;
   }
   52% {
     opacity: 0;
-    transform: scale(2.1);
+    transform: scaleY(0.42) scale(2.2);
   }
   100% {
     opacity: 0;
-    transform: scale(2.1);
+    transform: scaleY(0.42) scale(2.2);
   }
 }
 
@@ -530,27 +405,31 @@ img {
  * La carte descend depuis la droite, se pose une demi-seconde sur le lecteur
  * (c'est là que les ondes partent, à 30–34 %), puis repart.
  */
+/*
+ * Le lecteur est désormais peint de face (trapèze), sans rotation sur Z : la
+ * carte se pose donc à plat dessus, sans le décalage de 24° d'avant.
+ */
 @keyframes tap {
   0% {
-    transform: translate3d(120px, -40px, 190px) rotateX(52deg) rotateZ(-8deg);
+    transform: translate3d(130px, -60px, 200px) rotateX(54deg) rotateZ(-6deg);
     opacity: 0;
   }
   12% {
     opacity: 1;
   }
   30% {
-    transform: translate3d(0, 96px, 26px) rotateX(62deg) rotateZ(-24deg);
+    transform: translate3d(0, 104px, 22px) rotateX(64deg) rotateZ(0deg);
   }
   40% {
-    transform: translate3d(0, 96px, 26px) rotateX(62deg) rotateZ(-24deg);
+    transform: translate3d(0, 104px, 22px) rotateX(64deg) rotateZ(0deg);
   }
   62% {
-    transform: translate3d(96px, -30px, 200px) rotateX(52deg) rotateZ(-10deg);
+    transform: translate3d(104px, -46px, 205px) rotateX(56deg) rotateZ(-6deg);
     opacity: 1;
   }
   74%,
   100% {
-    transform: translate3d(130px, -56px, 220px) rotateX(50deg) rotateZ(-8deg);
+    transform: translate3d(140px, -74px, 225px) rotateX(54deg) rotateZ(-4deg);
     opacity: 0;
   }
 }
@@ -657,11 +536,12 @@ img {
   .tkcard,
   .eticket,
   .ping,
+  .reader-led-dot,
   .scene-caption .dot {
     animation: none;
   }
   .tkcard {
-    transform: translate3d(0, 96px, 26px) rotateX(62deg) rotateZ(-24deg);
+    transform: translate3d(0, 104px, 22px) rotateX(64deg) rotateZ(0deg);
   }
   .eticket {
     opacity: 1;
@@ -669,7 +549,10 @@ img {
   }
   .ping-1 {
     opacity: 0.5;
-    transform: scale(1.4);
+    transform: scaleY(0.42) scale(1.5);
+  }
+  .reader-led-dot {
+    fill: #c3f53c;
   }
 }
 
