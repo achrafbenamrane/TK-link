@@ -5,14 +5,15 @@ import { selectTotalUnread, useShopStore } from '@/features/shop';
 import { colors } from '@/shared/theme/colors';
 
 /**
- * La navigation reprend EXACTEMENT le parcours de la maquette du client :
+ * La barre du bas :
  *
- *   Accueil · Favoris · Parcourir · Commandes · Compte
+ *   Accueil · Favoris · Commandes · Compte
  *
- * L'accueil, ce sont les ventes flash — pas le portefeuille de tickets. Les
- * apports TK LINK (tickets dématérialisés, carte de fidélité, cadeaux, jeux)
- * se rejoignent depuis le compte et les fiches commerçant, sans déplacer les
- * cinq entrées que le client a validées.
+ * L'accueil, ce sont les ventes flash. « Parcourir » reste une ROUTE (la
+ * recherche par commerce, avec les flashs en cours de chaque enseigne) mais
+ * quitte la barre : le client ne la veut pas là. Même chose pour les apports
+ * TK LINK — tickets, carte de fidélité, cadeaux, jeux — qu'on rejoint depuis
+ * le compte et les fiches commerçant.
  */
 export default function TabsLayout() {
   const unread = useShopStore(selectTotalUnread);
@@ -47,13 +48,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="parcourir"
-        options={{
-          title: 'Parcourir',
-          tabBarIcon: ({ color }) => <Feather name="search" size={22} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="commandes"
         options={{
           title: 'Commandes',
@@ -78,6 +72,7 @@ export default function TabsLayout() {
           tabBarBadgeStyle: { backgroundColor: colors.brand500, fontSize: 10 },
         }}
       />
+      <Tabs.Screen name="parcourir" options={{ href: null }} />
       <Tabs.Screen name="carte" options={{ href: null }} />
       <Tabs.Screen name="offres" options={{ href: null }} />
       <Tabs.Screen name="jeux" options={{ href: null }} />
