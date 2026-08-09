@@ -30,7 +30,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name,
   slug: 'freedoo',
-  owner: 'krunchy',
+  owner: 'tk-link',
   version: '0.1.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
@@ -164,14 +164,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     eas: {
-      // Projet sous l'organisation « krunchy » (compte borzvalor).
+      // Projet sous l'organisation « TK LINK » (slug tk-link, compte borzvalor).
       // Historique des organisations précédentes, pour mémoire :
+      //   krunchy   → 654ee1f7-56b9-4f4e-a3f9-337598077850
       //   freedoo   → 329bcddd-d9a7-404c-9325-523290072a8f
       //   (ancien)  → f8fd49f4… (compte achrafbenamrane)
       // Changer d'organisation régénère les identifiants de signature : le
       // nouvel APK ne peut donc PAS mettre à jour une installation existante,
       // il faut désinstaller l'ancienne.
-      projectId: '654ee1f7-56b9-4f4e-a3f9-337598077850',
+      projectId: '4c764f8e-8c18-43d4-bbe6-972ee71b76c5',
     },
     /**
      * Jeton Mapbox PUBLIC (pk.*) — conçu pour être livré dans l’app ; il rend la
