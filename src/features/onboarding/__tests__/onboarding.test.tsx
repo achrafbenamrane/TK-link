@@ -49,18 +49,18 @@ describe('avatarColors', () => {
 
 describe('toggleInterest', () => {
   it('ajoute puis retire', () => {
-    expect(toggleInterest([], 'sante')).toEqual(['sante']);
-    expect(toggleInterest(['sante'], 'sante')).toEqual([]);
-    expect(toggleInterest(['sante'], 'loisirs')).toEqual(['sante', 'loisirs']);
+    expect(toggleInterest([], 'beaute')).toEqual(['beaute']);
+    expect(toggleInterest(['beaute'], 'beaute')).toEqual([]);
+    expect(toggleInterest(['beaute'], 'sport')).toEqual(['beaute', 'sport']);
   });
 });
 
 describe('canFinish', () => {
   it('exige un prénom non vide et un intérêt', () => {
     expect(canFinish('', [])).toBe(false);
-    expect(canFinish('  ', ['sante'])).toBe(false);
+    expect(canFinish('  ', ['beaute'])).toBe(false);
     expect(canFinish('Sofiane', [])).toBe(false);
-    expect(canFinish('Sofiane', ['sante'])).toBe(true);
+    expect(canFinish('Sofiane', ['beaute'])).toBe(true);
   });
 });
 
@@ -71,10 +71,52 @@ describe('OnboardingSchema', () => {
     expect(s.interests).toEqual([]);
     expect(s.holderType).toBe('particulier');
   });
+
+  it('démarre au rôle consommateur — CDC §4', () => {
+    expect(OnboardingSchema.parse({}).role).toBe('consommateur');
+  });
+
+  it('survit à un profil enregistré AVANT le CDC', () => {
+    // Le vrai risque de la bascule vers les 8 catégories : un `z.enum` strict
+    // ferait échouer safeParse sur `alimentation`, et le store repartirait de
+    // zéro — l'utilisateur refait tout l'onboarding et perd son avatar.
+    const s = OnboardingSchema.parse({
+      completed: true,
+      firstName: 'Sofiane',
+      avatar: { hue: 2, face: 1, accessory: 3 },
+      interests: ['alimentation', 'carburant', 'mode'],
+    });
+    expect(s.interests).toEqual(['mode']); // les disparus sont écartés
+    expect(s.firstName).toBe('Sofiane'); // le profil, lui, est intact
+    expect(s.avatar.hue).toBe(2);
+    expect(s.completed).toBe(true);
+  });
+});
+
+describe('rôle — CDC §4', () => {
+  it('un commerçant est forcément un professionnel', () => {
+    const store = useOnboardingStore.getState();
+    store.setRole('commercant');
+    expect(useOnboardingStore.getState().role).toBe('commercant');
+    // Sans cette règle, on obtiendrait un « commerçant particulier » et
+    // l'audience des cadeaux fidélité deviendrait fausse.
+    expect(useOnboardingStore.getState().holderType).toBe('pro');
+  });
+
+  it('un grossiste aussi', () => {
+    useOnboardingStore.getState().setRole('grossiste');
+    expect(useOnboardingStore.getState().holderType).toBe('pro');
+  });
+
+  it('le consommateur garde son choix particulier / pro', () => {
+    useOnboardingStore.getState().setHolderType('particulier');
+    useOnboardingStore.getState().setRole('consommateur');
+    expect(useOnboardingStore.getState().holderType).toBe('particulier');
+  });
 });
 
 describe('<OnboardingScreen />', () => {
-  it('déroule les quatre étapes et ne termine qu’une fois rempli', () => {
+  it('déroule le parcours consommateur et ne termine qu’une fois rempli', () => {
     const onDone = jest.fn();
     render(<OnboardingScreen onDone={onDone} />);
 
@@ -82,41 +124,71 @@ describe('<OnboardingScreen />', () => {
     expect(screen.getByTestId('onboarding-screen')).toBeTruthy();
     fireEvent.press(screen.getByTestId('onboarding-next'));
 
-    // 2 — avatar
+    // 2 — rôle (CDC §4)
+    expect(screen.getByTestId('role-consommateur')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('role-consommateur'));
+    fireEvent.press(screen.getByTestId('onboarding-next'));
+
+    // 3 — avatar
     expect(screen.getByTestId('avatar-random')).toBeTruthy();
     fireEvent.press(screen.getByTestId('avatar-hue-next'));
     expect(useOnboardingStore.getState().avatar.hue).toBe(1);
     fireEvent.press(screen.getByTestId('onboarding-next'));
 
-    // 3 — profil
+    // 4 — profil
     fireEvent.press(screen.getByTestId('holder-pro'));
     fireEvent.press(screen.getByTestId('medium-pastille'));
     expect(useOnboardingStore.getState().holderType).toBe('pro');
     expect(useOnboardingStore.getState().medium).toBe('pastille');
     fireEvent.press(screen.getByTestId('onboarding-next'));
 
-    // 4 — intérêts : incomplet, donc on ne termine pas
+    // 5 — intérêts : incomplet, donc on ne termine pas
     fireEvent.press(screen.getByTestId('onboarding-next'));
     expect(onDone).not.toHaveBeenCalled();
     expect(useOnboardingStore.getState().completed).toBe(false);
 
     // On remplit, et là ça passe.
     fireEvent.changeText(screen.getByTestId('onboarding-firstname'), 'Sofiane');
-    fireEvent.press(screen.getByTestId('interest-alimentation'));
+    fireEvent.press(screen.getByTestId('interest-restauration'));
     fireEvent.press(screen.getByTestId('onboarding-next'));
 
     expect(onDone).toHaveBeenCalled();
     expect(useOnboardingStore.getState().completed).toBe(true);
     expect(useOnboardingStore.getState().firstName).toBe('Sofiane');
-    expect(useOnboardingStore.getState().interests).toEqual(['alimentation']);
+    expect(useOnboardingStore.getState().interests).toEqual(['restauration']);
+  });
+
+  it('saute l’étape particulier / pro pour un commerçant — CDC §4', () => {
+    render(<OnboardingScreen onDone={jest.fn()} />);
+    fireEvent.press(screen.getByTestId('onboarding-next')); // impact → rôle
+    fireEvent.press(screen.getByTestId('role-commercant'));
+    fireEvent.press(screen.getByTestId('onboarding-next')); // rôle → avatar
+    fireEvent.press(screen.getByTestId('onboarding-next')); // avatar → …
+
+    // La question particulier / pro n’a pas de sens pour un commerçant :
+    // on tombe directement sur les rayons.
+    expect(screen.queryByTestId('holder-particulier')).toBeNull();
+    expect(screen.getByTestId('onboarding-firstname')).toBeTruthy();
+  });
+
+  it('propose les huit catégories du CDC', () => {
+    render(<OnboardingScreen onDone={jest.fn()} />);
+    fireEvent.press(screen.getByTestId('onboarding-next'));
+    fireEvent.press(screen.getByTestId('onboarding-next'));
+    fireEvent.press(screen.getByTestId('onboarding-next'));
+    fireEvent.press(screen.getByTestId('onboarding-next'));
+
+    for (const key of ['restauration', 'high-tech', 'maison', 'mode', 'auto', 'services']) {
+      expect(screen.getByTestId(`interest-${key}`)).toBeTruthy();
+    }
   });
 
   it('permet de revenir en arrière', () => {
     render(<OnboardingScreen onDone={jest.fn()} />);
     fireEvent.press(screen.getByTestId('onboarding-next'));
-    expect(screen.getByTestId('avatar-random')).toBeTruthy();
+    expect(screen.getByTestId('role-consommateur')).toBeTruthy();
     fireEvent.press(screen.getByTestId('onboarding-back'));
-    // Retour à l'accroche : plus d'avatar à l'écran.
-    expect(screen.queryByTestId('avatar-random')).toBeNull();
+    // Retour à l'accroche : plus de choix de rôle à l'écran.
+    expect(screen.queryByTestId('role-consommateur')).toBeNull();
   });
 });

@@ -1,12 +1,28 @@
 import { DEALS, MERCHANTS } from '../model/catalog';
-import { PRODUCT_IMAGES } from '../model/product-images';
+import { AWAITING_PHOTO, PRODUCT_IMAGES } from '../model/product-images';
 
 describe('product images', () => {
   // La règle décidée avec le client : pas de visuel propre → pas de produit.
-  // Un test plutôt qu'une bonne intention : ajouter un deal sans image casse ici.
-  it('gives every deal a real photo', () => {
-    const missing = DEALS.filter((d) => !PRODUCT_IMAGES[d.id]).map((d) => d.id);
+  // Les huit catégories du CDC ont forcé une exception, mais elle est NOMMÉE :
+  // toute offre sans photo doit figurer dans `AWAITING_PHOTO`, sinon ce test
+  // casse. On ne peut pas en ajouter une par distraction.
+  it('gives every deal a real photo, or declares it as owed', () => {
+    const missing = DEALS.filter((d) => !PRODUCT_IMAGES[d.id] && !AWAITING_PHOTO.has(d.id)).map(
+      (d) => d.id,
+    );
     expect(missing).toEqual([]);
+  });
+
+  it('empties the debt list as photos arrive', () => {
+    // Un identifiant qui a DÉJÀ sa photo n'a rien à faire dans la liste : sans
+    // ce test, elle ne rétrécirait jamais et perdrait tout son sens.
+    const settled = [...AWAITING_PHOTO].filter((id) => PRODUCT_IMAGES[id]);
+    expect(settled).toEqual([]);
+  });
+
+  it('owes no photo to a deal that does not exist', () => {
+    const ids = new Set(DEALS.map((d) => d.id));
+    expect([...AWAITING_PHOTO].filter((id) => !ids.has(id))).toEqual([]);
   });
 
   it('has no image pointing at a deal that no longer exists', () => {

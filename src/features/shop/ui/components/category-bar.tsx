@@ -6,23 +6,24 @@ import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
+import { CATEGORY_INFO } from '@/shared/lib/categories';
+
 import { CATEGORIES, CATEGORY_LABELS, type Category } from '../../model/schema';
 
 type FeatherName = ComponentProps<typeof Feather>['name'];
 
-const ICONS: Record<Category | 'tous', FeatherName> = {
-  tous: 'grid',
-  restos: 'coffee',
-  artisans: 'award',
-  courses: 'shopping-bag',
-  shopping: 'gift',
-};
+/**
+ * `shared/lib` décrit l'icône par son nom, en `string` : une table de domaine
+ * n'a pas à dépendre des types d'une librairie de rendu. La conversion se fait
+ * donc ici, au seul endroit qui connaît Feather.
+ */
+const iconOf = (c: Category): FeatherName => CATEGORY_INFO[c].icon as FeatherName;
 
 type Item = { key: Category | null; label: string; icon: FeatherName };
 
 const ITEMS: Item[] = [
-  { key: null, label: 'Tous', icon: ICONS.tous },
-  ...CATEGORIES.map((c) => ({ key: c, label: CATEGORY_LABELS[c], icon: ICONS[c] })),
+  { key: null, label: 'Tous', icon: 'grid' },
+  ...CATEGORIES.map((c) => ({ key: c, label: CATEGORY_LABELS[c], icon: iconOf(c) })),
 ];
 
 type Props = {
@@ -57,7 +58,7 @@ export function CategoryBar({ value, onChange }: Props) {
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
             onPress={() => onChange(item.key)}
-            className="w-[68px] items-center gap-1.5 active:opacity-70"
+            className="w-[76px] items-center gap-1.5 active:opacity-70"
           >
             <View
               className={cn(

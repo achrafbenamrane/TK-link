@@ -1,3 +1,6 @@
+import { useRouter } from 'expo-router';
+import { useCallback } from 'react';
+
 import { SignInScreen } from '@/features/auth';
 
 /**
@@ -5,5 +8,7 @@ import { SignInScreen } from '@/features/auth';
  * `useProtectedRoute` redirects here when there is no session.
  */
 export default function SignInRoute() {
-  return <SignInScreen />;
+  const router = useRouter();
+  const onCreateAccount = useCallback(() => router.push('/sign-up'), [router]);
+  return <SignInScreen onCreateAccount={onCreateAccount} />;
 }

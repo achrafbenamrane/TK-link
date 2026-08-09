@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { CATEGORIES, CATEGORY_LABELS, type Category } from '@/shared/lib/categories';
+
 /**
  * Domain contract for the Freedoo shop (flash sales, cart, orders).
  *
@@ -8,15 +10,13 @@ import { z } from 'zod';
  * orders) is validated with Zod on rehydration — see model/store.ts.
  */
 
-export const CATEGORIES = ['restos', 'artisans', 'courses', 'shopping'] as const;
-export type Category = (typeof CATEGORIES)[number];
-
-export const CATEGORY_LABELS: Record<Category, string> = {
-  restos: 'Restos',
-  artisans: 'Artisans',
-  courses: 'Courses',
-  shopping: 'Shopping',
-};
+/**
+ * Les catégories viennent de `shared` — CDC §4 et §7 exigent la MÊME liste à
+ * l’onboarding et à l’accueil. On la ré-exporte ici pour que les écrans de la
+ * boutique continuent d’avoir un seul point d’entrée pour le domaine.
+ */
+export { CATEGORIES, CATEGORY_LABELS };
+export type { Category };
 
 /** WGS84 point — what Mapbox and the geo helpers speak. */
 export type Coord = { lat: number; lng: number };

@@ -1,3 +1,5 @@
+import { CATEGORIES, CATEGORY_INFO } from '@/shared/lib/categories';
+
 import type { Avatar, Interest } from '../model/schema';
 
 /**
@@ -45,16 +47,20 @@ export function avatarColors(avatar: Avatar): { bg: string; fg: string } {
   return AVATAR_HUES[avatar.hue % AVATAR_HUES.length]!;
 }
 
-/** Libellés des centres d'intérêt, dans l'ordre d'affichage. */
-export const INTERESTS: { key: Interest; label: string; icon: string }[] = [
-  { key: 'alimentation', label: 'Courses', icon: 'shopping-cart' },
-  { key: 'restauration', label: 'Restaurants', icon: 'coffee' },
-  { key: 'carburant', label: 'Carburant', icon: 'droplet' },
-  { key: 'transport', label: 'Transports', icon: 'navigation' },
-  { key: 'fournitures', label: 'Fournitures', icon: 'printer' },
-  { key: 'sante', label: 'Santé', icon: 'heart' },
-  { key: 'loisirs', label: 'Loisirs', icon: 'film' },
-];
+/**
+ * Les 8 catégories du CDC (§4, §23 Q2), dans l'ordre du document.
+ *
+ * Dérivées et non recopiées : une seconde liste finirait par diverger de celle
+ * de l'accueil, et le tri par centres d'intérêt du §7 cesserait de fonctionner
+ * sans que rien ne le signale.
+ */
+export const INTERESTS: { key: Interest; label: string; icon: string; emoji: string }[] =
+  CATEGORIES.map((key) => ({
+    key,
+    label: CATEGORY_INFO[key].label,
+    icon: CATEGORY_INFO[key].icon,
+    emoji: CATEGORY_INFO[key].emoji,
+  }));
 
 /** Ajoute / retire un centre d'intérêt. Fonction pure. */
 export function toggleInterest(list: Interest[], key: Interest): Interest[] {

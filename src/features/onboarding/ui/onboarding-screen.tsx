@@ -1,9 +1,10 @@
 import { Feather } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useMemo, useState, type ComponentProps } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cn } from '@/shared/lib/cn';
+import { ROLES, ROLE_ICON, ROLE_LABEL, ROLE_TAGLINE, type Role } from '@/shared/lib/roles';
 import { AppText } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
@@ -16,14 +17,51 @@ import {
   INTERESTS,
   randomAvatar,
 } from '../lib/avatar';
-import { selectAvatar, selectFirstName, selectInterests, useOnboardingStore } from '../model/store';
+import {
+  selectAvatar,
+  selectFirstName,
+  selectInterests,
+  selectRole,
+  useOnboardingStore,
+} from '../model/store';
 import { AvatarView } from './avatar-view';
 
 type Props = { onDone: () => void };
 
-/** Les étapes, dans l'ordre. L'accroche écologique ouvre — c'est la promesse. */
-const STEPS = ['impact', 'avatar', 'profil', 'interets'] as const;
-type Step = (typeof STEPS)[number];
+type Step = 'impact' | 'role' | 'avatar' | 'profil' | 'interets';
+
+/**
+ * Les étapes, adaptées au rôle — CDC §4 : « L'onboarding devra être adapté au
+ * rôle sélectionné. »
+ *
+ * L'étape « profil » demande particulier ou professionnel : la question n'a de
+ * sens que pour un consommateur. Un commerçant ou un grossiste est un
+ * professionnel par définition, lui poser la question serait un faux choix.
+ */
+function stepsFor(role: Role): Step[] {
+  return role === 'consommateur'
+    ? ['impact', 'role', 'avatar', 'profil', 'interets']
+    : ['impact', 'role', 'avatar', 'interets'];
+}
+
+/** Ce que l'étape « intérêts » veut dire selon le rôle. */
+const INTEREST_COPY: Record<Role, { title: string; subtitle: string; label: string }> = {
+  consommateur: {
+    title: 'Presque fini',
+    subtitle: 'Votre prénom, et ce qui vous intéresse — pour trier vos offres.',
+    label: 'Ce que vous achetez le plus',
+  },
+  commercant: {
+    title: 'Votre commerce',
+    subtitle: 'Votre prénom, et vos rayons — pour vous montrer les bons lots.',
+    label: 'Ce que vous vendez',
+  },
+  grossiste: {
+    title: 'Votre activité',
+    subtitle: 'Votre prénom, et vos rayons — pour cibler les bons commerçants.',
+    label: 'Ce que vous distribuez',
+  },
+};
 
 export function OnboardingScreen({ onDone }: Props) {
   const insets = useSafeAreaInsets();
@@ -32,19 +70,25 @@ export function OnboardingScreen({ onDone }: Props) {
   const firstName = useOnboardingStore(selectFirstName);
   const avatar = useOnboardingStore(selectAvatar);
   const interests = useOnboardingStore(selectInterests);
+  const role = useOnboardingStore(selectRole);
   const holderType = useOnboardingStore((s) => s.holderType);
   const medium = useOnboardingStore((s) => s.medium);
 
   const setFirstName = useOnboardingStore((s) => s.setFirstName);
   const setAvatar = useOnboardingStore((s) => s.setAvatar);
+  const setRole = useOnboardingStore((s) => s.setRole);
   const setHolderType = useOnboardingStore((s) => s.setHolderType);
   const setMedium = useOnboardingStore((s) => s.setMedium);
   const toggle = useOnboardingStore((s) => s.toggleInterest);
   const complete = useOnboardingStore((s) => s.complete);
 
-  const index = STEPS.indexOf(step);
-  const isLast = index === STEPS.length - 1;
+  const steps = useMemo(() => stepsFor(role), [role]);
+  // `indexOf` peut renvoyer -1 si le rôle vient de retirer l'étape courante :
+  // on retombe alors sur le début plutôt que de calculer sur un index négatif.
+  const index = Math.max(0, steps.indexOf(step));
+  const isLast = index === steps.length - 1;
   const canContinue = isLast ? canFinish(firstName, interests) : true;
+  const copy = INTEREST_COPY[role];
 
   const next = () => {
     if (isLast) {
@@ -52,7 +96,7 @@ export function OnboardingScreen({ onDone }: Props) {
       onDone();
       return;
     }
-    setStep(STEPS[index + 1]!);
+    setStep(steps[index + 1]!);
   };
 
   return (
@@ -63,7 +107,7 @@ export function OnboardingScreen({ onDone }: Props) {
     >
       {/* Progression */}
       <View className="flex-row gap-1.5 px-5 pb-1 pt-3">
-        {STEPS.map((s, i) => (
+        {steps.map((s, i) => (
           <View
             key={s}
             className={cn('h-1 flex-1 rounded-pill', i <= index ? 'bg-brand-500' : 'bg-line')}
@@ -77,6 +121,39 @@ export function OnboardingScreen({ onDone }: Props) {
         keyboardShouldPersistTaps="handled"
       >
         {step === 'impact' ? <ImpactStep /> : null}
+
+        {/* CDC §4 — le choix du rôle, avant tout le reste. */}
+        {step === 'role' ? (
+          <View className="gap-5">
+            <Header
+              title="Vous venez pour…"
+              subtitle="Ce choix décide des offres que vous verrez."
+            />
+            <View className="gap-2">
+              {ROLES.map((r) => (
+                <Choice
+                  key={r}
+                  testID={`role-${r}`}
+                  icon={ROLE_ICON[r] as 'user'}
+                  title={ROLE_LABEL[r]}
+                  detail={ROLE_TAGLINE[r]}
+                  selected={role === r}
+                  onPress={() => setRole(r)}
+                />
+              ))}
+            </View>
+            <View className="flex-row items-start gap-2.5 rounded-card bg-surface-muted p-3.5">
+              <Feather name="info" size={15} color={colors.inkFaint} />
+              <AppText variant="caption" className="flex-1 text-ink-muted" style={{ fontSize: 12 }}>
+                {role === 'consommateur'
+                  ? 'Vous verrez les offres des commerçants près de chez vous.'
+                  : role === 'commercant'
+                    ? 'Vous verrez en plus les lots des grossistes. Votre SIRET vous sera demandé pour commander.'
+                    : 'Vous publierez des lots réservés aux commerçants.'}
+              </AppText>
+            </View>
+          </View>
+        ) : null}
 
         {step === 'avatar' ? (
           <View className="gap-5">
@@ -193,10 +270,7 @@ export function OnboardingScreen({ onDone }: Props) {
 
         {step === 'interets' ? (
           <View className="gap-5">
-            <Header
-              title="Presque fini"
-              subtitle="Votre prénom, et ce qui vous intéresse — pour trier vos offres."
-            />
+            <Header title={copy.title} subtitle={copy.subtitle} />
 
             <View className="gap-2">
               <AppText variant="caption" className="text-ink-muted">
@@ -218,7 +292,7 @@ export function OnboardingScreen({ onDone }: Props) {
 
             <View className="gap-2">
               <AppText variant="caption" className="text-ink-muted">
-                Ce que vous achetez le plus
+                {copy.label}
               </AppText>
               <View className="flex-row flex-wrap gap-2">
                 {INTERESTS.map((it) => {
@@ -289,7 +363,7 @@ export function OnboardingScreen({ onDone }: Props) {
             testID="onboarding-back"
             accessibilityRole="button"
             accessibilityLabel="Étape précédente"
-            onPress={() => setStep(STEPS[index - 1]!)}
+            onPress={() => setStep(steps[index - 1]!)}
             className="items-center py-2"
           >
             <AppText variant="caption" className="text-ink-muted">
@@ -417,7 +491,7 @@ function Choice({
   onPress,
 }: {
   testID: string;
-  icon: 'user' | 'briefcase' | 'credit-card' | 'disc';
+  icon: ComponentProps<typeof Feather>['name'];
   title: string;
   detail: string;
   selected: boolean;

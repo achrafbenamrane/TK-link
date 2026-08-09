@@ -10,33 +10,28 @@ import { friendlyAuthError } from '../model/auth-errors';
 import { CredentialsSchema } from '../model/schema';
 import { useAuthStore } from '../model/store';
 
-type Mode = 'sign-in' | 'sign-up';
 type FieldErrors = { email?: string; password?: string };
 
-const ARGUMENTS = [
-  'Les ventes flash de votre quartier',
-  'Livraison offerte, sans frais cachés',
-  'Vos points de fidélité, partageables',
-];
-
 /**
- * Première impression de l'app : elle doit parler la même langue que le reste
- * (français) et ressembler à Freedoo, pas à un formulaire générique.
+ * CONNEXION — CDC §6 (e-mail + mot de passe ; l'empreinte digitale vit dans
+ * l'écran dédié une fois le compte ouvert).
+ *
+ * L'INSCRIPTION a son propre écran depuis le CDC §5 : elle réclame sept champs
+ * et un SIRET conditionnel, ce qui n'entre plus dans un simple basculement de
+ * mode sur cet écran.
  *
  * Les erreurs sont affichées SOUS LE CHAMP concerné plutôt qu'en une ligne
  * commune : avec deux champs, un message global oblige à deviner lequel corriger.
  */
-export function SignInScreen() {
+export function SignInScreen({ onCreateAccount }: { onCreateAccount?: () => void } = {}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [mode, setMode] = useState<Mode>('sign-in');
   const [submitting, setSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState(false);
 
   const storeError = useAuthStore((s) => s.error);
   const signIn = useAuthStore((s) => s.signIn);
-  const signUp = useAuthStore((s) => s.signUp);
 
   // L'erreur du serveur ne s'affiche qu'après une tentative : sinon une erreur
   // d'une session précédente accueille l'utilisateur à l'ouverture.
@@ -63,16 +58,8 @@ export function SignInScreen() {
     setFieldErrors({});
     setTouched(true);
     setSubmitting(true);
-    await (mode === 'sign-in'
-      ? signIn(parsed.data.email, parsed.data.password)
-      : signUp(parsed.data.email, parsed.data.password));
+    await signIn(parsed.data.email, parsed.data.password);
     setSubmitting(false);
-  };
-
-  const toggleMode = () => {
-    setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in');
-    setFieldErrors({});
-    setTouched(false);
   };
 
   return (
@@ -88,25 +75,12 @@ export function SignInScreen() {
         >
           <View className="mb-8">
             <AppText className="font-display text-ink" style={{ fontSize: 34, lineHeight: 44 }}>
-              Freedoo<AppText className="text-brand-500">.</AppText>
+              TK<AppText className="text-brand-500"> LINK</AppText>
             </AppText>
             <AppText variant="caption" className="mt-1">
-              {mode === 'sign-in'
-                ? 'Content de vous revoir.'
-                : 'Créez votre compte, c’est gratuit.'}
+              Content de vous revoir.
             </AppText>
           </View>
-
-          {mode === 'sign-up' ? (
-            <View className="mb-6 gap-2.5 rounded-card bg-ink p-4">
-              {ARGUMENTS.map((line) => (
-                <View key={line} className="flex-row items-center gap-2.5">
-                  <Feather name="check" size={14} color={colors.brand500} />
-                  <AppText className="flex-1 text-sm text-ink-inverse">{line}</AppText>
-                </View>
-              ))}
-            </View>
-          ) : null}
 
           <View className="gap-3">
             <View className="gap-1.5">
@@ -150,7 +124,7 @@ export function SignInScreen() {
                   }}
                   placeholder="8 caractères minimum"
                   secureTextEntry
-                  textContentType={mode === 'sign-in' ? 'password' : 'newPassword'}
+                  textContentType="password"
                   className={cn(fieldErrors.password && 'border-brand-500')}
                 />
               </View>
@@ -173,25 +147,26 @@ export function SignInScreen() {
             <View className="mt-1">
               <Button
                 testID="auth-submit"
-                label={mode === 'sign-in' ? 'Se connecter' : 'Créer mon compte'}
+                label="Se connecter"
                 loading={submitting}
                 onPress={submit}
               />
             </View>
 
-            <Pressable
-              testID="auth-toggle"
-              accessibilityRole="button"
-              onPress={toggleMode}
-              className="py-3"
-            >
-              <AppText variant="caption" className="text-center text-ink-muted">
-                {mode === 'sign-in' ? 'Pas encore de compte ? ' : 'Vous avez déjà un compte ? '}
-                <AppText className="font-sans-bold text-brand-600">
-                  {mode === 'sign-in' ? 'Créer un compte' : 'Se connecter'}
+            {onCreateAccount ? (
+              <Pressable
+                testID="auth-toggle"
+                accessibilityRole="button"
+                accessibilityLabel="Créer un compte"
+                onPress={onCreateAccount}
+                className="py-3"
+              >
+                <AppText variant="caption" className="text-center text-ink-muted">
+                  Pas encore de compte ?{' '}
+                  <AppText className="font-sans-bold text-brand-600">Créer un compte</AppText>
                 </AppText>
-              </AppText>
-            </Pressable>
+              </Pressable>
+            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

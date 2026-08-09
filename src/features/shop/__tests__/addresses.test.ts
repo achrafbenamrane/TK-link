@@ -71,7 +71,7 @@ describe('AddressDraftSchema', () => {
 describe('MerchantApplicationSchema', () => {
   const APP = {
     shopName: 'Maison Hammamet',
-    category: 'restos' as const,
+    category: 'restauration' as const,
     contactName: 'Farid',
     phone: '06 12 34 56 78',
     email: 'farid@hammamet.fr',

@@ -13,7 +13,7 @@ const deal = (over: Partial<Deal> = {}): Deal =>
     id: 'd',
     title: 'Offre',
     merchantId: 'm',
-    category: 'restos',
+    category: 'restauration',
     emoji: '🍔',
     tint: '#fff',
     price: 10,

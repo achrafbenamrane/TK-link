@@ -16,6 +16,29 @@
  * commerciale. Bon pour la démo, à remplacer par les photos réelles des
  * commerçants (ou une banque sous licence) avant publication sur les stores.
  */
+/**
+ * Offres publiées SANS photo, en connaissance de cause.
+ *
+ * Le CDC (§4, §23 Q2) impose huit catégories. Les remplir demandait des offres
+ * hors alimentaire, pour lesquelles nous n'avons aucun visuel utilisable — et
+ * un onglet vide est pire qu'une vignette emoji.
+ *
+ * Cette liste est une DETTE, pas une porte de sortie : le test d'intégrité
+ * refuse toute autre offre sans image, refuse un identifiant inconnu, et
+ * refuse qu'un identifiant y reste une fois sa photo arrivée. Elle ne peut donc
+ * que rétrécir.
+ */
+export const AWAITING_PHOTO = new Set<string>([
+  'd_casque',
+  'd_tablette',
+  'd_lampe',
+  'd_veste',
+  'd_soin',
+  'd_padel',
+  'd_revision',
+  'd_poterie',
+]);
+
 export const PRODUCT_IMAGES: Record<string, number | undefined> = {
   d_cote: require('../../../../assets/images/products/d_cote.jpg'),
   d_cassoulet: require('../../../../assets/images/products/d_cassoulet.jpg'),

@@ -19,7 +19,7 @@ const deal = (id: string, merchantId: string, over: Partial<Deal> = {}): Deal =>
     id,
     title: id,
     merchantId,
-    category: 'restos',
+    category: 'restauration',
     emoji: '🍔',
     tint: '#fff',
     price: 10,
@@ -40,7 +40,7 @@ const lookup = (id: string) => MERCHANTS[id];
 describe('summarize', () => {
   const deals = [
     deal('d1', 'a', { endsInSeconds: 600, oldPrice: 20, price: 10 }),
-    deal('d2', 'a', { endsInSeconds: 120, category: 'courses' }),
+    deal('d2', 'a', { endsInSeconds: 120, category: 'mode' }),
     deal('d3', 'b', { endsInSeconds: 900 }),
   ];
 
@@ -58,7 +58,7 @@ describe('summarize', () => {
 
   it('dédoublonne les catégories', () => {
     const a = summarize(deals, lookup, null).find((x) => x.merchant.id === 'a')!;
-    expect(a.categories.sort()).toEqual(['courses', 'restos']);
+    expect(a.categories.sort()).toEqual(['mode', 'restauration']);
   });
 
   it('calcule la distance quand la position est connue, null sinon', () => {
