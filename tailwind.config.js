@@ -2,7 +2,9 @@
  * Design tokens live HERE — this file is the single source of truth for
  * colors, spacing and typography used via className.
  *
- * Freedoo brand: warm paper + ink, one signal red, cream surfaces.
+ * TK LINK brand: le ticket papier disparaît — d'où le vert. Vert forêt du logo
+ * pour les fonds sombres, vert vif pour l'action, citron pour l'accent (repris
+ * de la vidéo de marque), surfaces papier très légèrement teintées de vert.
  * Display type is Unbounded; body/UI type is Manrope.
  *
  * If you need a token imperatively (rare), import it from
@@ -19,26 +21,37 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          50: '#FEEDEA',
-          100: '#FCD9D3',
-          200: '#F9B4A8',
-          500: '#F5311D',
-          600: '#DC2410',
-          700: '#B21C0D',
+          50: '#E8F7EC',
+          100: '#C7EBD2',
+          200: '#8FD5A8',
+          500: '#0F8A4C',
+          600: '#0B6C3B',
+          700: '#08512C',
+        },
+        // Vert forêt du logo — fonds sombres, cartes « affiche », en-têtes.
+        forest: {
+          DEFAULT: '#123A22',
+          deep: '#0B2415',
+        },
+        // Citron TK — accent vif (jamais en texte sur fond clair : contraste trop faible).
+        lime: {
+          DEFAULT: '#C3F53C',
+          soft: '#E6FBAE',
+          deep: '#7F9E14',
         },
         surface: {
           DEFAULT: '#FFFFFF',
-          muted: '#F6F2EA',
-          sunken: '#EFEAE0',
-          inverse: '#17140F',
+          muted: '#F2F7F0',
+          sunken: '#E6EFE3',
+          inverse: '#123A22',
         },
         ink: {
-          DEFAULT: '#17140F',
-          muted: '#57524A',
-          faint: '#8F887C',
-          inverse: '#F6F2EA',
+          DEFAULT: '#0F1A12',
+          muted: '#4D5B50',
+          faint: '#84927F',
+          inverse: '#F2F7F0',
         },
-        line: '#E7E2D8',
+        line: '#DCE6D7',
         danger: '#DC2626',
         success: '#16A34A',
       },

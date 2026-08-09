@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { colors } from '../theme/colors';
 import { AppText } from './text';
 
 type FeatherName = ComponentProps<typeof Feather>['name'];
@@ -25,8 +26,8 @@ export type PushButtonProps = {
   accessibilityLabel?: string;
 };
 
-const CAP = '#F5311D';
-const BASE = '#8a0d18';
+const CAP = colors.brand500;
+const BASE = colors.brand700;
 
 /** Ratios taken from the 178px landing-page button, so any size keeps its look. */
 const WALL_RATIO = 0.084; // 3D thickness — how far the cap sinks
@@ -35,7 +36,7 @@ const LABEL_RATIO = 0.067;
 const SUBLABEL_RATIO = 0.125;
 
 /**
- * Freedoo's signature red 3D push button — a solid cap raised on a darker base
+ * TK LINK's signature 3D push button — a solid cap raised on a darker base
  * that physically compresses on press. Reanimated, reduced-motion aware.
  * Reused from the landing page at the client's request.
  *

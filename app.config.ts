@@ -13,7 +13,11 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 const IS_DEV = process.env.APP_VARIANT === 'development';
 const IS_PREVIEW = process.env.APP_VARIANT === 'preview';
 
-const name = IS_DEV ? 'Freedoo (Dev)' : IS_PREVIEW ? 'Freedoo (Preview)' : 'Freedoo';
+// Nom affiché (écran d'accueil du téléphone, stores). NB : `slug`, `owner` et
+// `bundleIdentifier` restent « freedoo » — ils identifient le projet EAS et les
+// clés de signature ; les renommer casse la chaîne de build et les mises à jour
+// des installations existantes. À traiter séparément, quand la bascule est actée.
+const name = IS_DEV ? 'TK LINK (Dev)' : IS_PREVIEW ? 'TK LINK (Preview)' : 'TK LINK';
 const bundleId = IS_DEV
   ? 'com.progix.freedoo.dev'
   : IS_PREVIEW
@@ -116,7 +120,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-location',
       {
         locationWhenInUsePermission:
-          'Freedoo utilise votre position pour afficher les ventes flash autour de vous et calculer le trajet jusqu’au commerçant.',
+          'TK LINK utilise votre position pour afficher les commerces partenaires autour de vous et calculer le trajet jusqu’au magasin.',
       },
     ],
     [
@@ -125,7 +129,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       // propriétaire » — aucune app ne peut lire une empreinte.
       'expo-local-authentication',
       {
-        faceIDPermission: 'Freedoo utilise Face ID pour déverrouiller votre compte.',
+        faceIDPermission: 'TK LINK utilise Face ID pour déverrouiller votre compte.',
       },
     ],
     [
