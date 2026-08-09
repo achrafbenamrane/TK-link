@@ -1,9 +1,29 @@
-import { HomeScreen } from '@/features/shop';
+import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
+
+import { selectCards, useMerchantLoyaltyStore } from '@/features/loyalty';
+import { BrowseScreen } from '@/features/shop';
 
 /**
- * PARCOURIR — la recherche par la carte : on ouvre directement sur les
- * commerces autour de soi, comme dans la maquette du client.
+ * PARCOURIR — la découverte par commerce.
+ *
+ * Distinct de l'accueil : celui-ci déroule les ventes flash, celui-là cherche
+ * une enseigne. Les soldes de fidélité viennent de la feature « loyalty » et
+ * sont passés en props — la boutique ne l'importe pas.
  */
 export default function ParcourirRoute() {
-  return <HomeScreen initialView="carte" />;
+  const router = useRouter();
+  const cards = useMerchantLoyaltyStore(selectCards);
+
+  const loyaltyByMerchant = useMemo(
+    () => Object.fromEntries(Object.entries(cards).map(([id, c]) => [id, c.points])),
+    [cards],
+  );
+
+  return (
+    <BrowseScreen
+      loyaltyByMerchant={loyaltyByMerchant}
+      onOpenMerchant={(id) => router.push({ pathname: '/enseigne/[id]', params: { id } })}
+    />
+  );
 }

@@ -11,6 +11,16 @@ export { OrderDetailScreen } from './ui/order-detail-screen';
 export { FavoritesScreen } from './ui/favorites-screen';
 export { ProfileScreen } from './ui/profile-screen';
 export { PreferencesScreen } from './ui/preferences-screen';
+export { BrowseScreen } from './ui/browse-screen';
+export {
+  summarize,
+  sortSummaries,
+  searchSummaries,
+  flashLabel,
+  SORT_LABEL,
+  type MerchantSummary,
+  type SortKey,
+} from './lib/browse';
 export {
   applyPreferences,
   toggleLifeStyle,
