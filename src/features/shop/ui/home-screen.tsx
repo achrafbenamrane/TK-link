@@ -7,7 +7,7 @@ import { AppText, Screen, TextField } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { activeFilterCount, filterDeals } from '../lib/preferences';
-import { countCritical, sortByUrgency } from '../lib/urgency';
+import { countCritical, sortForInterests } from '../lib/urgency';
 import { dealsByCategory, getDeal, getMerchant, FEATURED_DEAL_ID } from '../model/catalog';
 import type { Category, Deal } from '../model/schema';
 import { getUserCoord } from '../lib/location';
@@ -123,6 +123,17 @@ type HomeScreenProps = {
   /** Vue d'ouverture : « Parcourir » entre directement sur la carte. */
   initialView?: HomeView;
   /**
+   * L'identité affichée en tête — CDC §7. Rendue par la ROUTE : l'avatar et le
+   * prénom appartiennent à la feature `onboarding`, que la boutique n'importe
+   * pas.
+   */
+  renderIdentity?: () => ReactNode;
+  /**
+   * Catégories déclarées à l'onboarding — CDC §7 : leurs offres passent
+   * devant. Vient aussi de la route, pour la même raison.
+   */
+  interests?: Category[];
+  /**
    * Bandeau posé en tête de liste, rendu par la ROUTE. La progression vit dans
    * sa propre feature ; la boutique ne l'importe pas, elle lui laisse une
    * place et lui passe le nombre d'offres en dernière chance.
@@ -132,7 +143,13 @@ type HomeScreenProps = {
   onVisit?: () => void;
 };
 
-export function HomeScreen({ initialView = 'liste', renderBanner, onVisit }: HomeScreenProps = {}) {
+export function HomeScreen({
+  initialView = 'liste',
+  renderIdentity,
+  interests,
+  renderBanner,
+  onVisit,
+}: HomeScreenProps = {}) {
   const [category, setCategory] = useState<Category | null>(null);
   const [query, setQuery] = useState('');
   const [view, setView] = useState<HomeView>(initialView);
@@ -167,9 +184,13 @@ export function HomeScreen({ initialView = 'liste', renderBanner, onVisit }: Hom
     // rayon aussi — mais jamais jusqu'à vider l'écran (voir `filterDeals`).
     const outcome = filterDeals(list, getMerchant, preferences, userCoord);
     // Ce qui va disparaître passe DEVANT : c'est un déstockage, pas un
-    // catalogue. Trier par urgence est ce qui change la nature de l'écran.
-    return { deals: sortByUrgency(outcome.deals), radiusRelaxed: outcome.radiusRelaxed };
-  }, [category, query, preferences, userCoord]);
+    // catalogue. Trier par urgence est ce qui change la nature de l'écran —
+    // mais le CDC §7 met les catégories déclarées avant tout le reste.
+    return {
+      deals: sortForInterests(outcome.deals, interests ?? []),
+      radiusRelaxed: outcome.radiusRelaxed,
+    };
+  }, [category, query, preferences, userCoord, interests]);
 
   const critical = useMemo(() => countCritical(deals), [deals]);
   const featured = getDeal(FEATURED_DEAL_ID);
@@ -182,15 +203,20 @@ export function HomeScreen({ initialView = 'liste', renderBanner, onVisit }: Hom
   return (
     <Screen padded={false} testID="home-screen">
       <View className="flex-row items-center justify-between px-5 pb-3 pt-2">
-        <View>
-          <AppText className="font-display text-ink" style={{ fontSize: 20 }}>
-            TK<AppText className="text-brand-500"> LINK</AppText>
-          </AppText>
-          <View className="mt-0.5 flex-row items-center gap-1">
-            <Feather name="map-pin" size={12} color={colors.inkFaint} />
-            <AppText variant="caption" className="text-ink-faint">
-              Toulouse · Centre
+        {/* CDC §7 — l'écran d'accueil présente « l'identité de l'utilisateur ».
+            La marque seule ne disait pas à qui l'app parle. */}
+        <View className="flex-1 flex-row items-center gap-2.5">
+          {renderIdentity ? renderIdentity() : null}
+          <View className="flex-1">
+            <AppText className="font-display text-ink" style={{ fontSize: 20 }}>
+              TK<AppText className="text-brand-500"> LINK</AppText>
             </AppText>
+            <View className="mt-0.5 flex-row items-center gap-1">
+              <Feather name="map-pin" size={12} color={colors.inkFaint} />
+              <AppText variant="caption" className="text-ink-faint">
+                Toulouse · Centre
+              </AppText>
+            </View>
           </View>
         </View>
         <View className="flex-row items-center gap-2">

@@ -1,3 +1,5 @@
+import type { Category } from '@/shared/lib/categories';
+
 import type { Deal } from '../model/schema';
 
 /**
@@ -70,6 +72,28 @@ export function sortByUrgency(deals: Deal[]): Deal[] {
     const d = WEIGHT[urgencyOf(a)] - WEIGHT[urgencyOf(b)];
     return d !== 0 ? d : a.endsInSeconds - b.endsInSeconds;
   });
+}
+
+/**
+ * Trie en plaçant DEVANT les offres des catégories déclarées — CDC §7.
+ *
+ * « Les offres correspondant à ses catégories d'intérêt doivent être présentées
+ * en priorité. » L'intérêt est le premier critère, l'urgence le second : une
+ * offre qui ne concerne pas l'utilisateur ne remonte pas parce qu'elle expire,
+ * sinon la personnalisation ne tiendrait que quelques minutes par offre.
+ *
+ * Rien de déclaré = rien à prioriser : on retombe exactement sur l'urgence.
+ * L'ordre à l'intérieur de chaque groupe reste celui de `sortByUrgency`, donc
+ * la nature « déstockage » de l'écran est préservée dans les deux cas.
+ */
+export function sortForInterests(deals: Deal[], interests: Category[]): Deal[] {
+  if (interests.length === 0) return sortByUrgency(deals);
+  const wanted = new Set(interests);
+  const urgent = sortByUrgency(deals);
+  return [
+    ...urgent.filter((d) => wanted.has(d.category)),
+    ...urgent.filter((d) => !wanted.has(d.category)),
+  ];
 }
 
 /** Combien d'offres sont en dernière chance — sert le bandeau d'accueil. */

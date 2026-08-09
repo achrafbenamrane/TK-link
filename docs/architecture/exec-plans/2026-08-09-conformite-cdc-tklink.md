@@ -29,8 +29,8 @@ du code. Là où le CDC propose lui-même une valeur (8 catégories, 0,99 €, 5
 | 6   | Auth email + mot de passe                                                     | ✓                                                      | `auth/ui/sign-in-screen.tsx`                |
 | 6   | Auth empreinte digitale                                                       | ✓                                                      | `shop/ui/biometrics-screen.tsx`             |
 | 7   | Accueil : catégories, recherche, offres, compteur, quantité, prix             | ✓                                                      | `shop/ui/home-screen.tsx`                   |
-| 7   | Accueil : identité de l’utilisateur                                           | ✗ absent — l’entête montre la marque, pas la personne  | idem                                        |
-| 7   | Offres des catégories d’intérêt en priorité                                   | ✗ absent — le tri est par urgence seule                | `shop/lib/urgency.ts`                       |
+| 7   | Accueil : identité de l’utilisateur                                           | ✓ avatar + prénom, cliquable                           | `app/(tabs)/index.tsx`                      |
+| 7   | Offres des catégories d’intérêt en priorité                                   | ✓ intérêt d’abord, urgence ensuite                     | `shop/lib/urgency.ts`                       |
 | 8   | Offre : image, prix initial, prix promo, quantité, compteur, achat            | ✓                                                      | `shop/ui/components/flash-card.tsx`         |
 | 9   | Offres flash publiées par le commerçant                                       | ✗ absent (côté commerçant)                             | —                                           |
 | 9   | 5 opérations gratuites puis packs payants                                     | ✗ absent                                               | —                                           |
@@ -91,8 +91,9 @@ livreur. En attendant l'arbitrage, une commande confiée au livreur reste
 
 ### Phase 3 — L’accueil conforme (CDC §7)
 
-- [ ] Identité de l’utilisateur dans l’entête
-- [ ] Priorité aux catégories d’intérêt, urgence en second critère
+- [x] Identité de l’utilisateur dans l’entête
+- [x] Priorité aux catégories d’intérêt, urgence en second critère
+      **Preuve :** 4 tests sur `sortForInterests` ; 482 au total.
 
 ### Phase 4 — B2B et offres flash commerçant (CDC §9, §20, §21)
 

@@ -3,6 +3,7 @@ import {
   discountPct,
   liquidationLabel,
   sortByUrgency,
+  sortForInterests,
   stockRatio,
   urgencyOf,
 } from '../lib/urgency';
@@ -127,5 +128,41 @@ describe('countCritical', () => {
         deal({ endsInSeconds: 7200 }),
       ]),
     ).toBe(2);
+  });
+});
+
+describe('sortForInterests — CDC §7', () => {
+  const resto = deal({ id: 'resto', category: 'restauration', endsInSeconds: 7200 });
+  const modeCalme = deal({ id: 'mode-calme', category: 'mode', endsInSeconds: 7200 });
+  const modeUrgente = deal({ id: 'mode-urgente', category: 'mode', endsInSeconds: 60 });
+
+  it('place les catégories déclarées devant, même moins urgentes', () => {
+    // « mode » est déclaré : ses offres passent devant, y compris la calme,
+    // sinon la personnalisation ne durerait que le temps d’un compte à rebours.
+    expect(sortForInterests([resto, modeCalme, modeUrgente], ['mode']).map((d) => d.id)).toEqual([
+      'mode-urgente',
+      'mode-calme',
+      'resto',
+    ]);
+  });
+
+  it('garde l’urgence comme second critère à l’intérieur de chaque groupe', () => {
+    const restoUrgent = deal({ id: 'resto-urgent', category: 'restauration', endsInSeconds: 30 });
+    const out = sortForInterests([resto, restoUrgent, modeUrgente], ['mode']);
+    expect(out.map((d) => d.id)).toEqual(['mode-urgente', 'resto-urgent', 'resto']);
+  });
+
+  it('retombe exactement sur l’urgence quand rien n’est déclaré', () => {
+    const list = [resto, modeCalme, modeUrgente];
+    expect(sortForInterests(list, []).map((d) => d.id)).toEqual(
+      sortByUrgency(list).map((d) => d.id),
+    );
+  });
+
+  it('ne perd aucune offre et ne mute pas la liste reçue', () => {
+    const list = [resto, modeCalme, modeUrgente];
+    const before = list.map((d) => d.id);
+    expect(sortForInterests(list, ['mode'])).toHaveLength(3);
+    expect(list.map((d) => d.id)).toEqual(before);
   });
 });
