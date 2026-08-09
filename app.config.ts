@@ -13,10 +13,12 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 const IS_DEV = process.env.APP_VARIANT === 'development';
 const IS_PREVIEW = process.env.APP_VARIANT === 'preview';
 
-// Nom affiché (écran d'accueil du téléphone, stores). NB : `slug`, `owner` et
-// `bundleIdentifier` restent « freedoo » — ils identifient le projet EAS et les
-// clés de signature ; les renommer casse la chaîne de build et les mises à jour
-// des installations existantes. À traiter séparément, quand la bascule est actée.
+// Nom affiché (écran d'accueil du téléphone, stores).
+//
+// `slug` et `bundleIdentifier` restent « freedoo » volontairement : le bundle
+// id est l'identité de l'app pour Android et les stores, le changer crée une
+// NOUVELLE app (impossible de mettre à jour les installations existantes).
+// À traiter séparément, quand la bascule de marque sera actée.
 const name = IS_DEV ? 'TK LINK (Dev)' : IS_PREVIEW ? 'TK LINK (Preview)' : 'TK LINK';
 const bundleId = IS_DEV
   ? 'com.progix.freedoo.dev'
@@ -28,7 +30,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name,
   slug: 'freedoo',
-  owner: 'freedoo',
+  owner: 'krunchy',
   version: '0.1.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
@@ -162,10 +164,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     eas: {
-      // Projet sous l'organisation « freedoo » (compte borzvalor). L'ancien
-      // projet (f8fd49f4…, compte achrafbenamrane) garde l'historique des
-      // premiers builds mais n'est plus utilisé.
-      projectId: '329bcddd-d9a7-404c-9325-523290072a8f',
+      // Projet sous l'organisation « krunchy » (compte borzvalor).
+      // Historique des organisations précédentes, pour mémoire :
+      //   freedoo   → 329bcddd-d9a7-404c-9325-523290072a8f
+      //   (ancien)  → f8fd49f4… (compte achrafbenamrane)
+      // Changer d'organisation régénère les identifiants de signature : le
+      // nouvel APK ne peut donc PAS mettre à jour une installation existante,
+      // il faut désinstaller l'ancienne.
+      projectId: '654ee1f7-56b9-4f4e-a3f9-337598077850',
     },
     /**
      * Jeton Mapbox PUBLIC (pk.*) — conçu pour être livré dans l’app ; il rend la
