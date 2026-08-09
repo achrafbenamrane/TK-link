@@ -105,8 +105,16 @@ export function ProductScreen({ dealId }: Props) {
 
         {/* Body */}
         <View className="gap-4 px-5 pt-5">
-          {/* Merchant */}
-          <View className="flex-row items-center justify-between">
+          {/* Merchant — ouvre sa fiche : ventes flash, fidélité, infos. */}
+          <Pressable
+            testID="product-merchant"
+            accessibilityRole="button"
+            accessibilityLabel={`Voir ${merchant?.name ?? 'le commerçant'}`}
+            onPress={() =>
+              merchant && router.push({ pathname: '/enseigne/[id]', params: { id: merchant.id } })
+            }
+            className="flex-row items-center justify-between active:opacity-70"
+          >
             <View className="flex-1 flex-row items-center gap-2 pr-2">
               <View className="h-9 w-9 items-center justify-center rounded-pill bg-surface-muted">
                 <AppText style={{ fontSize: 18 }}>{merchant?.emoji}</AppText>
@@ -123,8 +131,9 @@ export function ProductScreen({ dealId }: Props) {
             <View className="flex-row items-center gap-1">
               <Ionicons name="star" size={14} color={colors.brand500} />
               <AppText variant="label">{deal.rating.toFixed(1)}</AppText>
+              <Feather name="chevron-right" size={16} color={colors.inkFaint} />
             </View>
-          </View>
+          </Pressable>
 
           {/* Title + tags */}
           <View className="gap-2">

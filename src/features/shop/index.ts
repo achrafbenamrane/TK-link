@@ -14,6 +14,7 @@ export { BiometricsScreen } from './ui/biometrics-screen';
 export { InvoicesScreen } from './ui/invoices-screen';
 export { AddressesScreen } from './ui/addresses-screen';
 export { MerchantScreen } from './ui/merchant-screen';
+export { MerchantDetailScreen } from './ui/merchant-detail-screen';
 export { HelpScreen } from './ui/help-screen';
 export { ChatListScreen } from './ui/chat-list-screen';
 export { ChatThreadScreen } from './ui/chat-thread-screen';
