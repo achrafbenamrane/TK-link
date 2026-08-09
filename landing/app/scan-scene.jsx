@@ -14,67 +14,103 @@
  * en CSS.
  */
 
-/** Le sigle TK LINK : les lettres, les ondes du sans-contact, et l'arbre. */
-function TkMark({ width = 96, tone = '#123a22', leaf = '#7fbf3f' }) {
+/**
+ * Le sigle : « TK » en noir, les ondes du sans-contact en vert, « LINK » en
+ * dessous. Sur l'appareil il est posé en bas à gauche, l'arbre occupant la
+ * droite — les deux sont donc dessinés séparément.
+ */
+function TkMark({ width = 96, tone = '#14170f', wave = '#6ea82f' }) {
   return (
     <svg
       width={width}
-      viewBox="0 0 200 96"
+      viewBox="0 0 148 96"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      {/* TK */}
       <text
         x="0"
-        y="52"
+        y="54"
         fontFamily="Unbounded, sans-serif"
         fontWeight="800"
-        fontSize="52"
-        letterSpacing="-2"
+        fontSize="54"
+        letterSpacing="-3"
         fill={tone}
       >
         TK
       </text>
 
-      {/* Les trois ondes du sans-contact, après le K */}
-      <g stroke={tone} strokeWidth="6" strokeLinecap="round" fill="none">
-        <path d="M92 22a26 26 0 0 1 0 30" opacity="0.95" />
-        <path d="M104 14a40 40 0 0 1 0 46" opacity="0.6" />
-        <path d="M116 6a54 54 0 0 1 0 62" opacity="0.3" />
+      {/* Les trois ondes, après le K */}
+      <g stroke={wave} strokeWidth="7" strokeLinecap="round" fill="none">
+        <path d="M92 24a24 24 0 0 1 0 26" />
+        <path d="M104 15a40 40 0 0 1 0 44" opacity="0.75" />
+        <path d="M116 6a56 56 0 0 1 0 62" opacity="0.45" />
       </g>
 
-      {/* LINK */}
       <text
-        x="2"
-        y="82"
+        x="3"
+        y="84"
         fontFamily="Manrope, sans-serif"
         fontWeight="500"
-        fontSize="22"
-        letterSpacing="7"
+        fontSize="21"
+        letterSpacing="9"
         fill={tone}
       >
         LINK
       </text>
+    </svg>
+  );
+}
 
-      {/* L'arbre — le symbole écologique de la marque */}
-      <g transform="translate(150 14)">
-        <path
-          d="M20 44V26M20 30l-9-8M20 34l9-8"
-          stroke={leaf}
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-        <circle cx="20" cy="14" r="11" fill={leaf} opacity="0.85" />
-        <circle cx="9" cy="21" r="7" fill={leaf} opacity="0.65" />
-        <circle cx="31" cy="21" r="7" fill={leaf} opacity="0.65" />
+/**
+ * L'arbre imprimé sur la droite du boîtier, relié au sigle par un trait
+ * façon signal — c'est ce qui figure sur l'appareil réel.
+ */
+function TkTree({ width = 84, leaf = '#6ea82f' }) {
+  return (
+    <svg
+      width={width}
+      viewBox="0 0 120 120"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      {/* Le trait de signal qui arrive de la gauche */}
+      <path
+        d="M0 96h22l7-11 6 20 7-24 6 15h10"
+        stroke={leaf}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.9"
+      />
+      {/* Tronc et branches */}
+      <path
+        d="M66 100V52M66 66l-13-13M66 74l13-13M66 58l-8-9M66 62l9-10"
+        stroke={leaf}
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      {/* Feuillage — des touches plutôt qu'une masse pleine */}
+      <g fill={leaf}>
+        <ellipse cx="66" cy="30" rx="15" ry="12" opacity="0.9" />
+        <ellipse cx="48" cy="44" rx="12" ry="9" opacity="0.75" />
+        <ellipse cx="85" cy="44" rx="12" ry="9" opacity="0.75" />
+        <ellipse cx="56" cy="20" rx="9" ry="7" opacity="0.6" />
+        <ellipse cx="78" cy="19" rx="9" ry="7" opacity="0.6" />
+        <ellipse cx="38" cy="33" rx="6" ry="5" opacity="0.45" />
+        <ellipse cx="95" cy="32" rx="6" ry="5" opacity="0.45" />
       </g>
     </svg>
   );
 }
 
-/** Tranches d'extrusion du boîtier — 0 = le dessus, 11 = le dessous. */
-const EDGE_SLICES = Array.from({ length: 12 }, (_, i) => i);
+/**
+ * Tranches d'extrusion du boîtier — 0 = le dessus.
+ * Les six premières forment la coque blanche, la septième la ligne de joint,
+ * les suivantes le socle gris, comme sur l'appareil.
+ */
+const EDGE_SLICES = Array.from({ length: 14 }, (_, i) => i);
 
 export default function ScanScene() {
   return (
@@ -98,13 +134,20 @@ export default function ScanScene() {
 
           <div className="reader-face">
             <span className="reader-sheen" />
-            {/* La zone de contact, légèrement creusée */}
-            <span className="reader-zone" />
+            {/* Sigle en bas à gauche, arbre à droite — comme sur l'appareil */}
             <span className="reader-mark">
-              <TkMark width={104} />
+              <TkMark width={98} />
+            </span>
+            <span className="reader-tree">
+              <TkTree width={86} />
             </span>
             {/* Témoin lumineux : vert au repos, citron au passage de la carte */}
             <span className="reader-led" />
+          </div>
+
+          {/* La face avant : le socle gris et son port USB-C */}
+          <div className="reader-front">
+            <span className="reader-port" />
           </div>
 
           {/* Ombre portée sur le comptoir */}

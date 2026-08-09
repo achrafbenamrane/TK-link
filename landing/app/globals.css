@@ -295,12 +295,13 @@ img {
 .reader {
   position: absolute;
   left: 50%;
-  bottom: 34px;
-  width: 224px;
-  height: 152px;
-  margin-left: -112px;
+  bottom: 30px;
+  /* Proportions de l'appareil réel : large, plat, coins très arrondis. */
+  width: 250px;
+  height: 138px;
+  margin-left: -125px;
   transform-style: preserve-3d;
-  transform: rotateX(62deg) rotateZ(-24deg);
+  transform: rotateX(60deg) rotateZ(-22deg);
 }
 /*
  * Le corps du boîtier : douze tranches empilées en profondeur. Une seule face
@@ -311,36 +312,56 @@ img {
 .reader-slice {
   position: absolute;
   inset: 0;
-  border-radius: 22px;
-  transform: translateZ(calc(var(--i) * -2px));
-  /* Le dessus reçoit la lumière, le bas s'assombrit : le dégradé simule la
-     courbure du plastique sur la tranche. */
-  background: hsl(104 12% calc(94% - var(--i) * 3.2%));
+  border-radius: 26px;
+  transform: translateZ(calc(var(--i) * -2.2px));
+  /* Coque blanche : la lumière tombe du dessus, la tranche s'assombrit à peine. */
+  background: hsl(72 14% calc(97% - var(--i) * 1.5%));
 }
 /* Les deux tranches du haut forment le chanfrein (positions, pas attributs :
-   la sérialisation de `--i` par React n'est pas garantie). */
+   la sérialisation de `--i` par React n'est pas garantie — elle sort « --i:0 »). */
 .reader-slice:nth-child(1),
 .reader-slice:nth-child(2) {
   inset: 2px;
 }
-/* La douzième et dernière tranche ferme le dessous. */
-.reader-slice:nth-child(12) {
-  background: #7d8b76;
-  box-shadow: 0 0 0 1px rgba(18, 58, 34, 0.18);
+/* La ligne de joint entre la coque et le socle. */
+.reader-slice:nth-child(7) {
+  background: #9aa294;
+}
+/* Le socle, gris, plus foncé que la coque. */
+.reader-slice:nth-child(n + 8) {
+  background: hsl(96 6% calc(76% - (var(--i) - 7) * 2.6%));
+}
+/* La dernière tranche ferme le dessous. */
+.reader-slice:nth-child(14) {
+  background: #5f665b;
+  box-shadow: 0 0 0 1px rgba(18, 58, 34, 0.2);
 }
 
 .reader-face {
   position: absolute;
   inset: 2px;
-  border-radius: 20px;
+  border-radius: 24px;
   overflow: hidden;
-  background: radial-gradient(120% 90% at 28% 18%, #ffffff 0%, #f6faf3 42%, #e6ede0 100%), #f4f8f1;
-  display: grid;
-  place-items: center;
+  /* Coque légèrement bombée : la lumière frappe en haut à gauche. */
+  background: radial-gradient(130% 100% at 26% 12%, #ffffff 0%, #fafbf6 46%, #eceee4 100%), #f7f8f2;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.95) inset,
-    0 -1px 0 rgba(18, 58, 34, 0.06) inset,
-    0 0 0 1px rgba(18, 58, 34, 0.07);
+    0 -1px 0 rgba(18, 58, 34, 0.05) inset,
+    0 0 0 1px rgba(18, 58, 34, 0.06);
+}
+
+/* Sigle en bas à gauche, arbre à droite — la disposition de l'appareil. */
+.reader-mark {
+  position: absolute;
+  left: 18px;
+  bottom: 16px;
+  z-index: 2;
+}
+.reader-tree {
+  position: absolute;
+  right: 16px;
+  top: 10px;
+  z-index: 2;
 }
 
 /* Reflet spéculaire : une bande de lumière en travers du plastique. */
@@ -358,34 +379,48 @@ img {
   pointer-events: none;
 }
 
-/* La zone de contact, creusée dans la coque. */
-.reader-zone {
+/*
+ * La face avant du socle, et son port USB-C.
+ *
+ * Posée sur l'arête basse puis rabattue : origine en haut + rotateX(-90deg)
+ * envoie le panneau vers le bas, dans l'épaisseur du boîtier. C'est un vrai
+ * mur avant — sans lui, le port aurait l'air posé à plat sur le comptoir.
+ */
+.reader-front {
   position: absolute;
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  border: 1px solid rgba(18, 58, 34, 0.09);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9),
-    0 1px 3px rgba(18, 58, 34, 0.07) inset;
+  left: 2px;
+  right: 2px;
+  top: 100%;
+  height: 30px;
+  transform-origin: top center;
+  transform: rotateX(-90deg);
+  background: linear-gradient(#b7bfb1 0%, #9aa294 46%, #838b7e 100%);
+  border-radius: 0 0 12px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45) inset;
 }
-
-.reader-mark {
-  position: relative;
-  z-index: 2;
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.7));
+.reader-port {
+  width: 34px;
+  height: 11px;
+  border-radius: 6px;
+  background: linear-gradient(#1c201a, #343930);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.55) inset;
 }
 
 /* Témoin : vert discret au repos, citron vif pendant le passage. */
 .reader-led {
   position: absolute;
-  bottom: 12px;
-  left: 50%;
+  top: 14px;
+  left: 18px;
   width: 7px;
   height: 7px;
-  margin-left: -3.5px;
   border-radius: 50%;
   background: #b7c6ae;
+  z-index: 2;
   animation: led 7s ease-out infinite;
 }
 @keyframes led {
