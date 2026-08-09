@@ -10,6 +10,11 @@ const nextConfig = {
   outputFileTracingRoot: rootDir,
   // Linting is run separately, not during the build.
   eslint: { ignoreDuringBuilds: true },
+  // Permet de vérifier un build de production SANS écraser le cache du serveur
+  // de dev : `NEXT_DIST_DIR=.next-verify npx next build`. Mélanger les deux
+  // artefacts casse `next dev` (« __webpack_modules__[moduleId] is not a
+  // function »).
+  distDir: process.env.NEXT_DIST_DIR || '.next',
 };
 
 export default nextConfig;

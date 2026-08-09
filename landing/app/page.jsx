@@ -1,4 +1,5 @@
 import Interactions from './interactions';
+import ScanScene from './scan-scene';
 
 /**
  * Site vitrine TK LINK.
@@ -59,17 +60,7 @@ export default function Page() {
             </p>
           </div>
 
-          <div>
-            <div className="card3d" aria-hidden="true">
-              <div>
-                <div className="logo" style={{ color: 'var(--forest)' }}>
-                  TK<span style={{ opacity: 0.6 }}>LINK</span>
-                </div>
-              </div>
-              <div className="cn">7014 2299</div>
-              <div className="tree">🌳</div>
-            </div>
-          </div>
+          <ScanScene />
         </div>
       </section>
 
@@ -155,6 +146,36 @@ export default function Page() {
                 Le ticket devient une facture certifiée, transmise au commerçant et à son comptable.
                 Sans ressaisie.
               </p>
+            </div>
+          </div>
+
+          {/* Le matériel remis au commerçant */}
+          <div className="kit r">
+            <div className="kit-item">
+              <div className="kit-shape kit-box">
+                <span>TK</span>
+              </div>
+              <b>Le boîtier</b>
+              <span>Relie la caisse au réseau TK LINK.</span>
+            </div>
+            <div className="kit-item">
+              <div className="kit-shape kit-reader">
+                <span>TK</span>
+              </div>
+              <b>Le lecteur</b>
+              <span>Prend la place de l’imprimante, sur le comptoir.</span>
+            </div>
+            <div className="kit-item">
+              <div className="kit-shape kit-key" />
+              <b>La clé</b>
+              <span>Installe l’imprimante virtuelle sur la caisse.</span>
+            </div>
+            <div className="kit-item">
+              <div className="kit-shape kit-card">
+                <span>TK</span>
+              </div>
+              <b>La carte ou la pastille</b>
+              <span>Remise au client — ou collée sur sa carte bancaire.</span>
             </div>
           </div>
         </div>
