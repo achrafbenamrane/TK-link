@@ -270,33 +270,6 @@ img {
   }
 }
 
-/* la « carte » TK LINK, dessinée en CSS */
-.card3d {
-  aspect-ratio: 1.58;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #ffffff, #eef4ea);
-  color: var(--forest);
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.34);
-  transform: rotate(-7deg);
-  max-width: 400px;
-  margin-inline: auto;
-}
-.card3d .cn {
-  font-family: ui-monospace, Menlo, monospace;
-  letter-spacing: 3px;
-  font-size: 15px;
-  font-weight: 600;
-}
-.card3d .tree {
-  font-size: 30px;
-  line-height: 1;
-  align-self: flex-end;
-}
-
 /* ------------------------------------------------- scène « passage carte »
  *
  * Le geste du produit, en 3D CSS : la carte s'approche, touche le lecteur,
@@ -329,26 +302,123 @@ img {
   transform-style: preserve-3d;
   transform: rotateX(62deg) rotateZ(-24deg);
 }
-.reader-top {
+/*
+ * Le corps du boîtier : douze tranches empilées en profondeur. Une seule face
+ * plus une « tranche » se voyait tout de suite ; là, le volume tient sous
+ * n'importe quel angle. Les deux premières sont rentrées de 2 px : c'est le
+ * chanfrein du dessus.
+ */
+.reader-slice {
   position: absolute;
   inset: 0;
-  background: linear-gradient(150deg, #ffffff 0%, #eef3ea 100%);
   border-radius: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 26px 44px rgba(4, 26, 12, 0.42);
+  transform: translateZ(calc(var(--i) * -2px));
+  /* Le dessus reçoit la lumière, le bas s'assombrit : le dégradé simule la
+     courbure du plastique sur la tranche. */
+  background: hsl(104 12% calc(94% - var(--i) * 3.2%));
 }
-/* La tranche : ce qui donne l'épaisseur du boîtier. */
-.reader-edge {
+/* Les deux tranches du haut forment le chanfrein (positions, pas attributs :
+   la sérialisation de `--i` par React n'est pas garantie). */
+.reader-slice:nth-child(1),
+.reader-slice:nth-child(2) {
+  inset: 2px;
+}
+/* La douzième et dernière tranche ferme le dessous. */
+.reader-slice:nth-child(12) {
+  background: #7d8b76;
+  box-shadow: 0 0 0 1px rgba(18, 58, 34, 0.18);
+}
+
+.reader-face {
   position: absolute;
-  inset: 0;
-  border-radius: 22px;
-  background: linear-gradient(#cfdac7, #a9b7a0);
-  transform: translateZ(-16px);
-  box-shadow: 0 0 0 1px rgba(18, 58, 34, 0.12);
+  inset: 2px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 28% 18%, #ffffff 0%, #f6faf3 42%, #e6ede0 100%), #f4f8f1;
+  display: grid;
+  place-items: center;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 -1px 0 rgba(18, 58, 34, 0.06) inset,
+    0 0 0 1px rgba(18, 58, 34, 0.07);
+}
+
+/* Reflet spéculaire : une bande de lumière en travers du plastique. */
+.reader-sheen {
+  position: absolute;
+  inset: -40% -10%;
+  background: linear-gradient(
+    104deg,
+    transparent 34%,
+    rgba(255, 255, 255, 0.85) 46%,
+    rgba(255, 255, 255, 0.5) 52%,
+    transparent 62%
+  );
+  transform: translateX(-14%);
+  pointer-events: none;
+}
+
+/* La zone de contact, creusée dans la coque. */
+.reader-zone {
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 1px solid rgba(18, 58, 34, 0.09);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 3px rgba(18, 58, 34, 0.07) inset;
+}
+
+.reader-mark {
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.7));
+}
+
+/* Témoin : vert discret au repos, citron vif pendant le passage. */
+.reader-led {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  border-radius: 50%;
+  background: #b7c6ae;
+  animation: led 7s ease-out infinite;
+}
+@keyframes led {
+  0%,
+  28% {
+    background: #b7c6ae;
+    box-shadow: none;
+  }
+  32%,
+  46% {
+    background: var(--lime);
+    box-shadow: 0 0 10px 2px rgba(195, 245, 60, 0.85);
+  }
+  56%,
+  100% {
+    background: #b7c6ae;
+    box-shadow: none;
+  }
+}
+
+/* Ombre portée : serrée sous l'appareil, diffuse autour. */
+.reader-cast {
+  position: absolute;
+  inset: 6% -6% -10% -6%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(4, 26, 12, 0.5),
+    rgba(4, 26, 12, 0.22) 62%,
+    transparent 100%
+  );
+  transform: translateZ(-25px);
+  filter: blur(11px);
 }
 
 /* Ondes du sans-contact — synchronisées avec le contact de la carte. */

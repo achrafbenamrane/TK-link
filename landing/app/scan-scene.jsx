@@ -73,6 +73,9 @@ function TkMark({ width = 96, tone = '#123a22', leaf = '#7fbf3f' }) {
   );
 }
 
+/** Tranches d'extrusion du boîtier — 0 = le dessus, 11 = le dessous. */
+const EDGE_SLICES = Array.from({ length: 12 }, (_, i) => i);
+
 export default function ScanScene() {
   return (
     <div
@@ -83,10 +86,30 @@ export default function ScanScene() {
       <div className="scene-stage">
         {/* ------------------------------------------------------- lecteur */}
         <div className="reader">
-          <div className="reader-top">
-            <TkMark width={104} />
+          {/*
+           * Épaisseur du boîtier : on empile des tranches en profondeur plutôt
+           * que de poser une seule face. C'est ce qui donne un vrai volume —
+           * les deux premières sont légèrement rentrées pour former le chanfrein
+           * du dessus, comme sur l'appareil réel.
+           */}
+          {EDGE_SLICES.map((i) => (
+            <span key={i} className="reader-slice" style={{ '--i': i }} />
+          ))}
+
+          <div className="reader-face">
+            <span className="reader-sheen" />
+            {/* La zone de contact, légèrement creusée */}
+            <span className="reader-zone" />
+            <span className="reader-mark">
+              <TkMark width={104} />
+            </span>
+            {/* Témoin lumineux : vert au repos, citron au passage de la carte */}
+            <span className="reader-led" />
           </div>
-          <div className="reader-edge" />
+
+          {/* Ombre portée sur le comptoir */}
+          <span className="reader-cast" />
+
           {/* Ondes émises au moment du passage */}
           <span className="ping ping-1" />
           <span className="ping ping-2" />
