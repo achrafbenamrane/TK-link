@@ -51,6 +51,13 @@ export type Deal = {
   description: string;
   perk?: string; // « 50 % sur le 2ᵉ »
   origin?: string;
+  /**
+   * Régimes que l'offre satisfait. Absent = non renseigné, donc l'offre ne
+   * ressort pas quand un régime est demandé — mieux vaut manquer un résultat
+   que d'en promettre un faux à quelqu'un qui filtre pour raison alimentaire.
+   * (`halal` se lit sur le commerçant, pas ici.)
+   */
+  diet?: ('vegetarien' | 'vegan')[];
 };
 
 /* ---- State that hits storage → validated with Zod ---- */
@@ -203,5 +210,17 @@ export const PersistedShopSchema = z.object({
   // n'a pas cette clé. Sans valeur par défaut, safeParse échouerait et le
   // `merge` du store repartirait de zéro — panier et commandes effacés.
   biometricEnabled: z.boolean().default(false),
+  /**
+   * « Ma Fan Zone ». `.default()` pour la même raison que ci-dessus : les
+   * installations existantes n'ont pas cette clé, et sans valeur par défaut le
+   * `safeParse` échouerait — panier et commandes effacés.
+   */
+  preferences: z
+    .object({
+      collect: z.enum(['tous', 'touch-collect', 'livraison', 'a-commander']).default('tous'),
+      radiusKm: z.union([z.literal(5), z.literal(10), z.literal(15), z.literal(30)]).default(10),
+      lifestyle: z.array(z.enum(['vegetarien', 'vegan', 'halal'])).default([]),
+    })
+    .default({ collect: 'tous', radiusKm: 10, lifestyle: [] }),
 });
 export type PersistedShop = z.infer<typeof PersistedShopSchema>;

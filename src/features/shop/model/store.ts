@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { makeId } from '@/shared/lib/id';
 // Cart/favorites/orders hold no secrets → the plaintext tier is correct.
+import { DEFAULT_PREFERENCES, type Preferences } from '../lib/preferences';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
 import { getDeal } from './catalog';
@@ -66,6 +67,10 @@ type ShopState = {
   userCoord: Coord | null;
   conversations: Conversation[];
   messages: ChatMessage[];
+  /** « Ma Fan Zone » : mode de retrait, rayon, régimes. Filtre les résultats. */
+  preferences: Preferences;
+
+  setPreferences: (next: Preferences) => void;
 
   addToCart: (dealId: string, qty?: number) => void;
   decrement: (dealId: string) => void;
@@ -117,9 +122,12 @@ export const useShopStore = create<ShopState>()(
       addresses: [],
       merchantApplication: null,
       vouchers: [],
+      preferences: DEFAULT_PREFERENCES,
       userCoord: null,
       conversations: CHAT_SEED.conversations,
       messages: CHAT_SEED.messages,
+
+      setPreferences: (next) => set({ preferences: next }),
 
       addToCart: (dealId, qty = 1) =>
         set((state) => {
@@ -339,6 +347,7 @@ export const useShopStore = create<ShopState>()(
         vouchers: s.vouchers,
         conversations: s.conversations,
         messages: s.messages,
+        preferences: s.preferences,
       }),
       // Corrupt storage must never crash the app — validate then fall back.
       merge: (persisted, current) => {

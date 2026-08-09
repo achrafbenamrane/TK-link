@@ -6,6 +6,7 @@ import { FlatList, Pressable, View } from 'react-native';
 import { AppText, Screen, TextField } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
+import { activeFilterCount, applyPreferences } from '../lib/preferences';
 import { dealsByCategory, getDeal, getMerchant, FEATURED_DEAL_ID } from '../model/catalog';
 import type { Category, Deal } from '../model/schema';
 import { getUserCoord } from '../lib/location';
@@ -28,6 +29,31 @@ function CartButton() {
       className="h-10 w-10 items-center justify-center rounded-pill bg-surface-muted"
     >
       <Feather name="shopping-bag" size={19} color={colors.ink} />
+      {count > 0 ? (
+        <View className="absolute -right-1 -top-1 h-5 min-w-[20px] items-center justify-center rounded-pill bg-brand-500 px-1">
+          <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 10 }}>
+            {count}
+          </AppText>
+        </View>
+      ) : null}
+    </Pressable>
+  );
+}
+
+/** Accès à « Ma Fan Zone » — la pastille compte les filtres actifs. */
+function PreferencesButton() {
+  const router = useRouter();
+  const preferences = useShopStore((s) => s.preferences);
+  const count = activeFilterCount(preferences);
+  return (
+    <Pressable
+      testID="home-preferences"
+      accessibilityRole="button"
+      accessibilityLabel="Mes préférences de recherche"
+      onPress={() => router.push('/preferences')}
+      className="h-10 w-10 items-center justify-center rounded-pill bg-surface-muted"
+    >
+      <Feather name="sliders" size={18} color={colors.ink} />
       {count > 0 ? (
         <View className="absolute -right-1 -top-1 h-5 min-w-[20px] items-center justify-center rounded-pill bg-brand-500 px-1">
           <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 10 }}>
@@ -111,6 +137,9 @@ export function HomeScreen({ initialView = 'liste' }: HomeScreenProps = {}) {
     };
   }, [setUserCoord]);
 
+  const preferences = useShopStore((s) => s.preferences);
+  const userCoord = useShopStore((s) => s.userCoord);
+
   const deals = useMemo(() => {
     let list = dealsByCategory(category);
     const q = query.trim().toLowerCase();
@@ -121,8 +150,9 @@ export function HomeScreen({ initialView = 'liste' }: HomeScreenProps = {}) {
           getMerchant(d.merchantId)?.name.toLowerCase().includes(q),
       );
     }
-    return list;
-  }, [category, query]);
+    // « Ma Fan Zone » agit ici : régimes et rayon écartent réellement des offres.
+    return applyPreferences(list, getMerchant, preferences, userCoord);
+  }, [category, query, preferences, userCoord]);
 
   const featured = getDeal(FEATURED_DEAL_ID);
 
@@ -131,7 +161,7 @@ export function HomeScreen({ initialView = 'liste' }: HomeScreenProps = {}) {
       <View className="flex-row items-center justify-between px-5 pb-3 pt-2">
         <View>
           <AppText className="font-display text-ink" style={{ fontSize: 20 }}>
-            Freedoo<AppText className="text-brand-500">.</AppText>
+            TK<AppText className="text-brand-500"> LINK</AppText>
           </AppText>
           <View className="mt-0.5 flex-row items-center gap-1">
             <Feather name="map-pin" size={12} color={colors.inkFaint} />
@@ -142,6 +172,7 @@ export function HomeScreen({ initialView = 'liste' }: HomeScreenProps = {}) {
         </View>
         <View className="flex-row items-center gap-2">
           <ViewSwitch value={view} onChange={setView} />
+          <PreferencesButton />
           <CartButton />
         </View>
       </View>

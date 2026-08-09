@@ -10,6 +10,19 @@ export { OrdersScreen } from './ui/orders-screen';
 export { OrderDetailScreen } from './ui/order-detail-screen';
 export { FavoritesScreen } from './ui/favorites-screen';
 export { ProfileScreen } from './ui/profile-screen';
+export { PreferencesScreen } from './ui/preferences-screen';
+export {
+  applyPreferences,
+  toggleLifeStyle,
+  activeFilterCount,
+  DEFAULT_PREFERENCES,
+  COLLECT_LABEL,
+  LIFESTYLE_LABEL,
+  RADII,
+  type Preferences,
+  type CollectType,
+  type LifeStyle,
+} from './lib/preferences';
 export { BiometricsScreen } from './ui/biometrics-screen';
 export { InvoicesScreen } from './ui/invoices-screen';
 export { AddressesScreen } from './ui/addresses-screen';

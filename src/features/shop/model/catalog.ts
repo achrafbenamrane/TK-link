@@ -120,6 +120,7 @@ export const DEALS: Deal[] = [
   },
   {
     id: 'd_viennoiseries',
+    diet: ['vegetarien'] as ('vegetarien' | 'vegan')[],
     title: 'Panier viennoiseries',
     merchantId: 'm_stcyp',
     category: 'artisans',
@@ -137,6 +138,7 @@ export const DEALS: Deal[] = [
   },
   {
     id: 'd_legumes',
+    diet: ['vegetarien', 'vegan'] as ('vegetarien' | 'vegan')[],
     title: 'Panier de légumes de saison',
     merchantId: 'm_carmes',
     category: 'courses',
@@ -154,6 +156,7 @@ export const DEALS: Deal[] = [
   },
   {
     id: 'd_pizza',
+    diet: ['vegetarien'] as ('vegetarien' | 'vegan')[],
     title: 'Pizza Margherita',
     merchantId: 'm_napoli',
     category: 'restos',
@@ -171,6 +174,7 @@ export const DEALS: Deal[] = [
   },
   {
     id: 'd_fromage',
+    diet: ['vegetarien'] as ('vegetarien' | 'vegan')[],
     title: 'Plateau de fromages',
     merchantId: 'm_xavier',
     category: 'artisans',
@@ -187,6 +191,7 @@ export const DEALS: Deal[] = [
   },
   {
     id: 'd_fruits',
+    diet: ['vegetarien', 'vegan'] as ('vegetarien' | 'vegan')[],
     title: 'Corbeille de fruits bio',
     merchantId: 'm_jeanne',
     category: 'courses',

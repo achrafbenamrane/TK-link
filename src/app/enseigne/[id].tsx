@@ -17,7 +17,7 @@ export default function EnseigneRoute() {
     <MerchantDetailScreen
       merchantId={merchantId}
       loyaltyPoints={cards[merchantId]?.points ?? 0}
-      onOpenLoyalty={() => router.push(`/fidelite/${merchantId}`)}
+      onOpenLoyalty={() => router.push({ pathname: '/fidelite/[id]', params: { id: merchantId } })}
       onOpenDeal={(dealId) => router.push({ pathname: '/produit/[id]', params: { id: dealId } })}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
     />
