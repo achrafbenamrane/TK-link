@@ -1,0 +1,502 @@
+/*
+ * Espace professionnel TK LINK — styles portés par la classe `.tkpro`, pour ne
+ * pas se mêler à ceux du site vitrine (même `globals.css` hérité du layout).
+ *
+ * Palette alignée sur l'app mobile : vert forêt du logo, vert vif pour l'action,
+ * citron en accent, surfaces papier très légèrement vertes.
+ */
+
+.tkpro {
+  --brand: #0f8a4c;
+  --brand-600: #0b6c3b;
+  --brand-50: #e8f7ec;
+  --forest: #123a22;
+  --lime: #c3f53c;
+  --ink: #0f1a12;
+  --ink-muted: #4d5b50;
+  --ink-faint: #84927f;
+  --surface: #ffffff;
+  --surface-muted: #f2f7f0;
+  --surface-sunken: #e6efe3;
+  --line: #dce6d7;
+  --danger: #dc2626;
+
+  min-height: 100vh;
+  background: var(--surface-muted);
+  color: var(--ink);
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  display: grid;
+  grid-template-columns: 248px 1fr;
+}
+
+.tkpro * {
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------------- barre */
+.tkpro-side {
+  background: var(--forest);
+  color: #f2f7f0;
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.tkpro-logo {
+  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 21px;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.tkpro-logo span {
+  font-weight: 400;
+  font-size: 12px;
+  letter-spacing: 3px;
+  opacity: 0.75;
+}
+
+.tkpro-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.tkpro-nav button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: rgba(242, 247, 240, 0.72);
+  font: inherit;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.15s ease;
+}
+.tkpro-nav button:hover {
+  background: rgba(242, 247, 240, 0.08);
+  color: #f2f7f0;
+}
+.tkpro-nav button[aria-current='page'] {
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+}
+.tkpro-nav button:focus-visible,
+.tkpro button:focus-visible,
+.tkpro select:focus-visible,
+.tkpro input:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 2px;
+}
+
+.tkpro-side-foot {
+  margin-top: auto;
+  font-size: 12px;
+  color: rgba(242, 247, 240, 0.55);
+  border-top: 1px solid rgba(242, 247, 240, 0.14);
+  padding-top: 14px;
+  line-height: 1.5;
+}
+
+/* ---------------------------------------------------------------- corps */
+.tkpro-main {
+  padding: 26px 30px 60px;
+  max-width: 1180px;
+  width: 100%;
+}
+
+.tkpro-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.tkpro-head h1 {
+  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin: 0 0 4px;
+}
+.tkpro-head p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+
+/* ---------------------------------------------------------------- cartes */
+.tkpro-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.tkpro-stat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px 18px;
+}
+.tkpro-stat .k {
+  font-size: 12px;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+.tkpro-stat .v {
+  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.tkpro-stat .d {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+.tkpro-stat.eco {
+  background: var(--forest);
+  border-color: var(--forest);
+  color: #f2f7f0;
+}
+.tkpro-stat.eco .k {
+  color: rgba(242, 247, 240, 0.6);
+}
+.tkpro-stat.eco .v {
+  color: var(--lime);
+}
+.tkpro-stat.eco .d {
+  color: rgba(242, 247, 240, 0.7);
+}
+
+.tkpro-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.tkpro-card-head {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.tkpro-card-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- table */
+.tkpro-scroll {
+  overflow-x: auto;
+}
+.tkpro table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  min-width: 720px;
+}
+.tkpro th {
+  text-align: left;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-faint);
+  font-weight: 700;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-muted);
+  white-space: nowrap;
+}
+.tkpro td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.tkpro tbody tr {
+  cursor: pointer;
+}
+.tkpro tbody tr:hover {
+  background: var(--surface-muted);
+}
+.tkpro tbody tr[aria-selected='true'] {
+  background: var(--brand-50);
+}
+.tkpro tbody tr:last-child td {
+  border-bottom: 0;
+}
+.tkpro .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- puces */
+.tkpro-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.tkpro-tag.facture {
+  background: var(--brand-50);
+  color: var(--brand-600);
+}
+.tkpro-tag.ticket {
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+}
+.tkpro-tag.flash {
+  background: var(--lime);
+  color: var(--forest);
+}
+.tkpro-tag.online {
+  background: #eaf1fb;
+  color: #2f5fa8;
+}
+
+/* ---------------------------------------------------------------- boutons */
+.tkpro-btn {
+  appearance: none;
+  font: inherit;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 9px 15px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.tkpro-btn:hover {
+  background: var(--surface-muted);
+}
+.tkpro-btn.primary {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.tkpro-btn.primary:hover {
+  background: var(--brand-600);
+  border-color: var(--brand-600);
+}
+.tkpro-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tkpro-filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.tkpro input[type='search'],
+.tkpro select {
+  font: inherit;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+/* ---------------------------------------------- détail facture (2 colonnes) */
+.tkpro-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.tkpro-doc {
+  padding: 20px;
+  background: var(--surface-muted);
+  border-right: 1px solid var(--line);
+}
+.tkpro-paper {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+.tkpro-paper .r {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tkpro-paper hr {
+  border: 0;
+  border-top: 1px dashed var(--line);
+  margin: 10px 0;
+}
+
+.tkpro-fields {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tkpro-field {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.tkpro-field:last-child {
+  border-bottom: 0;
+}
+.tkpro-field .k {
+  color: var(--ink-muted);
+}
+.tkpro-field .v {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.tkpro-extracted {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--brand-600);
+  background: var(--brand-50);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.tkpro-empty {
+  padding: 44px 20px;
+  text-align: center;
+  color: var(--ink-faint);
+}
+
+.tkpro-note {
+  margin-top: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--brand);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 13.5px;
+  color: var(--ink-muted);
+}
+
+.tkpro-toast {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--forest);
+  color: #f2f7f0;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(18, 58, 34, 0.28);
+  z-index: 50;
+}
+
+/* ---------------------------------------------------------------- offres */
+.tkpro-offers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.tkpro-offer {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+}
+.tkpro-offer .claim {
+  background: var(--forest);
+  color: var(--lime);
+  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  min-width: 92px;
+  text-align: center;
+}
+.tkpro-offer .body {
+  padding: 12px 14px;
+  flex: 1;
+  min-width: 0;
+}
+.tkpro-offer .body b {
+  display: block;
+  font-size: 14px;
+}
+.tkpro-offer .body span {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+
+/* ---------------------------------------------------------------- mobile */
+@media (max-width: 900px) {
+  .tkpro {
+    grid-template-columns: 1fr;
+  }
+  .tkpro-side {
+    position: static;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    overflow-x: auto;
+    padding: 14px;
+  }
+  .tkpro-nav {
+    flex-direction: row;
+    gap: 6px;
+  }
+  .tkpro-side-foot {
+    display: none;
+  }
+  .tkpro-main {
+    padding: 18px 16px 50px;
+  }
+  .tkpro-split {
+    grid-template-columns: 1fr;
+  }
+  .tkpro-doc {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+}
