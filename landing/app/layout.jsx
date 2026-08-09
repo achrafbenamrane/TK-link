@@ -1,9 +1,9 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Freedoo — Les bons plans de votre quartier, livrés avant qu’ils ne s’envolent',
+  title: 'TK LINK — La dématérialisation du ticket de caisse',
   description:
-    'Freedoo transforme les coups de cœur de vos commerçants de proximité en ventes flash livrées vite, bien et gratuitement. Lancement à Toulouse.',
+    'En caisse, le lecteur TK LINK remplace l’imprimante papier. Le ticket arrive dans l’application, devient une facture certifiée, et ses données partent classées vers votre comptable. Particuliers et professionnels, partout en France.',
 };
 
 export default function RootLayout({ children }) {
