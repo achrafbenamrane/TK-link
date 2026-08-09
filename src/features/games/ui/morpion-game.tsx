@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { AppText } from '@/shared/ui';
@@ -23,7 +23,9 @@ const PER_MOVE = 7;
 
 export function MorpionGame({ images, onWin, onExit }: Props) {
   const [game, setGame] = useState<Morpion>(() => newMorpion());
-  const [wonNotified, setWonNotified] = useState(false);
+  // Drapeau « victoire déjà signalée » en REF : rien ne l'affiche, donc le
+  // passer en state ne ferait qu'ajouter un rendu en cascade depuis l'effet.
+  const wonNotified = useRef(false);
   const [timedOut, setTimedOut] = useState(false);
 
   const me = images[0];
@@ -36,14 +38,14 @@ export function MorpionGame({ images, onWin, onExit }: Props) {
   const remaining = useCountdown(PER_MOVE, !done, () => setTimedOut(true), filled);
 
   useEffect(() => {
-    if (won && !wonNotified) {
-      setWonNotified(true);
+    if (won && !wonNotified.current) {
+      wonNotified.current = true;
       onWin(); // seule VOTRE victoire donne un coupon
     }
-  }, [won, wonNotified, onWin]);
+  }, [won, onWin]);
 
   const restart = () => {
-    setWonNotified(false);
+    wonNotified.current = false;
     setTimedOut(false);
     setGame(newMorpion());
   };

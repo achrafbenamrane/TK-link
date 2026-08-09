@@ -22,6 +22,9 @@ export function Countdown({ seconds, className }: Props) {
   const [left, setLeft] = useState(seconds);
 
   useEffect(() => {
+    // Synchronisation avec une horloge externe : le cas d'usage même d'un
+    // effet, y compris pour la remise à zéro qui l'accompagne.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- réarmement du minuteur
     setLeft(seconds);
     const id = setInterval(() => setLeft((v) => (v <= 0 ? seconds : v - 1)), 1000);
     return () => clearInterval(id);

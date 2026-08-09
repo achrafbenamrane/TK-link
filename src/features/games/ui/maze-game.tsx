@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { AppText } from '@/shared/ui';
@@ -47,7 +47,9 @@ function DirButton({
 
 export function MazeGame({ goalImage, onWin, onExit }: Props) {
   const [game, setGame] = useState<Maze>(() => newMaze());
-  const [wonNotified, setWonNotified] = useState(false);
+  // Drapeau « victoire déjà signalée » en REF : rien ne l'affiche, donc le
+  // passer en state ne ferait qu'ajouter un rendu en cascade depuis l'effet.
+  const wonNotified = useRef(false);
   const [startTs, setStartTs] = useState(() => Date.now());
   const [remaining, setRemaining] = useState(BUDGET);
   const [timedOut, setTimedOut] = useState(false);
@@ -56,11 +58,11 @@ export function MazeGame({ goalImage, onWin, onExit }: Props) {
   const over = won || timedOut;
 
   useEffect(() => {
-    if (won && !wonNotified) {
-      setWonNotified(true);
+    if (won && !wonNotified.current) {
+      wonNotified.current = true;
       onWin();
     }
-  }, [won, wonNotified, onWin]);
+  }, [won, onWin]);
 
   // Compte à REBOURS : chaque partie a BUDGET secondes ; à 0, c'est perdu.
   useEffect(() => {
@@ -80,7 +82,7 @@ export function MazeGame({ goalImage, onWin, onExit }: Props) {
   // Nouveau labyrinthe ALÉATOIRE à chaque partie → rien à mémoriser d'une fois
   // sur l'autre. (newMaze est aussi rappelé à chaque entrée dans le jeu.)
   const restart = () => {
-    setWonNotified(false);
+    wonNotified.current = false;
     setStartTs(Date.now());
     setRemaining(BUDGET);
     setTimedOut(false);

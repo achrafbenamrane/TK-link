@@ -14,15 +14,26 @@ export function useCountdown(
   resetKey: unknown,
 ): number {
   const [remaining, setRemaining] = useState(budget);
-  const startRef = useRef(Date.now());
+  // 0 = « pas encore armé » : appeler Date.now() pendant le rendu rendrait le
+  // hook non idempotent. L'effet de réarmement ci-dessous pose l'heure réelle,
+  // et il s'exécute aussi au montage.
+  const startRef = useRef(0);
   const firedRef = useRef(false);
   const onExpireRef = useRef(onExpire);
-  onExpireRef.current = onExpire;
+
+  // Toujours la dernière callback, sans relancer le minuteur (écrire une ref
+  // pendant le rendu est interdit — d'où cet effet).
+  useEffect(() => {
+    onExpireRef.current = onExpire;
+  }, [onExpire]);
 
   // Réarmement à chaque changement de clé (relance, coup suivant…).
   useEffect(() => {
     startRef.current = Date.now();
     firedRef.current = false;
+    // Synchronisation avec une horloge externe : c'est précisément le cas
+    // d'usage d'un effet, même si l'on y appelle setState.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- remise à zéro du minuteur
     setRemaining(budget);
   }, [resetKey, budget]);
 

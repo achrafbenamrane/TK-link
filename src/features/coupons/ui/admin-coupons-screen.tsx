@@ -47,7 +47,10 @@ export function AdminCouponsScreen() {
   const [expiryMs, setExpiryMs] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const now = Date.now();
+  // Instant de référence pour les libellés d'état, figé au montage : appeler
+  // Date.now() pendant le rendu rend le composant non idempotent. Les actions,
+  // elles, lisent l'heure RÉELLE au moment du clic (voir plus bas).
+  const [now] = useState(() => Date.now());
 
   const onCreate = () => {
     const n = Number(value.replace(',', '.'));
@@ -64,7 +67,7 @@ export function AdminCouponsScreen() {
       discount,
       code: code.trim() || undefined,
       maxRedemptions: cap.trim() ? Math.max(1, Math.round(Number(cap))) : null,
-      expiresAt: expiryMs ? now + expiryMs : null,
+      expiresAt: expiryMs ? Date.now() + expiryMs : null,
     });
     if (!res.ok) {
       setError(res.error);
@@ -79,7 +82,7 @@ export function AdminCouponsScreen() {
 
   const shareCode = (p: PromoCode) => {
     void Share.share({
-      message: `🎁 Code Freedoo : ${p.code} — ${formatDiscount(p.discount)} sur votre commande. À utiliser dans l’app !`,
+      message: `🎁 Code TK LINK : ${p.code} — ${formatDiscount(p.discount)} sur votre prochain passage en caisse !`,
     });
   };
 
@@ -284,7 +287,7 @@ export function AdminCouponsScreen() {
                     <Pressable
                       testID={`admin-expire-${p.id}`}
                       accessibilityRole="button"
-                      onPress={() => setExpiry(p.id, now)}
+                      onPress={() => setExpiry(p.id, Date.now())}
                       hitSlop={6}
                     >
                       <AppText variant="caption" className="font-sans-semibold text-brand-600">

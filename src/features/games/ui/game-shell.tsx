@@ -72,7 +72,7 @@ export function GameShell({
           <Feather name="chevron-left" size={22} color={colors.inkInverse} />
         </Pressable>
         <AppText className="font-display text-sm text-ink-inverse" style={{ letterSpacing: 1.5 }}>
-          freedoo
+          tk link
         </AppText>
         <View className="h-9 w-9" />
       </View>

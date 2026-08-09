@@ -1,5 +1,4 @@
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
@@ -25,6 +24,11 @@ type Props = {
   words: string[];
   /** Appelé quand un jeu est gagné — la route accorde alors le coupon. */
   onWin: () => void;
+  /**
+   * Flèche de retour. Absente quand l'écran est la racine d'un onglet : une
+   * flèche qui renvoie ailleurs y désoriente plus qu'elle n'aide.
+   */
+  onBack?: () => void;
 };
 
 type Mode = 'menu' | 'memory' | 'quiz' | 'morpion' | 'maze' | 'wordsearch' | 'pacman';
@@ -64,15 +68,14 @@ const TILES: Tile[] = [
   },
   {
     key: 'pacman',
-    name: 'PacFreedoo',
+    name: 'PacTK',
     tagline: 'Croquez tout au joystick',
     icon: 'disc',
     dark: true,
   },
 ];
 
-export function GamesScreen({ imagePool, quizPool, words, onWin }: Props) {
-  const router = useRouter();
+export function GamesScreen({ imagePool, quizPool, words, onWin, onBack }: Props) {
   const [mode, setMode] = useState<Mode>('menu');
   const back = () => setMode('menu');
   const goal = imagePool[0];
@@ -99,15 +102,17 @@ export function GamesScreen({ imagePool, quizPool, words, onWin }: Props) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-10">
         {/* Hero */}
         <View className="flex-row items-center gap-3 pb-2 pt-1">
-          <Pressable
-            testID="games-back"
-            accessibilityRole="button"
-            accessibilityLabel="Retour"
-            hitSlop={10}
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-          >
-            <Feather name="chevron-left" size={26} color={colors.ink} />
-          </Pressable>
+          {onBack ? (
+            <Pressable
+              testID="games-back"
+              accessibilityRole="button"
+              accessibilityLabel="Retour"
+              hitSlop={10}
+              onPress={onBack}
+            >
+              <Feather name="chevron-left" size={26} color={colors.ink} />
+            </Pressable>
+          ) : null}
           <View>
             <AppText variant="display" className="text-3xl">
               Jeux
@@ -168,7 +173,7 @@ export function GamesScreen({ imagePool, quizPool, words, onWin }: Props) {
           <AppText variant="caption" className="flex-1 text-ink-muted">
             Chaque victoire débloque un{' '}
             <AppText className="font-sans-bold text-ink">coupon</AppText> à utiliser sur votre
-            prochaine commande.
+            prochain passage en caisse.
           </AppText>
         </View>
       </ScrollView>

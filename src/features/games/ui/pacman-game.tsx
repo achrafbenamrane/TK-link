@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { memo, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Pressable, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -52,16 +52,16 @@ function Mover({
     const tx = col * cell;
     const ty = row * cell;
     // saut long (réapparition après une vie perdue) → pas d'animation
-    if (Math.abs(x.value - tx) > cell * 1.6 || Math.abs(y.value - ty) > cell * 1.6) {
-      x.value = tx;
-      y.value = ty;
+    if (Math.abs(x.get() - tx) > cell * 1.6 || Math.abs(y.get() - ty) > cell * 1.6) {
+      x.set(tx);
+      y.set(ty);
     } else {
-      x.value = withTiming(tx, { duration: TWEEN, easing: Easing.linear });
-      y.value = withTiming(ty, { duration: TWEEN, easing: Easing.linear });
+      x.set(withTiming(tx, { duration: TWEEN, easing: Easing.linear }));
+      y.set(withTiming(ty, { duration: TWEEN, easing: Easing.linear }));
     }
   }, [col, row, cell, x, y]);
   const st = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }, { translateY: y.value }],
+    transform: [{ translateX: x.get() }, { translateY: y.get() }],
   }));
   return (
     <Animated.View style={[{ position: 'absolute', width: cell, height: cell }, st]}>
@@ -267,7 +267,10 @@ export function PacmanGame({ images, onWin, onExit }: Props) {
   const boardH = CELL * ROWS;
 
   const [game, setGame] = useState<PacGame>(() => newPacGame(COLS, ROWS));
-  const [wonNotified, setWonNotified] = useState(false);
+  // Drapeau « victoire déjà signalée » en REF, pas en state : le passer en state
+  // déclencherait un rendu en cascade depuis l'effet, pour une valeur que rien
+  // n'affiche.
+  const wonNotified = useRef(false);
   const dDx = useSharedValue(0); // direction voulue (joystick) — x
   const dDy = useSharedValue(0); // direction voulue (joystick) — y
   const knobX = useSharedValue(0);
@@ -276,22 +279,22 @@ export function PacmanGame({ images, onWin, onExit }: Props) {
   // Boucle de jeu : un pas toutes les STEP ms tant qu'on joue.
   useEffect(() => {
     if (game.status !== 'playing') return;
-    const id = setInterval(() => setGame((g) => tick(g, { dx: dDx.value, dy: dDy.value })), STEP);
+    const id = setInterval(() => setGame((g) => tick(g, { dx: dDx.get(), dy: dDy.get() })), STEP);
     return () => clearInterval(id);
   }, [game.status, dDx, dDy]);
 
   // Victoire signalée une fois (coupon côté route).
   useEffect(() => {
-    if (game.status === 'won' && !wonNotified) {
-      setWonNotified(true);
+    if (game.status === 'won' && !wonNotified.current) {
+      wonNotified.current = true;
       onWin();
     }
-  }, [game.status, wonNotified, onWin]);
+  }, [game.status, onWin]);
 
   const restart = () => {
-    setWonNotified(false);
-    dDx.value = 0;
-    dDy.value = 0;
+    wonNotified.current = false;
+    dDx.set(0);
+    dDy.set(0);
     setGame(newPacGame(COLS, ROWS));
   };
 
@@ -311,27 +314,27 @@ export function PacmanGame({ images, onWin, onExit }: Props) {
             dx = (dx / mag) * max;
             dy = (dy / mag) * max;
           }
-          knobX.value = dx;
-          knobY.value = dy;
+          knobX.set(dx);
+          knobY.set(dy);
           if (Math.hypot(e.translationX, e.translationY) > 8) {
             if (Math.abs(e.translationX) > Math.abs(e.translationY)) {
-              dDx.value = e.translationX > 0 ? 1 : -1;
-              dDy.value = 0;
+              dDx.set(e.translationX > 0 ? 1 : -1);
+              dDy.set(0);
             } else {
-              dDx.value = 0;
-              dDy.value = e.translationY > 0 ? 1 : -1;
+              dDx.set(0);
+              dDy.set(e.translationY > 0 ? 1 : -1);
             }
           }
         })
         .onEnd(() => {
           'worklet';
-          knobX.value = withSpring(0);
-          knobY.value = withSpring(0);
+          knobX.set(withSpring(0));
+          knobY.set(withSpring(0));
         }),
     [STICK, dDx, dDy, knobX, knobY],
   );
   const knobStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: knobX.value }, { translateY: knobY.value }],
+    transform: [{ translateX: knobX.get() }, { translateY: knobY.get() }],
   }));
 
   const p = game.pac;
@@ -347,7 +350,7 @@ export function PacmanGame({ images, onWin, onExit }: Props) {
   return (
     <GameShell
       title="PAC"
-      accent="FREEDOO"
+      accent="TK"
       subtitle="Croquez tout, évitez les fantômes."
       onBack={onExit}
       scroll={false}

@@ -1,5 +1,5 @@
 /**
- * PacFreedoo — moteur pur du jeu façon Pac-Man, sans UI ni aléa caché.
+ * PacTK — moteur pur du jeu façon Pac-Man, sans UI ni aléa caché.
  *
  * Déplacement par CASES sur une grille (un pas par `tick`). On mange chaque
  * case traversée ; tout manger → gagné (coupon). Les fantômes coûtent une vie ;

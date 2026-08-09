@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import Mapbox from '@rnmapbox/maps';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
@@ -71,11 +71,15 @@ export function DealsMap({ deals, category }: Props) {
   const [box, setBox] = useState<{ width: number; height: number } | null>(null);
 
   // Un changement de filtre invalide la sélection : garder une route vers une
-  // bulle qui vient de disparaître n'aurait aucun sens.
-  useEffect(() => {
+  // bulle qui vient de disparaître n'aurait aucun sens. Ajustement PENDANT le
+  // rendu (motif recommandé par React pour « remettre à zéro quand une prop
+  // change ») plutôt qu'un effet, qui provoquerait un rendu en cascade.
+  const [prevCategory, setPrevCategory] = useState(category);
+  if (prevCategory !== category) {
+    setPrevCategory(category);
     setSelectedId(null);
     setRoute(null);
-  }, [category]);
+  }
 
   const selected = useMemo(
     () => deals.find((d) => d.id === selectedId) ?? null,

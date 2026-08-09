@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, useWindowDimensions, View } from 'react-native';
 import Animated, {
   interpolate,
@@ -154,7 +154,9 @@ function FlipCard({
 export function MemoryGame({ images, onWin, onExit }: Props) {
   const { width } = useWindowDimensions();
   const [game, setGame] = useState<Game>(() => newGame(images, PAIRS));
-  const [wonNotified, setWonNotified] = useState(false);
+  // Drapeau « victoire déjà signalée » en REF : rien ne l'affiche, donc le
+  // passer en state ne ferait qu'ajouter un rendu en cascade depuis l'effet.
+  const wonNotified = useRef(false);
   const [timedOut, setTimedOut] = useState(false);
   const [round, setRound] = useState(0);
 
@@ -172,14 +174,14 @@ export function MemoryGame({ images, onWin, onExit }: Props) {
 
   // Victoire signalée une seule fois (récompense côté appelant).
   useEffect(() => {
-    if (won && !wonNotified) {
-      setWonNotified(true);
+    if (won && !wonNotified.current) {
+      wonNotified.current = true;
       onWin();
     }
-  }, [won, wonNotified, onWin]);
+  }, [won, onWin]);
 
   const restart = () => {
-    setWonNotified(false);
+    wonNotified.current = false;
     setTimedOut(false);
     setRound((r) => r + 1);
     setGame(newGame(images, PAIRS));

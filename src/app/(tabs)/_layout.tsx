@@ -1,12 +1,22 @@
 import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
-import { selectTotalUnread, useShopStore } from '@/features/shop';
 import { colors } from '@/shared/theme/colors';
 
+/**
+ * La navigation de TK LINK, dans l'ordre où l'on s'en sert :
+ *
+ *  Tickets — le portefeuille, la raison d'être du produit
+ *  Carte   — ce qu'on ouvre devant le lecteur en caisse
+ *  Offres  — PROMO + CATALOGUE du menu de la vidéo
+ *  Jeux    — la gamification, qui alimente les points
+ *  Profil  — compte, cadeaux, réglages
+ *
+ * Les écrans hérités de la place de marché (favoris, commandes, messagerie)
+ * restent des routes accessibles, mais quittent la barre d'onglets : TK LINK
+ * n'est pas une boutique, on n'y passe pas commande.
+ */
 export default function TabsLayout() {
-  const unread = useShopStore(selectTotalUnread);
-
   return (
     <Tabs
       screenOptions={{
@@ -25,33 +35,29 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Accueil',
-          tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} />,
+          title: 'Tickets',
+          tabBarIcon: ({ color }) => <Feather name="file-text" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="favoris"
+        name="carte"
         options={{
-          title: 'Favoris',
-          tabBarIcon: ({ color }) => <Feather name="heart" size={22} color={color} />,
+          title: 'Ma carte',
+          tabBarIcon: ({ color }) => <Feather name="credit-card" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="commandes"
+        name="offres"
         options={{
-          title: 'Commandes',
-          tabBarIcon: ({ color }) => <Feather name="shopping-bag" size={22} color={color} />,
+          title: 'Offres',
+          tabBarIcon: ({ color }) => <Feather name="tag" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="chat"
+        name="jeux"
         options={{
-          title: 'Chat',
-          tabBarIcon: ({ color }) => <Feather name="message-circle" size={22} color={color} />,
-          // Les non-lus se voient depuis n'importe quel onglet — sinon personne
-          // ne pense à ouvrir la messagerie.
-          tabBarBadge: unread > 0 ? unread : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.brand500, fontSize: 10 },
+          title: 'Jeux',
+          tabBarIcon: ({ color }) => <Feather name="target" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -61,6 +67,11 @@ export default function TabsLayout() {
           tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} />,
         }}
       />
+
+      {/* Routes conservées, hors barre d'onglets. */}
+      <Tabs.Screen name="favoris" options={{ href: null }} />
+      <Tabs.Screen name="commandes" options={{ href: null }} />
+      <Tabs.Screen name="chat" options={{ href: null }} />
     </Tabs>
   );
 }

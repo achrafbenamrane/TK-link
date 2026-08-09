@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
@@ -33,7 +33,9 @@ const PER_Q = 10;
 
 export function QuizGame({ pool, onWin, onExit }: Props) {
   const [game, setGame] = useState<Game>(() => newQuiz(pool));
-  const [wonNotified, setWonNotified] = useState(false);
+  // Drapeau « victoire déjà signalée » en REF : rien ne l'affiche, donc le
+  // passer en state ne ferait qu'ajouter un rendu en cascade depuis l'effet.
+  const wonNotified = useRef(false);
 
   const answered = isAnswered(game);
 
@@ -53,14 +55,14 @@ export function QuizGame({ pool, onWin, onExit }: Props) {
 
   // Victoire signalée une seule fois (récompense côté appelant).
   useEffect(() => {
-    if (game.status === 'won' && !wonNotified) {
-      setWonNotified(true);
+    if (game.status === 'won' && !wonNotified.current) {
+      wonNotified.current = true;
       onWin();
     }
-  }, [game.status, wonNotified, onWin]);
+  }, [game.status, onWin]);
 
   const restart = () => {
-    setWonNotified(false);
+    wonNotified.current = false;
     setGame(newQuiz(pool));
   };
 

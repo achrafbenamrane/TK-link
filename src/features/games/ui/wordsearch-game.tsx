@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
@@ -23,7 +23,9 @@ const BUDGET = 60;
 export function WordSearchGame({ words, onWin, onExit }: Props) {
   const [game, setGame] = useState<WordSearch>(() => newWordSearch(words));
   const [first, setFirst] = useState<number | null>(null);
-  const [wonNotified, setWonNotified] = useState(false);
+  // Drapeau « victoire déjà signalée » en REF : rien ne l'affiche, donc le
+  // passer en state ne ferait qu'ajouter un rendu en cascade depuis l'effet.
+  const wonNotified = useRef(false);
   const [timedOut, setTimedOut] = useState(false);
   const [round, setRound] = useState(0);
 
@@ -33,14 +35,14 @@ export function WordSearchGame({ words, onWin, onExit }: Props) {
   const remaining = useCountdown(BUDGET, !over, () => setTimedOut(true), round);
 
   useEffect(() => {
-    if (won && !wonNotified) {
-      setWonNotified(true);
+    if (won && !wonNotified.current) {
+      wonNotified.current = true;
       onWin();
     }
-  }, [won, wonNotified, onWin]);
+  }, [won, onWin]);
 
   const restart = () => {
-    setWonNotified(false);
+    wonNotified.current = false;
     setTimedOut(false);
     setRound((r) => r + 1);
     setFirst(null);
