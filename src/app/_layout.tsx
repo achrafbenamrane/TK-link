@@ -15,25 +15,28 @@ import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { useWelcomeStore } from '@/features/welcome';
+import { selectCompleted, selectHydrated, useOnboardingStore } from '@/features/onboarding';
 import '@/shared/lib/env'; // fail fast on invalid environment (has safe defaults)
 import { colors } from '@/shared/theme/colors';
 
 /**
- * Redirige vers l'accueil animé au premier lancement. On attend `hydrated`
- * (lecture du disque terminée) avant de décider, sinon un utilisateur qui
- * revient verrait l'accueil clignoter le temps que le stockage se charge.
+ * Au premier lancement, on passe par l'onboarding : c'est là qu'on explique la
+ * promesse (le ticket papier disparaît) et qu'on personnalise l'app.
+ *
+ * On attend `hydrated` (lecture du disque terminée) avant de décider, sinon un
+ * utilisateur qui revient verrait l'onboarding clignoter le temps que le
+ * stockage se charge — `completed` valant `false` par défaut.
  */
-function WelcomeGate() {
+function OnboardingGate() {
   const router = useRouter();
   const segments = useSegments();
-  const seen = useWelcomeStore((s) => s.seen);
-  const hydrated = useWelcomeStore((s) => s.hydrated);
+  const completed = useOnboardingStore(selectCompleted);
+  const hydrated = useOnboardingStore(selectHydrated);
 
   useEffect(() => {
-    if (!hydrated || seen) return;
-    if (segments[0] !== 'welcome') router.replace('/welcome');
-  }, [hydrated, seen, segments, router]);
+    if (!hydrated || completed) return;
+    if (segments[0] !== 'onboarding') router.replace('/onboarding');
+  }, [hydrated, completed, segments, router]);
 
   return null;
 }
@@ -54,12 +57,12 @@ export default function RootLayout() {
   // disabled here so the client preview boots straight into the app. Re-enable
   // useProtectedRoute()/useAuthStore().init() from '@/features/auth' for prod.
 
-  const welcomeHydrated = useWelcomeStore((s) => s.hydrated);
+  const onboardingHydrated = useOnboardingStore(selectHydrated);
 
   // On garde l'écran de démarrage natif jusqu'à ce que la police ET la décision
-  // « accueil déjà vu ? » soient prêtes : la porte redirige alors avant le
-  // premier rendu visible, donc pas de flash.
-  const ready = (fontsLoaded || fontError) && welcomeHydrated;
+  // « onboarding déjà fait ? » soient prêtes : la porte redirige alors avant le
+  // premier rendu visible, donc pas de clignotement.
+  const ready = (fontsLoaded || fontError) && onboardingHydrated;
 
   useEffect(() => {
     if (ready) {
@@ -74,7 +77,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView className="flex-1">
       <SafeAreaProvider>
-        <WelcomeGate />
+        <OnboardingGate />
         <Stack
           screenOptions={{
             headerShown: false,
