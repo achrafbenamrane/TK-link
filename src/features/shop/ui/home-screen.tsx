@@ -6,7 +6,7 @@ import { FlatList, Pressable, View } from 'react-native';
 import { AppText, Screen, TextField } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
-import { activeFilterCount, applyPreferences } from '../lib/preferences';
+import { activeFilterCount, filterDeals } from '../lib/preferences';
 import { countCritical, sortByUrgency } from '../lib/urgency';
 import { dealsByCategory, getDeal, getMerchant, FEATURED_DEAL_ID } from '../model/catalog';
 import type { Category, Deal } from '../model/schema';
@@ -41,6 +41,31 @@ function PreferencesButton() {
           </AppText>
         </View>
       ) : null}
+    </Pressable>
+  );
+}
+
+/**
+ * Dit pourquoi la liste dépasse le rayon choisi.
+ *
+ * Sans ce bandeau, l'élargissement serait une tricherie silencieuse : on
+ * afficherait des offres à 400 km en laissant croire qu'elles sont à côté.
+ */
+function RadiusNotice({ km }: { km: number }) {
+  const router = useRouter();
+  return (
+    <Pressable
+      testID="home-radius-relaxed"
+      accessibilityRole="button"
+      accessibilityLabel={`Aucune offre à moins de ${km} kilomètres. Régler ma Fan Zone.`}
+      onPress={() => router.push('/preferences')}
+      className="mx-5 mt-4 flex-row items-center gap-2.5 rounded-control border border-line bg-surface-muted px-3.5 py-2.5"
+    >
+      <Feather name="navigation" size={15} color={colors.inkFaint} />
+      <AppText variant="caption" className="flex-1 text-ink-muted">
+        Rien à moins de {km} km d’ici — voici tout ce qui se déstocke.
+      </AppText>
+      <Feather name="chevron-right" size={16} color={colors.inkFaint} />
     </Pressable>
   );
 }
@@ -128,7 +153,7 @@ export function HomeScreen({ initialView = 'liste', renderBanner, onVisit }: Hom
   const preferences = useShopStore((s) => s.preferences);
   const userCoord = useShopStore((s) => s.userCoord);
 
-  const deals = useMemo(() => {
+  const { deals, radiusRelaxed } = useMemo(() => {
     let list = dealsByCategory(category);
     const q = query.trim().toLowerCase();
     if (q) {
@@ -138,11 +163,12 @@ export function HomeScreen({ initialView = 'liste', renderBanner, onVisit }: Hom
           getMerchant(d.merchantId)?.name.toLowerCase().includes(q),
       );
     }
-    // « Ma Fan Zone » agit ici : régimes et rayon écartent réellement des offres.
-    const kept = applyPreferences(list, getMerchant, preferences, userCoord);
+    // « Ma Fan Zone » agit ici : les régimes écartent réellement des offres, le
+    // rayon aussi — mais jamais jusqu'à vider l'écran (voir `filterDeals`).
+    const outcome = filterDeals(list, getMerchant, preferences, userCoord);
     // Ce qui va disparaître passe DEVANT : c'est un déstockage, pas un
     // catalogue. Trier par urgence est ce qui change la nature de l'écran.
-    return sortByUrgency(kept);
+    return { deals: sortByUrgency(outcome.deals), radiusRelaxed: outcome.radiusRelaxed };
   }, [category, query, preferences, userCoord]);
 
   const critical = useMemo(() => countCritical(deals), [deals]);
@@ -220,6 +246,9 @@ export function HomeScreen({ initialView = 'liste', renderBanner, onVisit }: Hom
 
               <CategoryBar value={category} onChange={setCategory} />
 
+              {/* Rien dans le rayon : on montre tout, mais on ne le cache pas. */}
+              {radiusRelaxed ? <RadiusNotice km={preferences.radiusKm} /> : null}
+
               <View className="mb-3 mt-4 flex-row items-end justify-between px-5">
                 <AppText variant="title" className="text-lg">
                   Ça part maintenant
@@ -232,12 +261,14 @@ export function HomeScreen({ initialView = 'liste', renderBanner, onVisit }: Hom
           }
           ListEmptyComponent={
             <View className="items-center px-10 pt-16" testID="home-empty">
-              <Feather name="search" size={30} color={colors.inkFaint} />
+              <Feather name={query ? 'search' : 'sliders'} size={30} color={colors.inkFaint} />
               <AppText variant="title" className="mt-3 text-center text-ink-faint">
-                Aucune offre pour cette recherche
+                {query ? 'Aucune offre pour cette recherche' : 'Aucune offre avec ces réglages'}
               </AppText>
               <AppText variant="caption" className="mt-1 text-center">
-                Essayez une autre catégorie ou un autre mot-clé.
+                {query
+                  ? 'Essayez une autre catégorie ou un autre mot-clé.'
+                  : 'Vos régimes déclarés dans Ma Fan Zone écartent toutes les offres du moment.'}
               </AppText>
             </View>
           }

@@ -101,6 +101,45 @@ export function applyPreferences(
   });
 }
 
+export type FilterOutcome = {
+  deals: Deal[];
+  /**
+   * Vrai quand le rayon a dû être ignoré pour ne pas rendre un écran vide.
+   * L'écran DOIT le dire : une liste élargie sans explication est un mensonge
+   * sur la distance.
+   */
+  radiusRelaxed: boolean;
+};
+
+/**
+ * Filtre les offres sans jamais vider l'écran à cause de la distance.
+ *
+ * Les deux réglages n'ont pas le même poids, et c'est délibéré :
+ *
+ * - le **régime** est un engagement — halal, vegan. On ne le contourne JAMAIS,
+ *   même si le résultat est vide. Montrer un plat non halal à quelqu'un qui a
+ *   coché halal serait une faute, pas une commodité.
+ * - le **rayon** est un confort. Si rien n'est assez proche, on montre quand
+ *   même les offres et on l'annonce. Sinon, un utilisateur hors de la zone
+ *   couverte — un testeur, un client en déplacement, quelqu'un qui vient
+ *   d'arriver — voit une app vide et croit qu'elle est cassée.
+ */
+export function filterDeals(
+  deals: Deal[],
+  merchantOf: (id: string) => Merchant | undefined,
+  prefs: Preferences,
+  from: Coord | null,
+): FilterOutcome {
+  const byDiet = deals.filter((d) =>
+    matchesLifeStyle(d, merchantOf(d.merchantId), prefs.lifestyle),
+  );
+  const near = byDiet.filter((d) => withinRadius(merchantOf(d.merchantId), from, prefs.radiusKm));
+
+  // Rien d'assez proche alors qu'il existe des offres : on élargit et on le dit.
+  if (near.length === 0 && byDiet.length > 0) return { deals: byDiet, radiusRelaxed: true };
+  return { deals: near, radiusRelaxed: false };
+}
+
 /** Combien de filtres sont actifs — sert la pastille « 2 » sur le bouton. */
 export function activeFilterCount(prefs: Preferences): number {
   let n = prefs.lifestyle.length;

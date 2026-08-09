@@ -23,6 +23,7 @@ export {
 } from './lib/browse';
 export {
   applyPreferences,
+  filterDeals,
   toggleLifeStyle,
   activeFilterCount,
   DEFAULT_PREFERENCES,

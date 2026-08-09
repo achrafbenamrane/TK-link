@@ -2,6 +2,7 @@ import {
   activeFilterCount,
   applyPreferences,
   DEFAULT_PREFERENCES,
+  filterDeals,
   matchesLifeStyle,
   toggleLifeStyle,
   withinRadius,
@@ -117,6 +118,69 @@ describe('applyPreferences', () => {
   it('ne filtre pas sur le mode de retrait (donnée absente)', () => {
     const prefs: Preferences = { ...DEFAULT_PREFERENCES, collect: 'livraison' };
     expect(applyPreferences(deals, lookup, prefs, null)).toHaveLength(3);
+  });
+});
+
+describe('filterDeals — le rayon ne doit jamais vider l’écran', () => {
+  // Le catalogue de démonstration est à Toulouse ; le testeur, lui, peut être
+  // n’importe où. C’est exactement ce cas qui affichait « Aucune offre ».
+  const toulouse = { lat: 43.6045, lng: 1.4442 };
+  const alger = { lat: 36.7538, lng: 3.0588 };
+
+  const merchants: Record<string, Merchant> = {
+    m_halal: merchant({ id: 'm_halal', coord: toulouse, halal: true }),
+    m_std: merchant({ id: 'm_std', coord: toulouse, halal: false }),
+  };
+  const lookup = (id: string) => merchants[id];
+
+  const deals = [
+    deal({ id: 'a', merchantId: 'm_halal', diet: ['vegetarien', 'vegan'] }),
+    deal({ id: 'b', merchantId: 'm_std' }),
+  ];
+
+  it('élargit le rayon plutôt que de ne rien montrer, et le signale', () => {
+    const out = filterDeals(deals, lookup, DEFAULT_PREFERENCES, alger);
+    expect(out.deals).toHaveLength(2);
+    expect(out.radiusRelaxed).toBe(true);
+  });
+
+  it('respecte le rayon dès qu’une offre est à portée', () => {
+    const near: Record<string, Merchant> = {
+      ...merchants,
+      m_std: merchant({ id: 'm_std', coord: alger }),
+    };
+    const out = filterDeals(deals, (id) => near[id], DEFAULT_PREFERENCES, alger);
+    expect(out.deals.map((d) => d.id)).toEqual(['b']);
+    expect(out.radiusRelaxed).toBe(false);
+  });
+
+  it('n’élargit JAMAIS un régime — un vide alimentaire reste un vide', () => {
+    const prefs: Preferences = { ...DEFAULT_PREFERENCES, lifestyle: ['vegan', 'halal'] };
+    const carne = [deal({ id: 'c', merchantId: 'm_std' })];
+    const out = filterDeals(carne, lookup, prefs, alger);
+    expect(out.deals).toEqual([]);
+    expect(out.radiusRelaxed).toBe(false);
+  });
+
+  it('combine les deux : le régime filtre, la distance s’efface', () => {
+    const prefs: Preferences = { ...DEFAULT_PREFERENCES, lifestyle: ['halal'] };
+    const out = filterDeals(deals, lookup, prefs, alger);
+    expect(out.deals.map((d) => d.id)).toEqual(['a']);
+    expect(out.radiusRelaxed).toBe(true);
+  });
+
+  it('sans position connue, rien n’est élargi', () => {
+    expect(filterDeals(deals, lookup, DEFAULT_PREFERENCES, null)).toEqual({
+      deals,
+      radiusRelaxed: false,
+    });
+  });
+
+  it('une liste vide au départ ne déclenche pas de faux élargissement', () => {
+    expect(filterDeals([], lookup, DEFAULT_PREFERENCES, alger)).toEqual({
+      deals: [],
+      radiusRelaxed: false,
+    });
   });
 });
 

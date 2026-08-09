@@ -15,7 +15,7 @@ import {
   type SortKey,
 } from '../lib/browse';
 import { formatDistance } from '../lib/geo';
-import { applyPreferences } from '../lib/preferences';
+import { filterDeals } from '../lib/preferences';
 import { DEALS, getMerchant } from '../model/catalog';
 import { useShopStore } from '../model/store';
 import { CategoryBar } from './components/category-bar';
@@ -49,9 +49,9 @@ export function BrowseScreen({ loyaltyByMerchant, onOpenMerchant }: Props) {
 
   // Les mêmes préférences qu'ailleurs : une enseigne écartée par « Ma Fan Zone »
   // ne doit pas réapparaître ici.
-  const deals = useMemo(() => {
+  const { deals, radiusRelaxed } = useMemo(() => {
     const byCat = category ? DEALS.filter((d) => d.category === category) : DEALS;
-    return applyPreferences(byCat, getMerchant, preferences, userCoord);
+    return filterDeals(byCat, getMerchant, preferences, userCoord);
   }, [category, preferences, userCoord]);
 
   const list = useMemo(() => {
@@ -141,6 +141,16 @@ export function BrowseScreen({ loyaltyByMerchant, onOpenMerchant }: Props) {
       </View>
 
       <CategoryBar value={category} onChange={setCategory} />
+
+      {/* Hors zone couverte : on montre tout plutôt qu'un écran vide, et on le dit. */}
+      {radiusRelaxed ? (
+        <View className="flex-row items-center gap-2 px-5 pt-3" testID="browse-radius-relaxed">
+          <Feather name="navigation" size={13} color={colors.inkFaint} />
+          <AppText variant="caption" className="flex-1 text-ink-faint">
+            Aucun commerce à moins de {preferences.radiusKm} km — voici tous les autres.
+          </AppText>
+        </View>
+      ) : null}
 
       {asMap ? (
         <View className="flex-1">
