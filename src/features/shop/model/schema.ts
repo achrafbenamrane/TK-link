@@ -2,6 +2,15 @@ import { z } from 'zod';
 
 import { CATEGORIES, CATEGORY_LABELS, type Category } from '@/shared/lib/categories';
 
+import {
+  FULFILMENTS,
+  FULFILMENT_LABEL,
+  ORDER_STATUSES,
+  ORDER_STATUS_LABEL,
+  type Fulfilment,
+  type OrderStatus,
+} from '../lib/order-status';
+
 /**
  * Domain contract for the Freedoo shop (flash sales, cart, orders).
  *
@@ -68,8 +77,27 @@ export const CartItemSchema = z.object({
 });
 export type CartItem = z.infer<typeof CartItemSchema>;
 
-export const OrderStatusSchema = z.enum(['en_preparation', 'en_livraison', 'livree']);
-export type OrderStatus = z.infer<typeof OrderStatusSchema>;
+/**
+ * Statuts d'avant le CDC, encore présents dans les commandes stockées sur les
+ * téléphones. Sans cette table, `safeParse` échouerait à la réhydratation et le
+ * store repartirait de zéro : tout l'historique de commandes disparaîtrait.
+ *
+ * `en_livraison` devient `prete` faute de mieux — le CDC §11 n'a pas de statut
+ * « en cours de livraison ». C'est une question ouverte pour Farid.
+ */
+const LEGACY_STATUS: Record<string, OrderStatus> = {
+  en_preparation: 'preparation',
+  en_livraison: 'prete',
+  livree: 'livree',
+};
+
+export const OrderStatusSchema = z.preprocess(
+  (v) => (typeof v === 'string' && LEGACY_STATUS[v] ? LEGACY_STATUS[v] : v),
+  z.enum(ORDER_STATUSES),
+);
+
+export { ORDER_STATUSES, ORDER_STATUS_LABEL, FULFILMENTS, FULFILMENT_LABEL };
+export type { OrderStatus, Fulfilment };
 
 export const OrderLineSchema = z.object({
   dealId: z.string(),
@@ -100,6 +128,12 @@ export const OrderSchema = z.object({
   /** Code du coupon utilisé, pour le reçu ; `null` si aucun. */
   couponCode: z.string().nullable().default(null),
   deliveryFee: z.number(),
+  /**
+   * Click & Collect ou livraison — CDC §12. `.default('livraison')` : les
+   * commandes déjà stockées n'ont pas ce champ, et un champ requis effacerait
+   * tout l'historique à la réhydratation.
+   */
+  fulfilment: z.enum(FULFILMENTS).default('livraison'),
   status: OrderStatusSchema,
   pointsEarned: z.number().int().nonnegative(),
 });

@@ -1,4 +1,5 @@
 import { getDeal } from '../model/catalog';
+import { OrderSchema } from '../model/schema';
 import { selectCartCount, selectCartSubtotal, useShopStore } from '../model/store';
 
 const reset = () => useShopStore.setState({ cart: [], favorites: [], orders: [], points: 120 });
@@ -125,24 +126,43 @@ describe('progression de commande (démo)', () => {
     discount: 0,
     couponCode: null,
     deliveryFee: 0,
-    status: 'en_preparation' as const,
+    fulfilment: 'livraison' as const,
+    status: 'creee' as const,
     pointsEarned: 24,
   });
 
-  it('reste en préparation juste après la commande', () => {
+  it('vient d’être créée juste après la commande', () => {
     useShopStore.setState({ orders: [orderAgedBy(5)] });
     useShopStore.getState().syncOrderStatuses();
-    expect(useShopStore.getState().orders[0]?.status).toBe('en_preparation');
+    expect(useShopStore.getState().orders[0]?.status).toBe('creee');
   });
 
-  it('passe en livraison puis livrée avec le temps', () => {
-    useShopStore.setState({ orders: [orderAgedBy(90)] });
-    useShopStore.getState().syncOrderStatuses();
-    expect(useShopStore.getState().orders[0]?.status).toBe('en_livraison');
+  it('traverse les statuts du CDC avec le temps', () => {
+    const at = (seconds: number) => {
+      useShopStore.setState({ orders: [orderAgedBy(seconds)] });
+      useShopStore.getState().syncOrderStatuses();
+      return useShopStore.getState().orders[0]?.status;
+    };
+    expect(at(15)).toBe('payee');
+    expect(at(40)).toBe('preparation');
+    expect(at(90)).toBe('prete');
+    expect(at(300)).toBe('livree');
+  });
 
-    useShopStore.setState({ orders: [orderAgedBy(300)] });
+  it('se termine « récupérée » en Click & Collect — CDC §12', () => {
+    useShopStore.setState({
+      orders: [{ ...orderAgedBy(300), fulfilment: 'click-collect' as const }],
+    });
     useShopStore.getState().syncOrderStatuses();
-    expect(useShopStore.getState().orders[0]?.status).toBe('livree');
+    expect(useShopStore.getState().orders[0]?.status).toBe('recuperee');
+  });
+
+  it('ne ressuscite pas une commande annulée', () => {
+    // La démo dérive le statut du temps écoulé : sans garde, une annulation
+    // serait écrasée cinq secondes plus tard.
+    useShopStore.setState({ orders: [{ ...orderAgedBy(300), status: 'annulee' as const }] });
+    useShopStore.getState().syncOrderStatuses();
+    expect(useShopStore.getState().orders[0]?.status).toBe('annulee');
   });
 
   // Le tableau ne doit être remplacé que s'il change vraiment : sinon chaque
@@ -152,5 +172,44 @@ describe('progression de commande (démo)', () => {
     const before = useShopStore.getState().orders;
     useShopStore.getState().syncOrderStatuses();
     expect(useShopStore.getState().orders).toBe(before);
+  });
+});
+
+describe('migration des commandes stockées — CDC §11', () => {
+  it('traduit les anciens statuts sans effacer l’historique', () => {
+    // Le vrai risque : un z.enum strict ferait échouer safeParse et le store
+    // repartirait de zéro — toutes les commandes du client disparaîtraient.
+    const legacy = {
+      id: 'o_old',
+      createdAt: 1_700_000_000_000,
+      addressId: null,
+      items: [{ dealId: 'd_cote', title: 'Côte', emoji: '🥩', qty: 1, price: 24.9 }],
+      total: 24.9,
+      discount: 0,
+      couponCode: null,
+      deliveryFee: 3,
+      status: 'en_preparation',
+      pointsEarned: 24,
+    };
+    const parsed = OrderSchema.safeParse(legacy);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.status).toBe('preparation');
+      // Pas de mode de retrait avant le CDC : la livraison est le défaut.
+      expect(parsed.data.fulfilment).toBe('livraison');
+    }
+  });
+
+  it('traduit aussi « en livraison »', () => {
+    const parsed = OrderSchema.safeParse({
+      id: 'o',
+      createdAt: 1_700_000_000_000,
+      items: [],
+      total: 0,
+      deliveryFee: 0,
+      status: 'en_livraison',
+      pointsEarned: 0,
+    });
+    expect(parsed.success && parsed.data.status).toBe('prete');
   });
 });

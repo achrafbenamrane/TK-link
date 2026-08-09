@@ -35,8 +35,8 @@ du code. Là où le CDC propose lui-même une valeur (8 catégories, 0,99 €, 5
 | 9   | Offres flash publiées par le commerçant                                       | ✗ absent (côté commerçant)                             | —                                           |
 | 9   | 5 opérations gratuites puis packs payants                                     | ✗ absent                                               | —                                           |
 | 10  | Panier                                                                        | ✓                                                      | `shop/ui/cart-screen.tsx`                   |
-| 11  | 10 statuts de commande                                                        | ~ partiel — 3 statuts sur 10                           | `shop/model/schema.ts`                      |
-| 12  | Click & Collect                                                               | ✗ absent                                               | —                                           |
+| 11  | 10 statuts de commande                                                        | ✓ + machine à états                                    | `shop/lib/order-status.ts`                  |
+| 12  | Click & Collect                                                               | ✓ choix au panier, frais annulés                       | `shop/ui/cart-screen.tsx`                   |
 | 12  | Livraison                                                                     | ~ suivi présent, pas de livreur                        | `shop/ui/components/delivery-tracker.tsx`   |
 | 13  | Points par achat, paliers, avantages                                          | ✓                                                      | `loyalty/lib/tiers.ts`                      |
 | 13  | Partage de points entre utilisateurs                                          | ✓                                                      | `shop/ui/components/share-points-sheet.tsx` |
@@ -79,9 +79,15 @@ pas de rôle, aucune de ces sections ne peut exister.
 
 ### Phase 2 — Le contrat de commande (CDC §11, §12)
 
-- [ ] Les 10 statuts + machine à états (transitions légales seulement)
-- [ ] Click & Collect vs Livraison porté par la commande
-- [ ] Migration Zod des commandes déjà stockées (3 statuts → 10)
+- [x] Les 10 statuts + machine à états (transitions légales seulement)
+- [x] Click & Collect vs Livraison porté par la commande
+- [x] Migration Zod des commandes déjà stockées (3 statuts → 10)
+      **Preuve :** 21 tests dont la migration des commandes stockées ; 475 au total.
+
+**Question remontée à Farid :** le §11 n'a pas de statut « en cours de
+livraison », entre « prête » et « livrée ». L'app affichait déjà le trajet du
+livreur. En attendant l'arbitrage, une commande confiée au livreur reste
+« prête ».
 
 ### Phase 3 — L’accueil conforme (CDC §7)
 

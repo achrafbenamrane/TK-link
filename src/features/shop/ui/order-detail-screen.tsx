@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, type ComponentProps } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -8,31 +8,52 @@ import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
-import type { Order, OrderStatus } from '../model/schema';
+import {
+  ORDER_STATUS_LABEL,
+  timelineFor,
+  timelineIndex,
+  type Fulfilment,
+  type OrderStatus,
+} from '../lib/order-status';
+import type { Order } from '../model/schema';
 import { useShopStore } from '../model/store';
 import { DeliveryTracker } from './components/delivery-tracker';
 
-const STEPS: {
-  key: OrderStatus;
-  label: string;
-  hint: string;
-  icon: 'package' | 'truck' | 'check';
-}[] = [
-  {
-    key: 'en_preparation',
-    label: 'En préparation',
-    hint: 'Le commerçant prépare votre commande',
-    icon: 'package',
-  },
-  { key: 'en_livraison', label: 'En livraison', hint: 'Votre livreur est en route', icon: 'truck' },
-  { key: 'livree', label: 'Livrée', hint: 'Bon appétit !', icon: 'check' },
-];
+type FeatherName = ComponentProps<typeof Feather>['name'];
 
-function stepIndex(status: OrderStatus): number {
-  return Math.max(
-    0,
-    STEPS.findIndex((s) => s.key === status),
-  );
+const STEP_ICON: Record<OrderStatus, FeatherName> = {
+  panier: 'shopping-cart',
+  creee: 'file-text',
+  paiement_attente: 'clock',
+  payee: 'credit-card',
+  preparation: 'package',
+  prete: 'check-circle',
+  recuperee: 'shopping-bag',
+  livree: 'truck',
+  annulee: 'x-circle',
+  remboursee: 'corner-up-left',
+};
+
+/** Ce que chaque étape veut dire pour le client, selon son mode de retrait. */
+function hintFor(status: OrderStatus, fulfilment: Fulfilment): string {
+  switch (status) {
+    case 'creee':
+      return 'Nous avons bien reçu votre commande';
+    case 'paiement_attente':
+      return 'En attente de la confirmation du paiement';
+    case 'payee':
+      return 'Paiement confirmé';
+    case 'preparation':
+      return 'Le commerçant prépare votre commande';
+    case 'prete':
+      return fulfilment === 'click-collect'
+        ? 'À retirer en boutique, présentez votre QR code'
+        : 'Confiée au livreur';
+    case 'recuperee':
+      return 'Récupérée en boutique. Merci !';
+    default:
+      return 'Bon appétit !';
+  }
 }
 
 function formatDateTime(ms: number): string {
@@ -41,16 +62,24 @@ function formatDateTime(ms: number): string {
   return `${p(d.getDate())}/${p(d.getMonth() + 1)} à ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-/** Fil vertical : où en est la commande, et ce qu'il reste à attendre. */
-function Timeline({ status }: { status: OrderStatus }) {
-  const current = stepIndex(status);
+/**
+ * Fil vertical : où en est la commande, et ce qu'il reste à attendre.
+ *
+ * Les étapes viennent du mode de retrait — un Click & Collect ne se termine pas
+ * par « livrée ». Un statut hors parcours (annulée, remboursée) n'a pas d'index
+ * sur la frise : on n'allume alors aucune étape plutôt que d'en désigner une au
+ * hasard, ce qui laisserait croire que la commande avance encore.
+ */
+function Timeline({ status, fulfilment }: { status: OrderStatus; fulfilment: Fulfilment }) {
+  const steps = timelineFor(fulfilment);
+  const current = timelineIndex(status, fulfilment);
   return (
     <View className="gap-0">
-      {STEPS.map((step, i) => {
-        const done = i < current;
-        const active = i === current;
+      {steps.map((step, i) => {
+        const done = current !== null && i < current;
+        const active = current === i;
         return (
-          <View key={step.key} className="flex-row gap-3">
+          <View key={step} className="flex-row gap-3">
             <View className="items-center">
               <View
                 className={cn(
@@ -59,26 +88,26 @@ function Timeline({ status }: { status: OrderStatus }) {
                 )}
               >
                 <Feather
-                  name={done ? 'check' : step.icon}
+                  name={done ? 'check' : STEP_ICON[step]}
                   size={15}
                   color={done || active ? colors.inkInverse : colors.inkFaint}
                 />
               </View>
-              {i < STEPS.length - 1 ? (
+              {i < steps.length - 1 ? (
                 <View className={cn('w-0.5 flex-1', done ? 'bg-brand-500' : 'bg-line')} />
               ) : null}
             </View>
-            <View className={cn('flex-1', i < STEPS.length - 1 && 'pb-5')}>
+            <View className={cn('flex-1', i < steps.length - 1 && 'pb-5')}>
               <AppText
                 className={cn(
                   'font-sans-bold',
                   active ? 'text-brand-600' : done ? 'text-ink' : 'text-ink-faint',
                 )}
               >
-                {step.label}
+                {ORDER_STATUS_LABEL[step]}
               </AppText>
               <AppText variant="caption" className="text-xs text-ink-faint">
-                {step.hint}
+                {hintFor(step, fulfilment)}
               </AppText>
             </View>
           </View>
@@ -147,18 +176,19 @@ export function OrderDetailScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-5 pb-10">
         {/* La carte n'a de sens qu'en course : avant, il n'y a rien à suivre ;
-            après, le trajet est terminé. */}
-        {order.status === 'en_livraison' && address ? (
+            après, le trajet est terminé. Et jamais en Click & Collect, où
+            personne ne se déplace vers le client. */}
+        {order.status === 'prete' && order.fulfilment === 'livraison' && address ? (
           <DeliveryTracker order={order} address={address} />
         ) : null}
 
         <View className="mb-4 rounded-card border border-line bg-surface p-4">
-          <Timeline status={order.status} />
+          <Timeline status={order.status} fulfilment={order.fulfilment} />
         </View>
 
         {/* Adresse — l'ancienne commande n'en a pas, on ne montre rien plutôt
-            qu'un bloc vide. */}
-        {address ? (
+            qu'un bloc vide. Inutile aussi en Click & Collect : le client vient. */}
+        {address && order.fulfilment === 'livraison' ? (
           <View className="mb-4 flex-row gap-3 rounded-card border border-line bg-surface p-4">
             <Feather name="map-pin" size={16} color={colors.brand500} />
             <View className="flex-1">

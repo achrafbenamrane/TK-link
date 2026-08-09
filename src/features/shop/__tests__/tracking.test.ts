@@ -19,7 +19,8 @@ const orderAgedBy = (seconds: number): Order => ({
   discount: 0,
   couponCode: null,
   deliveryFee: 0,
-  status: 'en_livraison',
+  fulfilment: 'livraison' as const,
+  status: 'prete',
   pointsEarned: 24,
 });
 

@@ -7,19 +7,41 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { AppText, Button, EmptyState, Screen } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
-import type { OrderStatus } from '../model/schema';
+import {
+  FULFILMENT_LABEL,
+  ORDER_STATUS_LABEL,
+  STATUS_TONE,
+  type OrderStatus,
+  type StatusTone,
+} from '../lib/order-status';
 import { selectOrders, useShopStore } from '../model/store';
 
 type FeatherName = ComponentProps<typeof Feather>['name'];
 
-const STATUS: Record<OrderStatus, { label: string; className: string; icon: FeatherName }> = {
-  en_preparation: {
-    label: 'En préparation',
-    className: 'bg-surface-sunken text-ink-muted',
-    icon: 'clock',
-  },
-  en_livraison: { label: 'En livraison', className: 'bg-brand-50 text-brand-600', icon: 'truck' },
-  livree: { label: 'Livrée', className: 'bg-success/10 text-success', icon: 'check' },
+/**
+ * Les dix statuts du CDC §11 se répartissent en quatre tons. Peindre chaque
+ * statut d'une couleur propre donnerait un arc-en-ciel illisible ; ce qui
+ * compte pour le client, c'est « ça avance / ça attend / c'est fait / c'est
+ * raté ».
+ */
+const TONE_CLASS: Record<StatusTone, string> = {
+  attente: 'bg-surface-sunken text-ink-muted',
+  encours: 'bg-brand-50 text-brand-600',
+  succes: 'bg-success/10 text-success',
+  echec: 'bg-surface-sunken text-ink-faint',
+};
+
+const STATUS_ICON: Record<OrderStatus, FeatherName> = {
+  panier: 'shopping-cart',
+  creee: 'file-text',
+  paiement_attente: 'clock',
+  payee: 'credit-card',
+  preparation: 'package',
+  prete: 'check-circle',
+  recuperee: 'shopping-bag',
+  livree: 'check',
+  annulee: 'x-circle',
+  remboursee: 'corner-up-left',
 };
 
 function formatDate(ts: number): string {
@@ -59,7 +81,11 @@ export function OrdersScreen() {
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-10">
           {orders.map((order) => {
-            const s = STATUS[order.status];
+            const s = {
+              label: ORDER_STATUS_LABEL[order.status],
+              className: TONE_CLASS[STATUS_TONE[order.status]],
+              icon: STATUS_ICON[order.status],
+            };
             return (
               <Pressable
                 key={order.id}
@@ -77,7 +103,7 @@ export function OrdersScreen() {
                       Commande #{order.id.slice(0, 6).toUpperCase()}
                     </AppText>
                     <AppText variant="caption" className="text-ink-faint">
-                      {formatDate(order.createdAt)}
+                      {formatDate(order.createdAt)} · {FULFILMENT_LABEL[order.fulfilment]}
                     </AppText>
                   </View>
                   <View

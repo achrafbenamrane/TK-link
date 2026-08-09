@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { makeId } from '@/shared/lib/id';
 // Cart/favorites/orders hold no secrets → the plaintext tier is correct.
+import { isActive, type Fulfilment } from '../lib/order-status';
 import { DEFAULT_PREFERENCES, type Preferences } from '../lib/preferences';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
@@ -108,6 +109,8 @@ type ShopState = {
   checkout: (
     addressId?: string | null,
     applied?: AppliedDiscount | null,
+    /** Click & Collect ou livraison — CDC §12. */
+    fulfilment?: Fulfilment,
   ) => { ok: false } | { ok: true; orderId: string };
 };
 
@@ -292,7 +295,7 @@ export const useShopStore = create<ShopState>()(
             : [dealId, ...state.favorites],
         })),
 
-      checkout: (addressId = null, applied = null) => {
+      checkout: (addressId = null, applied = null, fulfilment = 'livraison') => {
         const { cart } = get();
         const lines = cartLines(cart);
         if (lines.length === 0) return { ok: false as const };
@@ -320,8 +323,10 @@ export const useShopStore = create<ShopState>()(
           total,
           discount,
           couponCode: applied?.couponCode ?? null,
-          deliveryFee: DELIVERY_FEE,
-          status: 'en_preparation',
+          // Pas de frais de livraison quand le client vient chercher — CDC §12.
+          deliveryFee: fulfilment === 'click-collect' ? 0 : DELIVERY_FEE,
+          fulfilment,
+          status: 'creee',
           pointsEarned,
         };
 
@@ -368,14 +373,25 @@ export const useShopStore = create<ShopState>()(
  *
  * À SUPPRIMER quand le back-end poussera les vrais statuts.
  */
+export const DEMO_PAID_AFTER_S = 10;
+export const DEMO_PREPARING_AFTER_S = 25;
 export const DEMO_SHIPPING_AFTER_S = 60;
 export const DEMO_DELIVERED_AFTER_S = 240;
 
 export function demoStatusFor(order: Order): Order['status'] {
+  // Une commande close ne bouge plus : sans cette garde, une annulation ou un
+  // remboursement seraient écrasés à la seconde suivante par la démo.
+  if (!isActive(order.status)) return order.status;
+
   const elapsed = (Date.now() - order.createdAt) / 1000;
-  if (elapsed >= DEMO_DELIVERED_AFTER_S) return 'livree';
-  if (elapsed >= DEMO_SHIPPING_AFTER_S) return 'en_livraison';
-  return 'en_preparation';
+  // La fin du parcours dépend du mode de retrait — CDC §12.
+  if (elapsed >= DEMO_DELIVERED_AFTER_S) {
+    return order.fulfilment === 'click-collect' ? 'recuperee' : 'livree';
+  }
+  if (elapsed >= DEMO_SHIPPING_AFTER_S) return 'prete';
+  if (elapsed >= DEMO_PREPARING_AFTER_S) return 'preparation';
+  if (elapsed >= DEMO_PAID_AFTER_S) return 'payee';
+  return 'creee';
 }
 
 /* ---- pure helpers + selectors (subscribe to slices, never the whole store) ---- */

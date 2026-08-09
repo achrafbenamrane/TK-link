@@ -4,10 +4,12 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { cn } from '@/shared/lib/cn';
 import { AppText, Button } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { authenticate } from '../lib/biometrics';
+import { FULFILMENTS, FULFILMENT_LABEL, type Fulfilment } from '../lib/order-status';
 import { cartLines, DELIVERY_FEE_EUR, selectCart, useShopStore } from '../model/store';
 import { QtyStepper } from './components/qty-stepper';
 
@@ -42,6 +44,10 @@ export function CartScreen({ coupons }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [pickerOpen, setPickerOpen] = useState(false);
+  // CDC §12 — le Click & Collect fait partie du MVP. Livraison par défaut :
+  // c'est le mode que l'app proposait déjà, on ne change pas l'habitude sans
+  // que l'utilisateur le demande.
+  const [fulfilment, setFulfilment] = useState<Fulfilment>('livraison');
 
   const cart = useShopStore(selectCart);
   const lines = useMemo(() => cartLines(cart), [cart]);
@@ -70,7 +76,9 @@ export function CartScreen({ coupons }: Props) {
   };
 
   const handleCheckout = async () => {
-    if (!address) {
+    // L'adresse n'est indispensable qu'en livraison : exiger une adresse pour
+    // venir chercher en boutique bloquerait le Click & Collect sans raison.
+    if (fulfilment === 'livraison' && !address) {
       router.push('/adresses');
       return;
     }
@@ -85,7 +93,7 @@ export function CartScreen({ coupons }: Props) {
     const applied = selectedCoupon
       ? { discountEur: selectedCoupon.discountEur, couponCode: selectedCoupon.code }
       : null;
-    const res = checkout(address.id, applied);
+    const res = checkout(address?.id ?? null, applied, fulfilment);
     if (res.ok) {
       if (selectedCoupon) coupons?.onApplied(selectedCoupon.id);
       router.replace('/commandes');
@@ -187,6 +195,43 @@ export function CartScreen({ coupons }: Props) {
         className="absolute inset-x-0 bottom-0 gap-3 rounded-t-card border-t border-line bg-surface px-5 pt-4"
         style={{ paddingBottom: insets.bottom + 12 }}
       >
+        {/* Mode de retrait — CDC §12. Le choix se fait AVANT le total, parce
+            qu'il le change : le Click & Collect supprime les frais. */}
+        <View className="flex-row gap-2">
+          {FULFILMENTS.map((f) => {
+            const active = fulfilment === f;
+            return (
+              <Pressable
+                key={f}
+                testID={`cart-fulfilment-${f}`}
+                accessibilityRole="button"
+                accessibilityLabel={FULFILMENT_LABEL[f]}
+                accessibilityState={{ selected: active }}
+                onPress={() => setFulfilment(f)}
+                className={cn(
+                  'flex-1 flex-row items-center justify-center gap-2 rounded-control py-2.5',
+                  active ? 'bg-ink' : 'bg-surface-muted',
+                )}
+              >
+                <Feather
+                  name={f === 'click-collect' ? 'shopping-bag' : 'truck'}
+                  size={14}
+                  color={active ? colors.inkInverse : colors.inkMuted}
+                />
+                <AppText
+                  className={cn(
+                    'font-sans-semibold',
+                    active ? 'text-ink-inverse' : 'text-ink-muted',
+                  )}
+                  style={{ fontSize: 12.5 }}
+                >
+                  {FULFILMENT_LABEL[f]}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+
         {/* Coupon — applique une réduction gagnée en jouant ou reçue par code. */}
         {selectedCoupon ? (
           <View
@@ -265,41 +310,58 @@ export function CartScreen({ coupons }: Props) {
           </View>
         ) : null}
 
-        <Pressable
-          testID="cart-address"
-          accessibilityRole="button"
-          accessibilityLabel={
-            address ? `Livrer à ${address.label}, modifier` : 'Ajouter une adresse de livraison'
-          }
-          onPress={() => router.push('/adresses')}
-          className="flex-row items-center gap-3 rounded-control border border-line bg-surface-muted px-3 py-2.5"
-        >
-          <Feather name="map-pin" size={15} color={address ? colors.brand500 : colors.inkFaint} />
-          <View className="flex-1">
-            {address ? (
-              <>
-                <AppText className="font-sans-bold text-xs text-ink">
-                  Livrer à {address.label}
-                </AppText>
-                <AppText variant="caption" className="text-xs text-ink-faint" numberOfLines={1}>
-                  {address.street}, {address.zip} {address.city}
-                </AppText>
-              </>
-            ) : (
-              <>
-                <AppText className="font-sans-bold text-xs text-brand-600">
-                  Adresse de livraison manquante
-                </AppText>
-                <AppText variant="caption" className="text-xs text-ink-faint">
-                  Ajoutez une adresse pour être livré.
-                </AppText>
-              </>
-            )}
+        {/* En Click & Collect, l'adresse n'a rien à faire là : c'est le client
+            qui se déplace. */}
+        {fulfilment === 'click-collect' ? (
+          <View
+            testID="cart-collect-note"
+            className="flex-row items-center gap-3 rounded-control border border-line bg-surface-muted px-3 py-2.5"
+          >
+            <Feather name="shopping-bag" size={15} color={colors.brand500} />
+            <View className="flex-1">
+              <AppText className="font-sans-bold text-xs text-ink">Retrait en boutique</AppText>
+              <AppText variant="caption" className="text-xs text-ink-faint">
+                Présentez le QR code de votre commande au commerçant.
+              </AppText>
+            </View>
           </View>
-          <AppText variant="caption" className="font-sans-semibold text-xs text-ink-muted">
-            {address ? 'Changer' : 'Ajouter'}
-          </AppText>
-        </Pressable>
+        ) : (
+          <Pressable
+            testID="cart-address"
+            accessibilityRole="button"
+            accessibilityLabel={
+              address ? `Livrer à ${address.label}, modifier` : 'Ajouter une adresse de livraison'
+            }
+            onPress={() => router.push('/adresses')}
+            className="flex-row items-center gap-3 rounded-control border border-line bg-surface-muted px-3 py-2.5"
+          >
+            <Feather name="map-pin" size={15} color={address ? colors.brand500 : colors.inkFaint} />
+            <View className="flex-1">
+              {address ? (
+                <>
+                  <AppText className="font-sans-bold text-xs text-ink">
+                    Livrer à {address.label}
+                  </AppText>
+                  <AppText variant="caption" className="text-xs text-ink-faint" numberOfLines={1}>
+                    {address.street}, {address.zip} {address.city}
+                  </AppText>
+                </>
+              ) : (
+                <>
+                  <AppText className="font-sans-bold text-xs text-brand-600">
+                    Adresse de livraison manquante
+                  </AppText>
+                  <AppText variant="caption" className="text-xs text-ink-faint">
+                    Ajoutez une adresse pour être livré.
+                  </AppText>
+                </>
+              )}
+            </View>
+            <AppText variant="caption" className="font-sans-semibold text-xs text-ink-muted">
+              {address ? 'Changer' : 'Ajouter'}
+            </AppText>
+          </Pressable>
+        )}
 
         <View className="gap-1.5">
           <View className="flex-row items-center justify-between">
@@ -320,10 +382,12 @@ export function CartScreen({ coupons }: Props) {
           ) : null}
           <View className="flex-row items-center justify-between">
             <AppText variant="caption" className="text-ink-muted">
-              Livraison
+              {FULFILMENT_LABEL[fulfilment]}
             </AppText>
             <AppText className="font-sans-bold text-sm text-success">
-              {DELIVERY_FEE_EUR === 0 ? 'Offerte' : `${DELIVERY_FEE_EUR.toFixed(2)}€`}
+              {fulfilment === 'click-collect' || DELIVERY_FEE_EUR === 0
+                ? 'Offerte'
+                : `${DELIVERY_FEE_EUR.toFixed(2)}€`}
             </AppText>
           </View>
           <View className="mt-1 flex-row items-center justify-between border-t border-line pt-2">
@@ -341,7 +405,9 @@ export function CartScreen({ coupons }: Props) {
         >
           <Feather name="lock" size={16} color={colors.inkInverse} />
           <AppText className="font-sans-bold text-ink-inverse">
-            {address ? `Payer · ${total.toFixed(2)}€` : 'Choisir une adresse'}
+            {fulfilment === 'click-collect' || address
+              ? `Payer · ${total.toFixed(2)}€`
+              : 'Choisir une adresse'}
           </AppText>
         </Pressable>
         <View className="flex-row items-center justify-center gap-1.5">
