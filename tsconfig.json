@@ -11,5 +11,8 @@
     "types": ["jest"]
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts"],
-  "exclude": ["node_modules", "scripts", "packs"]
+  // `landing` (Next.js) et `supabase/functions` (Deno) ne tournent pas sur le
+  // runtime de l'app : les typer avec CE tsconfig ne prouve rien et casse la
+  // porte de vérification dès que leurs artefacts existent sur le disque.
+  "exclude": ["node_modules", "scripts", "packs", "landing", "supabase"]
 }

@@ -28,7 +28,7 @@ export default function Interactions() {
             }
           });
         },
-        { threshold: 0.16, rootMargin: '0px 0px -6% 0px' }
+        { threshold: 0.16, rootMargin: '0px 0px -6% 0px' },
       );
       rs.forEach((el) => io.observe(el));
     } else {
@@ -86,16 +86,49 @@ export default function Interactions() {
       let out = '';
       let seed = 7;
       const finder = (x, y) =>
-        '<rect x="' + x * sz + '" y="' + y * sz + '" width="' + 7 * sz + '" height="' + 7 * sz + '" fill="#17140f"/>' +
-        '<rect x="' + (x + 1) * sz + '" y="' + (y + 1) * sz + '" width="' + 5 * sz + '" height="' + 5 * sz + '" fill="#f6f2ea"/>' +
-        '<rect x="' + (x + 2) * sz + '" y="' + (y + 2) * sz + '" width="' + 3 * sz + '" height="' + 3 * sz + '" fill="#17140f"/>';
+        '<rect x="' +
+        x * sz +
+        '" y="' +
+        y * sz +
+        '" width="' +
+        7 * sz +
+        '" height="' +
+        7 * sz +
+        '" fill="#17140f"/>' +
+        '<rect x="' +
+        (x + 1) * sz +
+        '" y="' +
+        (y + 1) * sz +
+        '" width="' +
+        5 * sz +
+        '" height="' +
+        5 * sz +
+        '" fill="#f6f2ea"/>' +
+        '<rect x="' +
+        (x + 2) * sz +
+        '" y="' +
+        (y + 2) * sz +
+        '" width="' +
+        3 * sz +
+        '" height="' +
+        3 * sz +
+        '" fill="#17140f"/>';
       for (let y = 0; y < cells; y++) {
         for (let x = 0; x < cells; x++) {
           const f = (x < 8 && y < 8) || (x > cells - 9 && y < 8) || (x < 8 && y > cells - 9);
           if (f) continue;
           seed = (seed * 1103515245 + 12345) & 0x7fffffff;
           if ((seed >> 8) % 2 === 0)
-            out += '<rect x="' + x * sz + '" y="' + y * sz + '" width="' + sz + '" height="' + sz + '" fill="#17140f"/>';
+            out +=
+              '<rect x="' +
+              x * sz +
+              '" y="' +
+              y * sz +
+              '" width="' +
+              sz +
+              '" height="' +
+              sz +
+              '" fill="#17140f"/>';
         }
       }
       qr.innerHTML = out + finder(0, 0) + finder(cells - 7, 0) + finder(0, cells - 7);

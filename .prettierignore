@@ -1,6 +1,9 @@
 node_modules
 .expo
 dist
+.next
+landing/.next-verify
+packs
 android
 ios
 coverage

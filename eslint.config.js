@@ -23,6 +23,8 @@ module.exports = defineConfig([
       'coverage/**',
       'reports/**',
       'packs/**', // feature-pack library: parked, opt-in code — not linted until installed
+      '**/.next/**', // Next.js build output for `landing/` — generated, never source
+      'supabase/functions/**', // Deno edge runtime: different globals, different resolver
       'expo-env.d.ts',
       '**/._*', // macOS AppleDouble files on exFAT/network volumes
     ],
