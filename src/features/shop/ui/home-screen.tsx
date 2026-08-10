@@ -133,6 +133,12 @@ type HomeScreenProps = {
    * devant. Vient aussi de la route, pour la même raison.
    */
   interests?: Category[];
+  /**
+   * Offres venues d'ailleurs, placées en tête du catalogue — aujourd'hui les
+   * ventes flash publiées par le commerçant (CDC §9). La boutique n'importe pas
+   * l'espace commerçant : c'est la ROUTE qui les lui apporte, déjà converties.
+   */
+  extraDeals?: Deal[];
   /** Signalé une fois au montage — sert la série et les missions du jour. */
   onVisit?: () => void;
 };
@@ -141,6 +147,7 @@ export function HomeScreen({
   initialView = 'liste',
   renderIdentity,
   interests,
+  extraDeals,
   onVisit,
 }: HomeScreenProps = {}) {
   const [category, setCategory] = useState<Category | null>(null);
@@ -164,7 +171,12 @@ export function HomeScreen({
   const userCoord = useShopStore((s) => s.userCoord);
 
   const { deals, radiusRelaxed } = useMemo(() => {
-    let list = dealsByCategory(category);
+    // Les offres publiées depuis l'app passent par exactement les mêmes filtres
+    // que le catalogue : régimes, rayon, catégorie, recherche. Les exempter
+    // ferait apparaître une offre que « Ma Fan Zone » vient d'écarter.
+    const extra = extraDeals ?? [];
+    let list = [...extra, ...dealsByCategory(category)];
+    if (category) list = list.filter((d) => d.category === category);
     const q = query.trim().toLowerCase();
     if (q) {
       list = list.filter(
@@ -183,7 +195,7 @@ export function HomeScreen({
       deals: sortForInterests(outcome.deals, interests ?? []),
       radiusRelaxed: outcome.radiusRelaxed,
     };
-  }, [category, query, preferences, userCoord, interests]);
+  }, [category, query, preferences, userCoord, interests, extraDeals]);
 
   const featured = getDeal(FEATURED_DEAL_ID);
 

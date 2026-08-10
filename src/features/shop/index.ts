@@ -52,3 +52,7 @@ export {
 } from './model/store';
 export { dealImagePool, dealQuizPool, getMerchant, MERCHANTS } from './model/catalog';
 export type { GameImageSource } from './model/catalog';
+/** Le contrat d'une offre affichable — sert aux routes qui en fabriquent une
+ *  à partir d'une autre feature (les ventes flash du commerçant, CDC §9). */
+export type { Deal } from './model/schema';
+export { LOCAL_MERCHANT_ID } from './model/catalog';

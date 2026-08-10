@@ -464,6 +464,17 @@ export function criticalDealCount(): number {
 export const FEATURED_DEAL_ID = 'd_cote';
 
 /**
+ * Le commerçant sous lequel apparaissent les offres publiées depuis l'app —
+ * CDC §9.
+ *
+ * En démonstration, l'utilisateur qui publie n'a pas encore de fiche
+ * commerçant : ses ventes flash s'affichent donc sous une enseigne du
+ * catalogue, à quelques rues d'ici. Le jour où le back-office existe, elles
+ * porteront sa vraie fiche — seule cette constante disparaît.
+ */
+export const LOCAL_MERCHANT_ID = 'm_petit';
+
+/**
  * Source d'image d'une pièce de jeu. `number` = asset embarqué ; `{ uri }` =
  * URL distante. expo-image accepte les deux, donc une photo uploadée par le
  * commerçant s'affiche sans rien changer aux jeux.

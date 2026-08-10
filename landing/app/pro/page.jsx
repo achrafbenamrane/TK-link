@@ -3,7 +3,17 @@
 import { useMemo, useState } from 'react';
 
 import './pro.css';
+import {
+  canPublish,
+  COMMISSION_PCT,
+  formatCents,
+  freeLeft,
+  FREE_OPERATIONS,
+  operationsLeft,
+  PACKS,
+} from './billing';
 import { DOCUMENTS, formatDate, formatMoney, OFFERS, PAPER_G_PER_RECEIPT } from './data';
+import OfferForm from './offer-form';
 
 /**
  * Espace professionnel TK LINK — la « version web pour les entreprises ».
@@ -24,12 +34,40 @@ const TABS = [
   { key: 'offers', label: 'Offres', icon: '％' },
 ];
 
+/** Un brouillon d'offre vers la carte affichée dans la liste. */
+function toCard(draft) {
+  const pct = Math.round((1 - draft.priceCents / draft.oldPriceCents) * 100);
+  return {
+    id: `o_${Date.now()}`,
+    title: draft.title,
+    claim: `-${pct} %`,
+    audience: `${draft.stock} pièce${draft.stock > 1 ? 's' : ''} · ${
+      draft.durationMinutes < 60
+        ? `${draft.durationMinutes} min`
+        : `${draft.durationMinutes / 60} h`
+    }`,
+    flash: true,
+    live: true,
+  };
+}
+
 export default function ProPage() {
   const [tab, setTab] = useState('dashboard');
   const [selectedId, setSelectedId] = useState(DOCUMENTS[0].id);
   const [query, setQuery] = useState('');
   const [kindFilter, setKindFilter] = useState('all');
   const [toast, setToast] = useState(null);
+
+  /* --- Offres et quota (CDC §9). Local à la page : le back-office prendra
+     le relais, la forme des données ne changera pas. --- */
+  const [offers, setOffers] = useState(OFFERS);
+  const [composing, setComposing] = useState(false);
+  const [used, setUsed] = useState(OFFERS.length);
+  const [purchased, setPurchased] = useState(0);
+
+  const left = operationsLeft(used, purchased);
+  const free = freeLeft(used);
+  const allowed = canPublish(used, purchased);
 
   const selected = useMemo(() => DOCUMENTS.find((d) => d.id === selectedId) ?? null, [selectedId]);
 
@@ -400,14 +438,57 @@ export default function ProPage() {
               <button
                 type="button"
                 className="tkpro-btn primary"
-                onClick={() => notify('La création d’offre arrive avec le back-office.')}
+                disabled={!allowed}
+                onClick={() => (composing ? setComposing(false) : setComposing(true))}
               >
-                Nouvelle offre
+                {composing ? 'Fermer' : 'Nouvelle offre'}
               </button>
             </div>
 
+            {/* Le quota du CDC §9, affiché AVANT d'être subi. */}
+            <div className={allowed ? 'tkpro-quota' : 'tkpro-quota empty'}>
+              <div>
+                <b>
+                  {left} opération{left > 1 ? 's' : ''} disponible{left > 1 ? 's' : ''}
+                </b>
+                <span>
+                  {free > 0
+                    ? `Dont ${free} offerte${free > 1 ? 's' : ''} — les ${FREE_OPERATIONS} premières sont gratuites.`
+                    : 'Vos opérations gratuites sont consommées : prenez un pack pour continuer.'}
+                </span>
+              </div>
+              <div className="tkpro-packs">
+                {PACKS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="tkpro-pack"
+                    onClick={() => {
+                      setPurchased((n) => n + p.operations);
+                      notify(`${p.label} crédité — ${p.operations} opérations.`);
+                    }}
+                  >
+                    <b>{p.operations}</b>
+                    <span>{formatCents(p.priceCents)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {composing ? (
+              <OfferForm
+                onPublish={(draft) => {
+                  setOffers((list) => [toCard(draft), ...list]);
+                  setUsed((n) => n + 1);
+                  setComposing(false);
+                  notify(`« ${draft.title} » est en ligne dans l’app.`);
+                }}
+                onCancel={() => setComposing(false)}
+              />
+            ) : null}
+
             <div className="tkpro-offers">
-              {OFFERS.map((o) => (
+              {offers.map((o) => (
                 <div className="tkpro-offer" key={o.id}>
                   <div className="claim">{o.claim}</div>
                   <div className="body">
@@ -425,8 +506,9 @@ export default function ProPage() {
             </div>
 
             <p className="tkpro-note">
-              Une offre publiée ici apparaît immédiatement dans l’onglet « Offres » de l’app, et la
-              remise s’applique au passage de la carte en caisse.
+              Une offre publiée ici apparaît immédiatement dans l’app des clients, et la remise
+              s’applique au passage de la carte en caisse. TK LINK prélève {COMMISSION_PCT}&nbsp;%
+              sur chaque vente (CDC §21).
             </p>
           </>
         ) : null}

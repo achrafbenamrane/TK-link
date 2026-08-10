@@ -53,7 +53,16 @@ function Row({
   );
 }
 
-export function ProfileScreen() {
+type ProfileScreenProps = {
+  /**
+   * Le compte peut-il publier des offres ? Fourni par la ROUTE : le rôle vit
+   * dans `onboarding`, que la boutique n'importe pas. Un consommateur ne voit
+   * simplement pas l'entrée.
+   */
+  canPublishOffers?: boolean;
+};
+
+export function ProfileScreen({ canPublishOffers = false }: ProfileScreenProps = {}) {
   const router = useRouter();
   const points = useShopStore(selectPoints);
   // On s'abonne à la référence STABLE (`s.vouchers`) puis on filtre en mémo :
@@ -198,6 +207,29 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
             <AppText className="font-sans-bold text-ink-inverse">Partager l’app</AppText>
           </Pressable>
         </View>
+
+        {/* CDC §9 — l'entrée du commerçant, en tête de menu : c'est son métier,
+            pas une option enfouie sous les réglages. */}
+        {canPublishOffers ? (
+          <Pressable
+            testID="profile-mes-offres"
+            accessibilityRole="button"
+            accessibilityLabel="Mes ventes flash"
+            onPress={() => router.push('/mes-offres')}
+            className="mb-4 flex-row items-center gap-3 rounded-card bg-brand-500 p-4 active:bg-brand-600"
+          >
+            <View className="h-10 w-10 items-center justify-center rounded-control bg-ink-inverse/15">
+              <Feather name="zap" size={19} color={colors.inkInverse} />
+            </View>
+            <View className="flex-1">
+              <AppText className="font-sans-bold text-ink-inverse">Mes ventes flash</AppText>
+              <AppText variant="caption" className="text-ink-inverse/70">
+                Publier un invendu, suivre ce qu’il rapporte.
+              </AppText>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.inkInverse} />
+          </Pressable>
+        ) : null}
 
         {/* Menu */}
         <View className="rounded-card border border-line bg-surface px-4">
