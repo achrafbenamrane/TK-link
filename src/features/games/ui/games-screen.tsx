@@ -8,12 +8,8 @@ import { colors } from '@/shared/theme/colors';
 
 import type { CardImage } from '../model/memory';
 import type { QuizItem } from '../model/quiz';
-import { MazeGame } from './maze-game';
-import { MemoryGame } from './memory-game';
-import { MorpionGame } from './morpion-game';
-import { PacmanGame } from './pacman-game';
-import { QuizGame } from './quiz-game';
-import { WordSearchGame } from './wordsearch-game';
+import { GAME_TILES, playableGames, type GameKey } from '../model/tiles';
+import { GamePlayer } from './game-player';
 
 type Props = {
   /** Réservoir d'images, injecté par la route depuis les offres du catalogue. */
@@ -31,71 +27,29 @@ type Props = {
   onBack?: () => void;
 };
 
-type Mode = 'menu' | 'memory' | 'quiz' | 'morpion' | 'maze' | 'wordsearch' | 'pacman';
-
-type Tile = {
-  key: Exclude<Mode, 'menu'>;
-  name: string;
-  tagline: string;
-  icon: 'grid' | 'zap' | 'hash' | 'navigation' | 'type' | 'disc';
-  /** Fond de la tuile : rouge de marque (false) ou ink (true). */
-  dark: boolean;
-};
-
-const TILES: Tile[] = [
-  {
-    key: 'memory',
-    name: 'Trouvez les paires',
-    tagline: 'Retrouvez les duos',
-    icon: 'grid',
-    dark: false,
-  },
-  { key: 'morpion', name: 'Morpion', tagline: 'Alignez trois plats', icon: 'hash', dark: true },
-  { key: 'maze', name: 'Labyrinthe', tagline: 'Trouvez le chemin', icon: 'navigation', dark: true },
-  {
-    key: 'wordsearch',
-    name: 'Mots mêlés',
-    tagline: 'Cachés dans la grille',
-    icon: 'type',
-    dark: false,
-  },
-  {
-    key: 'quiz',
-    name: 'Le juste prix',
-    tagline: 'Devinez le prix flash',
-    icon: 'zap',
-    dark: false,
-  },
-  {
-    key: 'pacman',
-    name: 'PacTK',
-    tagline: 'Croquez tout au joystick',
-    icon: 'disc',
-    dark: true,
-  },
-];
-
 export function GamesScreen({ imagePool, quizPool, words, onWin, onBack }: Props) {
-  const [mode, setMode] = useState<Mode>('menu');
-  const back = () => setMode('menu');
-  const goal = imagePool[0];
+  const [mode, setMode] = useState<GameKey | null>(null);
+  const back = () => setMode(null);
 
-  const canPlay: Record<Tile['key'], boolean> = {
-    memory: imagePool.length >= 3,
-    morpion: imagePool.length >= 2,
-    maze: imagePool.length >= 1,
-    wordsearch: words.length >= 3,
-    quiz: quizPool.length >= 3,
-    pacman: imagePool.length >= 1,
-  };
+  const canPlay = playableGames({
+    images: imagePool.length,
+    quiz: quizPool.length,
+    words: words.length,
+  });
 
   // Chaque jeu ouvre sa propre coquille « affiche » plein écran.
-  if (mode === 'memory') return <MemoryGame images={imagePool} onWin={onWin} onExit={back} />;
-  if (mode === 'morpion') return <MorpionGame images={imagePool} onWin={onWin} onExit={back} />;
-  if (mode === 'maze' && goal) return <MazeGame goalImage={goal} onWin={onWin} onExit={back} />;
-  if (mode === 'wordsearch') return <WordSearchGame words={words} onWin={onWin} onExit={back} />;
-  if (mode === 'quiz') return <QuizGame pool={quizPool} onWin={onWin} onExit={back} />;
-  if (mode === 'pacman') return <PacmanGame images={imagePool} onWin={onWin} onExit={back} />;
+  if (mode) {
+    return (
+      <GamePlayer
+        game={mode}
+        imagePool={imagePool}
+        quizPool={quizPool}
+        words={words}
+        onWin={onWin}
+        onExit={back}
+      />
+    );
+  }
 
   return (
     <Screen testID="games-screen">
@@ -125,7 +79,7 @@ export function GamesScreen({ imagePool, quizPool, words, onWin, onBack }: Props
 
         {/* Grille de jeux */}
         <View className="mt-4 flex-row flex-wrap justify-between gap-y-4">
-          {TILES.map((t) => {
+          {GAME_TILES.map((t) => {
             const disabled = !canPlay[t.key];
             return (
               <Pressable

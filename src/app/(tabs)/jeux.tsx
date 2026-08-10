@@ -2,23 +2,19 @@ import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Alert } from 'react-native';
 
-import { useCouponsStore } from '@/features/coupons';
+import { pickGameReward, useCouponsStore } from '@/features/coupons';
 import { GamesScreen } from '@/features/games';
 import { useGameStore } from '@/features/gamification';
 import { useLoyaltyStore } from '@/features/loyalty';
 import { dealImagePool, dealQuizPool } from '@/features/shop';
 
 /**
- * Racine de composition des jeux. Les jeux ne connaissent ni les points ni les
- * coupons : ils reçoivent tout en props, ce qui les garde sans dépendance
- * croisée. Ici on branche la récompense sur les DEUX moteurs de fidélité —
- * des points (BONUS POINT) et un coupon.
+ * Le menu complet des jeux — le « tout voir » de l'onglet La Chasse, qui n'en
+ * montre qu'un rail. Les jeux ne connaissent ni les points ni les coupons :
+ * ils reçoivent tout en props, ce qui les garde sans dépendance croisée. Ici on
+ * branche la récompense sur les DEUX moteurs de fidélité — des points (BONUS
+ * POINT) et un coupon, avec la même table que le hub.
  */
-const REWARDS = [
-  { discount: { kind: 'amount' as const, cents: 200 }, label: 'Victoire au jeu', points: 50 },
-  { discount: { kind: 'percent' as const, pct: 10 }, label: 'Bien joué', points: 40 },
-  { discount: { kind: 'amount' as const, cents: 300 }, label: 'Score parfait', points: 75 },
-];
 
 /** Mots à cacher dans « Mots mêlés » — courts, sans accents, dans l'univers TK. */
 const GAME_WORDS = ['TICKET', 'CAISSE', 'POINTS', 'CARTE', 'CADEAU', 'FLASH', 'PROMO', 'ARBRE'];
@@ -32,7 +28,7 @@ export default function GamesRoute() {
   const quizPool = useMemo(() => dealQuizPool(), []);
 
   const onWin = () => {
-    const reward = REWARDS[Math.floor(Math.random() * REWARDS.length)]!;
+    const reward = pickGameReward();
     const coupon = grant(reward.discount, reward.label);
     earn(reward.points, reward.label, 'jeu');
     // La victoire nourrit aussi la progression du chasseur (XP, missions).
@@ -47,5 +43,13 @@ export default function GamesRoute() {
     );
   };
 
-  return <GamesScreen imagePool={imagePool} quizPool={quizPool} words={GAME_WORDS} onWin={onWin} />;
+  return (
+    <GamesScreen
+      imagePool={imagePool}
+      quizPool={quizPool}
+      words={GAME_WORDS}
+      onWin={onWin}
+      onBack={() => router.back()}
+    />
+  );
 }
