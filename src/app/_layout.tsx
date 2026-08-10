@@ -85,6 +85,14 @@ function ReceiptBridge() {
   const orders = useShopStore(selectOrders);
   const receipts = useReceiptsStore((s) => s.receipts);
   const addReceipt = useReceiptsStore((s) => s.addReceipt);
+  const purgeExpired = useReceiptsStore((s) => s.purgeExpired);
+
+  // CDC §16 — au démarrage, et une seule fois : les documents dont la durée de
+  // conservation est écoulée s'en vont. Garder un historique d'achats au-delà
+  // du nécessaire est une donnée personnelle de trop, pas un service rendu.
+  useEffect(() => {
+    purgeExpired();
+  }, [purgeExpired]);
 
   useEffect(() => {
     for (const order of orders) {

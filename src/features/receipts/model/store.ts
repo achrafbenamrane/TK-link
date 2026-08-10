@@ -5,6 +5,7 @@ import { makeId } from '@/shared/lib/id';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
 import { certificateFor, splitVat, toInvoice } from '../lib/receipts';
+import { purge } from '../lib/retention';
 import { seedReceipts } from './seed';
 import {
   PersistedReceiptsSchema,
@@ -50,13 +51,19 @@ type ReceiptsState = {
   /** Affecter un code fournisseur — le classement qu'attend la comptabilité. */
   setSupplierCode: (id: string, code: string) => void;
   removeReceipt: (id: string) => void;
+  /**
+   * Supprime les documents dont la durée de conservation est écoulée — CDC §16.
+   * Renvoie le nombre de documents effacés, pour pouvoir le DIRE plutôt que de
+   * les faire disparaître en silence.
+   */
+  purgeExpired: (nowMs?: number) => number;
   /** Remet l'historique de démonstration (écran de réglages). */
   resetDemo: () => void;
 };
 
 export const useReceiptsStore = create<ReceiptsState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       receipts: seedReceipts(),
 
       addReceipt: (incoming) => {
@@ -101,6 +108,16 @@ export const useReceiptsStore = create<ReceiptsState>()(
         })),
 
       removeReceipt: (id) => set((s) => ({ receipts: s.receipts.filter((r) => r.id !== id) })),
+
+      purgeExpired: (nowMs = Date.now()) => {
+        const before = get().receipts;
+        const kept = purge(before, nowMs);
+        const removed = before.length - kept.length;
+        // On ne remplace le tableau QUE s'il change : sinon chaque passage
+        // notifie les abonnés et relance un rendu pour rien.
+        if (removed > 0) set({ receipts: kept });
+        return removed;
+      },
 
       resetDemo: () => set({ receipts: seedReceipts() }),
     }),

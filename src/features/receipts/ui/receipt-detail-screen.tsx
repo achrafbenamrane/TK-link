@@ -6,6 +6,7 @@ import { AppText, Button, Screen } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { CATEGORY_LABEL, formatMoney } from '../lib/receipts';
+import { formatKeptUntil } from '../lib/retention';
 import { selectReceipts, useReceiptsStore } from '../model/store';
 
 type Props = {
@@ -170,6 +171,12 @@ export function ReceiptDetailScreen({ id, onBack }: Props) {
             {receipt.supplierCode ? (
               <Row label="Code fournisseur" value={receipt.supplierCode} mono />
             ) : null}
+            {/* CDC §16 — on dit jusqu'à quand le document est gardé, plutôt
+                que de le faire disparaître un matin sans prévenir. */}
+            <Row
+              label={receipt.pinned ? 'Conservation' : 'Conservé jusqu’au'}
+              value={receipt.pinned ? 'Sans limite (épinglé)' : formatKeptUntil(receipt)}
+            />
           </View>
         </View>
 

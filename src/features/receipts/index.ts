@@ -26,3 +26,12 @@ export {
   receiptForOrder,
   CATEGORY_LABEL,
 } from './lib/receipts';
+export {
+  RETENTION_YEARS,
+  daysLeft,
+  expiringCount,
+  formatKeptUntil,
+  isExpired,
+  keptUntil,
+  purge,
+} from './lib/retention';

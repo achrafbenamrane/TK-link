@@ -42,7 +42,7 @@ du code. Là où le CDC propose lui-même une valeur (8 catégories, 0,99 €, 5
 | 13  | Partage de points entre utilisateurs                                          | ✓                                                                           | `shop/ui/components/share-points-sheet.tsx` |
 | 14  | QR Code : Transaction → Ticket → Facture                                      | ✓ chaîne reliée (commande honorée → ticket → facture)                       | `shop/lib/transactions.ts`, `app/_layout`   |
 | 15  | Module de facturation                                                         | ~ facture générée, mentions légales à valider (§23 Q7)                      | `receipts/lib/receipts.ts`                  |
-| 16  | Conservation / suppression des factures                                       | ✗ absent (§23 Q8 ouverte)                                                   | —                                           |
+| 16  | Conservation / suppression des factures                                       | ✓ 2 ans par défaut (§23 Q8), purge automatique, épinglage qui protège       | `receipts/lib/retention.ts`                 |
 | 17  | Web Super Admin — Farid                                                       | ✓ inscrits, statistiques, revenus (données simulées)                        | `landing/app/admin/`                        |
 | 18  | Web commerçants et grossistes                                                 | ~ tableau de bord, documents, création d'offre ; stock et commandes absents | `landing/app/pro/`                          |
 | 19  | App mobile client                                                             | ✓                                                                           | `src/`                                      |

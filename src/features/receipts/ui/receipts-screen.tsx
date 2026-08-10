@@ -13,6 +13,7 @@ import {
   groupByMonth,
   searchReceipts,
 } from '../lib/receipts';
+import { RETENTION_YEARS } from '../lib/retention';
 import { selectReceipts, useReceiptsStore } from '../model/store';
 import { ReceiptRow } from './components/receipt-row';
 
@@ -159,6 +160,20 @@ export function ReceiptsScreen({ onOpenReceipt }: Props) {
             </View>
           ))
         )}
+
+        {/* CDC §16 — la règle est annoncée, pas seulement appliquée. Un
+            document qui disparaît sans qu'on ait jamais dit pourquoi passe
+            pour un bug, ou pour une perte de données. */}
+        <View
+          testID="receipts-retention"
+          className="mt-6 flex-row items-start gap-2.5 rounded-card bg-surface-muted p-4"
+        >
+          <Feather name="clock" size={15} color={colors.inkFaint} />
+          <AppText variant="caption" className="flex-1 text-ink-muted">
+            Vos documents sont conservés {RETENTION_YEARS} ans, puis supprimés automatiquement.
+            Épinglez ceux que vous voulez garder au-delà — une garantie, un litige.
+          </AppText>
+        </View>
       </ScrollView>
     </Screen>
   );
