@@ -1,7 +1,7 @@
 /**
- * PUBLIC API of the welcome feature — the animated first-launch onboarding.
+ * PUBLIC API de l'accueil — le premier écran, ses scènes animées, et la
+ * mémoire du « déjà vu ».
  */
 export { WelcomeScreen } from './ui/welcome-screen';
-export { AnimatedLogo } from './ui/animated-logo';
-export { LogoHero } from './ui/logo-hero';
+export { TkMark, TkTree, TkWaves } from './ui/tk-mark';
 export { useWelcomeStore } from './model/store';

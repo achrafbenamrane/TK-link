@@ -1,48 +1,96 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeIn,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
+import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { useWelcomeStore } from '../model/store';
-import { LogoHero } from './logo-hero';
+import { CardReaderScene } from './scenes/card-reader-scene';
+import { HubScene } from './scenes/hub-scene';
+import { PacmanScene } from './scenes/pacman-scene';
+import { TkMark } from './tk-mark';
 
-const INK = '#17140F';
+/** Temps d'affichage d'un panneau — calé sur la durée d'un cycle de scène. */
+const DWELL = 5200;
 
-const VALUES = [
+type Panel = {
+  key: string;
+  title: string;
+  accent: string;
+  line: string;
+};
+
+const PANELS: Panel[] = [
   {
-    icon: 'zap' as const,
-    title: 'Ventes flash',
-    line: 'Les bons plans du quartier, à saisir vite.',
+    key: 'carte',
+    title: 'Votre carte,',
+    accent: 'un geste',
+    line: 'Passez-la sur le lecteur du commerçant : le ticket arrive dans l’app et les points tombent. Zéro papier.',
   },
   {
-    icon: 'truck' as const,
-    title: 'Livraison offerte',
-    line: 'Zéro frais caché. Le prix affiché est le prix payé.',
+    key: 'jeux',
+    title: 'Jouez,',
+    accent: 'gagnez pour de vrai',
+    line: 'Des mini-jeux qui donnent de vrais coupons — à présenter en caisse, pas des points en l’air.',
   },
   {
-    icon: 'map-pin' as const,
-    title: 'Autour de vous',
-    line: 'Vos commerçants de proximité, sur une carte.',
+    key: 'chasse',
+    title: 'La',
+    accent: 'Chasse',
+    line: 'Invendus à sauver, missions du jour, coffre et trophées : tout ce qui rapporte, au même endroit.',
   },
 ];
 
 /**
- * Premier écran de l'app : le sac s'assemble, puis le texte et l'appel à
- * l'action se révèlent une fois l'intro posée (`onSettled`). Fond ink, dans la
- * continuité de l'écran de démarrage natif — l'entrée dans l'app (fond crème)
- * se lit alors comme un « pas à l'intérieur » du produit.
+ * PREMIER ÉCRAN — trois plans qui MONTRENT le produit plutôt que de le décrire.
+ *
+ * Un écran d'accueil qui aligne trois lignes de texte et un bouton ne prouve
+ * rien : on y promet une app « ludique » sans jamais la faire bouger. Ici la
+ * carte touche vraiment le lecteur, PacTK croque vraiment la marque, la barre
+ * d'XP se remplit vraiment — chaque panneau tient trois secondes et démontre
+ * une promesse.
+ *
+ * Les panneaux défilent seuls (barres de progression en tête, comme une story)
+ * mais restent balayables : personne n'est obligé d'attendre, personne n'est
+ * obligé d'agir.
  */
 export function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const reduced = useReducedMotion();
+  const { width } = useWindowDimensions();
   const markSeen = useWelcomeStore((s) => s.markSeen);
-  const [revealed, setRevealed] = useState(false);
+
+  const [index, setIndex] = useState(0);
+  const scroller = useRef<ScrollView>(null);
+  const panel = PANELS[index]!;
+  const stage = Math.min(width - 48, 320);
+
+  // Défilement automatique. En mode « réduire les animations », il n'y a pas
+  // d'avance seule : un écran qui bouge tout seul est exactement ce que ce
+  // réglage demande d'éviter.
+  useEffect(() => {
+    if (reduced) return;
+    const id = setTimeout(() => {
+      const next = (index + 1) % PANELS.length;
+      scroller.current?.scrollTo({ x: next * width, animated: true });
+      setIndex(next);
+    }, DWELL);
+    return () => clearTimeout(id);
+  }, [index, width, reduced]);
 
   const enter = () => {
     markSeen();
@@ -55,79 +103,135 @@ export function WelcomeScreen() {
   };
 
   return (
-    <View className="flex-1" style={{ backgroundColor: INK, paddingTop: insets.top }}>
-      {/* Fond ink → icônes de statut claires, sinon elles disparaissent. */}
+    <View
+      testID="welcome-screen"
+      className="flex-1 bg-forest-deep"
+      style={{ paddingTop: insets.top }}
+    >
+      {/* Fond très sombre → icônes de statut claires, sinon elles disparaissent. */}
       <StatusBar style="light" />
-      <View className="flex-1 items-center justify-center px-8">
-        <LogoHero onSettled={() => setRevealed(true)} />
 
-        {revealed ? (
-          <Animated.View entering={FadeInDown.duration(500)} className="mt-10 items-center">
-            <AppText
-              className="font-display text-ink-inverse"
-              style={{ fontSize: 40, lineHeight: 50 }}
-            >
-              Freedoo<AppText style={{ color: colors.brand500 }}>.</AppText>
-            </AppText>
-            <AppText className="mt-2 text-center text-ink-inverse/70" style={{ fontSize: 16 }}>
-              Les ventes flash de votre quartier,{'\n'}livrées avant qu’elles ne s’envolent.
-            </AppText>
-          </Animated.View>
-        ) : null}
+      {/* En-tête : la marque, et de quoi couper court. */}
+      <View className="flex-row items-start justify-between px-6 pb-3 pt-2">
+        <TkMark size={22} />
+        <Pressable
+          testID="welcome-skip"
+          accessibilityRole="button"
+          accessibilityLabel="Passer l’introduction"
+          onPress={enter}
+          hitSlop={10}
+          className="rounded-pill bg-ink-inverse/10 px-3 py-1.5"
+        >
+          <AppText className="font-sans-semibold text-ink-inverse/70" style={{ fontSize: 12.5 }}>
+            Passer
+          </AppText>
+        </Pressable>
       </View>
 
-      {revealed ? (
-        <Animated.View
-          entering={FadeIn.delay(300).duration(500)}
-          className="gap-5 px-8"
-          style={{ paddingBottom: insets.bottom + 24 }}
-        >
-          <View className="gap-4">
-            {VALUES.map((v, i) => (
-              <Animated.View
-                key={v.title}
-                entering={FadeInDown.delay(400 + i * 120).duration(450)}
-                className="flex-row items-center gap-4"
-              >
-                <View className="h-11 w-11 items-center justify-center rounded-control bg-ink-inverse/10">
-                  <Feather name={v.icon} size={19} color={colors.brand500} />
-                </View>
-                <View className="flex-1">
-                  <AppText className="font-sans-bold text-ink-inverse">{v.title}</AppText>
-                  <AppText variant="caption" className="text-ink-inverse/60">
-                    {v.line}
-                  </AppText>
-                </View>
-              </Animated.View>
-            ))}
-          </View>
+      {/* Progression, façon story : où l'on en est, combien il reste. */}
+      <View className="flex-row gap-1.5 px-6">
+        {PANELS.map((p, i) => (
+          <Segment key={p.key} active={i === index} done={i < index} still={reduced} />
+        ))}
+      </View>
 
-          <Animated.View entering={FadeInDown.delay(760).duration(450)} className="gap-2">
-            <Pressable
-              testID="welcome-start"
-              accessibilityRole="button"
-              onPress={enter}
-              className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-4 active:bg-brand-600"
-            >
-              <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 16 }}>
-                Commencer
-              </AppText>
-              <Feather name="arrow-right" size={18} color={colors.inkInverse} />
-            </Pressable>
-            <Pressable
-              testID="welcome-signin"
-              accessibilityRole="button"
-              onPress={signIn}
-              className="py-3"
-            >
-              <AppText className="text-center text-ink-inverse/60">
-                J’ai déjà un compte{' '}
-                <AppText className="font-sans-bold text-ink-inverse">Se connecter</AppText>
-              </AppText>
-            </Pressable>
-          </Animated.View>
+      {/* Les plans. Balayables — l'automatique ne doit jamais bloquer la main. */}
+      <ScrollView
+        ref={scroller}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(e) =>
+          setIndex(Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)))
+        }
+        style={{ flexGrow: 0 }}
+      >
+        {PANELS.map((p) => (
+          <View
+            key={p.key}
+            testID={`welcome-panel-${p.key}`}
+            style={{ width }}
+            className="items-center justify-center py-2"
+          >
+            {p.key === 'carte' ? <CardReaderScene size={stage} still={reduced} /> : null}
+            {p.key === 'jeux' ? <PacmanScene size={stage} still={reduced} /> : null}
+            {p.key === 'chasse' ? <HubScene size={stage} still={reduced} /> : null}
+          </View>
+        ))}
+      </ScrollView>
+
+      {/* Le discours suit le plan affiché. */}
+      <View className="flex-1 justify-start px-6 pt-2">
+        <Animated.View key={panel.key} entering={reduced ? undefined : FadeIn.duration(320)}>
+          <AppText
+            className="font-display text-ink-inverse"
+            style={{ fontSize: 30, lineHeight: 40 }}
+          >
+            {panel.title} <AppText style={{ color: colors.lime }}>{panel.accent}</AppText>
+          </AppText>
+          <AppText className="mt-2 text-ink-inverse/70" style={{ fontSize: 15, lineHeight: 22 }}>
+            {panel.line}
+          </AppText>
         </Animated.View>
-      ) : null}
+      </View>
+
+      {/* L'action, toujours au même endroit : elle ne se cherche pas. */}
+      <View className="gap-1 px-6" style={{ paddingBottom: insets.bottom + 18 }}>
+        <Pressable
+          testID="welcome-start"
+          accessibilityRole="button"
+          accessibilityLabel="Commencer"
+          onPress={enter}
+          className="flex-row items-center justify-center gap-2 rounded-control bg-lime py-4 active:opacity-85"
+        >
+          <AppText className="font-sans-bold text-forest-deep" style={{ fontSize: 16 }}>
+            Commencer
+          </AppText>
+          <Feather name="arrow-right" size={18} color={colors.forestDeep} />
+        </Pressable>
+        <Pressable
+          testID="welcome-signin"
+          accessibilityRole="button"
+          accessibilityLabel="Se connecter"
+          onPress={signIn}
+          className="py-3"
+        >
+          <AppText className="text-center text-ink-inverse/60" style={{ fontSize: 14 }}>
+            J’ai déjà un compte{' '}
+            <AppText className="font-sans-bold text-ink-inverse">Se connecter</AppText>
+          </AppText>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Un segment de progression. Le segment actif se remplit sur la durée
+ * d'affichage : on sait combien de temps il reste avant le plan suivant, donc
+ * on sait qu'attendre est un choix.
+ */
+function Segment({ active, done, still }: { active: boolean; done: boolean; still: boolean }) {
+  const fill = useSharedValue(done ? 1 : 0);
+
+  useEffect(() => {
+    if (done) {
+      fill.value = 1;
+      return;
+    }
+    if (!active) {
+      fill.value = 0;
+      return;
+    }
+    fill.value = 0;
+    fill.value = still ? 1 : withTiming(1, { duration: DWELL, easing: Easing.linear });
+  }, [active, done, still, fill]);
+
+  const style = useAnimatedStyle(() => ({ width: `${fill.value * 100}%` }));
+
+  return (
+    <View className={cn('h-1 flex-1 overflow-hidden rounded-pill bg-ink-inverse/15')}>
+      <Animated.View style={[style, { height: '100%', backgroundColor: colors.lime }]} />
     </View>
   );
 }
