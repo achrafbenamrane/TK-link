@@ -17,6 +17,24 @@ enforces).
 - **Performance budget:** add-task interaction < 100ms to visible row on a
   mid-range Android emulator.
 
+## CUJ-002 — La boucle de la chasse
+
+- **Owner:** squad produit TK LINK
+- **Flow:** `.maestro/flows/chasse-cuj.yaml`
+- **Journey:** ouvrir l’app → onglet du milieu « La Chasse » → ouvrir le
+  coffre du jour (points + XP + coupon crédités, une seule fois par jour
+  civil) → attraper un invendu du rail « Dernière chance » (panier +
+  mission `catch`) → lancer un mini-jeu depuis le rail et en ressortir sur le
+  hub → trophées et classement visibles en bas d’écran.
+- **Edge cases agents must try:** rouvrir le coffre après un aller-retour
+  d’onglet (doit rester fermé), tuer l’app juste après l’ouverture du coffre
+  puis relancer (récompense persistée, pas de second tirage), attraper un
+  invendu à stock 0 (bouton inerte), lancer un jeu quand le catalogue est
+  filtré au point de vider les réservoirs (tuiles verrouillées, pas de
+  plantage), passer minuit avec l’app ouverte.
+- **Performance budget:** le hub s’affiche en < 500 ms après le tap sur
+  l’onglet, sur un Android milieu de gamme ; les rails défilent à 60 fps.
+
 ## Template for new CUJs
 
 ```

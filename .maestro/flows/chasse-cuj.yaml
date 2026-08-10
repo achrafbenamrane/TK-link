@@ -1,0 +1,58 @@
+# CUJ-002: la boucle de la chasse (docs/quality/critical-user-journeys.md)
+# Deterministic E2E gate — the agentic QA (Argent) covers the exploratory rest.
+#
+# `clearState` is not optional here: the daily chest opens ONCE per calendar
+# day. Without a clean state the second run of the day would find it already
+# opened and the flow would fail for the wrong reason.
+appId: com.progix.freedoo.dev
+---
+- launchApp:
+    clearState: true
+
+# L'accueil reste l'accueil — la progression n'y est plus.
+- assertVisible:
+    id: 'home-screen'
+
+# L'onglet du milieu, atteint depuis la barre du bas.
+- tapOn: 'La Chasse'
+- assertVisible:
+    id: 'hub-screen'
+
+# Le coffre du jour : disponible, ouvrable, une seule fois.
+- assertVisible:
+    id: 'hub-chest-open'
+- tapOn:
+    id: 'hub-chest-open'
+- assertVisible: 'Coffre.*'
+- tapOn: 'OK'
+- assertVisible: 'Prochain coffre demain'
+- assertNotVisible:
+    id: 'hub-chest-open'
+
+# Le déstockage : attraper un invendu le met au panier.
+- assertVisible:
+    id: 'liquidation-rail'
+- tapOn:
+    id: 'liquidation-catch-.*'
+
+# Les mini-jeux s'ouvrent dans l'onglet et se referment dessus.
+- scrollUntilVisible:
+    element:
+      id: 'games-rail-memory'
+    direction: DOWN
+- tapOn:
+    id: 'games-rail-memory'
+- assertVisible:
+    id: 'game-back'
+- tapOn:
+    id: 'game-back'
+- assertVisible:
+    id: 'hub-screen'
+
+# Les offres membres et la progression longue vivent sur le même écran.
+- scrollUntilVisible:
+    element:
+      id: 'hub-badges'
+    direction: DOWN
+- assertVisible:
+    id: 'hub-leaderboard'
