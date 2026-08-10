@@ -8,6 +8,7 @@
  */
 export { MerchantOffersScreen } from './ui/offers-screen';
 export { WholesaleScreen } from './ui/wholesale-screen';
+export { MerchantPurchasesScreen } from './ui/purchases-screen';
 export {
   useMerchantStore,
   selectOffers,

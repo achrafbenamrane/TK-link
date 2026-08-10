@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { selectRole, useOnboardingStore } from '@/features/onboarding';
 import { selectTotalUnread, useShopStore } from '@/features/shop';
 import { cn } from '@/shared/lib/cn';
 import { colors } from '@/shared/theme/colors';
@@ -49,6 +50,17 @@ function HubTabIcon({ focused }: { focused: boolean }) {
 export default function TabsLayout() {
   const unread = useShopStore(selectTotalUnread);
   const insets = useSafeAreaInsets();
+  const role = useOnboardingStore(selectRole);
+
+  /**
+   * La barre change avec le rôle — décision client du 2026-08-10.
+   *
+   * Un commerçant vient s'approvisionner : ses lots, ses achats, son compte.
+   * Lui proposer « La Chasse » (jeux, XP, coffre) et des favoris de
+   * consommateur serait lui donner l'app de quelqu'un d'autre. Ses ventes se
+   * pilotent sur l'espace pro web, pas ici.
+   */
+  const pro = role === 'commercant';
 
   return (
     <Tabs
@@ -73,13 +85,16 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Accueil',
-          tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} />,
+          title: pro ? 'Lots' : 'Accueil',
+          tabBarIcon: ({ color }) => (
+            <Feather name={pro ? 'package' : 'home'} size={22} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="favoris"
         options={{
+          href: pro ? null : undefined,
           title: 'Favoris',
           tabBarIcon: ({ color }) => <Feather name="heart" size={22} color={color} />,
         }}
@@ -87,6 +102,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="chasse"
         options={{
+          href: pro ? null : undefined,
           title: 'La Chasse',
           tabBarIcon: ({ focused }) => <HubTabIcon focused={focused} />,
         }}
@@ -94,8 +110,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="commandes"
         options={{
-          title: 'Commandes',
-          tabBarIcon: ({ color }) => <Feather name="clipboard" size={22} color={color} />,
+          title: pro ? 'Mes achats' : 'Commandes',
+          tabBarIcon: ({ color }) => (
+            <Feather name={pro ? 'shopping-bag' : 'clipboard'} size={22} color={color} />
+          ),
         }}
       />
       <Tabs.Screen

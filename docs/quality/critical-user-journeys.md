@@ -59,13 +59,16 @@ enforces).
 - **Performance budget :** publication < 500 ms entre le tap et l’offre visible
   sur l’accueil, sur un Android milieu de gamme.
 
-## CUJ-004 — Commander en gros (B2B)
+## CUJ-004 — Le parcours du commerçant (approvisionnement)
 
 - **Owner :** squad produit TK LINK
 - **Flow :** aucun — parcours couvert par les tests d’intégration
-  (`merchant/__tests__/wholesale.test.tsx`) en attendant un flow dédié.
-- **Journey :** compte commerçant → « Lots des grossistes » → un lot →
-  « Commander » → le stock baisse et la commande est enregistrée.
+  (`merchant/__tests__/wholesale.test.tsx`, `purchases-screen.test.tsx`) en
+  attendant un flow dédié.
+- **Journey :** s’inscrire comme commerçant → l’accueil montre les LOTS des
+  grossistes (et non les invendus des confrères) → commander un lot → le
+  retrouver dans « Mes achats » → le compte renvoie vers l’espace pro web pour
+  vendre. La barre du bas n’a que trois onglets : ni favoris, ni Chasse.
 - **Edge cases agents must try :** commander SANS SIRET (bloqué, §5, avec le
   chemin pour le renseigner), commander plus que le stock, ouvrir l’écran avec
   un compte consommateur (les lots ne doivent pas être accessibles).
