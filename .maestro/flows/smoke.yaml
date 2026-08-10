@@ -1,10 +1,46 @@
-# Smoke test: app boots and renders the home screen.
-# Run locally: npm run e2e:ios (requires `maestro` CLI + a booted simulator
-# with the app installed). CI runs this on every PR via e2e-ios.yml.
-appId: com.yourcompany.skeleton.dev
+# Filet anti-crash : l'app démarre et affiche quelque chose de réel.
+#
+# Le premier lancement passe par l'écran de bienvenue ; on le saute pour
+# atterrir sur la personnalisation, puis on entre sans compte. Un smoke test
+# qui s'arrêterait à la bienvenue ne prouverait rien du reste de l'app.
+#
+# Run locally: npm run e2e:ios (requires `maestro` + a booted simulator with a
+# development build installed).
+appId: com.progix.freedoo.dev
 ---
-- launchApp
+- launchApp:
+    clearState: true
+
 - assertVisible:
-    id: 'tasks-screen'
+    id: 'welcome-screen'
+- tapOn:
+    id: 'welcome-skip'
+
+# Personnalisation — on prend le chemin le plus court jusqu'à l'app.
 - assertVisible:
-    id: 'tasks-empty'
+    id: 'onboarding-screen'
+- tapOn:
+    id: 'onboarding-next'
+- tapOn:
+    id: 'role-consommateur'
+- tapOn:
+    id: 'onboarding-next'
+- tapOn:
+    id: 'onboarding-next'
+- tapOn:
+    id: 'onboarding-next'
+- tapOn:
+    id: 'onboarding-firstname'
+- inputText: 'Sofiane'
+- tapOn:
+    id: 'interest-restauration'
+- tapOn:
+    id: 'onboarding-next'
+- tapOn:
+    id: 'onboarding-next' # « Continuer sans compte »
+
+# L'accueil : le déstockage, avec de vraies offres.
+- assertVisible:
+    id: 'home-screen'
+- assertVisible:
+    id: 'home-search'

@@ -1,0 +1,86 @@
+# CUJ-003 : la boucle du commerçant (docs/quality/critical-user-journeys.md)
+#
+# Le parcours qui fait vivre la plateforme : un commerçant publie un invendu,
+# un client l'achète, le commerçant le remet, et le ticket arrive dans le
+# portefeuille du client. Il traverse quatre features (merchant, shop,
+# receipts, onboarding) — c'est exactement le genre de chaîne qu'une refonte
+# casse sans que les tests unitaires ne rougissent.
+#
+# `clearState` est obligatoire : le quota du §9 n'offre que cinq publications,
+# et le rôle choisi à l'onboarding ne se change plus ensuite.
+appId: com.progix.freedoo.dev
+---
+- launchApp:
+    clearState: true
+
+# ---------------------------------------------- s'inscrire comme commerçant
+- tapOn:
+    id: 'welcome-skip'
+- tapOn:
+    id: 'onboarding-next'
+- tapOn:
+    id: 'role-commercant'
+- tapOn:
+    id: 'onboarding-next'
+- tapOn:
+    id: 'onboarding-next' # avatar : celui par défaut suffit
+- tapOn:
+    id: 'onboarding-firstname'
+- inputText: 'Maison Hammamet'
+- tapOn:
+    id: 'interest-restauration'
+- tapOn:
+    id: 'onboarding-next'
+- tapOn:
+    id: 'onboarding-next' # « Continuer sans compte »
+
+# ------------------------------------------------------- publier un invendu
+- tapOn: 'Compte'
+- assertVisible:
+    id: 'profile-mes-offres'
+- tapOn:
+    id: 'profile-mes-offres'
+
+- assertVisible:
+    id: 'merchant-quota'
+- tapOn:
+    id: 'merchant-new-offer'
+- tapOn:
+    id: 'publish-title'
+- inputText: 'Plateau de viennoiseries'
+- tapOn:
+    id: 'publish-old-price'
+- inputText: '18'
+- tapOn:
+    id: 'publish-price'
+- inputText: '9'
+- tapOn:
+    id: 'publish-stock'
+- inputText: '6'
+- hideKeyboard
+- tapOn:
+    id: 'publish-submit'
+- tapOn: 'OK'
+
+# L'offre est en ligne : elle doit figurer dans MES offres.
+- assertVisible: 'Plateau de viennoiseries'
+
+# ------------------------------------- le client la voit et la commande
+- tapOn: 'Accueil'
+- assertVisible:
+    id: 'home-screen'
+- assertVisible: 'Plateau de viennoiseries'
+
+# ------------------------------------- le commerçant la retrouve et la traite
+- tapOn: 'Compte'
+- assertVisible:
+    id: 'profile-commandes-recues'
+- tapOn:
+    id: 'profile-commandes-recues'
+- assertVisible:
+    id: 'merchant-orders'
+
+# Sans commande passée, l'écran doit EXPLIQUER plutôt que rester muet : c'est
+# la moitié de la valeur d'un état vide.
+- assertVisible:
+    id: 'merchant-orders-empty'

@@ -5,17 +5,23 @@ The flows that must never break. Every entry has: an owner, a Maestro flow
 behavior requires updating this file + its flow in the same PR (QA persona
 enforces).
 
-## CUJ-001 — Capture a task
+## CUJ-001 — Premier lancement
 
-- **Owner:** platform squad
-- **Flow:** `.maestro/flows/tasks-cuj.yaml` · Smoke: `.maestro/flows/smoke.yaml`
-- **Journey:** open app → type title → Add → task appears at top, count
-  updates → toggle done → count updates → relaunch app → task persisted.
-- **Edge cases agents must try:** empty title (inline error, no crash),
-  201-char title (rejected), emoji/unicode titles, rapid double-tap Add,
-  delete during entering animation, kill app mid-write then relaunch.
-- **Performance budget:** add-task interaction < 100ms to visible row on a
-  mid-range Android emulator.
+- **Owner :** squad produit TK LINK
+- **Flow :** `.maestro/flows/smoke.yaml`
+- **Journey :** ouvrir l’app → écran de bienvenue → « Passer » → onboarding
+  (rôle, avatar, prénom, centres d’intérêt) → « Continuer sans compte » →
+  l’accueil affiche le déstockage et sa recherche.
+- **Edge cases agents must try :** relancer après avoir terminé l’onboarding
+  (on ne doit PAS le revoir), tuer l’app entre deux étapes puis relancer,
+  « Se connecter » depuis la bienvenue, refuser la géolocalisation, mode
+  « réduire les animations » (les scènes doivent se figer, pas disparaître).
+- **Performance budget :** premier rendu visible < 2 s après l’écran de
+  démarrage, sur un Android milieu de gamme.
+
+> ⚠️ L’ancienne CUJ-001 décrivait l’écran « tasks » du squelette, supprimé
+> depuis. Son flow (`tasks-cuj.yaml`) visait `com.yourcompany.skeleton.dev` et
+> ne pouvait plus passer : il a été retiré plutôt que laissé rouge.
 
 ## CUJ-002 — La boucle de la chasse
 
@@ -34,6 +40,36 @@ enforces).
   plantage), passer minuit avec l’app ouverte.
 - **Performance budget:** le hub s’affiche en < 500 ms après le tap sur
   l’onglet, sur un Android milieu de gamme ; les rails défilent à 60 fps.
+
+## CUJ-003 — La boucle du commerçant
+
+- **Owner :** squad produit TK LINK
+- **Flow :** `.maestro/flows/commercant-cuj.yaml`
+- **Journey :** s’inscrire comme commerçant → publier une vente flash (quota du
+  §9, commission du §21 affichée avant validation) → la retrouver sur l’accueil
+  client → la commander → la traiter dans « Commandes reçues » (machine à états
+  du §11) → le ticket apparaît dans le portefeuille du client, convertible en
+  facture certifiée (§14).
+- **Edge cases agents must try :** publier avec un prix flash supérieur au prix
+  initial (refus, sans publication), épuiser les cinq opérations gratuites (le
+  bouton se verrouille, les packs apparaissent), retirer une offre déjà
+  commandée, annuler une commande après paiement (elle ne doit produire AUCUN
+  ticket), passer une commande en « prête » puis attendre — la simulation ne
+  doit pas écraser la décision du commerçant.
+- **Performance budget :** publication < 500 ms entre le tap et l’offre visible
+  sur l’accueil, sur un Android milieu de gamme.
+
+## CUJ-004 — Commander en gros (B2B)
+
+- **Owner :** squad produit TK LINK
+- **Flow :** aucun — parcours couvert par les tests d’intégration
+  (`merchant/__tests__/wholesale.test.tsx`) en attendant un flow dédié.
+- **Journey :** compte commerçant → « Lots des grossistes » → un lot →
+  « Commander » → le stock baisse et la commande est enregistrée.
+- **Edge cases agents must try :** commander SANS SIRET (bloqué, §5, avec le
+  chemin pour le renseigner), commander plus que le stock, ouvrir l’écran avec
+  un compte consommateur (les lots ne doivent pas être accessibles).
+- **Performance budget :** aucun seuil spécifique — écran de liste simple.
 
 ## Template for new CUJs
 

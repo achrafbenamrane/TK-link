@@ -3,7 +3,7 @@
 - **Status:** shipped (reference PRD — the example feature implements it)
 - **Author / Date:** platform team, 2026-06-06
 - **Owner squad:** platform
-- **Links:** `src/features/tasks/`, flows `.maestro/flows/tasks-cuj.yaml`
+- **Links:** `src/features/tasks/` — la tranche de référence du squelette, gardée comme modèle de structure. Son flow Maestro a été retiré : il visait l'identifiant du squelette et ne pouvait plus passer sur TK LINK.
 
 ## Problem
 
@@ -37,7 +37,7 @@ Sync, reminders, multi-list. This is a teaching feature.
 
 ## Proof
 
-Jest suite green; Maestro `tasks-cuj.yaml` passes on simulator build.
+Jest suite green. Plus de flow Maestro dédié : les CUJ du produit sont celles de `docs/quality/critical-user-journeys.md`.
 
 ## Rollout
 

@@ -3,7 +3,7 @@
 - **Date :** 2026-08-09
 - **Auteur :** agent + PROGIX
 - **Intent :** `CDC_TKLINK.pdf` V0.1 — Farid × PROGIX
-- **Statut :** in-progress
+- **Statut :** in-progress — carte à jour au 2026-08-10
 
 ## Objectif & non-objectifs
 
@@ -16,41 +16,41 @@ les 9 questions ouvertes du CDC §23 — elles appellent une décision de Farid,
 du code. Là où le CDC propose lui-même une valeur (8 catégories, 0,99 €, 5 %,
 2 ans), on l’implémente comme valeur par défaut modifiable, sans attendre.
 
-## Carte de conformité — CDC vs code au 2026-08-09
+## Carte de conformité — CDC vs code au 2026-08-10
 
-| §   | Point du CDC                                                                  | État                                                   | Où                                          |
-| --- | ----------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------- |
-| 3   | 4 rôles : consommateur, commerçant, grossiste, livreur                        | ✓ — livreur exclu (app à part, §23 Q5)                 | `shared/lib/roles.ts`                       |
-| 3.2 | Le commerçant voit les offres des grossistes                                  | ✓ règle testée                                         | `shared/lib/roles.ts`                       |
-| 4   | Onboarding : choix du rôle                                                    | ✓ étape dédiée + parcours adapté                       | `onboarding/ui/onboarding-screen.tsx`       |
-| 4   | Onboarding : domaines d’intérêt                                               | ✓ les 8 catégories du CDC                              | `shared/lib/categories.ts`                  |
-| 5   | Inscription : prénom, nom, email, téléphone, mdp + confirmation, localisation | ✓ formulaire complet                                   | `auth/ui/sign-up-screen.tsx`                |
-| 5   | SIRET obligatoire pour commander chez un grossiste                            | ✓ Luhn + garde de commande                             | `shared/lib/roles.ts`                       |
-| 6   | Auth email + mot de passe                                                     | ✓                                                      | `auth/ui/sign-in-screen.tsx`                |
-| 6   | Auth empreinte digitale                                                       | ✓                                                      | `shop/ui/biometrics-screen.tsx`             |
-| 7   | Accueil : catégories, recherche, offres, compteur, quantité, prix             | ✓                                                      | `shop/ui/home-screen.tsx`                   |
-| 7   | Accueil : identité de l’utilisateur                                           | ✓ avatar + prénom, cliquable                           | `app/(tabs)/index.tsx`                      |
-| 7   | Offres des catégories d’intérêt en priorité                                   | ✓ intérêt d’abord, urgence ensuite                     | `shop/lib/urgency.ts`                       |
-| 8   | Offre : image, prix initial, prix promo, quantité, compteur, achat            | ✓                                                      | `shop/ui/components/flash-card.tsx`         |
-| 9   | Offres flash publiées par le commerçant                                       | ✗ absent (côté commerçant)                             | —                                           |
-| 9   | 5 opérations gratuites puis packs payants                                     | ✗ absent                                               | —                                           |
-| 10  | Panier                                                                        | ✓                                                      | `shop/ui/cart-screen.tsx`                   |
-| 11  | 10 statuts de commande                                                        | ✓ + machine à états                                    | `shop/lib/order-status.ts`                  |
-| 12  | Click & Collect                                                               | ✓ choix au panier, frais annulés                       | `shop/ui/cart-screen.tsx`                   |
-| 12  | Livraison                                                                     | ~ suivi présent, pas de livreur                        | `shop/ui/components/delivery-tracker.tsx`   |
-| 13  | Points par achat, paliers, avantages                                          | ✓                                                      | `loyalty/lib/tiers.ts`                      |
-| 13  | Partage de points entre utilisateurs                                          | ✓                                                      | `shop/ui/components/share-points-sheet.tsx` |
-| 14  | QR Code : Transaction → Ticket → Facture                                      | ~ écrans présents, chaîne non reliée                   | `receipts/`, `coupons/`                     |
-| 15  | Module de facturation                                                         | ~ facture générée, mentions légales à valider (§23 Q7) | `receipts/lib/receipts.ts`                  |
-| 16  | Conservation / suppression des factures                                       | ✗ absent (§23 Q8 ouverte)                              | —                                           |
-| 17  | Web Super Admin — Farid                                                       | ✗ absent                                               | `landing/`                                  |
-| 18  | Web commerçants et grossistes                                                 | ~ vitrine seule, aucune gestion                        | `landing/pro/`                              |
-| 19  | App mobile client                                                             | ✓                                                      | `src/`                                      |
-| 19  | App mobile commerçant                                                         | ✗ absent                                               | —                                           |
-| 19  | App mobile livreur                                                            | ✗ absent (§23 Q5 ouverte)                              | —                                           |
-| 20  | B2B : offres grossiste → commerçant                                           | ✗ absent                                               | —                                           |
-| 21  | Commission 5 %, packs, premium 12–24 h d’avance                               | ✗ absent                                               | —                                           |
-| 22  | Cas d’incident de livraison                                                   | ✗ absent (§23 Q5a ouverte)                             | —                                           |
+| §   | Point du CDC                                                                  | État                                                                        | Où                                          |
+| --- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------- |
+| 3   | 4 rôles : consommateur, commerçant, grossiste, livreur                        | ✓ — livreur exclu (app à part, §23 Q5)                                      | `shared/lib/roles.ts`                       |
+| 3.2 | Le commerçant voit les offres des grossistes                                  | ✓ règle testée                                                              | `shared/lib/roles.ts`                       |
+| 4   | Onboarding : choix du rôle                                                    | ✓ étape dédiée + parcours adapté                                            | `onboarding/ui/onboarding-screen.tsx`       |
+| 4   | Onboarding : domaines d’intérêt                                               | ✓ les 8 catégories du CDC                                                   | `shared/lib/categories.ts`                  |
+| 5   | Inscription : prénom, nom, email, téléphone, mdp + confirmation, localisation | ✓ formulaire complet                                                        | `auth/ui/sign-up-screen.tsx`                |
+| 5   | SIRET obligatoire pour commander chez un grossiste                            | ✓ Luhn + garde de commande                                                  | `shared/lib/roles.ts`                       |
+| 6   | Auth email + mot de passe                                                     | ✓                                                                           | `auth/ui/sign-in-screen.tsx`                |
+| 6   | Auth empreinte digitale                                                       | ✓                                                                           | `shop/ui/biometrics-screen.tsx`             |
+| 7   | Accueil : catégories, recherche, offres, compteur, quantité, prix             | ✓                                                                           | `shop/ui/home-screen.tsx`                   |
+| 7   | Accueil : identité de l’utilisateur                                           | ✓ avatar + prénom, cliquable                                                | `app/(tabs)/index.tsx`                      |
+| 7   | Offres des catégories d’intérêt en priorité                                   | ✓ intérêt d’abord, urgence ensuite                                          | `shop/lib/urgency.ts`                       |
+| 8   | Offre : image, prix initial, prix promo, quantité, compteur, achat            | ✓                                                                           | `shop/ui/components/flash-card.tsx`         |
+| 9   | Offres flash publiées par le commerçant                                       | ✓ app + web pro                                                             | `merchant/ui/offers-screen.tsx`             |
+| 9   | 5 opérations gratuites puis packs payants                                     | ~ quota et packs tenus ; paiement réel absent                               | `merchant/lib/billing.ts`                   |
+| 10  | Panier                                                                        | ✓                                                                           | `shop/ui/cart-screen.tsx`                   |
+| 11  | 10 statuts de commande                                                        | ✓ + machine à états                                                         | `shop/lib/order-status.ts`                  |
+| 12  | Click & Collect                                                               | ✓ choix au panier, frais annulés                                            | `shop/ui/cart-screen.tsx`                   |
+| 12  | Livraison                                                                     | ~ suivi présent, pas de livreur                                             | `shop/ui/components/delivery-tracker.tsx`   |
+| 13  | Points par achat, paliers, avantages                                          | ✓                                                                           | `loyalty/lib/tiers.ts`                      |
+| 13  | Partage de points entre utilisateurs                                          | ✓                                                                           | `shop/ui/components/share-points-sheet.tsx` |
+| 14  | QR Code : Transaction → Ticket → Facture                                      | ✓ chaîne reliée (commande honorée → ticket → facture)                       | `shop/lib/transactions.ts`, `app/_layout`   |
+| 15  | Module de facturation                                                         | ~ facture générée, mentions légales à valider (§23 Q7)                      | `receipts/lib/receipts.ts`                  |
+| 16  | Conservation / suppression des factures                                       | ✗ absent (§23 Q8 ouverte)                                                   | —                                           |
+| 17  | Web Super Admin — Farid                                                       | ✓ inscrits, statistiques, revenus (données simulées)                        | `landing/app/admin/`                        |
+| 18  | Web commerçants et grossistes                                                 | ~ tableau de bord, documents, création d'offre ; stock et commandes absents | `landing/app/pro/`                          |
+| 19  | App mobile client                                                             | ✓                                                                           | `src/`                                      |
+| 19  | App mobile commerçant                                                         | ~ espace commerçant DANS l'app client ; pas d'app dédiée                    | `merchant/`, `app/mes-offres.tsx`           |
+| 19  | App mobile livreur                                                            | ✗ absent (§23 Q5 ouverte)                                                   | —                                           |
+| 20  | B2B : offres grossiste → commerçant                                           | ✓ marché, garde SIRET (§5), commandes en gros                               | `merchant/ui/wholesale-screen.tsx`          |
+| 21  | Commission 5 %, packs, premium 12–24 h d’avance                               | ~ commission calculée et affichée ; facturation et premium absents          | `merchant/lib/billing.ts`                   |
+| 22  | Cas d’incident de livraison                                                   | ✗ absent (§23 Q5a ouverte)                                                  | —                                           |
 
 **Lecture :** le parcours consommateur est largement conforme. Ce qui manque est
 d’une autre nature — c’est la **structure multi-rôles** dont dépendent §3, §4,
@@ -97,14 +97,25 @@ livreur. En attendant l'arbitrage, une commande confiée au livreur reste
 
 ### Phase 4 — B2B et offres flash commerçant (CDC §9, §20, §21)
 
-- [ ] Offres grossiste visibles des seuls commerçants
-- [ ] Quota 5 opérations gratuites, puis packs
-- [ ] Commission 5 % au niveau du modèle
+- [x] Publication d'une vente flash par le commerçant, app et web pro
+- [x] Offres grossiste visibles des seuls commerçants, garde SIRET du §5 branchée
+- [x] Quota 5 opérations gratuites, puis packs
+- [x] Commission 5 % au niveau du modèle, affichée AVANT d'être subie
+- [ ] Facturation réelle des packs (attend RevenueCat + un compte)
+- [ ] Avance premium de 12–24 h — §21
+      **Preuve :** 41 tests sur `merchant` ; `npm run verify` vert.
+
+### Phase 4 bis — la chaîne du ticket (CDC §11, §14)
+
+- [x] Le commerçant voit et traite les commandes reçues, via la machine à états du §11
+- [x] Commande honorée → ticket → facture certifiée
+      **Preuve :** 21 tests (`transactions`, `order-chain`, `merchant-orders-screen`).
 
 ### Phase 5 — Web (CDC §17, §18)
 
-- [ ] Portail commerçant/grossiste : offres, commandes, stock, CA
-- [ ] Super Admin Farid : statistiques, gestion des inscrits
+- [x] Super Admin Farid : inscrits, statistiques, revenus — `landing/app/admin/`
+- [x] Portail pro : tableau de bord, documents, création d'offre, quota et packs
+- [ ] Portail pro : commandes reçues et stock (miroir de ce qui existe dans l'app)
 
 ## Risques & landmines
 
