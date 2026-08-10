@@ -6,6 +6,7 @@ import { pickGameReward, selectWallet, useCouponsStore } from '@/features/coupon
 import { GamePlayer, GamesRail, type GameKey } from '@/features/games';
 import { HubScreen, useGameStore, type ChestReward } from '@/features/gamification';
 import { OffersRail, selectBalance, useLoyaltyStore } from '@/features/loyalty';
+import { AvatarView, selectAvatar, useOnboardingStore } from '@/features/onboarding';
 import { criticalDealCount, dealImagePool, dealQuizPool, LiquidationRail } from '@/features/shop';
 
 /**
@@ -42,6 +43,7 @@ export default function ChasseRoute() {
   const points = useLoyaltyStore(selectBalance);
 
   const record = useGameStore((s) => s.record);
+  const avatar = useOnboardingStore(selectAvatar);
 
   const imagePool = useMemo(() => dealImagePool(), []);
   const quizPool = useMemo(() => dealQuizPool(), []);
@@ -108,6 +110,7 @@ export default function ChasseRoute() {
       onSeeAllDeals={() => router.push('/')}
       onSeeAllOffers={() => router.push('/offres')}
       onSeeAllGames={() => router.push('/jeux')}
+      renderAvatar={() => <AvatarView avatar={avatar} size={48} />}
       renderLiquidation={() => <LiquidationRail onCatch={onCatch} />}
       renderOffers={() => <OffersRail />}
       renderGames={() => (

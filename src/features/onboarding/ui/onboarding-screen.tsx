@@ -8,15 +8,8 @@ import { ROLES, ROLE_ICON, ROLE_LABEL, ROLE_TAGLINE, type Role } from '@/shared/
 import { AppText } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
-import {
-  ACCESSORY_LABELS,
-  AVATAR_LIMITS,
-  canFinish,
-  cycle,
-  FACE_LABELS,
-  INTERESTS,
-  randomAvatar,
-} from '../lib/avatar';
+import { canFinish, INTERESTS, randomAvatar } from '../lib/avatar';
+import { AVATARS } from '../model/avatars';
 import {
   selectAvatar,
   selectFirstName,
@@ -159,12 +152,10 @@ export function OnboardingScreen({ onDone }: Props) {
           <View className="gap-5">
             <Header
               title="Votre avatar"
-              subtitle="Il vous suivra sur votre carte et dans les jeux."
+              subtitle="Il vous suivra sur votre carte, dans La Chasse et dans les jeux."
             />
             <View className="items-center gap-4">
-              <View className="rounded-pill bg-surface-muted p-4">
-                <AvatarView avatar={avatar} size={128} />
-              </View>
+              <AvatarView avatar={avatar} size={128} />
               <Pressable
                 testID="avatar-random"
                 accessibilityRole="button"
@@ -179,46 +170,38 @@ export function OnboardingScreen({ onDone }: Props) {
               </Pressable>
             </View>
 
-            <View className="gap-3">
-              <Picker
-                testID="avatar-hue"
-                label="Couleur"
-                value={`${avatar.hue + 1} / ${AVATAR_LIMITS.hue}`}
-                onPrev={() =>
-                  setAvatar({ ...avatar, hue: cycle(avatar.hue, -1, AVATAR_LIMITS.hue) })
-                }
-                onNext={() =>
-                  setAvatar({ ...avatar, hue: cycle(avatar.hue, 1, AVATAR_LIMITS.hue) })
-                }
-              />
-              <Picker
-                testID="avatar-face"
-                label="Expression"
-                value={FACE_LABELS[avatar.face] ?? ''}
-                onPrev={() =>
-                  setAvatar({ ...avatar, face: cycle(avatar.face, -1, AVATAR_LIMITS.face) })
-                }
-                onNext={() =>
-                  setAvatar({ ...avatar, face: cycle(avatar.face, 1, AVATAR_LIMITS.face) })
-                }
-              />
-              <Picker
-                testID="avatar-accessory"
-                label="Accessoire"
-                value={ACCESSORY_LABELS[avatar.accessory] ?? ''}
-                onPrev={() =>
-                  setAvatar({
-                    ...avatar,
-                    accessory: cycle(avatar.accessory, -1, AVATAR_LIMITS.accessory),
-                  })
-                }
-                onNext={() =>
-                  setAvatar({
-                    ...avatar,
-                    accessory: cycle(avatar.accessory, 1, AVATAR_LIMITS.accessory),
-                  })
-                }
-              />
+            {/* La galerie entière, visible d'un coup : dix illustrations se
+                parcourent à l'œil bien plus vite qu'avec des flèches. */}
+            <View className="flex-row flex-wrap justify-between gap-y-3">
+              {AVATARS.map((a, i) => {
+                const selected = avatar.preset === i;
+                return (
+                  <Pressable
+                    key={a.id}
+                    testID={`avatar-${a.id}`}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={a.label}
+                    onPress={() => setAvatar({ preset: i })}
+                    className={cn(
+                      'w-[22%] items-center gap-1 rounded-card border p-1.5',
+                      selected ? 'border-brand-500 bg-brand-50' : 'border-transparent',
+                    )}
+                  >
+                    <AvatarView avatar={{ preset: i }} size={56} />
+                    <AppText
+                      className={cn(
+                        'text-center',
+                        selected ? 'font-sans-semibold text-brand-700' : 'text-ink-faint',
+                      )}
+                      style={{ fontSize: 9.5, lineHeight: 12 }}
+                      numberOfLines={2}
+                    >
+                      {a.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
         ) : null}
@@ -431,53 +414,6 @@ function Stat({ value, label }: { value: string; label: string }) {
       <AppText variant="caption" className="text-ink-inverse/70">
         {label}
       </AppText>
-    </View>
-  );
-}
-
-function Picker({
-  testID,
-  label,
-  value,
-  onPrev,
-  onNext,
-}: {
-  testID: string;
-  label: string;
-  value: string;
-  onPrev: () => void;
-  onNext: () => void;
-}) {
-  return (
-    <View className="flex-row items-center justify-between rounded-control bg-surface-muted px-2 py-2">
-      <Pressable
-        testID={`${testID}-prev`}
-        accessibilityRole="button"
-        accessibilityLabel={`${label} précédent`}
-        hitSlop={8}
-        onPress={onPrev}
-        className="h-9 w-9 items-center justify-center rounded-pill bg-surface"
-      >
-        <Feather name="chevron-left" size={18} color={colors.ink} />
-      </Pressable>
-      <View className="items-center">
-        <AppText variant="caption" className="text-ink-faint" style={{ fontSize: 11 }}>
-          {label}
-        </AppText>
-        <AppText className="font-sans-semibold text-ink" style={{ fontSize: 14 }}>
-          {value}
-        </AppText>
-      </View>
-      <Pressable
-        testID={`${testID}-next`}
-        accessibilityRole="button"
-        accessibilityLabel={`${label} suivant`}
-        hitSlop={8}
-        onPress={onNext}
-        className="h-9 w-9 items-center justify-center rounded-pill bg-surface"
-      >
-        <Feather name="chevron-right" size={18} color={colors.ink} />
-      </Pressable>
     </View>
   );
 }

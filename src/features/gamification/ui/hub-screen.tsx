@@ -47,6 +47,11 @@ type Props = {
   onSeeAllDeals?: () => void;
   onSeeAllOffers?: () => void;
   onSeeAllGames?: () => void;
+  /**
+   * L'avatar choisi à l'onboarding, rendu par la ROUTE — il appartient à une
+   * autre feature. Absent, la pastille de niveau prend sa place.
+   */
+  renderAvatar?: () => ReactNode;
   /** Le déstockage — rendu par la route, la boutique n'est pas importée ici. */
   renderLiquidation?: () => ReactNode;
   /** Les offres réservées aux porteurs de carte. */
@@ -160,6 +165,7 @@ export function HubScreen({
   onSeeAllDeals,
   onSeeAllOffers,
   onSeeAllGames,
+  renderAvatar,
   renderLiquidation,
   renderOffers,
   renderGames,
@@ -207,10 +213,29 @@ export function HubScreen({
         {/* Hero : rang, XP, série, butin */}
         <View className="mx-5 overflow-hidden rounded-card bg-surface-inverse">
           <View className="flex-row items-center gap-3 px-4 pt-4">
-            <View className="h-12 w-12 items-center justify-center rounded-pill bg-lime">
-              <AppText className="font-display text-forest" style={{ fontSize: 17 }}>
-                {rank.level}
-              </AppText>
+            {/* L'avatar appartient à l'onboarding : la route le rend, sinon la
+                progression importerait une autre feature. Sans lui, la pastille
+                de niveau tient seule la tête de carte. */}
+            <View className="h-12 w-12">
+              {renderAvatar ? (
+                renderAvatar()
+              ) : (
+                <View className="h-12 w-12 items-center justify-center rounded-pill bg-lime">
+                  <AppText className="font-display text-forest" style={{ fontSize: 17 }}>
+                    {rank.level}
+                  </AppText>
+                </View>
+              )}
+              {renderAvatar ? (
+                <View className="absolute -bottom-1 -right-1 h-6 w-6 items-center justify-center rounded-pill border-2 border-surface-inverse bg-lime">
+                  <AppText
+                    className="font-display text-forest"
+                    style={{ fontSize: 10, lineHeight: 13 }}
+                  >
+                    {rank.level}
+                  </AppText>
+                </View>
+              ) : null}
             </View>
             <View className="flex-1">
               <AppText className="font-display text-ink-inverse" style={{ fontSize: 16 }}>

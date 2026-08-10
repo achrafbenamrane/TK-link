@@ -12,16 +12,21 @@ import { ROLES } from '@/shared/lib/roles';
  */
 
 /**
- * Avatar composable. Pas d'image à télécharger : tout est dessiné en SVG, donc
- * net à toute taille et sans poids dans le bundle.
+ * Avatar : un choix dans la galerie d'illustrations (`model/avatars.ts`).
+ *
+ * L'ancien avatar était composé (teinte + visage + accessoire) et dessiné en
+ * SVG. Les illustrations livrées par le client racontent bien mieux à qui
+ * l'app parle — mais elles ne se composent pas : un avatar tient désormais en
+ * UN entier.
+ *
+ * Rétrocompatible sans effort : Zod ignore les clés inconnues, donc un avatar
+ * stocké au format `{hue, face, accessory}` se relit en `{preset: 0}` au lieu
+ * de faire échouer la réhydratation et de renvoyer l'utilisateur à
+ * l'onboarding. Il repart sur la première illustration, et peut en changer.
  */
 export const AvatarSchema = z.object({
-  /** Teinte du fond de la pastille. */
-  hue: z.number().int().min(0).max(5).default(0),
-  /** Forme du visage. */
-  face: z.number().int().min(0).max(3).default(0),
-  /** Accessoire (aucun, lunettes, casquette…). */
-  accessory: z.number().int().min(0).max(3).default(0),
+  /** Index dans la galerie. Borné à l'affichage, jamais ici. */
+  preset: z.number().int().nonnegative().default(0),
 });
 export type Avatar = z.infer<typeof AvatarSchema>;
 
@@ -36,7 +41,7 @@ export type Interest = Category;
 export const OnboardingSchema = z.object({
   completed: z.boolean().default(false),
   firstName: z.string().max(24).default(''),
-  avatar: AvatarSchema.default({ hue: 0, face: 0, accessory: 0 }),
+  avatar: AvatarSchema.default({ preset: 0 }),
   /**
    * Rôle choisi à l'onboarding — CDC §4. Distinct de `holderType`, qui ne sert
    * qu'à l'audience des cadeaux fidélité : un consommateur peut être un

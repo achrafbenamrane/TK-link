@@ -1,50 +1,23 @@
 import { CATEGORIES, CATEGORY_INFO } from '@/shared/lib/categories';
 
+import { AVATARS } from '../model/avatars';
 import type { Avatar, Interest } from '../model/schema';
 
 /**
- * Options de l'avatar — pures, sans dépendance au rendu.
- *
- * Tout est dessiné : rien à télécharger, rien à empaqueter, et un avatar tient
- * en trois entiers dans le stockage.
+ * Règles de l'avatar — pures, sans dépendance au rendu. Les illustrations
+ * elles-mêmes vivent dans `model/avatars.ts`.
  */
 
-/** Fonds, dans l'esprit de la marque (verts, plus quelques teintes chaudes). */
-export const AVATAR_HUES = [
-  { bg: '#0F8A4C', fg: '#E6FBAE' },
-  { bg: '#123A22', fg: '#C3F53C' },
-  { bg: '#C3F53C', fg: '#123A22' },
-  { bg: '#F2A93B', fg: '#3A2408' },
-  { bg: '#3B7DD8', fg: '#E8F1FF' },
-  { bg: '#D8563B', fg: '#FFE9E3' },
-] as const;
+/** Combien d'illustrations la galerie propose. */
+export const AVATAR_COUNT = AVATARS.length;
 
-export const FACE_LABELS = ['Sourire', 'Clin d’œil', 'Surpris', 'Serein'] as const;
-export const ACCESSORY_LABELS = ['Aucun', 'Lunettes', 'Casquette', 'Feuille'] as const;
-
-export const AVATAR_LIMITS = {
-  hue: AVATAR_HUES.length,
-  face: FACE_LABELS.length,
-  accessory: ACCESSORY_LABELS.length,
-} as const;
-
-/** Fait tourner une option en boucle (les flèches ne bloquent jamais). */
-export function cycle(value: number, delta: number, count: number): number {
-  return (((value + delta) % count) + count) % count;
-}
-
-/** Avatar tiré au hasard — le bouton « surprenez-moi ». */
+/**
+ * Avatar tiré au hasard — le bouton « surprenez-moi ». Le hasard est
+ * injectable pour que les tests décrivent un résultat au lieu d'en accepter
+ * dix.
+ */
 export function randomAvatar(rand: () => number = Math.random): Avatar {
-  return {
-    hue: Math.floor(rand() * AVATAR_LIMITS.hue),
-    face: Math.floor(rand() * AVATAR_LIMITS.face),
-    accessory: Math.floor(rand() * AVATAR_LIMITS.accessory),
-  };
-}
-
-/** Couleurs effectives d'un avatar, bornées si la valeur déborde. */
-export function avatarColors(avatar: Avatar): { bg: string; fg: string } {
-  return AVATAR_HUES[avatar.hue % AVATAR_HUES.length]!;
+  return { preset: Math.min(AVATAR_COUNT - 1, Math.floor(rand() * AVATAR_COUNT)) };
 }
 
 /**

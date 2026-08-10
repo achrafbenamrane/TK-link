@@ -1,13 +1,7 @@
 import { fireEvent, render, screen } from '@/shared/testing/render';
 
-import {
-  AVATAR_LIMITS,
-  avatarColors,
-  canFinish,
-  cycle,
-  randomAvatar,
-  toggleInterest,
-} from '../lib/avatar';
+import { AVATAR_COUNT, canFinish, randomAvatar, toggleInterest } from '../lib/avatar';
+import { AVATARS, avatarAt } from '../model/avatars';
 import { OnboardingSchema } from '../model/schema';
 import { useOnboardingStore } from '../model/store';
 import { OnboardingScreen } from '../ui/onboarding-screen';
@@ -16,34 +10,40 @@ beforeEach(() => {
   useOnboardingStore.getState().reset();
 });
 
-describe('cycle', () => {
-  it('boucle dans les deux sens', () => {
-    expect(cycle(0, 1, 4)).toBe(1);
-    expect(cycle(3, 1, 4)).toBe(0); // dépasse → revient au début
-    expect(cycle(0, -1, 4)).toBe(3); // recule depuis le début → fin
+describe('galerie d’avatars', () => {
+  it('a un identifiant, un libellé et une image par avatar', () => {
+    expect(AVATARS.length).toBeGreaterThan(0);
+    for (const a of AVATARS) {
+      expect(a.id).toMatch(/^[a-z-]+$/);
+      expect(a.label.length).toBeGreaterThan(0);
+      expect(a.source).toBeDefined();
+    }
+  });
+
+  it('n’a pas deux fois le même identifiant', () => {
+    expect(new Set(AVATARS.map((a) => a.id)).size).toBe(AVATARS.length);
+  });
+
+  it('borne un index hors galerie au lieu de rendre un trou', () => {
+    expect(avatarAt(0)).toBe(AVATARS[0]);
+    expect(AVATARS).toContain(avatarAt(999));
   });
 });
 
 describe('randomAvatar', () => {
-  it('reste dans les bornes des options', () => {
+  it('reste dans la galerie', () => {
     for (let i = 0; i < 50; i++) {
       const a = randomAvatar();
-      expect(a.hue).toBeGreaterThanOrEqual(0);
-      expect(a.hue).toBeLessThan(AVATAR_LIMITS.hue);
-      expect(a.face).toBeLessThan(AVATAR_LIMITS.face);
-      expect(a.accessory).toBeLessThan(AVATAR_LIMITS.accessory);
+      expect(a.preset).toBeGreaterThanOrEqual(0);
+      expect(a.preset).toBeLessThan(AVATAR_COUNT);
     }
   });
 
   it('est déterministe avec un générateur fourni', () => {
-    expect(randomAvatar(() => 0)).toEqual({ hue: 0, face: 0, accessory: 0 });
-  });
-});
-
-describe('avatarColors', () => {
-  it('donne toujours une paire de couleurs, même hors bornes', () => {
-    expect(avatarColors({ hue: 0, face: 0, accessory: 0 }).bg).toMatch(/^#/);
-    expect(avatarColors({ hue: 99, face: 0, accessory: 0 }).bg).toMatch(/^#/);
+    expect(randomAvatar(() => 0)).toEqual({ preset: 0 });
+    // Un générateur qui rend 1 (borne haute exclue en théorie) ne doit pas
+    // sortir de la galerie.
+    expect(randomAvatar(() => 1)).toEqual({ preset: AVATAR_COUNT - 1 });
   });
 });
 
@@ -79,16 +79,29 @@ describe('OnboardingSchema', () => {
   it('survit à un profil enregistré AVANT le CDC', () => {
     // Le vrai risque de la bascule vers les 8 catégories : un `z.enum` strict
     // ferait échouer safeParse sur `alimentation`, et le store repartirait de
-    // zéro — l'utilisateur refait tout l'onboarding et perd son avatar.
+    // zéro — l'utilisateur refait tout l'onboarding.
     const s = OnboardingSchema.parse({
       completed: true,
       firstName: 'Sofiane',
-      avatar: { hue: 2, face: 1, accessory: 3 },
       interests: ['alimentation', 'carburant', 'mode'],
     });
     expect(s.interests).toEqual(['mode']); // les disparus sont écartés
     expect(s.firstName).toBe('Sofiane'); // le profil, lui, est intact
-    expect(s.avatar.hue).toBe(2);
+    expect(s.completed).toBe(true);
+  });
+
+  it('relit un avatar DESSINÉ (hue/face/accessory) sans casser le profil', () => {
+    // L'ancien avatar composable n'a pas d'équivalent dans la galerie : il
+    // retombe sur la première illustration. Ce qui compte, c'est que la
+    // réhydratation n'échoue PAS — sinon tout le profil serait perdu avec lui.
+    const s = OnboardingSchema.parse({
+      completed: true,
+      firstName: 'Sofiane',
+      avatar: { hue: 2, face: 1, accessory: 3 },
+      interests: ['mode'],
+    });
+    expect(s.avatar).toEqual({ preset: 0 });
+    expect(s.firstName).toBe('Sofiane');
     expect(s.completed).toBe(true);
   });
 });
@@ -129,10 +142,10 @@ describe('<OnboardingScreen />', () => {
     fireEvent.press(screen.getByTestId('role-consommateur'));
     fireEvent.press(screen.getByTestId('onboarding-next'));
 
-    // 3 — avatar
+    // 3 — avatar : la galerie entière est là, et un tap choisit.
     expect(screen.getByTestId('avatar-random')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('avatar-hue-next'));
-    expect(useOnboardingStore.getState().avatar.hue).toBe(1);
+    fireEvent.press(screen.getByTestId(`avatar-${AVATARS[2]!.id}`));
+    expect(useOnboardingStore.getState().avatar).toEqual({ preset: 2 });
     fireEvent.press(screen.getByTestId('onboarding-next'));
 
     // 4 — profil

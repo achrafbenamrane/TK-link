@@ -16,15 +16,5 @@ export {
   selectSiret,
 } from './model/store';
 export type { Avatar, Interest, OnboardingState } from './model/schema';
-export {
-  AVATAR_HUES,
-  AVATAR_LIMITS,
-  FACE_LABELS,
-  ACCESSORY_LABELS,
-  INTERESTS,
-  avatarColors,
-  canFinish,
-  cycle,
-  randomAvatar,
-  toggleInterest,
-} from './lib/avatar';
+export { AVATARS, avatarAt, type AvatarPreset } from './model/avatars';
+export { AVATAR_COUNT, INTERESTS, canFinish, randomAvatar, toggleInterest } from './lib/avatar';

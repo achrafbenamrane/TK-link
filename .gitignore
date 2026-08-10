@@ -55,3 +55,8 @@ reports/
 # Les visuels réellement utilisés sont traités et versionnés dans landing/img/.
 # Ce dossier reste local : c'est un dépôt de travail, pas un asset du produit.
 assets/screenshots mobile app/
+
+# Avatar sources: the 1024² renders (14 MB) the 256² bundled sprites come from.
+# Kept locally so they can be re-exported at another size; never committed and
+# never bundled — only the sprites in assets/avatars/ are required by the code.
+assets/avatars/source/
