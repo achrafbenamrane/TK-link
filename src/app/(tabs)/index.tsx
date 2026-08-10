@@ -3,30 +3,41 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { useGameStore } from '@/features/gamification';
-import { liveOffers, secondsLeft, selectOffers, useMerchantStore } from '@/features/merchant';
+import {
+  liveOffers,
+  secondsLeft,
+  selectOffers,
+  useMerchantStore,
+  WholesaleScreen,
+} from '@/features/merchant';
 import {
   AvatarView,
   selectAvatar,
   selectFirstName,
   selectInterests,
+  selectRole,
+  selectSiret,
   useOnboardingStore,
 } from '@/features/onboarding';
 import { HomeScreen, LOCAL_MERCHANT_ID, type Deal } from '@/features/shop';
 import { CATEGORY_INFO } from '@/shared/lib/categories';
+import { WHOLESALE_BLOCK_MESSAGE, wholesaleOrderBlock } from '@/shared/lib/roles';
 import { AppText } from '@/shared/ui';
 
 /**
- * ACCUEIL — les ventes flash, triées par ce qui va disparaître en premier.
+ * ACCUEIL — ce que l'utilisateur voit dépend de CE QU'IL EST (CDC §3.1, §3.2).
  *
- * La progression (rang, missions, série) n'est PLUS ici : elle vit dans
- * l'onglet « La Chasse ». L'accueil retrouve son seul métier — montrer ce qui
- * se déstocke maintenant. La visite du jour, elle, continue d'être comptée :
- * c'est bien l'ouverture de l'app qu'elle mesure, pas l'affichage du bandeau.
+ * « Le client final voit les offres du commerçant, le commerçant celles du
+ * grossiste. » La règle existait dans `shared/lib/roles` et n'était appliquée
+ * nulle part : un commerçant voyait le même accueil qu'un consommateur, donc
+ * les invendus de ses propres confrères plutôt que ses lots d'approvisionnement.
  *
- * C'est aussi ici que la boucle du CDC §9 se referme : ce qu'un commerçant
- * publie depuis « Mes ventes flash » atterrit dans la liste des clients. La
- * conversion se fait dans la ROUTE — `shop` ignore l'espace commerçant, et
- * `merchant` ignore la forme d'une fiche produit.
+ * C'est la ROUTE qui tranche, parce qu'elle seule connaît à la fois le profil
+ * (`onboarding`) et les deux écrans possibles (`shop`, `merchant`).
+ *
+ * La progression (rang, missions, série) n'est PAS ici : elle vit dans l'onglet
+ * « La Chasse ». La visite du jour, elle, continue d'être comptée — c'est bien
+ * l'ouverture de l'app qu'elle mesure.
  */
 
 /** Teinte de vignette par catégorie, faute de photo pour une offre fraîche. */
@@ -47,6 +58,8 @@ export default function AccueilRoute() {
   const avatar = useOnboardingStore(selectAvatar);
   const firstName = useOnboardingStore(selectFirstName);
   const interests = useOnboardingStore(selectInterests);
+  const role = useOnboardingStore(selectRole);
+  const siret = useOnboardingStore(selectSiret);
   // Tranche brute puis conversion en mémo : un sélecteur qui renverrait la
   // liste filtrée créerait un tableau neuf à chaque rendu (boucle Zustand 5).
   const published = useMerchantStore(selectOffers);
@@ -102,6 +115,18 @@ export default function AccueilRoute() {
     ),
     [avatar, firstName, router],
   );
+
+  // Un commerçant vient s'approvisionner : son accueil, ce sont les lots des
+  // grossistes — CDC §3.2. Il vend depuis l'espace pro sur le web.
+  if (role === 'commercant') {
+    const block = wholesaleOrderBlock(role, siret);
+    return (
+      <WholesaleScreen
+        blockedReason={block ? WHOLESALE_BLOCK_MESSAGE[block] : null}
+        onFixProfile={block === 'siret' ? () => router.push('/sign-up') : undefined}
+      />
+    );
+  }
 
   return (
     <HomeScreen

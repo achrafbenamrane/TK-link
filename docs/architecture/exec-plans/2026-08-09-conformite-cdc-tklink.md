@@ -65,6 +65,27 @@ pas de rôle, aucune de ces sections ne peut exister.
 - `src/features/shop/lib/preferences.ts` — filtrage déjà en place ([[filterDeals]]).
 - `src/features/loyalty/` — points, paliers, partage : conformes au §13.
 
+## Décision client du 2026-08-10 (relayée par le PM)
+
+Trois points, arbitrés par Farid après démonstration, qui **modifient le CDC
+tel qu'il était lu jusque-là** :
+
+1. **Le grossiste n'est pas utilisateur de l'application.** Il gère ses lots et
+   ses commandes depuis le web uniquement. Le rôle reste dans le modèle (le
+   back-end et la règle §3.2 en ont besoin), mais disparaît du choix à
+   l'onboarding — `APP_ROLES` vs `ROLES` dans `shared/lib/roles.ts`.
+2. **Le professionnel pilote ses ventes sur le web, pas sur le téléphone.**
+   L'app sert au commerçant à s'APPROVISIONNER : son accueil, ce sont les lots
+   des grossistes (§3.2, enfin appliqué). Le compte renvoie vers l'espace pro.
+   Les écrans mobiles de publication et de commandes restent dans le code,
+   joignables par URL, mais ne sont plus proposés — réversible d'une ligne si
+   l'arbitrage change.
+3. **Les centres d'intérêt ÉCARTENT, ils ne se contentent pas de trier.**
+   « Si tu es intéressé par le matériel informatique, on ne va pas t'afficher
+   les promotions des boucheries. » Le hors-intérêt passe sous une frontière
+   nommée plutôt que d'être mélangé — ou supprimé, ce qui viderait l'écran d'un
+   utilisateur n'ayant déclaré qu'un centre d'intérêt.
+
 ## Phases
 
 ### Phase 1 — Le socle multi-rôles (CDC §3, §4, §5, §20)

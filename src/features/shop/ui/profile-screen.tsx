@@ -55,22 +55,14 @@ function Row({
 
 type ProfileScreenProps = {
   /**
-   * Le compte peut-il publier des offres ? Fourni par la ROUTE : le rôle vit
-   * dans `onboarding`, que la boutique n'importe pas. Un consommateur ne voit
-   * simplement pas l'entrée.
+   * Ce compte est-il professionnel ? Fourni par la ROUTE : le rôle vit dans
+   * `onboarding`, que la boutique n'importe pas. Un consommateur ne voit
+   * simplement pas le renvoi vers l'espace pro.
    */
   canPublishOffers?: boolean;
-  /**
-   * Ce compte peut-il acheter en gros ? CDC §20 : seuls les commerçants voient
-   * les lots des grossistes. Fourni par la ROUTE, comme le rôle.
-   */
-  canBuyWholesale?: boolean;
 };
 
-export function ProfileScreen({
-  canPublishOffers = false,
-  canBuyWholesale = false,
-}: ProfileScreenProps = {}) {
+export function ProfileScreen({ canPublishOffers = false }: ProfileScreenProps = {}) {
   const router = useRouter();
   const points = useShopStore(selectPoints);
   // On s'abonne à la référence STABLE (`s.vouchers`) puis on filtre en mémo :
@@ -216,70 +208,28 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
           </Pressable>
         </View>
 
-        {/* CDC §9 — l'entrée du commerçant, en tête de menu : c'est son métier,
-            pas une option enfouie sous les réglages. */}
+        {/* Décision client du 2026-08-10 : un professionnel PILOTE ses ventes
+            depuis le web, pas depuis l'app. Le téléphone lui sert à
+            s'approvisionner (son accueil, ce sont les lots des grossistes) ;
+            publier et suivre ses commandes se fait sur l'espace pro. On le dit
+            plutôt que de laisser chercher. */}
         {canPublishOffers ? (
-          <Pressable
-            testID="profile-mes-offres"
-            accessibilityRole="button"
-            accessibilityLabel="Mes ventes flash"
-            onPress={() => router.push('/mes-offres')}
-            className="mb-4 flex-row items-center gap-3 rounded-card bg-brand-500 p-4 active:bg-brand-600"
-          >
-            <View className="h-10 w-10 items-center justify-center rounded-control bg-ink-inverse/15">
-              <Feather name="zap" size={19} color={colors.inkInverse} />
+          <View className="mb-4 gap-2 rounded-card bg-surface-inverse p-4">
+            <View className="flex-row items-center gap-2">
+              <Feather name="monitor" size={16} color={colors.lime} />
+              <AppText className="font-sans-bold text-ink-inverse">Espace professionnel</AppText>
             </View>
-            <View className="flex-1">
-              <AppText className="font-sans-bold text-ink-inverse">Mes ventes flash</AppText>
-              <AppText variant="caption" className="text-ink-inverse/70">
-                Publier un invendu, suivre ce qu’il rapporte.
+            <AppText variant="caption" className="text-ink-inverse/70">
+              Vos ventes flash, vos commandes reçues et votre facturation se gèrent sur le web —
+              écran large, clavier, export comptable.
+            </AppText>
+            <View className="mt-1 flex-row items-center gap-2 rounded-control bg-ink-inverse/10 px-3 py-2.5">
+              <Feather name="link" size={14} color={colors.inkInverse} />
+              <AppText className="flex-1 text-ink-inverse" style={{ fontSize: 12.5 }}>
+                tklink.fr/pro
               </AppText>
             </View>
-            <Feather name="chevron-right" size={18} color={colors.inkInverse} />
-          </Pressable>
-        ) : null}
-
-        {canPublishOffers ? (
-          <Pressable
-            testID="profile-commandes-recues"
-            accessibilityRole="button"
-            accessibilityLabel="Commandes reçues"
-            onPress={() => router.push('/commandes-recues')}
-            className="mb-4 flex-row items-center gap-3 rounded-card border border-line bg-surface p-4 active:bg-surface-muted"
-          >
-            <View className="h-10 w-10 items-center justify-center rounded-control bg-surface-muted">
-              <Feather name="inbox" size={19} color={colors.ink} />
-            </View>
-            <View className="flex-1">
-              <AppText className="font-sans-bold text-ink">Commandes reçues</AppText>
-              <AppText variant="caption" className="text-ink-faint">
-                Accepter, préparer, remettre au client.
-              </AppText>
-            </View>
-            <Feather name="chevron-right" size={18} color={colors.inkFaint} />
-          </Pressable>
-        ) : null}
-
-        {/* CDC §20 — le marché des grossistes, réservé aux commerçants. */}
-        {canBuyWholesale ? (
-          <Pressable
-            testID="profile-lots"
-            accessibilityRole="button"
-            accessibilityLabel="Lots des grossistes"
-            onPress={() => router.push('/lots')}
-            className="mb-4 flex-row items-center gap-3 rounded-card border border-line bg-surface p-4 active:bg-surface-muted"
-          >
-            <View className="h-10 w-10 items-center justify-center rounded-control bg-surface-muted">
-              <Feather name="package" size={19} color={colors.ink} />
-            </View>
-            <View className="flex-1">
-              <AppText className="font-sans-bold text-ink">Lots des grossistes</AppText>
-              <AppText variant="caption" className="text-ink-faint">
-                Acheter en gros pour votre commerce.
-              </AppText>
-            </View>
-            <Feather name="chevron-right" size={18} color={colors.inkFaint} />
-          </Pressable>
+          </View>
         ) : null}
 
         {/* Menu */}

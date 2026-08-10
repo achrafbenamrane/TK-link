@@ -14,6 +14,19 @@
 export const ROLES = ['consommateur', 'commercant', 'grossiste'] as const;
 export type Role = (typeof ROLES)[number];
 
+/**
+ * Les rôles qu'on peut CHOISIR dans l'application mobile.
+ *
+ * Le grossiste n'en fait pas partie : décision du client, relayée le
+ * 2026-08-10 — « le grossiste n'est pas utilisateur de l'appli, il n'a accès
+ * qu'à un web admin pour gérer ses offres flash et ses commandes ». Il reste
+ * dans `ROLES` parce que le back-end, le portail web et la règle de visibilité
+ * du §3.2 en ont besoin : ce qui disparaît, c'est la possibilité de s'inscrire
+ * comme grossiste depuis le téléphone, pas le rôle lui-même.
+ */
+export const APP_ROLES = ['consommateur', 'commercant'] as const;
+export type AppRole = (typeof APP_ROLES)[number];
+
 export const ROLE_LABEL: Record<Role, string> = {
   consommateur: 'Consommateur',
   commercant: 'Commerçant',
@@ -23,7 +36,7 @@ export const ROLE_LABEL: Record<Role, string> = {
 /** Ce que le rôle vient faire ici — sert l’étape de choix à l’onboarding. */
 export const ROLE_TAGLINE: Record<Role, string> = {
   consommateur: 'Je cherche les bons plans près de chez moi',
-  commercant: 'Je vends en boutique et j’achète en gros',
+  commercant: 'J’achète mes lots en gros ; je vends depuis l’espace pro web',
   grossiste: 'Je propose des lots aux commerçants',
 };
 

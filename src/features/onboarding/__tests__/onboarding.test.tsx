@@ -249,3 +249,14 @@ describe('<OnboardingScreen />', () => {
     expect(screen.queryByTestId('role-consommateur')).toBeNull();
   });
 });
+
+describe('rôles proposés dans l’app — décision client du 2026-08-10', () => {
+  it('ne propose PAS le grossiste : il passe par l’espace pro web', () => {
+    render(<OnboardingScreen onDone={jest.fn()} />);
+    fireEvent.press(screen.getByTestId('onboarding-next'));
+
+    expect(screen.getByTestId('role-consommateur')).toBeTruthy();
+    expect(screen.getByTestId('role-commercant')).toBeTruthy();
+    expect(screen.queryByTestId('role-grossiste')).toBeNull();
+  });
+});

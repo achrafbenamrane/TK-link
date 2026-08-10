@@ -4,7 +4,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cn } from '@/shared/lib/cn';
-import { ROLES, ROLE_ICON, ROLE_LABEL, ROLE_TAGLINE, type Role } from '@/shared/lib/roles';
+import { APP_ROLES, ROLE_ICON, ROLE_LABEL, ROLE_TAGLINE, type Role } from '@/shared/lib/roles';
 import { AppText } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
@@ -156,7 +156,7 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
               subtitle="Ce choix décide des offres que vous verrez."
             />
             <View className="gap-2">
-              {ROLES.map((r) => (
+              {APP_ROLES.map((r) => (
                 <Choice
                   key={r}
                   testID={`role-${r}`}
@@ -173,9 +173,7 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
               <AppText variant="caption" className="flex-1 text-ink-muted" style={{ fontSize: 12 }}>
                 {role === 'consommateur'
                   ? 'Vous verrez les offres des commerçants près de chez vous.'
-                  : role === 'commercant'
-                    ? 'Vous verrez en plus les lots des grossistes. Votre SIRET vous sera demandé pour commander.'
-                    : 'Vous publierez des lots réservés aux commerçants.'}
+                  : 'Vous verrez les lots des grossistes. Votre SIRET est exigé pour commander, et vos ventes se pilotent depuis l’espace pro sur le web.'}
               </AppText>
             </View>
           </View>
