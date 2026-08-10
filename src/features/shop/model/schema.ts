@@ -129,6 +129,17 @@ export const OrderSchema = z.object({
   couponCode: z.string().nullable().default(null),
   deliveryFee: z.number(),
   /**
+   * Le commerçant a-t-il pris la main sur cette commande — CDC §11 ?
+   *
+   * La démonstration fait avancer les statuts toute seule avec le temps. Dès
+   * qu'un commerçant décide (« j'accepte », « c'est prêt »), l'horloge doit se
+   * taire : sinon sa décision serait écrasée à la seconde suivante.
+   *
+   * `.default(false)` obligatoire : les commandes déjà stockées n'ont pas ce
+   * champ, et un champ requis effacerait tout l'historique à la réhydratation.
+   */
+  managed: z.boolean().default(false),
+  /**
    * Click & Collect ou livraison — CDC §12. `.default('livraison')` : les
    * commandes déjà stockées n'ont pas ce champ, et un champ requis effacerait
    * tout l'historique à la réhydratation.

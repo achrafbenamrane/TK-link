@@ -35,6 +35,7 @@ beforeEach(() => {
         fulfilment: 'livraison' as const,
         status: 'preparation',
         pointsEarned: 24,
+        managed: false,
       },
     ],
     favorites: ['d_cote'],

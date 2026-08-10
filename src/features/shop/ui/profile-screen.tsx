@@ -239,6 +239,27 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
           </Pressable>
         ) : null}
 
+        {canPublishOffers ? (
+          <Pressable
+            testID="profile-commandes-recues"
+            accessibilityRole="button"
+            accessibilityLabel="Commandes reçues"
+            onPress={() => router.push('/commandes-recues')}
+            className="mb-4 flex-row items-center gap-3 rounded-card border border-line bg-surface p-4 active:bg-surface-muted"
+          >
+            <View className="h-10 w-10 items-center justify-center rounded-control bg-surface-muted">
+              <Feather name="inbox" size={19} color={colors.ink} />
+            </View>
+            <View className="flex-1">
+              <AppText className="font-sans-bold text-ink">Commandes reçues</AppText>
+              <AppText variant="caption" className="text-ink-faint">
+                Accepter, préparer, remettre au client.
+              </AppText>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.inkFaint} />
+          </Pressable>
+        ) : null}
+
         {/* CDC §20 — le marché des grossistes, réservé aux commerçants. */}
         {canBuyWholesale ? (
           <Pressable

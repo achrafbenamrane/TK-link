@@ -129,6 +129,7 @@ describe('progression de commande (démo)', () => {
     fulfilment: 'livraison' as const,
     status: 'creee' as const,
     pointsEarned: 24,
+    managed: false,
   });
 
   it('vient d’être créée juste après la commande', () => {
@@ -190,6 +191,7 @@ describe('migration des commandes stockées — CDC §11', () => {
       deliveryFee: 3,
       status: 'en_preparation',
       pointsEarned: 24,
+      managed: false,
     };
     const parsed = OrderSchema.safeParse(legacy);
     expect(parsed.success).toBe(true);
@@ -209,6 +211,7 @@ describe('migration des commandes stockées — CDC §11', () => {
       deliveryFee: 0,
       status: 'en_livraison',
       pointsEarned: 0,
+      managed: false,
     });
     expect(parsed.success && parsed.data.status).toBe('prete');
   });

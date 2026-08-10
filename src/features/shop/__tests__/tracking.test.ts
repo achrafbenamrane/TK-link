@@ -22,6 +22,7 @@ const orderAgedBy = (seconds: number): Order => ({
   fulfilment: 'livraison' as const,
   status: 'prete',
   pointsEarned: 24,
+  managed: false,
 });
 
 /** Ligne droite est-ouest, segments de longueurs très différentes. */

@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { makeId } from '@/shared/lib/id';
 // Cart/favorites/orders hold no secrets → the plaintext tier is correct.
-import { isActive, type Fulfilment } from '../lib/order-status';
+import { canTransition, isActive, type Fulfilment, type OrderStatus } from '../lib/order-status';
 import { DEFAULT_PREFERENCES, type Preferences } from '../lib/preferences';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
@@ -94,6 +94,14 @@ type ShopState = {
   /** Offre des points à un proche. Renvoie le code à partager. */
   sharePoints: (amount: number) => { ok: false } | { ok: true; code: string };
 
+  /**
+   * Le commerçant fait avancer une commande — CDC §11. Refuse toute transition
+   * que la machine à états n'autorise pas.
+   */
+  setOrderStatus: (
+    orderId: string,
+    status: OrderStatus,
+  ) => { ok: true } | { ok: false; reason: 'introuvable' | 'transition' };
   /** DÉMO : aligne les statuts sur le temps écoulé (voir demoStatusFor). */
   syncOrderStatuses: () => void;
 
@@ -229,9 +237,25 @@ export const useShopStore = create<ShopState>()(
         return { ok: true as const, code: makeCode() };
       },
 
+      setOrderStatus: (orderId, status) => {
+        const order = get().orders.find((o) => o.id === orderId);
+        if (!order) return { ok: false as const, reason: 'introuvable' as const };
+        // La machine à états du §11 tranche : sans elle, un bug d'affichage
+        // deviendrait un bug comptable (« remboursée » → « en préparation »).
+        if (!canTransition(order.status, status, order.fulfilment)) {
+          return { ok: false as const, reason: 'transition' as const };
+        }
+        set((state) => ({
+          orders: state.orders.map((o) => (o.id === orderId ? { ...o, status, managed: true } : o)),
+        }));
+        return { ok: true as const };
+      },
+
       syncOrderStatuses: () =>
         set((state) => {
           const next = state.orders.map((o) => {
+            // Commande reprise en main par le commerçant : l'horloge se tait.
+            if (o.managed) return o;
             const status = demoStatusFor(o);
             return status === o.status ? o : { ...o, status };
           });
@@ -328,6 +352,7 @@ export const useShopStore = create<ShopState>()(
           fulfilment,
           status: 'creee',
           pointsEarned,
+          managed: false,
         };
 
         set((state) => ({
