@@ -14,6 +14,14 @@ import {
 } from './billing';
 import { DOCUMENTS, formatDate, formatMoney, OFFERS, PAPER_G_PER_RECEIPT } from './data';
 import OfferForm from './offer-form';
+import {
+  ACTION_LABEL,
+  isActive,
+  nextStatuses,
+  ORDER_STATUS_LABEL,
+  ORDERS,
+  sinceLabel,
+} from './orders';
 
 /**
  * Espace professionnel TK LINK — la « version web pour les entreprises ».
@@ -30,6 +38,7 @@ import OfferForm from './offer-form';
  */
 const TABS = [
   { key: 'dashboard', label: 'Tableau de bord', icon: '▦' },
+  { key: 'orders', label: 'Commandes', icon: '📦' },
   { key: 'documents', label: 'Tickets & factures', icon: '🧾' },
   { key: 'offers', label: 'Offres', icon: '％' },
 ];
@@ -64,6 +73,14 @@ export default function ProPage() {
   const [composing, setComposing] = useState(false);
   const [used, setUsed] = useState(OFFERS.length);
   const [purchased, setPurchased] = useState(0);
+
+  /* --- Commandes reçues (CDC §11 et §18). --- */
+  const [orders, setOrders] = useState(ORDERS);
+
+  const advance = (orderId, status) =>
+    setOrders((list) => list.map((o) => (o.id === orderId ? { ...o, status } : o)));
+
+  const waiting = orders.filter((o) => isActive(o.status)).length;
 
   const left = operationsLeft(used, purchased);
   const free = freeLeft(used);
@@ -249,6 +266,84 @@ export default function ProPage() {
             <p className="tkpro-note">
               Chaque passage de carte remplace un ticket imprimé. Le document part au client, la
               facture à votre comptable, et les données sont déjà classées.
+            </p>
+          </>
+        ) : null}
+
+        {tab === 'orders' ? (
+          <>
+            <div className="tkpro-head">
+              <div>
+                <h1>Commandes</h1>
+                <p>
+                  {waiting > 0
+                    ? `${waiting} commande${waiting > 1 ? 's' : ''} à traiter.`
+                    : 'Rien en attente pour l’instant.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="tkpro-orders">
+              {orders.map((o) => {
+                const options = nextStatuses(o.status, o.fulfilment);
+                return (
+                  <div
+                    className={isActive(o.status) ? 'tkpro-order' : 'tkpro-order done'}
+                    key={o.id}
+                  >
+                    <div className="head">
+                      <div>
+                        <b>{o.customer}</b>
+                        <span>
+                          {o.id} · {sinceLabel(o.placedAt)} ·{' '}
+                          {o.fulfilment === 'click-collect' ? 'Click & Collect' : 'Livraison'}
+                        </span>
+                      </div>
+                      <span className={`tkpro-tag ${isActive(o.status) ? 'flash' : 'ticket'}`}>
+                        {ORDER_STATUS_LABEL[o.status]}
+                      </span>
+                    </div>
+
+                    <ul className="lines">
+                      {o.lines.map((l) => (
+                        <li key={l.label}>
+                          <span>{l.label}</span>
+                          <b>×{l.qty}</b>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="foot">
+                      <b>{formatMoney(o.totalCents)}</b>
+                      <div className="actions">
+                        {options.map((status, i) => (
+                          <button
+                            key={status}
+                            type="button"
+                            className={
+                              i === 0 && status !== 'annulee' && status !== 'remboursee'
+                                ? 'tkpro-btn primary'
+                                : 'tkpro-btn'
+                            }
+                            onClick={() => {
+                              advance(o.id, status);
+                              notify(`${o.id} — ${ORDER_STATUS_LABEL[status]}.`);
+                            }}
+                          >
+                            {ACTION_LABEL[status] ?? ORDER_STATUS_LABEL[status]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="tkpro-note">
+              Les gestes proposés suivent la machine à états du CDC §11 : une commande en Click
+              &amp; Collect ne peut pas être « livrée », et une commande remboursée ne repart pas en
+              préparation. Ce sont les mêmes règles que dans l’application du commerçant.
             </p>
           </>
         ) : null}

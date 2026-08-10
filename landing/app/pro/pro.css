@@ -671,3 +671,77 @@
   gap: 8px;
   margin-top: 14px;
 }
+
+/* ------------------------------------------------ commandes reçues (§11/§18) */
+.tkpro-orders {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+.tkpro-order {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+}
+.tkpro-order.done {
+  opacity: 0.62;
+}
+.tkpro-order .head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tkpro-order .head b {
+  display: block;
+  font-size: 15px;
+}
+.tkpro-order .head span {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+.tkpro-order .lines {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tkpro-order .lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13.5px;
+  color: var(--ink-muted);
+}
+.tkpro-order .lines b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.tkpro-order .foot {
+  margin-top: auto;
+  padding-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.tkpro-order .foot > b {
+  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-size: 17px;
+}
+.tkpro-order .actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tkpro-order .actions .tkpro-btn {
+  padding: 7px 12px;
+  font-size: 13px;
+}

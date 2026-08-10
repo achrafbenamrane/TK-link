@@ -238,8 +238,12 @@ function OrderCard({
           §11 : on ne propose jamais un chemin illégal. */}
       {options.length > 0 ? (
         <View className="mt-3 flex-row flex-wrap gap-2">
-          {options.map((status) => {
-            const cancel = status === 'annulee';
+          {options.map((status, index) => {
+            // La machine à états liste le chemin nominal EN TÊTE. Tout le
+            // reste — refuser, rembourser — est une sortie de route : la
+            // mettre en avant inviterait à la prendre, même quand c'est la
+            // seule action restante sur une commande déjà close.
+            const secondary = index > 0 || status === 'annulee' || status === 'remboursee';
             return (
               <Pressable
                 key={status}
@@ -249,11 +253,14 @@ function OrderCard({
                 onPress={() => onAdvance(status)}
                 className={cn(
                   'rounded-control px-4 py-2.5',
-                  cancel ? 'border border-line' : 'bg-brand-500 active:bg-brand-600',
+                  secondary ? 'border border-line' : 'bg-brand-500 active:bg-brand-600',
                 )}
               >
                 <AppText
-                  className={cn('font-sans-bold', cancel ? 'text-ink-muted' : 'text-ink-inverse')}
+                  className={cn(
+                    'font-sans-bold',
+                    secondary ? 'text-ink-muted' : 'text-ink-inverse',
+                  )}
                   style={{ fontSize: 13 }}
                 >
                   {ACTION_LABEL[status] ?? ORDER_STATUS_LABEL[status]}
