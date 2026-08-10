@@ -17,6 +17,20 @@ success`, fonts `sans*`, radii `card/control`). **Never hardcode a hex color
   process before improvising.
 - NativeWind v4 targets Tailwind CSS v3 (v5/v4 migration tracked in an ADR
   when it goes stable).
+- **A class that has never been used in the repo does nothing until Metro
+  rebuilds the stylesheet.** Tailwind generates only the utilities it finds in
+  the source; a running dev client keeps the stylesheet it was given. Adding a
+  brand-new utility (say `h-52` when the repo only ever used `h-44`) therefore
+  fails **silently** — the value is simply absent, so the element gets no
+  height, no padding, no color, and nothing warns you. Restart with
+  `npx expo start --clear` after introducing one.
+- **A dimension the layout cannot survive without does not belong in a class
+  you are inventing.** It cost us a broken flash-sale card in front of the
+  client: the image block collapsed to zero height, the countdown overlapped
+  the merchant name, and the discount badge was clipped away. Where the whole
+  component falls apart without it, pass the value through `style` — that is
+  exactly the "must be dynamic" exemption above, and it cannot be lost to a
+  stale build (`FlashCard`'s `IMAGE_HEIGHT`).
 
 ## Component hierarchy
 

@@ -17,6 +17,20 @@ import { ProductImage } from './product-image';
 type Props = { deal: Deal };
 
 /**
+ * Hauteur du visuel, en pixels et NON en classe utilitaire.
+ *
+ * Une classe de hauteur inédite (`h-52`) a été silencieusement ignorée par la
+ * feuille NativeWind déjà compilée sur l'appareil : le bloc image est tombé à
+ * zéro, le compte à rebours a chevauché le nom du commerçant, et le badge de
+ * remise s'est fait rogner. Une classe manquante ne casse rien bruyamment —
+ * elle vaut simplement « rien ».
+ *
+ * La photo est l'élément le plus important de la carte : sa hauteur ne dépend
+ * donc pas d'un cache de styles. Elle voyage avec la teinte, déjà dynamique.
+ */
+const IMAGE_HEIGHT = 230;
+
+/**
  * LA CARTE D'UNE VENTE FLASH — le cœur de l'app, et donc l'écran qu'on
  * retravaille en dernier recours plutôt qu'à la légère.
  *
@@ -59,15 +73,16 @@ export function FlashCard({ deal }: Props) {
       className="mb-4 overflow-hidden rounded-card border border-line bg-surface"
     >
       {/* ------------------------------------------------------------ visuel */}
-      <View className="h-52 items-center justify-center" style={{ backgroundColor: deal.tint }}>
-        <ProductImage deal={deal} emojiSize={84} />
+      <View
+        className="items-center justify-center"
+        style={{ height: IMAGE_HEIGHT, backgroundColor: deal.tint }}
+      >
+        <ProductImage deal={deal} emojiSize={96} />
 
         {/* Le temps qui reste — rouge dès que l'offre agonise. */}
         <View
           testID={`deal-${deal.id}-countdown`}
-          className={cn(
-            'absolute left-3 top-3 flex-row items-center gap-1.5 rounded-pill px-3 py-1.5',
-          )}
+          className="absolute left-3 top-3 flex-row items-center gap-1.5 rounded-pill px-3 py-1.5"
           style={{ backgroundColor: critical ? colors.danger : colors.ink }}
         >
           <Feather name="clock" size={13} color={colors.inkInverse} />
@@ -91,7 +106,7 @@ export function FlashCard({ deal }: Props) {
         {/* La remise, en gros : c'est elle qui fait s'arrêter le pouce. */}
         {discount ? (
           <View className="absolute bottom-3 left-3 rounded-control bg-brand-500 px-3 py-1.5">
-            <AppText className="font-display text-ink-inverse" style={{ fontSize: 17 }}>
+            <AppText className="font-display text-ink-inverse" style={{ fontSize: 19 }}>
               -{discount}%
             </AppText>
           </View>
@@ -156,14 +171,14 @@ export function FlashCard({ deal }: Props) {
             <AppText
               testID={`deal-${deal.id}-price`}
               className="font-display text-ink"
-              style={{ fontSize: 30, lineHeight: 38 }}
+              style={{ fontSize: 34, lineHeight: 43 }}
             >
               {deal.price.toFixed(2)}€
             </AppText>
             {deal.oldPrice ? (
               <AppText
                 className="text-ink-faint line-through"
-                style={{ fontSize: 16, lineHeight: 22 }}
+                style={{ fontSize: 17, lineHeight: 23 }}
               >
                 {deal.oldPrice.toFixed(2)}€
               </AppText>
