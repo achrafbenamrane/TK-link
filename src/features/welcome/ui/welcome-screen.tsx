@@ -92,11 +92,17 @@ export function WelcomeScreen() {
     return () => clearTimeout(id);
   }, [index, width, reduced]);
 
+  /**
+   * On enchaîne sur l'accueil des nouveaux — rôle, avatar, intérêts, compte.
+   * Passer par `/` d'abord ferait clignoter la boutique avant que la porte du
+   * layout ne renvoie sur l'onboarding.
+   */
   const enter = () => {
     markSeen();
-    router.replace('/');
+    router.replace('/onboarding');
   };
 
+  /** Un compte existe déjà : rien à personnaliser, on va droit à la connexion. */
   const signIn = () => {
     markSeen();
     router.replace('/sign-in');

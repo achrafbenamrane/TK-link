@@ -34,20 +34,22 @@ describe('<WelcomeScreen />', () => {
     expect(screen.getByTestId('welcome-hub')).toBeTruthy();
   });
 
-  it('« Commencer » marque l’accueil vu et entre dans l’app', () => {
+  it('« Commencer » marque l’accueil vu et enchaîne sur l’onboarding', () => {
     render(<WelcomeScreen />);
     fireEvent.press(screen.getByTestId('welcome-start'));
 
     expect(useWelcomeStore.getState().seen).toBe(true);
-    expect(mockReplace).toHaveBeenCalledWith('/');
+    // Pas `/` : passer par la boutique ferait clignoter l’accueil avant que la
+    // porte du layout ne renvoie sur l’onboarding.
+    expect(mockReplace).toHaveBeenCalledWith('/onboarding');
   });
 
-  it('« Passer » entre aussi — l’intro ne retient personne', () => {
+  it('« Passer » saute l’intro mais pas la personnalisation', () => {
     render(<WelcomeScreen />);
     fireEvent.press(screen.getByTestId('welcome-skip'));
 
     expect(useWelcomeStore.getState().seen).toBe(true);
-    expect(mockReplace).toHaveBeenCalledWith('/');
+    expect(mockReplace).toHaveBeenCalledWith('/onboarding');
   });
 
   it('« Se connecter » mène à la connexion, sans revoir l’intro ensuite', () => {

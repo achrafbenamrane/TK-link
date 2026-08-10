@@ -19,9 +19,25 @@ import {
 } from '../model/store';
 import { AvatarView } from './avatar-view';
 
-type Props = { onDone: () => void };
+/** Où l'on va une fois l'accueil des nouveaux terminé. */
+export type OnboardingExit = 'app' | 'sign-up' | 'sign-in';
 
-type Step = 'impact' | 'role' | 'avatar' | 'profil' | 'interets';
+type Props = {
+  /**
+   * Fin du parcours. La destination est décidée ICI mais TRADUITE par la
+   * route : la feature ne connaît aucune URL.
+   */
+  onDone: (next: OnboardingExit) => void;
+  /**
+   * Une session existe déjà (fourni par la route — `auth` n'est pas importée
+   * ici). L'étape « compte » disparaît alors : proposer de créer un compte à
+   * quelqu'un qui vient de se connecter est au mieux inutile, au pire
+   * inquiétant.
+   */
+  hasAccount?: boolean;
+};
+
+type Step = 'impact' | 'role' | 'avatar' | 'profil' | 'interets' | 'compte';
 
 /**
  * Les étapes, adaptées au rôle — CDC §4 : « L'onboarding devra être adapté au
@@ -30,11 +46,18 @@ type Step = 'impact' | 'role' | 'avatar' | 'profil' | 'interets';
  * L'étape « profil » demande particulier ou professionnel : la question n'a de
  * sens que pour un consommateur. Un commerçant ou un grossiste est un
  * professionnel par définition, lui poser la question serait un faux choix.
+ *
+ * Le compte vient EN DERNIER, et jamais avant le rôle : l'inscription du CDC
+ * §5 dépend du rôle (le SIRET n'est demandé qu'aux professionnels), et
+ * réclamer un mot de passe à quelqu'un qui n'a encore rien vu du produit est
+ * le meilleur moyen de le perdre.
  */
-function stepsFor(role: Role): Step[] {
-  return role === 'consommateur'
-    ? ['impact', 'role', 'avatar', 'profil', 'interets']
-    : ['impact', 'role', 'avatar', 'interets'];
+function stepsFor(role: Role, hasAccount: boolean): Step[] {
+  const steps: Step[] =
+    role === 'consommateur'
+      ? ['impact', 'role', 'avatar', 'profil', 'interets']
+      : ['impact', 'role', 'avatar', 'interets'];
+  return hasAccount ? steps : [...steps, 'compte'];
 }
 
 /** Ce que l'étape « intérêts » veut dire selon le rôle. */
@@ -56,7 +79,7 @@ const INTEREST_COPY: Record<Role, { title: string; subtitle: string; label: stri
   },
 };
 
-export function OnboardingScreen({ onDone }: Props) {
+export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>('impact');
 
@@ -75,18 +98,28 @@ export function OnboardingScreen({ onDone }: Props) {
   const toggle = useOnboardingStore((s) => s.toggleInterest);
   const complete = useOnboardingStore((s) => s.complete);
 
-  const steps = useMemo(() => stepsFor(role), [role]);
+  const steps = useMemo(() => stepsFor(role, hasAccount), [role, hasAccount]);
   // `indexOf` peut renvoyer -1 si le rôle vient de retirer l'étape courante :
   // on retombe alors sur le début plutôt que de calculer sur un index négatif.
   const index = Math.max(0, steps.indexOf(step));
   const isLast = index === steps.length - 1;
-  const canContinue = isLast ? canFinish(firstName, interests) : true;
+  // Le prénom et les intérêts sont exigés à l'étape qui les demande, pas à la
+  // fin : sinon le bouton se bloque sur l'écran du compte, loin des champs à
+  // remplir, et plus rien n'indique quoi corriger.
+  const canContinue = step === 'interets' ? canFinish(firstName, interests) : true;
   const copy = INTEREST_COPY[role];
+  const onAccountStep = step === 'compte';
+  const label = onAccountStep ? 'Continuer sans compte' : isLast ? 'Commencer' : 'Continuer';
+
+  /** Clôt l'accueil des nouveaux et dit à la route où aller ensuite. */
+  const finish = (exit: OnboardingExit) => {
+    complete();
+    onDone(exit);
+  };
 
   const next = () => {
     if (isLast) {
-      complete();
-      onDone();
+      finish('app');
       return;
     }
     setStep(steps[index + 1]!);
@@ -313,29 +346,111 @@ export function OnboardingScreen({ onDone }: Props) {
             </View>
           </View>
         ) : null}
+
+        {/* CDC §5 — le compte, une fois qu'on sait à qui l'on parle. */}
+        {step === 'compte' ? (
+          <View className="gap-5">
+            <Header
+              title={firstName ? `Enchanté, ${firstName}` : 'Votre compte'}
+              subtitle="Créez votre compte pour garder vos points, vos coupons et votre carte — même en changeant de téléphone."
+            />
+
+            {/* La carte d'identité qu'on vient de composer. On peut encore
+                changer d'avatar d'ici : c'est le dernier moment où on le voit
+                avant qu'il ne parte sur la carte de fidélité et dans les jeux. */}
+            <Pressable
+              testID="onboarding-identity"
+              accessibilityRole="button"
+              accessibilityLabel="Changer mon avatar"
+              onPress={() => setStep('avatar')}
+              className="flex-row items-center gap-4 rounded-card bg-surface-muted p-4"
+            >
+              <AvatarView avatar={avatar} size={64} />
+              <View className="flex-1">
+                <AppText variant="title" className="text-lg">
+                  {firstName || 'Vous'}
+                </AppText>
+                <AppText variant="caption" className="text-ink-faint">
+                  {ROLE_LABEL[role]} · {interests.length} centre
+                  {interests.length > 1 ? 's' : ''} d’intérêt
+                </AppText>
+                <View className="mt-1 flex-row items-center gap-1">
+                  <Feather name="edit-2" size={11} color={colors.brand600} />
+                  <AppText className="font-sans-semibold text-brand-600" style={{ fontSize: 11.5 }}>
+                    Changer d’avatar
+                  </AppText>
+                </View>
+              </View>
+            </Pressable>
+
+            <View className="gap-2">
+              <Pressable
+                testID="onboarding-signup"
+                accessibilityRole="button"
+                accessibilityLabel="Créer mon compte"
+                onPress={() => finish('sign-up')}
+                className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-4 active:bg-brand-600"
+              >
+                <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 15 }}>
+                  Créer mon compte
+                </AppText>
+                <Feather name="arrow-right" size={17} color={colors.inkInverse} />
+              </Pressable>
+
+              <Pressable
+                testID="onboarding-signin"
+                accessibilityRole="button"
+                accessibilityLabel="J’ai déjà un compte"
+                onPress={() => finish('sign-in')}
+                className="items-center rounded-control border border-line py-4 active:bg-surface-muted"
+              >
+                <AppText className="font-sans-bold text-ink" style={{ fontSize: 15 }}>
+                  J’ai déjà un compte
+                </AppText>
+              </Pressable>
+            </View>
+
+            <View className="flex-row items-start gap-2.5 rounded-card bg-surface-muted p-3.5">
+              <Feather name="shield" size={15} color={colors.inkFaint} />
+              <AppText variant="caption" className="flex-1 text-ink-muted" style={{ fontSize: 12 }}>
+                Sans compte, vos points et vos coupons ne vivent que sur ce téléphone : les
+                désinstaller les efface.
+              </AppText>
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
 
       {/* Barre d'action */}
       <View className="gap-2 px-5 pt-2" style={{ paddingBottom: insets.bottom + 12 }}>
+        {/* Sur l'étape du compte, les actions principales sont au-dessus : ce
+            bouton y devient la sortie discrète, pas l'appel à l'action. */}
         <Pressable
           testID="onboarding-next"
           accessibilityRole="button"
-          accessibilityLabel={isLast ? 'Commencer' : 'Continuer'}
+          accessibilityLabel={label}
           disabled={!canContinue}
           onPress={next}
           className={cn(
-            'items-center rounded-control py-4',
-            canContinue ? 'bg-brand-500 active:bg-brand-600' : 'bg-surface-sunken',
+            'items-center rounded-control',
+            onAccountStep
+              ? 'py-2'
+              : cn('py-4', canContinue ? 'bg-brand-500 active:bg-brand-600' : 'bg-surface-sunken'),
           )}
         >
           <AppText
-            className={cn('font-sans-bold', canContinue ? 'text-ink-inverse' : 'text-ink-faint')}
+            className={cn(
+              onAccountStep
+                ? 'text-ink-muted'
+                : cn('font-sans-bold', canContinue ? 'text-ink-inverse' : 'text-ink-faint'),
+            )}
+            style={onAccountStep ? { fontSize: 13.5 } : undefined}
           >
-            {isLast ? 'Commencer' : 'Continuer'}
+            {label}
           </AppText>
         </Pressable>
 
-        {isLast && !canContinue ? (
+        {step === 'interets' && !canContinue ? (
           <AppText variant="caption" className="text-center text-ink-faint">
             Indiquez votre prénom et au moins un centre d’intérêt.
           </AppText>

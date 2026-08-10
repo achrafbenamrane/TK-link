@@ -155,9 +155,9 @@ describe('<OnboardingScreen />', () => {
     expect(useOnboardingStore.getState().medium).toBe('pastille');
     fireEvent.press(screen.getByTestId('onboarding-next'));
 
-    // 5 — intérêts : incomplet, donc on ne termine pas
+    // 5 — intérêts : incomplet, donc on n’avance pas
     fireEvent.press(screen.getByTestId('onboarding-next'));
-    expect(onDone).not.toHaveBeenCalled();
+    expect(screen.getByTestId('onboarding-firstname')).toBeTruthy(); // toujours là
     expect(useOnboardingStore.getState().completed).toBe(false);
 
     // On remplit, et là ça passe.
@@ -165,10 +165,54 @@ describe('<OnboardingScreen />', () => {
     fireEvent.press(screen.getByTestId('interest-restauration'));
     fireEvent.press(screen.getByTestId('onboarding-next'));
 
-    expect(onDone).toHaveBeenCalled();
+    // 6 — le compte : rien n’est encore terminé, on propose.
+    expect(screen.getByTestId('onboarding-signup')).toBeTruthy();
+    expect(onDone).not.toHaveBeenCalled();
+    expect(useOnboardingStore.getState().completed).toBe(false);
+
+    fireEvent.press(screen.getByTestId('onboarding-next')); // « Continuer sans compte »
+
+    expect(onDone).toHaveBeenCalledWith('app');
     expect(useOnboardingStore.getState().completed).toBe(true);
     expect(useOnboardingStore.getState().firstName).toBe('Sofiane');
     expect(useOnboardingStore.getState().interests).toEqual(['restauration']);
+  });
+
+  it('l’étape compte mène à l’inscription ou à la connexion', () => {
+    const onDone = jest.fn();
+    useOnboardingStore.setState({ firstName: 'Sofiane', interests: ['restauration'] });
+    render(<OnboardingScreen onDone={onDone} />);
+
+    for (let i = 0; i < 5; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
+
+    fireEvent.press(screen.getByTestId('onboarding-signup'));
+    expect(onDone).toHaveBeenCalledWith('sign-up');
+    // L’onboarding est clos AVANT de partir : sinon la porte du layout
+    // renverrait sur l’onboarding au lieu de laisser voir l’inscription.
+    expect(useOnboardingStore.getState().completed).toBe(true);
+  });
+
+  it('l’avatar reste modifiable depuis l’étape compte', () => {
+    useOnboardingStore.setState({ firstName: 'Sofiane', interests: ['restauration'] });
+    render(<OnboardingScreen onDone={jest.fn()} />);
+    for (let i = 0; i < 5; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
+
+    fireEvent.press(screen.getByTestId('onboarding-identity'));
+
+    expect(screen.getByTestId('avatar-random')).toBeTruthy();
+    fireEvent.press(screen.getByTestId(`avatar-${AVATARS[4]!.id}`));
+    expect(useOnboardingStore.getState().avatar).toEqual({ preset: 4 });
+  });
+
+  it('ne propose pas de compte à qui vient de se connecter', () => {
+    const onDone = jest.fn();
+    useOnboardingStore.setState({ firstName: 'Sofiane', interests: ['restauration'] });
+    render(<OnboardingScreen onDone={onDone} hasAccount />);
+
+    for (let i = 0; i < 5; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
+
+    expect(screen.queryByTestId('onboarding-signup')).toBeNull();
+    expect(onDone).toHaveBeenCalledWith('app');
   });
 
   it('saute l’étape particulier / pro pour un commerçant — CDC §4', () => {

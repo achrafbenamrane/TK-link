@@ -23,7 +23,17 @@ type FieldErrors = { email?: string; password?: string };
  * Les erreurs sont affichées SOUS LE CHAMP concerné plutôt qu'en une ligne
  * commune : avec deux champs, un message global oblige à deviner lequel corriger.
  */
-export function SignInScreen({ onCreateAccount }: { onCreateAccount?: () => void } = {}) {
+type Props = {
+  onCreateAccount?: () => void;
+  /**
+   * Connexion réussie. Sans ce rappel, l'écran resterait affiché après une
+   * connexion valide tant que le garde de route (désactivé en démo) ne prend
+   * pas le relais — l'utilisateur croirait que rien ne s'est passé.
+   */
+  onSignedIn?: () => void;
+};
+
+export function SignInScreen({ onCreateAccount, onSignedIn }: Props = {}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -58,8 +68,9 @@ export function SignInScreen({ onCreateAccount }: { onCreateAccount?: () => void
     setFieldErrors({});
     setTouched(true);
     setSubmitting(true);
-    await signIn(parsed.data.email, parsed.data.password);
+    const result = await signIn(parsed.data.email, parsed.data.password);
     setSubmitting(false);
+    if (result.ok) onSignedIn?.();
   };
 
   return (

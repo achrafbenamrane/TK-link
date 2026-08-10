@@ -2,7 +2,7 @@
  * PUBLIC API de l'accueil des nouveaux utilisateurs — l'onboarding « poussé »
  * demandé par le client, avatar compris.
  */
-export { OnboardingScreen } from './ui/onboarding-screen';
+export { OnboardingScreen, type OnboardingExit } from './ui/onboarding-screen';
 export { AvatarView } from './ui/avatar-view';
 export {
   useOnboardingStore,

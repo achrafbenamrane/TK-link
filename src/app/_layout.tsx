@@ -16,27 +16,49 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { selectCompleted, selectHydrated, useOnboardingStore } from '@/features/onboarding';
+import { useWelcomeStore } from '@/features/welcome';
 import '@/shared/lib/env'; // fail fast on invalid environment (has safe defaults)
 import { colors } from '@/shared/theme/colors';
 
 /**
- * Au premier lancement, on passe par l'onboarding : c'est là qu'on explique la
- * promesse (le ticket papier disparaît) et qu'on personnalise l'app.
+ * Écrans qu'un nouvel arrivant a le droit de voir avant d'avoir fini l'accueil.
+ *
+ * Sans cette liste, l'étape « compte » serait un piège : elle envoie vers
+ * l'inscription ou la connexion, et la porte les renverrait aussitôt à
+ * l'onboarding puisqu'il n'est pas terminé.
+ */
+const FIRST_RUN_ROUTES = new Set(['welcome', 'onboarding', 'sign-in', 'sign-up']);
+
+/**
+ * LA PORTE DU PREMIER LANCEMENT : bienvenue → onboarding → app.
+ *
+ * L'écran de bienvenue montre le produit (la carte, les jeux, la chasse) ;
+ * l'onboarding personnalise et propose le compte. L'ordre compte : demander un
+ * avatar et un mot de passe à quelqu'un qui n'a pas encore vu ce que fait
+ * l'app, c'est le perdre.
  *
  * On attend `hydrated` (lecture du disque terminée) avant de décider, sinon un
- * utilisateur qui revient verrait l'onboarding clignoter le temps que le
- * stockage se charge — `completed` valant `false` par défaut.
+ * utilisateur qui revient verrait l'accueil clignoter le temps que le stockage
+ * se charge — les deux drapeaux valant `false` par défaut.
  */
-function OnboardingGate() {
+function FirstRunGate() {
   const router = useRouter();
   const segments = useSegments();
   const completed = useOnboardingStore(selectCompleted);
-  const hydrated = useOnboardingStore(selectHydrated);
+  const onboardingHydrated = useOnboardingStore(selectHydrated);
+  const seenWelcome = useWelcomeStore((s) => s.seen);
+  const welcomeHydrated = useWelcomeStore((s) => s.hydrated);
 
   useEffect(() => {
-    if (!hydrated || completed) return;
-    if (segments[0] !== 'onboarding') router.replace('/onboarding');
-  }, [hydrated, completed, segments, router]);
+    if (!onboardingHydrated || !welcomeHydrated) return;
+    const here = segments[0] ?? '';
+
+    if (!seenWelcome) {
+      if (here !== 'welcome') router.replace('/welcome');
+      return;
+    }
+    if (!completed && !FIRST_RUN_ROUTES.has(here)) router.replace('/onboarding');
+  }, [onboardingHydrated, welcomeHydrated, seenWelcome, completed, segments, router]);
 
   return null;
 }
@@ -58,11 +80,13 @@ export default function RootLayout() {
   // useProtectedRoute()/useAuthStore().init() from '@/features/auth' for prod.
 
   const onboardingHydrated = useOnboardingStore(selectHydrated);
+  const welcomeHydrated = useWelcomeStore((s) => s.hydrated);
 
-  // On garde l'écran de démarrage natif jusqu'à ce que la police ET la décision
-  // « onboarding déjà fait ? » soient prêtes : la porte redirige alors avant le
-  // premier rendu visible, donc pas de clignotement.
-  const ready = (fontsLoaded || fontError) && onboardingHydrated;
+  // On garde l'écran de démarrage natif jusqu'à ce que la police ET les deux
+  // décisions du premier lancement (« bienvenue déjà vue ? », « onboarding
+  // fait ? ») soient prêtes : la porte redirige alors avant le premier rendu
+  // visible, donc pas de clignotement.
+  const ready = (fontsLoaded || fontError) && onboardingHydrated && welcomeHydrated;
 
   useEffect(() => {
     if (ready) {
@@ -77,7 +101,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView className="flex-1">
       <SafeAreaProvider>
-        <OnboardingGate />
+        <FirstRunGate />
         <Stack
           screenOptions={{
             headerShown: false,
