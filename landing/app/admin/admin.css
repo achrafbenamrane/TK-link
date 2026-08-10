@@ -1,0 +1,154 @@
+/*
+ * Super Admin — les quelques pièces que l'espace pro n'avait pas.
+ *
+ * Tout le reste (barre latérale, cartes, tableaux, pastilles, boutons) vient
+ * de `pro.css` : mêmes classes, donc un seul endroit à retoucher le jour où la
+ * charte bouge.
+ */
+
+/* Ce qui demande une action : visible avant les statistiques. */
+.tkadmin-alert {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fff8e6;
+  border: 1px solid #f0dca6;
+  border-radius: 16px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  color: var(--ink);
+  transition: background 0.15s ease;
+}
+.tkadmin-alert:hover {
+  background: #fdf2d5;
+}
+.tkadmin-alert b {
+  display: block;
+  font-size: 14px;
+}
+.tkadmin-alert em {
+  font-style: normal;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+.tkadmin-alert > span:first-child {
+  font-size: 18px;
+}
+.tkadmin-alert .go {
+  margin-left: auto;
+  color: var(--ink-faint);
+  font-size: 18px;
+}
+
+/* Histogramme empilé : commission + packs, mois par mois. */
+.tkadmin-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 20px 18px 14px;
+  min-height: 190px;
+}
+.tkadmin-bar {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+.tkadmin-bar .stack {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  align-items: stretch;
+  height: 120px;
+  margin-bottom: 8px;
+}
+.tkadmin-bar .stack span {
+  display: block;
+  border-radius: 6px 6px 0 0;
+}
+.tkadmin-bar .stack .commission {
+  background: var(--brand);
+}
+.tkadmin-bar .stack .packs {
+  background: var(--lime);
+  border-radius: 6px 6px 0 0;
+}
+.tkadmin-bar b {
+  display: block;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.tkadmin-bar span:last-child {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+
+.tkadmin-legend {
+  display: flex;
+  gap: 18px;
+  padding: 0 18px 16px;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+.tkadmin-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 6px;
+}
+.tkadmin-legend i.commission {
+  background: var(--brand);
+}
+.tkadmin-legend i.packs {
+  background: var(--lime);
+}
+
+/* Tableau des inscrits */
+.tkadmin-sub {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+.tkadmin-mono {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  font-size: 13px;
+}
+.tkadmin-missing {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--danger);
+}
+.tkpro tbody tr.tkadmin-off {
+  opacity: 0.5;
+}
+.tkpro tbody tr.tkadmin-off b {
+  text-decoration: line-through;
+}
+
+/* Les leviers du modèle économique */
+.tkadmin-levers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  padding: 18px;
+}
+.tkadmin-levers > div {
+  background: var(--surface-muted);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.tkadmin-levers b {
+  display: block;
+  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-size: 19px;
+  color: var(--brand-600);
+}
+.tkadmin-levers span {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
