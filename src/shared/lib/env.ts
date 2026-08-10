@@ -45,3 +45,26 @@ export function parseEnv(raw: Record<string, string | undefined>): Env {
 }
 
 export const env: Env = parseEnv(process.env as Record<string, string | undefined>);
+
+/**
+ * Les valeurs de repli du schéma ci-dessus. Un `.env` qui ne définit pas
+ * Supabase les laisse en place, et l'app tente alors de joindre un hôte qui
+ * n'existe pas : `UnknownHostException` à la première connexion.
+ */
+const PLACEHOLDER_URL = 'https://localhost.supabase.co';
+const PLACEHOLDER_KEY = 'public-anon-key-placeholder';
+
+/**
+ * Y a-t-il un VRAI back-end derrière cette build ?
+ *
+ * Sans projet Supabase renseigné, l'inscription et la connexion ne peuvent pas
+ * fonctionner — il n'y a personne au bout du fil. Plutôt que d'échouer sur une
+ * erreur réseau incompréhensible, l'app bascule en mode démonstration (voir
+ * `features/auth/model/store.ts`) et le DIT à l'écran.
+ *
+ * Renseigner `EXPO_PUBLIC_SUPABASE_URL` et `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+ * suffit à repasser sur le vrai serveur : aucun code à changer.
+ */
+export const isSupabaseConfigured: boolean =
+  env.EXPO_PUBLIC_SUPABASE_URL !== PLACEHOLDER_URL &&
+  env.EXPO_PUBLIC_SUPABASE_ANON_KEY !== PLACEHOLDER_KEY;

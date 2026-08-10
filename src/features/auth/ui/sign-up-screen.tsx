@@ -16,6 +16,7 @@ import {
   type RegistrationDraft,
 } from '../model/registration';
 import { useAuthStore } from '../model/store';
+import { DemoNotice } from './demo-notice';
 
 type Props = {
   /** Rôle choisi à l'onboarding — passé par la route (pas d'import inter-feature). */
@@ -100,6 +101,8 @@ export function SignUpScreen({ role, onSiretChange, onSignedUp }: Props) {
               </AppText>
             </View>
           </View>
+
+          <DemoNotice />
 
           <View className="gap-3.5">
             <View className="flex-row gap-3">

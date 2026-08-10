@@ -1,8 +1,10 @@
 import type { Session } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
+import { isSupabaseConfigured } from '@/shared/lib/env';
 import { supabase } from '@/shared/lib/supabase';
 
+import { makeDemoSession } from './demo-session';
 import { CredentialsSchema } from './schema';
 
 type Status = 'loading' | 'authenticated' | 'unauthenticated';
@@ -13,6 +15,11 @@ type AuthState = {
   status: Status;
   session: Session | null;
   error: string | null;
+  /**
+   * Aucun back-end n'est configuré : l'app tourne en démonstration et les
+   * comptes ne sont vérifiés par personne. Les écrans le disent à l'utilisateur.
+   */
+  demoMode: boolean;
   /** Load the current session and subscribe to changes. Returns an unsubscribe. */
   init: () => () => void;
   signIn: (email: string, password: string) => Promise<Result>;
@@ -30,8 +37,15 @@ export const useAuthStore = create<AuthState>()((set) => ({
   status: 'loading',
   session: null,
   error: null,
+  demoMode: !isSupabaseConfigured,
 
   init: () => {
+    // Sans serveur, il n'y a ni session à relire ni changement à écouter :
+    // interroger Supabase ne produirait qu'une erreur DNS au démarrage.
+    if (!isSupabaseConfigured) {
+      set({ status: 'unauthenticated' });
+      return () => {};
+    }
     void supabase.auth.getSession().then(({ data }) => {
       set({ session: data.session, status: statusFor(data.session) });
     });
@@ -49,6 +63,15 @@ export const useAuthStore = create<AuthState>()((set) => ({
       return { ok: false, error };
     }
     set({ error: null });
+
+    if (!isSupabaseConfigured) {
+      // Démonstration : on ouvre une session locale. Rien n'est vérifié — c'est
+      // dit à l'écran, et le mode disparaît dès qu'un projet Supabase existe.
+      const session = makeDemoSession(parsed.data.email);
+      set({ session, status: 'authenticated' });
+      return { ok: true };
+    }
+
     const { error } = await supabase.auth.signInWithPassword(parsed.data);
     if (error) {
       set({ error: error.message });
@@ -65,6 +88,13 @@ export const useAuthStore = create<AuthState>()((set) => ({
       return { ok: false, error };
     }
     set({ error: null });
+
+    if (!isSupabaseConfigured) {
+      const session = makeDemoSession(parsed.data.email);
+      set({ session, status: 'authenticated' });
+      return { ok: true };
+    }
+
     const { error } = await supabase.auth.signUp(parsed.data);
     if (error) {
       set({ error: error.message });
@@ -74,12 +104,23 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   signOut: async () => {
+    if (!isSupabaseConfigured) {
+      set({ session: null, status: 'unauthenticated', error: null });
+      return;
+    }
     // supabase-js clears the LargeSecureStore session via its storage adapter.
     await supabase.auth.signOut();
     set({ session: null, status: 'unauthenticated', error: null });
   },
 
   deleteAccount: async () => {
+    // En démonstration il n'y a rien à supprimer côté serveur : on ferme la
+    // session locale. La VRAIE suppression (exigée par les stores) passe par la
+    // fonction Edge dès qu'un back-end existe.
+    if (!isSupabaseConfigured) {
+      set({ session: null, status: 'unauthenticated', error: null });
+      return { ok: true };
+    }
     // The Edge Function validates the JWT and deletes the user + cascaded data.
     // `invoke` attaches the current session's Authorization header automatically.
     const { error } = await supabase.functions.invoke('delete-account', { method: 'POST' });
@@ -94,3 +135,4 @@ export const useAuthStore = create<AuthState>()((set) => ({
 }));
 
 export const selectIsAuthenticated = (s: AuthState): boolean => s.status === 'authenticated';
+export const selectDemoMode = (s: AuthState): boolean => s.demoMode;

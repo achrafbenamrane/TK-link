@@ -9,6 +9,7 @@ import { colors } from '@/shared/theme/colors';
 import { friendlyAuthError } from '../model/auth-errors';
 import { CredentialsSchema } from '../model/schema';
 import { useAuthStore } from '../model/store';
+import { DemoNotice } from './demo-notice';
 
 type FieldErrors = { email?: string; password?: string };
 
@@ -92,6 +93,8 @@ export function SignInScreen({ onCreateAccount, onSignedIn }: Props = {}) {
               Content de vous revoir.
             </AppText>
           </View>
+
+          <DemoNotice />
 
           <View className="gap-3">
             <View className="gap-1.5">
