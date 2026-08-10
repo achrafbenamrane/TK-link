@@ -1,22 +1,54 @@
 import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { selectTotalUnread, useShopStore } from '@/features/shop';
+import { cn } from '@/shared/lib/cn';
 import { colors } from '@/shared/theme/colors';
 
 /**
- * La barre du bas :
+ * La barre du bas, à cinq onglets :
  *
- *   Accueil · Favoris · Commandes · Compte
+ *   Accueil · Favoris · [ LA CHASSE ] · Commandes · Compte
  *
- * L'accueil, ce sont les ventes flash. « Parcourir » reste une ROUTE (la
- * recherche par commerce, avec les flashs en cours de chaque enseigne) mais
- * quitte la barre : le client ne la veut pas là. Même chose pour les apports
- * TK LINK — tickets, carte de fidélité, cadeaux, jeux — qu'on rejoint depuis
- * le compte et les fiches commerçant.
+ * L'accueil, ce sont les ventes flash. Au CENTRE, « La Chasse » réunit ce qui
+ * rapporte — déstockage, offres membres, mini-jeux et toute la progression :
+ * séparer les offres des jeux cassait la boucle (on jouait sans voir ce qu'on
+ * pouvait attraper). Sa pastille est surélevée : c'est l'onglet qu'on veut
+ * atteindre sans regarder.
+ *
+ * « Parcourir » reste une ROUTE (la recherche par commerce) mais quitte la
+ * barre. Même chose pour les écrans TK LINK — tickets, carte de fidélité,
+ * cadeaux, menu complet des jeux — qu'on rejoint depuis le compte, le hub et
+ * les fiches commerçant.
  */
+
+/** La pastille du milieu — surélevée, pour qu'on la vise au pouce. */
+function HubTabIcon({ focused }: { focused: boolean }) {
+  return (
+    <View
+      className={cn(
+        'h-11 w-11 items-center justify-center rounded-pill',
+        focused ? 'bg-brand-500' : 'bg-surface-inverse',
+      )}
+      style={{
+        marginTop: -14,
+        shadowColor: colors.forestDeep,
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 6,
+      }}
+    >
+      <Feather name="target" size={22} color={focused ? colors.inkInverse : colors.lime} />
+    </View>
+  );
+}
+
 export default function TabsLayout() {
   const unread = useShopStore(selectTotalUnread);
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -28,9 +60,14 @@ export default function TabsLayout() {
           backgroundColor: colors.surface,
           borderTopColor: colors.line,
           borderTopWidth: 1,
+          // Hauteur explicite : la pastille centrale déborde vers le haut, il
+          // lui faut la place. En la fixant, on reprend aussi la marge basse
+          // que la barre ajoutait seule — d'où le `paddingBottom` ci-dessous.
+          height: 62 + insets.bottom,
+          paddingBottom: insets.bottom,
+          paddingTop: 6,
         },
         tabBarLabelStyle: { fontFamily: 'Manrope_600SemiBold', fontSize: 11 },
-        tabBarItemStyle: { paddingTop: 4 },
       }}
     >
       <Tabs.Screen
@@ -45,6 +82,13 @@ export default function TabsLayout() {
         options={{
           title: 'Favoris',
           tabBarIcon: ({ color }) => <Feather name="heart" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="chasse"
+        options={{
+          title: 'La Chasse',
+          tabBarIcon: ({ focused }) => <HubTabIcon focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -63,7 +107,7 @@ export default function TabsLayout() {
       />
 
       {/* Routes conservées, hors barre d'onglets — on y accède depuis le compte,
-          les fiches commerçant ou l'accueil. */}
+          le hub, les fiches commerçant ou l'accueil. */}
       <Tabs.Screen
         name="chat"
         options={{

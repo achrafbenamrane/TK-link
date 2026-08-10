@@ -1,3 +1,4 @@
+import { countCritical } from '../lib/urgency';
 import { PRODUCT_IMAGES } from './product-images';
 import type { Category, Deal, Merchant } from './schema';
 
@@ -446,6 +447,17 @@ export function getMerchant(id: string): Merchant | undefined {
 export function dealsByCategory(category: Category | null): Deal[] {
   if (!category) return DEALS;
   return DEALS.filter((d) => d.category === category);
+}
+
+/**
+ * Combien d'invendus sont en dernière chance, tout le catalogue confondu.
+ *
+ * Les écrans qui affichent ce compteur (le bandeau du hub) n'ont pas la liste
+ * des offres sous la main : leur passer `DEALS` entier pour qu'ils le comptent
+ * eux-mêmes exposerait le catalogue sans raison.
+ */
+export function criticalDealCount(): number {
+  return countCritical(DEALS);
 }
 
 /** The hero flash sale surfaced at the top of the feed. */

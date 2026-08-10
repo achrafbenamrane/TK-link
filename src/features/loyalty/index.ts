@@ -6,6 +6,7 @@
 export { LoyaltyCardScreen } from './ui/card-screen';
 export { GiftsScreen } from './ui/gifts-screen';
 export { OffersScreen } from './ui/offers-screen';
+export { OffersRail } from './ui/offers-rail';
 export {
   useLoyaltyStore,
   selectCard,

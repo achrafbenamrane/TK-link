@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { HunterBar, useGameStore } from '@/features/gamification';
+import { useGameStore } from '@/features/gamification';
 import {
   AvatarView,
   selectAvatar,
@@ -16,9 +16,10 @@ import { AppText } from '@/shared/ui';
 /**
  * ACCUEIL — les ventes flash, triées par ce qui va disparaître en premier.
  *
- * C'est ici que la boutique, le profil et la progression se rencontrent :
- * `shop` laisse trois places (identité, bandeau, intérêts) et les features
- * `onboarding` et `gamification` les remplissent. Aucune ne dépend des autres.
+ * La progression (rang, missions, série) n'est PLUS ici : elle vit dans
+ * l'onglet « La Chasse ». L'accueil retrouve son seul métier — montrer ce qui
+ * se déstocke maintenant. La visite du jour, elle, continue d'être comptée :
+ * c'est bien l'ouverture de l'app qu'elle mesure, pas l'affichage du bandeau.
  */
 export default function AccueilRoute() {
   const router = useRouter();
@@ -55,12 +56,5 @@ export default function AccueilRoute() {
     [avatar, firstName, router],
   );
 
-  return (
-    <HomeScreen
-      onVisit={onVisit}
-      interests={interests}
-      renderIdentity={renderIdentity}
-      renderBanner={(criticalCount) => <HunterBar criticalCount={criticalCount} />}
-    />
-  );
+  return <HomeScreen onVisit={onVisit} interests={interests} renderIdentity={renderIdentity} />;
 }

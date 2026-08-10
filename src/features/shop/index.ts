@@ -12,6 +12,8 @@ export { FavoritesScreen } from './ui/favorites-screen';
 export { ProfileScreen } from './ui/profile-screen';
 export { PreferencesScreen } from './ui/preferences-screen';
 export { BrowseScreen } from './ui/browse-screen';
+export { LiquidationRail } from './ui/components/liquidation-rail';
+export { criticalDealCount } from './model/catalog';
 export {
   summarize,
   sortSummaries,

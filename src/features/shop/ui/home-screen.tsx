@@ -7,7 +7,7 @@ import { AppText, Screen, TextField } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { activeFilterCount, filterDeals } from '../lib/preferences';
-import { countCritical, sortForInterests } from '../lib/urgency';
+import { sortForInterests } from '../lib/urgency';
 import { dealsByCategory, getDeal, getMerchant, FEATURED_DEAL_ID } from '../model/catalog';
 import type { Category, Deal } from '../model/schema';
 import { getUserCoord } from '../lib/location';
@@ -133,12 +133,6 @@ type HomeScreenProps = {
    * devant. Vient aussi de la route, pour la même raison.
    */
   interests?: Category[];
-  /**
-   * Bandeau posé en tête de liste, rendu par la ROUTE. La progression vit dans
-   * sa propre feature ; la boutique ne l'importe pas, elle lui laisse une
-   * place et lui passe le nombre d'offres en dernière chance.
-   */
-  renderBanner?: (criticalCount: number) => ReactNode;
   /** Signalé une fois au montage — sert la série et les missions du jour. */
   onVisit?: () => void;
 };
@@ -147,7 +141,6 @@ export function HomeScreen({
   initialView = 'liste',
   renderIdentity,
   interests,
-  renderBanner,
   onVisit,
 }: HomeScreenProps = {}) {
   const [category, setCategory] = useState<Category | null>(null);
@@ -192,7 +185,6 @@ export function HomeScreen({
     };
   }, [category, query, preferences, userCoord, interests]);
 
-  const critical = useMemo(() => countCritical(deals), [deals]);
   const featured = getDeal(FEATURED_DEAL_ID);
 
   // Une visite par jour compte pour la série et les missions.
@@ -262,9 +254,6 @@ export function HomeScreen({
                   className="border-0 bg-transparent px-0"
                 />
               </View>
-
-              {/* Bandeau fourni par la route (progression du chasseur). */}
-              {renderBanner ? <View className="mb-4">{renderBanner(critical)}</View> : null}
 
               {/* Ad card sits above the filter and stays visible whatever the
                 selected category — it advertises the deal, it isn't a result. */}
