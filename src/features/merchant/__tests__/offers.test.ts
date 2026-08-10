@@ -16,6 +16,8 @@ const offer = (over: Partial<PublishedOffer> = {}): PublishedOffer => ({
   description: '',
   publishedAt: NOW,
   offline: false,
+  audience: 'clients',
+  seller: '',
   ...over,
 });
 
@@ -65,6 +67,7 @@ describe('brouillon d’offre', () => {
     stock: 10,
     durationMinutes: 60,
     description: '',
+    audience: 'clients' as const,
   };
 
   it('accepte une offre bien formée', () => {
@@ -94,12 +97,13 @@ describe('store commerçant', () => {
     stock: 4,
     durationMinutes: 30,
     description: '',
+    audience: 'clients' as const,
   };
 
   beforeEach(() => useMerchantStore.getState().resetDemo());
 
   it('publie et consomme une opération', () => {
-    const r = useMerchantStore.getState().publish(draft, NOW);
+    const r = useMerchantStore.getState().publish(draft, '', NOW);
     expect(r.ok).toBe(true);
     expect(useMerchantStore.getState().used).toBe(1);
     expect(useMerchantStore.getState().offers).toHaveLength(1);
@@ -107,8 +111,8 @@ describe('store commerçant', () => {
   });
 
   it('refuse la sixième publication — CDC §9', () => {
-    for (let i = 0; i < 5; i++) useMerchantStore.getState().publish(draft, NOW);
-    const r = useMerchantStore.getState().publish(draft, NOW);
+    for (let i = 0; i < 5; i++) useMerchantStore.getState().publish(draft, '', NOW);
+    const r = useMerchantStore.getState().publish(draft, '', NOW);
 
     expect(r).toEqual({ ok: false, reason: 'quota' });
     // Rien n’est consommé sur un refus, sinon le compteur dériverait.
@@ -117,9 +121,9 @@ describe('store commerçant', () => {
   });
 
   it('un pack débloque la suite', () => {
-    for (let i = 0; i < 5; i++) useMerchantStore.getState().publish(draft, NOW);
+    for (let i = 0; i < 5; i++) useMerchantStore.getState().publish(draft, '', NOW);
     expect(useMerchantStore.getState().buyPack('pack_10')).toBe(true);
-    expect(useMerchantStore.getState().publish(draft, NOW).ok).toBe(true);
+    expect(useMerchantStore.getState().publish(draft, '', NOW).ok).toBe(true);
   });
 
   it('ignore un pack inconnu', () => {
@@ -128,7 +132,7 @@ describe('store commerçant', () => {
   });
 
   it('retire une offre et décrémente un stock', () => {
-    const r = useMerchantStore.getState().publish(draft, NOW);
+    const r = useMerchantStore.getState().publish(draft, '', NOW);
     const id = r.ok ? r.offer.id : '';
 
     useMerchantStore.getState().sellOne(id);
@@ -139,7 +143,7 @@ describe('store commerçant', () => {
   });
 
   it('un stock ne descend jamais sous zéro', () => {
-    const r = useMerchantStore.getState().publish({ ...draft, stock: 1 }, NOW);
+    const r = useMerchantStore.getState().publish({ ...draft, stock: 1 }, '', NOW);
     const id = r.ok ? r.offer.id : '';
     useMerchantStore.getState().sellOne(id);
     useMerchantStore.getState().sellOne(id);

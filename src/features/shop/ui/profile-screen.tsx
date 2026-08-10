@@ -60,9 +60,17 @@ type ProfileScreenProps = {
    * simplement pas l'entrée.
    */
   canPublishOffers?: boolean;
+  /**
+   * Ce compte peut-il acheter en gros ? CDC §20 : seuls les commerçants voient
+   * les lots des grossistes. Fourni par la ROUTE, comme le rôle.
+   */
+  canBuyWholesale?: boolean;
 };
 
-export function ProfileScreen({ canPublishOffers = false }: ProfileScreenProps = {}) {
+export function ProfileScreen({
+  canPublishOffers = false,
+  canBuyWholesale = false,
+}: ProfileScreenProps = {}) {
   const router = useRouter();
   const points = useShopStore(selectPoints);
   // On s'abonne à la référence STABLE (`s.vouchers`) puis on filtre en mémo :
@@ -228,6 +236,28 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
               </AppText>
             </View>
             <Feather name="chevron-right" size={18} color={colors.inkInverse} />
+          </Pressable>
+        ) : null}
+
+        {/* CDC §20 — le marché des grossistes, réservé aux commerçants. */}
+        {canBuyWholesale ? (
+          <Pressable
+            testID="profile-lots"
+            accessibilityRole="button"
+            accessibilityLabel="Lots des grossistes"
+            onPress={() => router.push('/lots')}
+            className="mb-4 flex-row items-center gap-3 rounded-card border border-line bg-surface p-4 active:bg-surface-muted"
+          >
+            <View className="h-10 w-10 items-center justify-center rounded-control bg-surface-muted">
+              <Feather name="package" size={19} color={colors.ink} />
+            </View>
+            <View className="flex-1">
+              <AppText className="font-sans-bold text-ink">Lots des grossistes</AppText>
+              <AppText variant="caption" className="text-ink-faint">
+                Acheter en gros pour votre commerce.
+              </AppText>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.inkFaint} />
           </Pressable>
         ) : null}
 

@@ -7,9 +7,17 @@
  * B2B) est du ressort du portail web.
  */
 export { MerchantOffersScreen } from './ui/offers-screen';
-export { useMerchantStore, selectOffers, selectUsed, selectPurchased } from './model/store';
-export type { OfferDraft, PublishedOffer } from './model/schema';
-export { DURATIONS } from './model/schema';
+export { WholesaleScreen } from './ui/wholesale-screen';
+export {
+  useMerchantStore,
+  selectOffers,
+  selectLots,
+  selectUsed,
+  selectPurchased,
+  selectWholesaleOrders,
+} from './model/store';
+export type { Audience, OfferDraft, PublishedOffer, WholesaleOrder } from './model/schema';
+export { AUDIENCES, DURATIONS } from './model/schema';
 export {
   FREE_OPERATIONS,
   COMMISSION_PCT,

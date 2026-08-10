@@ -15,6 +15,20 @@ import { CATEGORIES } from '@/shared/lib/categories';
 export const DURATIONS = [15, 30, 60, 120, 240] as const;
 export type Duration = (typeof DURATIONS)[number];
 
+/**
+ * À QUI l'offre s'adresse — CDC §20.
+ *
+ * Le geste est le même (on publie un invendu), le public change : le commerçant
+ * vend aux clients, le grossiste vend aux commerçants. C'est donc UN champ, pas
+ * deux écrans jumeaux qui divergeraient à la première évolution.
+ *
+ * `.default('clients')` n'est pas décoratif : sans lui, les offres déjà
+ * stockées avant l'arrivée du B2B feraient échouer `safeParse`, et le
+ * commerçant perdrait tout son historique de publications.
+ */
+export const AUDIENCES = ['clients', 'commercants'] as const;
+export type Audience = (typeof AUDIENCES)[number];
+
 export const OfferDraftSchema = z
   .object({
     title: z.string().trim().min(3, 'Titre trop court').max(60, 'Titre trop long'),
@@ -26,6 +40,7 @@ export const OfferDraftSchema = z
     stock: z.number().int().positive('Indiquez la quantité').max(999, 'Quantité trop élevée'),
     durationMinutes: z.number().int().positive(),
     description: z.string().trim().max(240).default(''),
+    audience: z.enum(AUDIENCES).default('clients'),
   })
   .refine((o) => o.oldPriceCents > o.priceCents, {
     // Sans cette règle on publierait des « promotions » plus chères que le prix
@@ -50,14 +65,42 @@ export const PublishedOfferSchema = z.object({
   publishedAt: z.number().int().positive(),
   /** Retirée par le commerçant avant son terme. */
   offline: z.boolean().default(false),
+  /** Public visé — CDC §20. Les offres d'avant le B2B sont pour les clients. */
+  audience: z.enum(AUDIENCES).default('clients'),
+  /** Nom du vendeur, pour les lots B2B où l'on ne connaît pas l'enseigne. */
+  seller: z.string().default(''),
 });
 
 export type PublishedOffer = z.infer<typeof PublishedOfferSchema>;
 
+/**
+ * Une commande passée à un grossiste — CDC §20.
+ *
+ * On conserve le prix unitaire AU MOMENT de la commande, pas une référence
+ * vers l'offre : un lot dont le prix change ne doit pas réécrire les commandes
+ * déjà passées.
+ */
+export const WholesaleOrderSchema = z.object({
+  id: z.string().min(1),
+  offerId: z.string().min(1),
+  title: z.string(),
+  seller: z.string().default(''),
+  qty: z.number().int().positive(),
+  unitCents: z.number().int().nonnegative(),
+  totalCents: z.number().int().nonnegative(),
+  at: z.number().int().positive(),
+});
+
+export type WholesaleOrder = z.infer<typeof WholesaleOrderSchema>;
+
 export const PersistedMerchantSchema = z.object({
   offers: z.array(PublishedOfferSchema).default([]),
+  /** Le marché B2B — conservé pour que les stocks entamés survivent — CDC §20. */
+  lots: z.array(PublishedOfferSchema).default([]),
   /** Opérations consommées — CDC §9 : les cinq premières sont offertes. */
   used: z.number().int().nonnegative().default(0),
   /** Opérations achetées via des packs. */
   purchased: z.number().int().nonnegative().default(0),
+  /** Ce que le commerçant a commandé en gros — CDC §20. */
+  wholesaleOrders: z.array(WholesaleOrderSchema).default([]),
 });

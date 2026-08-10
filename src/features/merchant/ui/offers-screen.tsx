@@ -19,11 +19,37 @@ import {
 } from '../lib/billing';
 import { discountPct, secondsLeft, soldCents, STATE_LABEL, stateOf } from '../lib/offers';
 import { selectOffers, selectPurchased, selectUsed, useMerchantStore } from '../model/store';
-import type { OfferDraft, PublishedOffer } from '../model/schema';
+import type { Audience, OfferDraft, PublishedOffer } from '../model/schema';
 import { PublishForm } from './publish-form';
 
 type Props = {
+  /**
+   * À qui ce compte publie — CDC §20. Le commerçant vend aux clients, le
+   * grossiste aux commerçants. La ROUTE le déduit du rôle : la feature n'a pas
+   * le profil sous la main.
+   */
+  audience?: Audience;
+  /** Nom affiché sur les lots B2B, où l'acheteur ne connaît pas l'enseigne. */
+  seller?: string;
   onBack?: () => void;
+};
+
+/** Le vocabulaire change avec le public : on ne vend pas un lot comme un plat. */
+const COPY: Record<Audience, { title: string; subtitle: string; cta: string; empty: string }> = {
+  clients: {
+    title: 'Mes ventes flash',
+    subtitle: 'Ce que vos clients voient dans l’app.',
+    cta: 'Publier une vente flash',
+    empty:
+      'Publiez ce qui ne passera pas la nuit : les clients du quartier le verront immédiatement.',
+  },
+  commercants: {
+    title: 'Mes lots',
+    subtitle: 'Ce que les commerçants voient — CDC §20.',
+    cta: 'Publier un lot',
+    empty:
+      'Publiez vos fins de série : les commerçants de la plateforme les verront immédiatement.',
+  },
 };
 
 /** Couleur de la pastille d'état. Une offre en ligne doit sauter aux yeux. */
@@ -50,7 +76,8 @@ function timeLabel(seconds: number): string {
  * L'écran fait aussi le service après-vente du modèle économique : le quota du
  * §9 et la commission du §21 s'affichent AVANT d'être subis, jamais après.
  */
-export function MerchantOffersScreen({ onBack }: Props) {
+export function MerchantOffersScreen({ audience = 'clients', seller = '', onBack }: Props) {
+  const copy = COPY[audience];
   const [mode, setMode] = useState<'list' | 'publish'>('list');
   const [now] = useState(() => Date.now());
 
@@ -68,7 +95,7 @@ export function MerchantOffersScreen({ onBack }: Props) {
   const revenue = useMemo(() => offers.reduce((sum, o) => sum + soldCents(o), 0), [offers]);
 
   const onPublish = (draft: OfferDraft) => {
-    const result = publish(draft);
+    const result = publish({ ...draft, audience }, seller);
     if (!result.ok) {
       Alert.alert(
         'Quota épuisé',
@@ -77,7 +104,12 @@ export function MerchantOffersScreen({ onBack }: Props) {
       return;
     }
     setMode('list');
-    Alert.alert('En ligne 🎉', `« ${result.offer.title} » est visible dans l’app des clients.`);
+    Alert.alert(
+      'En ligne 🎉',
+      audience === 'clients'
+        ? `« ${result.offer.title} » est visible dans l’app des clients.`
+        : `« ${result.offer.title} » est visible des commerçants.`,
+    );
   };
 
   const onBuy = (packId: string) => {
@@ -108,7 +140,7 @@ export function MerchantOffersScreen({ onBack }: Props) {
           </Pressable>
           <View className="flex-1">
             <AppText variant="display" className="text-2xl">
-              Nouvelle vente flash
+              {audience === 'clients' ? 'Nouvelle vente flash' : 'Nouveau lot'}
             </AppText>
             <AppText variant="caption" className="mt-0.5">
               {left} opération{left > 1 ? 's' : ''} restante{left > 1 ? 's' : ''}
@@ -137,10 +169,10 @@ export function MerchantOffersScreen({ onBack }: Props) {
           ) : null}
           <View className="flex-1">
             <AppText variant="display" className="text-2xl">
-              Mes ventes flash
+              {copy.title}
             </AppText>
             <AppText variant="caption" className="mt-0.5">
-              Ce que vos clients voient dans l’app.
+              {copy.subtitle}
             </AppText>
           </View>
         </View>
@@ -188,7 +220,7 @@ export function MerchantOffersScreen({ onBack }: Props) {
         <Pressable
           testID="merchant-new-offer"
           accessibilityRole="button"
-          accessibilityLabel="Publier une vente flash"
+          accessibilityLabel={copy.cta}
           disabled={!allowed}
           onPress={() => setMode('publish')}
           className={cn(
@@ -205,7 +237,7 @@ export function MerchantOffersScreen({ onBack }: Props) {
             className={cn('font-sans-bold', allowed ? 'text-ink-inverse' : 'text-ink-faint')}
             style={{ fontSize: 15 }}
           >
-            {allowed ? 'Publier une vente flash' : 'Quota épuisé'}
+            {allowed ? copy.cta : 'Quota épuisé'}
           </AppText>
         </Pressable>
 
@@ -268,11 +300,10 @@ export function MerchantOffersScreen({ onBack }: Props) {
           <View testID="merchant-empty" className="mt-4 items-center gap-2 px-10">
             <Feather name="zap" size={30} color={colors.inkFaint} />
             <AppText variant="title" className="mt-1 text-center text-base">
-              Aucune vente flash pour l’instant
+              Rien de publié pour l’instant
             </AppText>
             <AppText variant="caption" className="text-center">
-              Publiez ce qui ne passera pas la nuit : les clients du quartier le verront
-              immédiatement.
+              {copy.empty}
             </AppText>
           </View>
         ) : (

@@ -16,6 +16,7 @@ const draft = {
   stock: 4,
   durationMinutes: 30,
   description: '',
+  audience: 'clients' as const,
 };
 
 beforeEach(() => useMerchantStore.getState().resetDemo());
@@ -62,7 +63,7 @@ describe('<MerchantOffersScreen />', () => {
   });
 
   it('verrouille la publication quand le quota est épuisé, et propose les packs', () => {
-    for (let i = 0; i < FREE_OPERATIONS; i++) useMerchantStore.getState().publish(draft);
+    for (let i = 0; i < FREE_OPERATIONS; i++) useMerchantStore.getState().publish(draft, '');
     render(<MerchantOffersScreen />);
 
     fireEvent.press(screen.getByTestId('merchant-new-offer'));
@@ -73,7 +74,7 @@ describe('<MerchantOffersScreen />', () => {
   });
 
   it('retire une offre de l’app', () => {
-    const r = useMerchantStore.getState().publish(draft);
+    const r = useMerchantStore.getState().publish(draft, '');
     const id = r.ok ? r.offer.id : '';
     render(<MerchantOffersScreen />);
 

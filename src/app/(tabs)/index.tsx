@@ -56,7 +56,9 @@ export default function AccueilRoute() {
   const [now] = useState(() => Date.now());
 
   const extraDeals = useMemo<Deal[]>(() => {
-    return liveOffers(published, now).map((o) => ({
+    // CDC §20 : un lot destiné aux commerçants n'a rien à faire chez le client.
+    const forClients = published.filter((o) => o.audience === 'clients');
+    return liveOffers(forClients, now).map((o) => ({
       id: `pub_${o.id}`,
       title: o.title,
       merchantId: LOCAL_MERCHANT_ID,
