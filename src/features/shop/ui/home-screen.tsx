@@ -7,7 +7,7 @@ import { AppText, Screen, TextField } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { activeFilterCount, filterDeals } from '../lib/preferences';
-import { sortForInterests } from '../lib/urgency';
+import { splitByInterests } from '../lib/urgency';
 import { dealsByCategory, getDeal, getMerchant, FEATURED_DEAL_ID } from '../model/catalog';
 import type { Category, Deal } from '../model/schema';
 import { getUserCoord } from '../lib/location';
@@ -170,7 +170,7 @@ export function HomeScreen({
   const preferences = useShopStore((s) => s.preferences);
   const userCoord = useShopStore((s) => s.userCoord);
 
-  const { deals, radiusRelaxed } = useMemo(() => {
+  const { deals, forYouCount, radiusRelaxed } = useMemo(() => {
     // Les offres publiées depuis l'app passent par exactement les mêmes filtres
     // que le catalogue : régimes, rayon, catégorie, recherche. Les exempter
     // ferait apparaître une offre que « Ma Fan Zone » vient d'écarter.
@@ -191,8 +191,13 @@ export function HomeScreen({
     // Ce qui va disparaître passe DEVANT : c'est un déstockage, pas un
     // catalogue. Trier par urgence est ce qui change la nature de l'écran —
     // mais le CDC §7 met les catégories déclarées avant tout le reste.
+    // Le client l'a tranché : on n'affiche pas des promotions de boucherie à
+    // quelqu'un venu pour du matériel informatique. On coupe donc en deux, au
+    // lieu de se contenter de remonter les bonnes offres.
+    const { forYou, others } = splitByInterests(outcome.deals, interests ?? []);
     return {
-      deals: sortForInterests(outcome.deals, interests ?? []),
+      deals: [...forYou, ...others],
+      forYouCount: forYou.length,
       radiusRelaxed: outcome.radiusRelaxed,
     };
   }, [category, query, preferences, userCoord, interests, extraDeals]);
@@ -245,8 +250,22 @@ export function HomeScreen({
         <FlatList
           data={deals}
           keyExtractor={(d) => d.id}
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
             <View className="px-5">
+              {/* La séparation n'est pas un tri : c'est une frontière assumée.
+                  Ce qui suit est hors des centres d'intérêt déclarés — présent,
+                  mais jamais mélangé à ce qu'on est venu chercher. */}
+              {index === forYouCount && forYouCount > 0 ? (
+                <View testID="home-others-divider" className="mb-3 mt-2 gap-1">
+                  <View className="h-px bg-line" />
+                  <AppText variant="title" className="mt-3 text-base">
+                    Autres offres du quartier
+                  </AppText>
+                  <AppText variant="caption" className="text-ink-faint">
+                    Hors de vos centres d’intérêt — modifiables dans Ma Fan Zone.
+                  </AppText>
+                </View>
+              ) : null}
               <FlashCard deal={item} />
             </View>
           )}
@@ -281,7 +300,9 @@ export function HomeScreen({
                   Ça part maintenant
                 </AppText>
                 <AppText variant="caption" className="text-ink-faint">
-                  {deals.length} invendu{deals.length > 1 ? 's' : ''} à sauver
+                  {forYouCount > 0 && forYouCount < deals.length
+                    ? `${forYouCount} pour vous · ${deals.length} en tout`
+                    : `${deals.length} invendu${deals.length > 1 ? 's' : ''} à sauver`}
                 </AppText>
               </View>
             </View>

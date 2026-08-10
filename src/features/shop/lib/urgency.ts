@@ -96,6 +96,36 @@ export function sortForInterests(deals: Deal[], interests: Category[]): Deal[] {
   ];
 }
 
+/**
+ * Sépare ce qui concerne l'utilisateur du reste — CDC §7, précisé par le
+ * client : « si tu es intéressé par le matériel informatique, on ne va pas
+ * t'afficher les promotions des boucheries ».
+ *
+ * Un simple tri ne suffisait pas : il remontait les bonnes offres SANS jamais
+ * écarter les autres, si bien qu'un amateur de high-tech voyait toujours
+ * arriver de la viande au bout de trois cartes. On coupe donc en deux.
+ *
+ * Mais on ne SUPPRIME pas : l'écran d'un utilisateur qui n'a déclaré qu'un
+ * centre d'intérêt se viderait, et un déstockage vide ne donne aucune raison
+ * de revenir. Le reste passe sous une séparation nommée — visible, assumé,
+ * et jamais mélangé au reste.
+ *
+ * Rien de déclaré = rien à séparer : tout retombe dans `forYou`, exactement
+ * comme avant.
+ */
+export function splitByInterests(
+  deals: Deal[],
+  interests: Category[],
+): { forYou: Deal[]; others: Deal[] } {
+  if (interests.length === 0) return { forYou: sortByUrgency(deals), others: [] };
+  const wanted = new Set(interests);
+  const urgent = sortByUrgency(deals);
+  return {
+    forYou: urgent.filter((d) => wanted.has(d.category)),
+    others: urgent.filter((d) => !wanted.has(d.category)),
+  };
+}
+
 /** Combien d'offres sont en dernière chance — sert le bandeau d'accueil. */
 export function countCritical(deals: Deal[]): number {
   return deals.filter((d) => urgencyOf(d) === 'critique').length;

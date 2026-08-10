@@ -8,6 +8,7 @@ import { colors } from '@/shared/theme/colors';
 
 import { getMerchant } from '../../model/catalog';
 import { distanceKm, formatDistance } from '../../lib/geo';
+import { discountPct, liquidationLabel, urgencyOf } from '../../lib/urgency';
 import type { Deal } from '../../model/schema';
 import { useShopStore } from '../../model/store';
 import { Countdown } from './countdown';
@@ -15,6 +16,21 @@ import { ProductImage } from './product-image';
 
 type Props = { deal: Deal };
 
+/**
+ * LA CARTE D'UNE VENTE FLASH — le cœur de l'app, et donc l'écran qu'on
+ * retravaille en dernier recours plutôt qu'à la légère.
+ *
+ * Quatre informations doivent se lire AVANT tout le reste, dans cet ordre :
+ * le produit (la photo), ce qu'il coûte maintenant contre son prix normal,
+ * combien de temps il reste, et combien il en reste. C'est la demande du
+ * client — « il faut que ça se voie du premier coup d'œil » — et c'est aussi
+ * ce qui distingue un déstockage d'un catalogue de promotions.
+ *
+ * La hiérarchie est donc TYPOGRAPHIQUE et pas décorative : le prix flash est
+ * le plus gros élément de la carte après la photo, le compte à rebours vire au
+ * rouge quand l'offre agonise, et le stock restant est une pastille sur
+ * l'image — pas une ligne de légende qu'on lit en dernier.
+ */
 export function FlashCard({ deal }: Props) {
   const router = useRouter();
   const merchant = getMerchant(deal.merchantId);
@@ -26,23 +42,36 @@ export function FlashCard({ deal }: Props) {
   const userCoord = useShopStore((s) => s.userCoord);
   const distance = userCoord && merchant ? distanceKm(userCoord, merchant.coord) : null;
 
-  const discount = deal.oldPrice ? Math.round((1 - deal.price / deal.oldPrice) * 100) : null;
-  const stockPct = Math.round((deal.stockLeft / deal.stockTotal) * 100);
+  const discount = discountPct(deal);
+  const urgency = urgencyOf(deal);
+  const critical = urgency === 'critique';
+  const stockPct = deal.stockTotal > 0 ? (deal.stockLeft / deal.stockTotal) * 100 : 0;
   const low = deal.stockLeft <= deal.stockTotal * 0.25;
 
   return (
     <Pressable
       testID={`deal-${deal.id}`}
       accessibilityRole="button"
+      accessibilityLabel={`${deal.title}, ${deal.price.toFixed(2)} euros au lieu de ${(
+        deal.oldPrice ?? deal.price
+      ).toFixed(2)}, ${deal.stockLeft} restant${deal.stockLeft > 1 ? 's' : ''}`}
       onPress={() => router.push(`/produit/${deal.id}`)}
       className="mb-4 overflow-hidden rounded-card border border-line bg-surface"
     >
-      <View className="h-44 items-center justify-center" style={{ backgroundColor: deal.tint }}>
-        <ProductImage deal={deal} emojiSize={72} />
+      {/* ------------------------------------------------------------ visuel */}
+      <View className="h-52 items-center justify-center" style={{ backgroundColor: deal.tint }}>
+        <ProductImage deal={deal} emojiSize={84} />
 
-        <View className="absolute left-3 top-3 flex-row items-center gap-1.5 rounded-control bg-ink px-2.5 py-1.5">
-          <Feather name="clock" size={12} color={colors.inkInverse} />
-          <Countdown seconds={deal.endsInSeconds} className="text-xs text-ink-inverse" />
+        {/* Le temps qui reste — rouge dès que l'offre agonise. */}
+        <View
+          testID={`deal-${deal.id}-countdown`}
+          className={cn(
+            'absolute left-3 top-3 flex-row items-center gap-1.5 rounded-pill px-3 py-1.5',
+          )}
+          style={{ backgroundColor: critical ? colors.danger : colors.ink }}
+        >
+          <Feather name="clock" size={13} color={colors.inkInverse} />
+          <Countdown seconds={deal.endsInSeconds} className="text-sm text-ink-inverse" />
         </View>
 
         <Pressable
@@ -50,23 +79,41 @@ export function FlashCard({ deal }: Props) {
           hitSlop={8}
           accessibilityLabel="Ajouter aux favoris"
           onPress={() => toggleFavorite(deal.id)}
-          className="absolute right-3 top-3 h-9 w-9 items-center justify-center rounded-pill bg-surface/90"
+          className="absolute right-3 top-3 h-10 w-10 items-center justify-center rounded-pill bg-surface/90"
         >
           <Ionicons
             name={isFav ? 'heart' : 'heart-outline'}
-            size={18}
+            size={20}
             color={isFav ? colors.brand500 : colors.inkMuted}
           />
         </Pressable>
 
+        {/* La remise, en gros : c'est elle qui fait s'arrêter le pouce. */}
         {discount ? (
-          <View className="absolute bottom-3 left-3 rounded-control bg-brand-500 px-2.5 py-1">
-            <AppText className="font-sans-bold text-xs text-ink-inverse">-{discount}%</AppText>
+          <View className="absolute bottom-3 left-3 rounded-control bg-brand-500 px-3 py-1.5">
+            <AppText className="font-display text-ink-inverse" style={{ fontSize: 17 }}>
+              -{discount}%
+            </AppText>
           </View>
         ) : null}
+
+        {/* Ce qu'il reste, sur l'image et non en légende. */}
+        <View
+          testID={`deal-${deal.id}-stock`}
+          className="absolute bottom-3 right-3 flex-row items-center gap-1.5 rounded-pill px-3 py-1.5"
+          style={{ backgroundColor: low ? colors.danger : 'rgba(15,26,18,0.82)' }}
+        >
+          <Feather name="package" size={12} color={colors.inkInverse} />
+          <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 12.5 }}>
+            {deal.stockLeft > 0
+              ? `${deal.stockLeft} restant${deal.stockLeft > 1 ? 's' : ''}`
+              : 'Épuisé'}
+          </AppText>
+        </View>
       </View>
 
-      <View className="gap-2 p-3.5">
+      {/* ------------------------------------------------------------ contenu */}
+      <View className="gap-2 p-4">
         <View className="flex-row items-center justify-between">
           <View className="flex-1 flex-row items-center gap-1.5 pr-2">
             <AppText style={{ fontSize: 14 }}>{merchant?.emoji}</AppText>
@@ -77,48 +124,47 @@ export function FlashCard({ deal }: Props) {
             >
               {merchant?.name}
             </AppText>
+            <View className="flex-row items-center gap-0.5">
+              <Ionicons name="star" size={11} color={colors.brand500} />
+              <AppText variant="caption" className="font-sans-semibold text-ink">
+                {deal.rating.toFixed(1)}
+              </AppText>
+            </View>
           </View>
           <View className="flex-row items-center gap-1">
-            <Ionicons name="star" size={12} color={colors.brand500} />
-            <AppText variant="caption" className="font-sans-semibold text-ink">
-              {deal.rating.toFixed(1)}
+            <Feather name={distance ? 'navigation' : 'map-pin'} size={12} color={colors.inkFaint} />
+            <AppText variant="caption" className="text-ink-faint">
+              {/* Position refusée ou indisponible → on affiche le quartier :
+                  toujours quelque chose de vrai, jamais une distance inventée. */}
+              {distance ? formatDistance(distance) : (merchant?.area ?? '')}
             </AppText>
           </View>
         </View>
 
-        <AppText variant="title" className="text-base leading-snug" numberOfLines={1}>
+        <AppText variant="title" className="text-lg leading-snug" numberOfLines={1}>
           {deal.title}
         </AppText>
         {deal.unit ? (
-          <AppText variant="caption" className="-mt-1 text-ink-faint">
+          <AppText variant="caption" className="-mt-1.5 text-ink-faint">
             {deal.unit}
           </AppText>
         ) : null}
 
-        <View className="mt-0.5 gap-1">
-          <View className="h-1.5 overflow-hidden rounded-pill bg-surface-sunken">
-            <View
-              className={cn('h-full rounded-pill', low ? 'bg-brand-500' : 'bg-ink')}
-              style={{ width: `${Math.max(8, stockPct)}%` }}
-            />
-          </View>
-          <AppText
-            variant="caption"
-            className={cn('text-xs', low ? 'font-sans-semibold text-brand-600' : 'text-ink-faint')}
-          >
-            {low
-              ? `Plus que ${deal.stockLeft} !`
-              : `Reste ${deal.stockLeft} sur ${deal.stockTotal}`}
-          </AppText>
-        </View>
-
-        {/* Prix à gauche, bouton signature au centre (marquage client), distance
-            à droite pour équilibrer la ligne avec une info utile. */}
-        <View className="mt-1 flex-row items-center">
-          <View className="flex-1">
-            <AppText className="font-display text-xl text-ink">{deal.price.toFixed(2)}€</AppText>
+        {/* Le prix domine tout le bas de la carte. */}
+        <View className="mt-1 flex-row items-end">
+          <View className="flex-1 flex-row items-baseline gap-2">
+            <AppText
+              testID={`deal-${deal.id}-price`}
+              className="font-display text-ink"
+              style={{ fontSize: 30, lineHeight: 38 }}
+            >
+              {deal.price.toFixed(2)}€
+            </AppText>
             {deal.oldPrice ? (
-              <AppText variant="caption" className="text-ink-faint line-through">
+              <AppText
+                className="text-ink-faint line-through"
+                style={{ fontSize: 16, lineHeight: 22 }}
+              >
                 {deal.oldPrice.toFixed(2)}€
               </AppText>
             ) : null}
@@ -132,19 +178,27 @@ export function FlashCard({ deal }: Props) {
             size={62}
             accessibilityLabel={`Ajouter ${deal.title} au panier`}
           />
+        </View>
 
-          <View className="flex-1 items-end">
-            <Feather name={distance ? 'navigation' : 'map-pin'} size={13} color={colors.inkFaint} />
-            <AppText
-              variant="caption"
-              className="mt-0.5 text-right text-ink-faint"
-              numberOfLines={1}
-            >
-              {/* Position refusée ou indisponible → on affiche le quartier :
-                  toujours quelque chose de vrai, jamais une distance inventée. */}
-              {distance ? formatDistance(distance) : (merchant?.area ?? '')}
-            </AppText>
+        {/* La jauge redit le stock — l'œil la lit sans lire les chiffres. */}
+        <View className="mt-0.5 gap-1">
+          <View className="h-2 overflow-hidden rounded-pill bg-surface-sunken">
+            <View
+              className="h-full rounded-pill"
+              style={{
+                width: `${Math.max(6, Math.round(stockPct))}%`,
+                backgroundColor: low ? colors.danger : colors.ink,
+              }}
+            />
           </View>
+          <AppText
+            variant="caption"
+            className={cn('text-xs', critical ? 'font-sans-bold text-danger' : 'text-ink-faint')}
+          >
+            {critical
+              ? liquidationLabel(deal).toUpperCase()
+              : `Reste ${deal.stockLeft} sur ${deal.stockTotal}`}
+          </AppText>
         </View>
       </View>
     </Pressable>
