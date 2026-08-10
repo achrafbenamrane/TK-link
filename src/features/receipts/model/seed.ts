@@ -136,6 +136,7 @@ export function seedReceipts(now: number = Date.now()): Receipt[] {
       // 1 point par euro dépensé, arrondi à l'euro inférieur.
       pointsEarned: Math.floor(totalCents / 100),
       pinned: false,
+      orderId: '',
     };
     return spec.invoice
       ? { ...base, kind: 'facture' as const, certificateId: certificateFor(base) }

@@ -21,8 +21,14 @@ import { z } from 'zod';
 export const ReceiptLineSchema = z.object({
   label: z.string().min(1),
   qty: z.number().int().positive().default(1),
-  /** Prix unitaire TTC, en centimes. */
-  unitCents: z.number().int().nonnegative(),
+  /**
+   * Prix unitaire TTC, en centimes. Peut être NÉGATIF : une remise s'inscrit
+   * comme une ligne à part entière plutôt que d'être retranchée des prix.
+   * Le client doit retrouver le prix qu'il a vu ET la remise qu'il a obtenue,
+   * et le total d'un ticket doit toujours être la somme de ses lignes — un
+   * ticket qui ne se recalcule pas est un ticket que le comptable refuse.
+   */
+  unitCents: z.number().int(),
 });
 export type ReceiptLine = z.infer<typeof ReceiptLineSchema>;
 
@@ -98,6 +104,17 @@ export const ReceiptSchema = z.object({
   pointsEarned: z.number().int().nonnegative().default(0),
   /** L'utilisateur peut épingler un ticket (garantie, note de frais…). */
   pinned: z.boolean().default(false),
+  /**
+   * La commande dont ce ticket est né — CDC §14. Vide pour un passage en
+   * caisse, où il n'y a pas de commande dans l'app.
+   *
+   * C'est ce champ qui garantit qu'une commande ne produit qu'UN ticket : sans
+   * lui, chaque ouverture de l'app en émettrait un de plus.
+   *
+   * `.default('')` obligatoire : les tickets déjà stockés ne l'ont pas, et un
+   * champ requis effacerait tout l'historique à la réhydratation.
+   */
+  orderId: z.string().default(''),
 });
 export type Receipt = z.infer<typeof ReceiptSchema>;
 

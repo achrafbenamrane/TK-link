@@ -31,6 +31,8 @@ export type IncomingReceipt = {
   channel?: 'store' | 'online';
   /** Défaut : maintenant. */
   issuedAt?: number;
+  /** Commande d'origine, quand le ticket naît d'un achat dans l'app — CDC §14. */
+  orderId?: string;
 };
 
 type ReceiptsState = {
@@ -79,6 +81,7 @@ export const useReceiptsStore = create<ReceiptsState>()(
           certificateId: '',
           pointsEarned: Math.floor(totalCents / 100),
           pinned: false,
+          orderId: incoming.orderId ?? '',
         };
         set((s) => ({ receipts: [base, ...s.receipts] }));
         return base;

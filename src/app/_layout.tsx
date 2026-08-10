@@ -16,6 +16,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { selectCompleted, selectHydrated, useOnboardingStore } from '@/features/onboarding';
+import { receiptForOrder, useReceiptsStore } from '@/features/receipts';
+import { orderToTransaction, producesReceipt, selectOrders, useShopStore } from '@/features/shop';
 import { useWelcomeStore } from '@/features/welcome';
 import '@/shared/lib/env'; // fail fast on invalid environment (has safe defaults)
 import { colors } from '@/shared/theme/colors';
@@ -63,6 +65,38 @@ function FirstRunGate() {
   return null;
 }
 
+/**
+ * LE PONT COMMANDE → TICKET — CDC §14.
+ *
+ * « Transaction → Ticket → Facture. » La boutique produit des commandes, le
+ * portefeuille produit des tickets, et jusqu'ici rien ne les reliait : une
+ * commande remise au client ne laissait aucune trace, alors que le ticket
+ * dématérialisé EST la promesse de la marque.
+ *
+ * Ce pont vit à la racine et non dans un écran : un ticket ne doit pas
+ * dépendre de la page qu'on regardait au moment où la commande s'est
+ * terminée. Les deux features s'ignorent toujours — elles se rencontrent ici,
+ * comme partout ailleurs dans `src/app`.
+ *
+ * L'idempotence tient au champ `orderId` du ticket : une commande déjà
+ * facturée est reconnue, donc repasser cent fois n'émet jamais un doublon.
+ */
+function ReceiptBridge() {
+  const orders = useShopStore(selectOrders);
+  const receipts = useReceiptsStore((s) => s.receipts);
+  const addReceipt = useReceiptsStore((s) => s.addReceipt);
+
+  useEffect(() => {
+    for (const order of orders) {
+      if (!producesReceipt(order)) continue;
+      if (receiptForOrder(receipts, order.id)) continue;
+      addReceipt(orderToTransaction(order));
+    }
+  }, [orders, receipts, addReceipt]);
+
+  return null;
+}
+
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -102,6 +136,7 @@ export default function RootLayout() {
     <GestureHandlerRootView className="flex-1">
       <SafeAreaProvider>
         <FirstRunGate />
+        <ReceiptBridge />
         <Stack
           screenOptions={{
             headerShown: false,

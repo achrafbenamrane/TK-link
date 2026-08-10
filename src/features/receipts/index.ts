@@ -23,5 +23,6 @@ export {
   searchReceipts,
   splitVat,
   toInvoice,
+  receiptForOrder,
   CATEGORY_LABEL,
 } from './lib/receipts';

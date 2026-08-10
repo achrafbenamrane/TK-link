@@ -37,6 +37,7 @@ function mk(over: Partial<Receipt> = {}): Receipt {
     certificateId: '',
     pointsEarned: 12,
     pinned: false,
+    orderId: '',
     ...over,
   };
 }

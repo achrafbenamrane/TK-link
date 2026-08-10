@@ -187,6 +187,17 @@ export function certificateFor(
  * Convertit un ticket en facture certifiée. Fonction PURE : elle renvoie un
  * nouveau ticket, elle ne touche pas à l'original. Déjà converti → inchangé.
  */
+/**
+ * Le ticket né d'une commande donnée, s'il existe — CDC §14.
+ *
+ * C'est la garde anti-doublon de la chaîne « commande → ticket » : sans elle,
+ * chaque passage du pont émettrait un ticket de plus pour la même commande.
+ */
+export function receiptForOrder(receipts: Receipt[], orderId: string): Receipt | undefined {
+  if (!orderId) return undefined;
+  return receipts.find((r) => r.orderId === orderId);
+}
+
 export function toInvoice(receipt: Receipt): Receipt {
   if (receipt.kind === 'facture') return receipt;
   return { ...receipt, kind: 'facture', certificateId: certificateFor(receipt) };
