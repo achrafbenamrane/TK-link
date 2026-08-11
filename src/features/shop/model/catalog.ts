@@ -148,9 +148,85 @@ export const MERCHANTS: Record<string, Merchant> = {
     halal: false,
     emoji: '🎁',
   },
+  m_lumiere: {
+    id: 'm_lumiere',
+    name: 'Cinéma Le Lumière',
+    area: 'Jean Jaurès',
+    coord: { lat: 43.6063, lng: 1.4497 },
+    rating: 4.7,
+    halal: false,
+    emoji: '🎬',
+  },
+  m_bowling: {
+    id: 'm_bowling',
+    name: 'Bowling des Minimes',
+    area: 'Minimes',
+    coord: { lat: 43.6212, lng: 1.4383 },
+    rating: 4.4,
+    halal: false,
+    emoji: '🎳',
+  },
 };
 
 export const DEALS: Deal[] = [
+  /* ---- Sorties et loisirs ----
+   *
+   * Une place de cinéma non vendue est un invendu comme un autre : passé
+   * l'heure de la séance, elle ne vaut plus rien. C'est exactement la promesse
+   * du déstockage, appliquée à un service — d'où la catégorie « Services &
+   * Expériences » du CDC §4, celle de l'atelier poterie, plutôt qu'une neuvième
+   * catégorie que personne n'a validée.
+   */
+  {
+    id: 'd_cinema',
+    title: 'Place de cinéma · séance du soir',
+    merchantId: 'm_lumiere',
+    category: 'services',
+    emoji: '🎬',
+    tint: '#DCD9EF',
+    price: 5.9,
+    oldPrice: 11.5,
+    unit: 'la place · séance de 20 h 15',
+    rating: 4.7,
+    stockTotal: 40,
+    stockLeft: 12,
+    endsInSeconds: 5400,
+    description: 'Fauteuils encore libres sur la séance de ce soir.',
+    perk: 'Salle non remplie',
+  },
+  {
+    id: 'd_cine_duo',
+    title: 'Duo cinéma + boisson',
+    merchantId: 'm_lumiere',
+    category: 'services',
+    emoji: '🍿',
+    tint: '#EFE0D6',
+    price: 14.0,
+    oldPrice: 27.0,
+    unit: 'pour deux personnes',
+    rating: 4.7,
+    stockTotal: 15,
+    stockLeft: 4,
+    endsInSeconds: 4200,
+    description: 'Deux places côte à côte et deux boissons, séance du soir.',
+    perk: 'Deux places restantes',
+  },
+  {
+    id: 'd_bowling',
+    title: 'Partie de bowling · 1 h',
+    merchantId: 'm_bowling',
+    category: 'services',
+    emoji: '🎳',
+    tint: '#D9E6EF',
+    price: 8.0,
+    oldPrice: 16.0,
+    unit: 'la piste · jusqu’à 6 joueurs',
+    rating: 4.4,
+    stockTotal: 10,
+    stockLeft: 6,
+    endsInSeconds: 7200,
+    description: 'Pistes libres en début de soirée, chaussures comprises.',
+  },
   {
     id: 'd_cote',
     title: 'Côte de bœuf maturée',
