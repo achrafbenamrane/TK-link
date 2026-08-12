@@ -5,7 +5,7 @@ import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
-import { GAME_TILES, playableGames, type GameKey } from '../model/tiles';
+import { GAME_TILES, playableGames, tileIsDark, type GameKey } from '../model/tiles';
 
 type Props = {
   /** Taille des réservoirs disponibles — sert à verrouiller les jeux sans matière. */
@@ -30,7 +30,7 @@ export function GamesRail({ pools = { images: 0, quiz: 0, words: 0 }, onPlay }: 
       showsHorizontalScrollIndicator={false}
       contentContainerClassName="gap-3 px-5"
     >
-      {GAME_TILES.map((t) => {
+      {GAME_TILES.map((t, index) => {
         const locked = !playable[t.key];
         return (
           <Pressable
@@ -42,7 +42,7 @@ export function GamesRail({ pools = { images: 0, quiz: 0, words: 0 }, onPlay }: 
             disabled={locked}
             className={cn(
               'w-36 overflow-hidden rounded-card p-3.5 active:opacity-85',
-              t.dark ? 'bg-ink' : 'bg-brand-500',
+              tileIsDark(index) ? 'bg-ink' : 'bg-brand-500',
               locked && 'opacity-50',
             )}
             style={{ height: 150 }}

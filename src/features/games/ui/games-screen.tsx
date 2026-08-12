@@ -8,7 +8,7 @@ import { colors } from '@/shared/theme/colors';
 
 import type { CardImage } from '../model/memory';
 import type { QuizItem } from '../model/quiz';
-import { GAME_TILES, playableGames, type GameKey } from '../model/tiles';
+import { GAME_TILES, playableGames, tileIsDark, type GameKey } from '../model/tiles';
 import { GamePlayer } from './game-player';
 
 type Props = {
@@ -79,7 +79,7 @@ export function GamesScreen({ imagePool, quizPool, words, onWin, onBack }: Props
 
         {/* Grille de jeux */}
         <View className="mt-4 flex-row flex-wrap justify-between gap-y-4">
-          {GAME_TILES.map((t) => {
+          {GAME_TILES.map((t, index) => {
             const disabled = !canPlay[t.key];
             return (
               <Pressable
@@ -91,7 +91,8 @@ export function GamesScreen({ imagePool, quizPool, words, onWin, onBack }: Props
                 disabled={disabled}
                 className={cn(
                   'w-[47%] overflow-hidden rounded-card p-4',
-                  t.dark ? 'bg-ink' : 'bg-brand-500',
+                  // Deux colonnes : damier, sinon on obtient deux colonnes unies.
+                  tileIsDark(index, 2) ? 'bg-ink' : 'bg-brand-500',
                   disabled && 'opacity-55',
                 )}
                 style={{ aspectRatio: 0.86 }}
