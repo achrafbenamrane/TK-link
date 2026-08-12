@@ -11,6 +11,7 @@ import type { Deal } from '../model/schema';
 import { selectFavorites, useShopStore } from '../model/store';
 import { CartButton } from './components/cart-button';
 import { Countdown } from './components/countdown';
+import { PriceTag } from './components/price-tag';
 import { ProductImage } from './components/product-image';
 
 /**
@@ -75,22 +76,7 @@ function FavoriteCard({ deal }: { deal: Deal }) {
 
         <View className="flex-row items-end justify-between">
           <View className="flex-1">
-            <View className="flex-row items-baseline gap-1.5">
-              <AppText
-                className="font-display text-ink"
-                style={{ fontSize: 16, fontVariant: ['tabular-nums'] }}
-              >
-                {deal.price.toFixed(2)}€
-              </AppText>
-              {deal.oldPrice ? (
-                <AppText
-                  className="text-ink-faint line-through"
-                  style={{ fontSize: 11, fontVariant: ['tabular-nums'] }}
-                >
-                  {deal.oldPrice.toFixed(2)}€
-                </AppText>
-              ) : null}
-            </View>
+            <PriceTag price={deal.price} oldPrice={deal.oldPrice} size={19} />
           </View>
 
           <Pressable

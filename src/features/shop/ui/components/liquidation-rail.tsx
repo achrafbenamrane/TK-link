@@ -12,6 +12,7 @@ import { DEALS, getMerchant } from '../../model/catalog';
 import type { Deal } from '../../model/schema';
 import { useShopStore } from '../../model/store';
 import { Countdown } from './countdown';
+import { PriceTag } from './price-tag';
 import { ProductImage } from './product-image';
 
 type Props = {
@@ -122,20 +123,7 @@ export function LiquidationRail({ limit = 8, onCatch }: Props) {
               </View>
 
               <View className="mt-0.5 flex-row items-center justify-between">
-                <View>
-                  <AppText className="font-display text-ink" style={{ fontSize: 15 }}>
-                    {deal.price.toFixed(2)}€
-                  </AppText>
-                  {deal.oldPrice ? (
-                    <AppText
-                      variant="caption"
-                      className="text-ink-faint line-through"
-                      style={{ fontSize: 10.5 }}
-                    >
-                      {deal.oldPrice.toFixed(2)}€
-                    </AppText>
-                  ) : null}
-                </View>
+                <PriceTag price={deal.price} oldPrice={deal.oldPrice} size={17} />
 
                 <Pressable
                   testID={`liquidation-catch-${deal.id}`}

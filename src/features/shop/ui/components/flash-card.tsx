@@ -12,6 +12,7 @@ import { discountPct, liquidationLabel, urgencyOf } from '../../lib/urgency';
 import type { Deal } from '../../model/schema';
 import { useShopStore } from '../../model/store';
 import { Countdown } from './countdown';
+import { PriceTag } from './price-tag';
 import { ProductImage } from './product-image';
 
 type Props = { deal: Deal };
@@ -167,22 +168,8 @@ export function FlashCard({ deal }: Props) {
 
         {/* Le prix domine tout le bas de la carte. */}
         <View className="mt-1 flex-row items-end">
-          <View className="flex-1 flex-row items-baseline gap-2">
-            <AppText
-              testID={`deal-${deal.id}-price`}
-              className="font-display text-ink"
-              style={{ fontSize: 34, lineHeight: 43 }}
-            >
-              {deal.price.toFixed(2)}€
-            </AppText>
-            {deal.oldPrice ? (
-              <AppText
-                className="text-ink-faint line-through"
-                style={{ fontSize: 17, lineHeight: 23 }}
-              >
-                {deal.oldPrice.toFixed(2)}€
-              </AppText>
-            ) : null}
+          <View className="flex-1">
+            <PriceTag price={deal.price} oldPrice={deal.oldPrice} size={34} />
           </View>
 
           <PushButton
