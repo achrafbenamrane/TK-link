@@ -70,6 +70,19 @@ export function LeaderboardCard({ rows }: Props) {
             : 'Vous êtes en tête du quartier — tenez la position.'}
         </AppText>
       </View>
+
+      {/* La plateforme n'a pas encore d'utilisateurs : ces voisins sont
+          fabriqués. Le dire à l'écran est la seule façon d'éviter qu'une
+          démonstration laisse croire à une communauté déjà en place. */}
+      <View
+        testID="hub-leaderboard-demo"
+        className="flex-row items-center gap-2 border-t border-line bg-surface-muted px-4 py-2.5"
+      >
+        <Feather name="info" size={12} color={colors.inkFaint} />
+        <AppText variant="caption" className="flex-1 text-ink-faint" style={{ fontSize: 11.5 }}>
+          Voisins simulés — le classement deviendra réel avec les comptes.
+        </AppText>
+      </View>
     </View>
   );
 }

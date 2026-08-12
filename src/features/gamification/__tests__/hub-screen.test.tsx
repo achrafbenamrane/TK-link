@@ -67,3 +67,13 @@ describe('<HubScreen /> — l’onglet La Chasse', () => {
     expect(onChestOpened).not.toHaveBeenCalled();
   });
 });
+
+describe('honnêteté de la démonstration', () => {
+  it('le classement DIT que ses voisins sont simulés', () => {
+    // La plateforme n’a pas encore d’utilisateurs. Sans cette mention, une
+    // démonstration laisserait croire à une communauté déjà en place — et
+    // c’est le genre de malentendu qu’on ne rattrape pas.
+    render(<HubScreen />);
+    expect(screen.getByTestId('hub-leaderboard-demo')).toBeTruthy();
+  });
+});

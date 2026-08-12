@@ -32,6 +32,7 @@ docs-lint keeps every page linked and every link alive.
 
 - [Vision](product/vision.md)
 - [PRDs](product/prds/README.md) — feature specs that agents implement
+- [Gamification](product/gamification.md) — les règles de « La Chasse », leur origine, et ce qui reste simulé
 
 ## Quality
 
