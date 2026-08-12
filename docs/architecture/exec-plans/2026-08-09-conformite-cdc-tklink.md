@@ -3,7 +3,7 @@
 - **Date :** 2026-08-09
 - **Auteur :** agent + PROGIX
 - **Intent :** `CDC_TKLINK.pdf` V0.1 — Farid × PROGIX
-- **Statut :** in-progress — carte à jour au 2026-08-10
+- **Statut :** in-progress — carte à jour au 2026-08-12, **relue sur la source**
 
 ## Objectif & non-objectifs
 
@@ -56,6 +56,33 @@ du code. Là où le CDC propose lui-même une valeur (8 catégories, 0,99 €, 5
 d’une autre nature — c’est la **structure multi-rôles** dont dépendent §3, §4,
 §5, §9, §18, §19, §20 et §21. Elle passe donc en premier : tant qu’un compte n’a
 pas de rôle, aucune de ces sections ne peut exister.
+
+## Relecture sur la source — 2026-08-12
+
+Jusqu’ici cette carte avait été bâtie sur des restitutions du cahier des
+charges, jamais sur le document lui-même. **`CDC_TKLINK.pdf` V0.1 a été lu
+intégralement le 2026-08-12** (11 pages, 23 sections). Le tableau ci-dessus a
+été confronté ligne à ligne au texte original : aucune exigence oubliée,
+aucune inventée. Trois précisions en sont sorties.
+
+**Le §7 dit « en priorité », pas « uniquement ».** Le texte exact :
+« Les offres correspondant à ses catégories d’intérêt doivent être présentées
+en priorité. » Farid a dit autre chose en démonstration — « on ne va pas
+t’afficher les promotions des boucheries ». Le CDC autorise donc ce que le
+client a semblé refuser. Ce qui est en place tient les deux : les intérêts
+d’abord, une frontière nommée, le reste dessous. **Trancher entre « dessous »
+et « pas du tout » reste à Farid** — c’est une ligne à changer, pas une
+refonte.
+
+**Le prix du pack est contradictoire dans le CDC lui-même** : « 0,99 € » au §9,
+« 0,99 $ » au §21.3. Le code retient l’euro (`merchant/lib/billing.ts`). À
+confirmer avec la question §23 Q4, qui parle d’euros elle aussi.
+
+**Les valeurs que le CDC proposait sont celles qui ont été retenues** :
+les 8 catégories du §23 Q2 mot pour mot, les 2 ans de conservation du §23 Q8,
+la commission de 5 % du §21.2. Elles restent marquées « à valider » dans le
+document — implémentées comme défauts modifiables, chacune dans un seul
+fichier.
 
 ## Existant à réutiliser — ne pas recréer
 
