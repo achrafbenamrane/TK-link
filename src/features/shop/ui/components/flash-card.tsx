@@ -8,12 +8,14 @@ import { colors } from '@/shared/theme/colors';
 
 import { getMerchant } from '../../model/catalog';
 import { distanceKm, formatDistance } from '../../lib/geo';
+import { screeningLabel } from '../../lib/screening';
 import { discountPct, liquidationLabel, urgencyOf } from '../../lib/urgency';
 import type { Deal } from '../../model/schema';
 import { useShopStore } from '../../model/store';
 import { Countdown } from './countdown';
 import { PriceTag } from './price-tag';
 import { ProductImage } from './product-image';
+import { ScreeningStrip } from './screening-strip';
 
 type Props = { deal: Deal };
 
@@ -67,9 +69,13 @@ export function FlashCard({ deal }: Props) {
     <Pressable
       testID={`deal-${deal.id}`}
       accessibilityRole="button"
-      accessibilityLabel={`${deal.title}, ${deal.price.toFixed(2)} euros au lieu de ${(
-        deal.oldPrice ?? deal.price
-      ).toFixed(2)}, ${deal.stockLeft} restant${deal.stockLeft > 1 ? 's' : ''}`}
+      accessibilityLabel={`${deal.title}${
+        // Sans le film et l'heure, la carte est inutilisable sans les yeux :
+        // c'est la séance qui décide de l'achat, pas le mot « place ».
+        deal.screening ? `, ${screeningLabel(deal.screening)}` : ''
+      }, ${deal.price.toFixed(2)} euros au lieu de ${(deal.oldPrice ?? deal.price).toFixed(2)}, ${
+        deal.stockLeft
+      } restant${deal.stockLeft > 1 ? 's' : ''}`}
       onPress={() => router.push(`/produit/${deal.id}`)}
       className="mb-4 overflow-hidden rounded-card border border-line bg-surface"
     >
@@ -164,6 +170,13 @@ export function FlashCard({ deal }: Props) {
           <AppText variant="caption" className="-mt-1.5 text-ink-faint">
             {deal.unit}
           </AppText>
+        ) : null}
+
+        {/* Pour une sortie, le film et l'heure passent AVANT le prix : c'est ce
+            qui décide de l'achat. Un « 5,90 € » ne dit pas si la séance est
+            dans dix minutes ou dans trois heures. */}
+        {deal.screening ? (
+          <ScreeningStrip testID={`deal-${deal.id}-screening`} screening={deal.screening} />
         ) : null}
 
         {/* Le prix domine tout le bas de la carte. */}

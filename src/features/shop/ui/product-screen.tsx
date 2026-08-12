@@ -12,6 +12,7 @@ import { useShopStore } from '../model/store';
 import { Countdown } from './components/countdown';
 import { ProductImage } from './components/product-image';
 import { QtyStepper } from './components/qty-stepper';
+import { ScreeningStrip } from './components/screening-strip';
 
 type Props = { dealId: string };
 
@@ -163,6 +164,13 @@ export function ProductScreen({ dealId }: Props) {
               ) : null}
             </View>
           </View>
+
+          {/* La séance en tête de fiche : avant même de lire la description,
+              on doit savoir quel film et à quelle heure — et si l'on aura le
+              temps d'y être. D'où l'heure de fin, absente de la carte. */}
+          {deal.screening ? (
+            <ScreeningStrip testID="product-screening" screening={deal.screening} expanded />
+          ) : null}
 
           <AppText variant="body" className="leading-relaxed text-ink-muted">
             {deal.description}

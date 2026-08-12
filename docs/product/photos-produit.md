@@ -1,11 +1,11 @@
 ---
 read-when: 'Vous ajoutez ou remplacez une photo d’offre'
-owns: 'Les onze visuels manquants : quoi chercher, comment nommer le fichier, comment l’intégrer'
+owns: 'Les treize visuels manquants : quoi chercher, comment nommer le fichier, comment l’intégrer'
 ---
 
 # Les photos produit — ce qui manque, et comment l’ajouter
 
-Onze offres n’ont pas encore de visuel. Elles s’affichent avec l’emoji du
+Treize offres n’ont pas encore de visuel. Elles s’affichent avec l’emoji du
 commerçant sur fond teinté : lisible, mais ce n’est pas ce qui fait cliquer.
 Le client l’a dit autrement — « le cœur de l’appli c’est les offres flash, faut
 vraiment que ça se voie du 1er coup d’œil ».
@@ -32,19 +32,31 @@ Termes en anglais : les banques d’images en rendent dix fois plus. Cadrage
 **paysage**, produit centré, fond simple — la carte recadre en 4:3 et superpose
 un compte à rebours en haut à droite, un badge de remise en bas à gauche.
 
-| Fichier          | L’offre                          | À chercher                                         |
-| ---------------- | -------------------------------- | -------------------------------------------------- |
-| `d_cinema.jpg`   | Place de cinéma · séance du soir | `empty cinema seats red velvet screen`             |
-| `d_cine_duo.jpg` | Duo cinéma + boisson             | `movie popcorn and soda cup cinema`                |
-| `d_bowling.jpg`  | Partie de bowling · 1 h          | `bowling lane pins neon alley`                     |
-| `d_casque.jpg`   | Casque audio sans fil            | `wireless over ear headphones product shot`        |
-| `d_tablette.jpg` | Tablette 10" reconditionnée      | `tablet on desk minimal flat lay`                  |
-| `d_lampe.jpg`    | Lampe artisanale en grès         | `handmade stoneware ceramic table lamp warm light` |
-| `d_veste.jpg`    | Veste en jean vintage            | `vintage denim jacket flat lay thrift`             |
-| `d_soin.jpg`     | Coffret soin visage bio          | `organic skincare gift set bottles beige`          |
-| `d_padel.jpg`    | Raquette de padel                | `padel racket and ball court`                      |
-| `d_revision.jpg` | Révision + vidange               | `car engine oil change mechanic garage`            |
-| `d_poterie.jpg`  | Atelier poterie · 2 h            | `pottery wheel hands clay workshop`                |
+| Fichier             | L’offre                          | À chercher                                         |
+| ------------------- | -------------------------------- | -------------------------------------------------- |
+| `d_cinema.jpg`      | Place de cinéma · séance du soir | `empty cinema seats red velvet screen`             |
+| `d_cine_duo.jpg`    | Duo cinéma + boisson             | `movie popcorn and soda cup cinema`                |
+| `d_cine_vost.jpg`   | Place · version originale        | `cinema auditorium rows glowing screen`            |
+| `d_cine_tardif.jpg` | Séance tardive                   | `neon cinema marquee sign night`                   |
+| `d_bowling.jpg`     | Partie de bowling · 1 h          | `bowling lane pins neon alley`                     |
+| `d_casque.jpg`      | Casque audio sans fil            | `wireless over ear headphones product shot`        |
+| `d_tablette.jpg`    | Tablette 10" reconditionnée      | `tablet on desk minimal flat lay`                  |
+| `d_lampe.jpg`       | Lampe artisanale en grès         | `handmade stoneware ceramic table lamp warm light` |
+| `d_veste.jpg`       | Veste en jean vintage            | `vintage denim jacket flat lay thrift`             |
+| `d_soin.jpg`        | Coffret soin visage bio          | `organic skincare gift set bottles beige`          |
+| `d_padel.jpg`       | Raquette de padel                | `padel racket and ball court`                      |
+| `d_revision.jpg`    | Révision + vidange               | `car engine oil change mechanic garage`            |
+| `d_poterie.jpg`     | Atelier poterie · 2 h            | `pottery wheel hands clay workshop`                |
+
+### Cinéma : surtout pas d’affiches
+
+Les quatre séances portent un film (titre, horaire, salle, version). **Aucune
+affiche de distribution ne doit entrer dans l’app** : ces visuels sont
+protégés, et une affiche dans une capture d’écran envoyée à un store est un
+risque réel. Le _titre_, lui, est une information factuelle — un cinéma a le
+droit d’annoncer ce qu’il projette.
+
+Cherchez donc l’ambiance, pas le film : salle, fauteuils, projecteur, enseigne.
 
 ## Les droits, avant de télécharger
 
@@ -55,7 +67,7 @@ cadrage, à ne pas utiliser comme fichier.
 Pour une image réellement utilisable : **Unsplash**, **Pexels** ou
 **Pixabay** (usage commercial autorisé, sans attribution obligatoire).
 
-La bonne réponse à terme est différente : ces onze visuels sont des
+La bonne réponse à terme est différente : ces treize visuels sont des
 **bouche-trous de démonstration**. En production, la photo vient du commerçant
 — le CDC le prévoit explicitement (§3.2 et §18 : « ajouter une image » dans le
 formulaire d’offre). Ce tableau disparaît le jour où de vrais commerçants

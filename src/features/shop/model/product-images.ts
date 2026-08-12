@@ -31,6 +31,8 @@
 export const AWAITING_PHOTO = new Set<string>([
   'd_cinema',
   'd_cine_duo',
+  'd_cine_vost',
+  'd_cine_tardif',
   'd_bowling',
   'd_casque',
   'd_tablette',

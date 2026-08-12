@@ -40,6 +40,41 @@ export type Merchant = {
   emoji: string;
 };
 
+/**
+ * Une séance — ce qui transforme « une place de cinéma » en quelque chose
+ * qu'on achète.
+ *
+ * Personne n'achète « une place » : on achète *un film, à une heure*. Une
+ * offre flash de cinéma sans ces deux informations demande à l'utilisateur de
+ * faire confiance à l'aveugle, et c'est précisément ce qu'un déstockage ne
+ * peut pas se permettre — il ne reste qu'une heure pour décider.
+ *
+ * Le bloc est optionnel et générique : un théâtre, un concert ou un match s'y
+ * logent sans nouveau champ. Ce qui le remplit est un LIBELLÉ, jamais une
+ * référence à un catalogue de films — en production, la programmation vient du
+ * commerçant, exactement comme la photo (CDC §3.2, §18 : « proposer des
+ * offres », « ajouter une image »).
+ *
+ * ⚠️ Aucune affiche de film n'est embarquée : les visuels de distribution sont
+ * protégés. Le titre, lui, est une information factuelle — un cinéma a le droit
+ * de dire ce qu'il projette.
+ */
+export type Screening = {
+  /** Le titre projeté, tel que le cinéma l'annonce. */
+  film: string;
+  /** Heure de début sur 24 h, « 20:15 » — comparable et triable en l'état. */
+  startsAt: string;
+  /** Durée en minutes. Formatée à l'affichage, jamais stockée en « 2 h 48 ». */
+  durationMin: number;
+  genre: string;
+  /** VF, VOST, VO… absent quand la question ne se pose pas (concert, match). */
+  version?: string;
+  /** « Salle 3 », « Piste 2 »… */
+  room?: string;
+  /** « Tous publics », « -12 ans ». Absent = non renseigné, donc rien d'affirmé. */
+  audience?: string;
+};
+
 export type Deal = {
   id: string;
   title: string;
@@ -67,6 +102,11 @@ export type Deal = {
    * (`halal` se lit sur le commerçant, pas ici.)
    */
   diet?: ('vegetarien' | 'vegan')[];
+  /**
+   * La séance, pour une sortie (cinéma, spectacle). Absent partout ailleurs :
+   * une côte de bœuf n'a pas d'horaire de projection.
+   */
+  screening?: Screening;
 };
 
 /* ---- State that hits storage → validated with Zod ---- */
