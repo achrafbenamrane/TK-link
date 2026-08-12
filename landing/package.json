@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "predeploy": "node scripts/guard-project.mjs",
+    "deploy": "npm run predeploy && vercel --prod",
+    "deploy:preview": "npm run predeploy && vercel"
   },
   "dependencies": {
     "next": "^15.1.0",

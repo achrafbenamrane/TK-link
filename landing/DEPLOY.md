@@ -29,19 +29,22 @@ jamais en ligne.
 > domaine attaché. Accepter la proposition déploie TK LINK **par-dessus l'autre
 > site**. Toujours nommer le projet explicitement.
 
+Une procédure écrite ne suffit pas : elle se contourne en recopiant une vieille
+commande depuis un terminal — c'est exactement ce qui s'est passé. **Passez donc
+par les scripts npm, qui refusent de démarrer si le lien est mauvais.**
+
 ```bash
 cd landing
-npx vercel login                        # une seule fois
+npx vercel login                           # une seule fois
 npx vercel link --project tklink-landing   # NOM EXPLICITE — jamais la proposition par défaut
-npx vercel                              # prévisualisation, URL jetable
-npx vercel --prod                       # production
+npm run deploy:preview                     # prévisualisation, URL jetable
+npm run deploy                             # production
 ```
 
-Vérifier avant de pousser en production :
-
-```bash
-cat .vercel/project.json   # "projectName" doit être tklink-landing
-```
+`npm run deploy` commence par `scripts/guard-project.mjs`, qui lit
+`.vercel/project.json` et **arrête tout** si le projet lié n'est pas
+`tklink-landing` — en nommant le site qui serait écrasé. `npx vercel --prod`
+en direct court-circuite ce garde-fou : ne l'utilisez pas.
 
 Alternative sans CLI : importer le dépôt GitHub depuis vercel.com, **créer un
 nouveau projet** (ne pas en réutiliser un existant) et régler **Root Directory
