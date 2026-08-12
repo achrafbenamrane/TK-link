@@ -54,8 +54,26 @@ if (!existsSync(INCOMING)) {
   console.log(`Dossier créé : ${path.relative(ROOT, INCOMING)}`);
 }
 
+/**
+ * Le format RÉEL du fichier, lu dans ses premiers octets.
+ *
+ * L'extension ment : les banques d'images servent régulièrement du WebP sous
+ * un nom en `.jpg`. Jimp ne décode pas le WebP et meurt alors sur une pile
+ * d'appels de 500 Ko, illisible, au milieu du lot — en emportant les fichiers
+ * suivants avec lui. Deux octets de vérification valent mieux que ça.
+ */
+function sniff(file) {
+  const head = readFileSync(file).subarray(0, 12);
+  if (head[0] === 0xff && head[1] === 0xd8) return 'jpeg';
+  if (head[0] === 0x89 && head[1] === 0x50) return 'png';
+  if (head.toString('ascii', 0, 4) === 'RIFF' && head.toString('ascii', 8, 12) === 'WEBP')
+    return 'webp';
+  return 'inconnu';
+}
+
 const files = readdirSync(INCOMING).filter((f) => /\.(jpe?g|png|webp)$/i.test(f));
 let done = 0;
+let failed = 0;
 
 for (const file of files) {
   // On repère l'identifiant LE PLUS LONG contenu dans le nom : « d_cine_duo »
@@ -69,23 +87,43 @@ for (const file of files) {
     continue;
   }
 
+  const source = path.join(INCOMING, file);
+  const format = sniff(source);
+  if (format !== 'jpeg' && format !== 'png') {
+    console.log(
+      `  ✗ ${file} — format ${format}, que Jimp ne sait pas lire.\n` +
+        `      Ré-enregistrez-le en JPEG ou PNG (l'extension seule ne suffit pas).`,
+    );
+    failed++;
+    continue;
+  }
+
   const target = path.join(PRODUCTS, `${match}.jpg`);
   const existed = existsSync(target);
 
-  const img = await Jimp.read(path.join(INCOMING, file));
-  if (img.bitmap.width > WIDTH) img.resize(WIDTH, Jimp.AUTO);
-  img.quality(QUALITY);
-  await img.writeAsync(target);
+  // Un fichier corrompu ne doit pas emporter les suivants : on le signale et
+  // on continue le lot.
+  try {
+    const img = await Jimp.read(source);
+    if (img.bitmap.width > WIDTH) img.resize(WIDTH, Jimp.AUTO);
+    img.quality(QUALITY);
+    await img.writeAsync(target);
 
-  const kb = Math.round(statSync(target).size / 1024);
-  console.log(`  ✓ ${match}.jpg — ${img.bitmap.width}px, ${kb} Ko${existed ? ' (remplacée)' : ''}`);
-  unlinkSync(path.join(INCOMING, file));
-  done++;
+    const kb = Math.round(statSync(target).size / 1024);
+    console.log(
+      `  ✓ ${match}.jpg — ${img.bitmap.width}px, ${kb} Ko${existed ? ' (remplacée)' : ''}`,
+    );
+    unlinkSync(source);
+    done++;
+  } catch (error) {
+    console.log(`  ✗ ${file} — illisible : ${error.message}`);
+    failed++;
+  }
 }
 
 const missing = awaiting().filter((id) => !existsSync(path.join(PRODUCTS, `${id}.jpg`)));
 
-console.log(`\n${done} image(s) intégrée(s).`);
+console.log(`\n${done} image(s) intégrée(s)${failed ? `, ${failed} refusée(s)` : ''}.`);
 if (missing.length === 0) {
   console.log('Plus aucune photo manquante — videz AWAITING_PHOTO dans product-images.ts.');
 } else {
