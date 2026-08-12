@@ -21,19 +21,42 @@ ces deux chemins — n'importe quel identifiant, ce mot de passe. **Variable
 absente = aucune protection**, ce qui est voulu en développement local mais
 jamais en ligne.
 
-## 2. Déployer
+## 2. Déployer — et NE PAS écraser un autre projet
+
+> ⚠️ **Le piège, rencontré le 11/08/2026.** Ce dossier s'appelle `landing`.
+> `vercel link` propose par défaut le projet Vercel **portant le même nom**, et
+> le compte en contenait déjà un — celui d'un autre produit, avec son propre
+> domaine attaché. Accepter la proposition déploie TK LINK **par-dessus l'autre
+> site**. Toujours nommer le projet explicitement.
 
 ```bash
 cd landing
-npx vercel login          # une seule fois
-npx vercel link           # créer/associer le projet ; Root Directory = ce dossier
-npx vercel                # prévisualisation, URL jetable
-npx vercel --prod         # production
+npx vercel login                        # une seule fois
+npx vercel link --project tklink-landing   # NOM EXPLICITE — jamais la proposition par défaut
+npx vercel                              # prévisualisation, URL jetable
+npx vercel --prod                       # production
 ```
 
-Alternative sans CLI : importer le dépôt GitHub depuis vercel.com et régler
-**Root Directory = `landing`**. Chaque `git push` déclenche alors un
-déploiement.
+Vérifier avant de pousser en production :
+
+```bash
+cat .vercel/project.json   # "projectName" doit être tklink-landing
+```
+
+Alternative sans CLI : importer le dépôt GitHub depuis vercel.com, **créer un
+nouveau projet** (ne pas en réutiliser un existant) et régler **Root Directory
+= `landing`**. Chaque `git push` déclenche alors un déploiement.
+
+### Si le mauvais projet a été écrasé
+
+Rien n'est perdu : Vercel garde l'historique des déploiements.
+
+1. Dashboard → le projet concerné → **Deployments** → retrouver le dernier
+   déploiement d'AVANT l'erreur → menu `…` → **Instant Rollback**.
+2. Supprimer le lien local fautif : `rm -rf landing/.vercel`, puis refaire le
+   `vercel link --project` ci-dessus avec le bon nom.
+3. Vérifier que le domaine de l'autre projet lui est bien resté :
+   `npx vercel domains inspect <domaine>`.
 
 ## 3. Vérifier après mise en ligne
 
