@@ -144,7 +144,7 @@ export function HelpScreen() {
         </View>
 
         <AppText variant="caption" className="mt-6 text-center text-ink-faint">
-          TK LINK v0.1 · Conçu par PROGIX · Lancement à Toulouse
+          TK LINK v0.1 · Lancement à Toulouse
         </AppText>
       </ScrollView>
     </Screen>

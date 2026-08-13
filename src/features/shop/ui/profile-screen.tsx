@@ -303,7 +303,7 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
         </View>
 
         <AppText variant="caption" className="mt-6 text-center text-ink-faint">
-          TK LINK v0.1 · Conçu par PROGIX
+          TK LINK v0.1
         </AppText>
       </ScrollView>
 
