@@ -29,7 +29,7 @@ or deletes stale ones. Newest first; keep entries one line each:
   `s.items.filter(…)`/`.map(…)` returns a fresh array each render → infinite
   loop → crash. Subscribe to the raw slice and derive with `useMemo`, or wrap
   with `useShallow`. Selectors returning `.length`/`.reduce` (a number) are safe.
-- PacFreedoo (`features/games/ui/pacman-game.tsx`) re-renders ~7×/s from its
+- PacTK (`features/games/ui/pacman-game.tsx`) re-renders ~7×/s from its
   `setInterval` game loop. The manual `useMemo`/`memo` there (gesture, `FoodLayer`,
   `foodSet`, single-SVG `DotsLayer`) are NOT redundant despite React Compiler
   being on (`app.config.ts: reactCompiler`) — they keep the hot loop off the JS

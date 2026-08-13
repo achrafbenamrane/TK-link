@@ -1,5 +1,5 @@
 /**
- * PUBLIC API of the shop feature (Freedoo buyer app).
+ * PUBLIC API of the shop feature (TK LINK buyer app).
  * Routes wire URLs to these screens; everything else is internal.
  */
 export { HomeScreen } from './ui/home-screen';

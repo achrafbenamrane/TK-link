@@ -1,4 +1,4 @@
-// Filet anti-crash : on monte PacFreedoo (SVG + gesture-handler + reanimated).
+// Filet anti-crash : on monte PacTK (SVG + gesture-handler + reanimated).
 import { render, screen } from '@/shared/testing/render';
 
 import type { CardImage } from '../model/memory';

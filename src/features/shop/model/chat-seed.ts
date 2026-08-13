@@ -50,7 +50,7 @@ export const CHAT_SEED: { conversations: Conversation[]; messages: ChatMessage[]
       id: 's5',
       conversation_id: 'c_support',
       sender_id: SUPPORT,
-      body: 'Bienvenue sur Freedoo 👋 Une question sur une vente flash ? Écrivez-nous ici.',
+      body: 'Bienvenue sur TK LINK 👋 Une question sur une vente flash ? Écrivez-nous ici.',
       created_at: minutesAgo(1440),
     },
   ],

@@ -103,7 +103,7 @@ export function ChatThreadScreen() {
 
   const partnerId = conversation?.partnerId ?? SUPPORT;
   const merchant = getMerchant(partnerId);
-  const name = partnerId === SUPPORT ? 'Équipe Freedoo' : (merchant?.name ?? 'Commerçant');
+  const name = partnerId === SUPPORT ? 'Équipe TK LINK' : (merchant?.name ?? 'Commerçant');
 
   const onSend = () => {
     const text = draft.trim();

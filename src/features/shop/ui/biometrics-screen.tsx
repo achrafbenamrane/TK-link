@@ -64,7 +64,7 @@ export function BiometricsScreen() {
           Empreinte
         </AppText>
         <AppText variant="caption" className="mt-1">
-          Déverrouillez Freedoo d’un doigt.
+          Déverrouillez TK LINK d’un doigt.
         </AppText>
       </View>
 
@@ -103,7 +103,7 @@ export function BiometricsScreen() {
               Votre empreinte reste chez vous
             </AppText>
             <AppText variant="caption">
-              Elle ne quitte jamais la zone sécurisée de votre téléphone. Freedoo ne la voit pas, ne
+              Elle ne quitte jamais la zone sécurisée de votre téléphone. TK LINK ne la voit pas, ne
               l’enregistre pas et ne l’envoie nulle part : le téléphone répond simplement « c’est
               bien vous ».
             </AppText>

@@ -28,7 +28,10 @@ export const useWelcomeStore = create<WelcomeState>()(
       reset: () => set({ seen: false }),
     }),
     {
-      name: 'freedoo-welcome-v1',
+      // La clé change avec la marque : les installations de test reverront donc
+      // l'écran de bienvenue UNE fois. Sans utilisateur en production, c'est le
+      // prix acceptable pour ne plus traîner l'ancien nom dans le stockage.
+      name: 'tklink-welcome-v1',
       storage: createJSONStorage(() => asyncStorageBackend),
       partialize: (s) => ({ seen: s.seen }),
       onRehydrateStorage: () => (state) => {

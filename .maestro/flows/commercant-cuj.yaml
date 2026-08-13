@@ -8,7 +8,7 @@
 #
 # `clearState` est obligatoire : le quota du §9 n'offre que cinq publications,
 # et le rôle choisi à l'onboarding ne se change plus ensuite.
-appId: com.progix.freedoo.dev
+appId: com.progix.tklink.dev
 ---
 - launchApp:
     clearState: true

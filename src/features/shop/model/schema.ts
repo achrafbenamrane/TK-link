@@ -12,7 +12,7 @@ import {
 } from '../lib/order-status';
 
 /**
- * Domain contract for the Freedoo shop (flash sales, cart, orders).
+ * Domain contract for the TK LINK shop (flash sales, cart, orders).
  *
  * Static catalog data (merchants/deals) is authored in-code (`catalog.ts`)
  * and typed here. State that crosses the storage edge (cart, favorites,
@@ -259,7 +259,7 @@ export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
 export const ConversationSchema = z.object({
   id: z.string().min(1),
-  /** Id du commerçant, ou 'support' pour l'équipe Freedoo. */
+  /** Id du commerçant, ou 'support' pour l'équipe TK LINK. */
   partnerId: z.string().min(1),
   /**
    * Dernier message VU, par identité — pas par horloge.

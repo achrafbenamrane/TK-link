@@ -15,33 +15,44 @@ const IS_PREVIEW = process.env.APP_VARIANT === 'preview';
 
 // Nom affiché (écran d'accueil du téléphone, stores).
 //
-// `slug` et `bundleIdentifier` restent « freedoo » volontairement : le bundle
-// id est l'identité de l'app pour Android et les stores, le changer crée une
-// NOUVELLE app (impossible de mettre à jour les installations existantes).
-// À traiter séparément, quand la bascule de marque sera actée.
+// La bascule de marque est ACTÉE : plus rien ne porte l'ancien nom ici.
+//
+// ⚠️ Changer le `package` Android crée une NOUVELLE application aux yeux du
+// système et des stores : les installations portant l'ancien identifiant ne
+// se mettront pas à jour, elles cohabiteront. C'est sans conséquence avant
+// publication — il n'y a pas d'utilisateur à emmener — mais ce serait
+// irréversible après. Les builds de test déjà installés sont à désinstaller
+// à la main.
 const name = IS_DEV ? 'TK LINK (Dev)' : IS_PREVIEW ? 'TK LINK (Preview)' : 'TK LINK';
 const bundleId = IS_DEV
-  ? 'com.progix.freedoo.dev'
+  ? 'com.progix.tklink.dev'
   : IS_PREVIEW
-    ? 'com.progix.freedoo.preview'
-    : 'com.progix.freedoo';
+    ? 'com.progix.tklink.preview'
+    : 'com.progix.tklink';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name,
+  // ⚠️ `slug` doit correspondre au NOM DU PROJET EAS, aujourd'hui
+  // « @tk-link/freedoo » (voir `npx eas project:info`). Le renommer ici sans
+  // l'avoir renommé sur expo.dev fait échouer tous les builds. C'est la seule
+  // trace de l'ancien nom qui subsiste, et elle n'est visible que dans les
+  // URL du tableau de bord EAS — jamais par un utilisateur.
+  // Pour la retirer : renommer le projet sur expo.dev, puis passer ce slug à
+  // 'tklink'. L'identifiant du projet (`extra.eas.projectId`) ne change pas.
   slug: 'freedoo',
   owner: 'tk-link',
   version: '0.1.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  scheme: 'freedoo',
+  scheme: 'tklink',
   userInterfaceStyle: 'automatic',
   ios: {
     bundleIdentifier: bundleId,
     supportsTablet: false,
     // Pas de surcharge iOS : `assets/expo.icon` est le bundle Icon Composer
     // livré par le squelette — il contient le symbole EXPO, pas le nôtre. Sans
-    // cette ligne, iOS reprend l'icône Freedoo commune définie plus haut.
+    // cette ligne, iOS reprend l'icône TK LINK commune définie plus haut.
     // Answers the App Store export-compliance prompt automatically (set true
     // only if you add non-exempt encryption). Store-readiness: STORE-APL-EXPORT.
     config: {
@@ -78,9 +89,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: bundleId,
     adaptiveIcon: {
-      // Blanc, comme android-icon-background.png : l'image l'emporte, mais une
-      // couleur contradictoire ici induirait en erreur le prochain lecteur.
-      backgroundColor: '#FFFFFF',
+      // Le vert de la marque, comme android-icon-background.png : l'image
+      // l'emporte, mais une couleur contradictoire ici induirait en erreur le
+      // prochain lecteur — et se verrait pendant le chargement de l'image.
+      backgroundColor: '#0B6C3B',
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
@@ -167,7 +179,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       // Projet sous l'organisation « TK LINK » (slug tk-link, compte borzvalor).
       // Historique des organisations précédentes, pour mémoire :
       //   krunchy   → 654ee1f7-56b9-4f4e-a3f9-337598077850
-      //   freedoo   → 329bcddd-d9a7-404c-9325-523290072a8f
+      //   tklink    → 329bcddd-d9a7-404c-9325-523290072a8f
       //   (ancien)  → f8fd49f4… (compte achrafbenamrane)
       // Changer d'organisation régénère les identifiants de signature : le
       // nouvel APK ne peut donc PAS mettre à jour une installation existante,

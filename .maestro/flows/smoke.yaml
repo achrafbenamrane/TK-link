@@ -6,7 +6,7 @@
 #
 # Run locally: npm run e2e:ios (requires `maestro` + a booted simulator with a
 # development build installed).
-appId: com.progix.freedoo.dev
+appId: com.progix.tklink.dev
 ---
 - launchApp:
     clearState: true

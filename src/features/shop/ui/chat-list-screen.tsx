@@ -43,7 +43,7 @@ function Avatar({ partnerId }: { partnerId: string }) {
 }
 
 function partnerName(partnerId: string): string {
-  if (partnerId === SUPPORT) return 'Équipe Freedoo';
+  if (partnerId === SUPPORT) return 'Équipe TK LINK';
   return getMerchant(partnerId)?.name ?? 'Commerçant';
 }
 
@@ -128,7 +128,7 @@ export function ChatListScreen() {
       <View className="pb-3 pt-2">
         <AppText variant="display">Messages</AppText>
         <AppText variant="caption" className="mt-1">
-          Vos commerçants et l’équipe Freedoo.
+          Vos commerçants et l’équipe TK LINK.
         </AppText>
       </View>
 

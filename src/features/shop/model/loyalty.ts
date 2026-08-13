@@ -35,7 +35,7 @@ export const REWARD_POINTS = 200;
 export const REWARD_VALUE_EUR = 2;
 
 /**
- * Commission estimée prélevée par Freedoo sur chaque transaction.
+ * Commission estimée prélevée par TK LINK sur chaque transaction.
  *
  * ⚠️ HYPOTHÈSE À CONFIRMER AVEC LE CLIENT. Le cadrage dit « commission légère,
  * inférieure au prix d'un TPE » ; un terminal de paiement français coûte entre

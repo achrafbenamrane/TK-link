@@ -44,7 +44,7 @@ export function SharePointsSheet({ visible, onClose }: Props) {
     setCode(result.code);
     try {
       await Share.share({
-        message: `Je t’offre ${amount} points Freedoo ⚡ Utilise le code ${result.code} dans l’app : https://freedoo.app`,
+        message: `Je t’offre ${amount} points TK LINK ⚡ Utilise le code ${result.code} dans l’app`,
       });
     } catch {
       // partage annulé ou indisponible — le code reste affiché

@@ -4,7 +4,7 @@
 # `clearState` is not optional here: the daily chest opens ONCE per calendar
 # day. Without a clean state the second run of the day would find it already
 # opened and the flow would fail for the wrong reason.
-appId: com.progix.freedoo.dev
+appId: com.progix.tklink.dev
 ---
 - launchApp:
     clearState: true

@@ -24,7 +24,7 @@ export function seedEntries(now: number = Date.now()): PointsEntry[] {
   return [
     { id: 'p1', points: 120, label: 'Carrefour City', at: now - 1 * DAY, source: 'achat' },
     { id: 'p2', points: 68, label: 'TotalEnergies', at: now - 3 * DAY, source: 'achat' },
-    { id: 'p3', points: 50, label: 'Victoire à PacFreedoo', at: now - 4 * DAY, source: 'jeu' },
+    { id: 'p3', points: 50, label: 'Victoire à PacTK', at: now - 4 * DAY, source: 'jeu' },
     { id: 'p4', points: 38, label: 'Le Comptoir du Midi', at: now - 5 * DAY, source: 'achat' },
     {
       id: 'p5',

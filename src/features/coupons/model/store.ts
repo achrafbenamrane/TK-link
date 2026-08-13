@@ -149,7 +149,13 @@ export const useCouponsStore = create<CouponsState>()(
         })),
     }),
     {
-      name: 'freedoo-coupons-v1',
+      // Clé renommée avec la marque. Elle porte de VRAIES données — changer
+      // une clé de persistance les efface d'ordinaire. Ici c'est sans coût :
+      // le `package` Android change en même temps, et Android donne alors
+      // à l'app un espace de stockage NEUF de toute façon. C'est le seul
+      // moment où ce renommage est gratuit ; après publication, il
+      // faudrait une migration.
+      name: 'tklink-coupons-v1',
       storage: createJSONStorage(() => asyncStorageBackend),
       partialize: (s) => ({ wallet: s.wallet, promoCatalog: s.promoCatalog }),
       merge: (persisted, current) => {

@@ -6,7 +6,10 @@ import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
-const SUPPORT_EMAIL = 'contact@freedoo.app';
+// ⚠️ Adresse PROVISOIRE : aucun domaine TK LINK n'est enregistré à ce jour.
+// À remplacer par la vraie boîte du support avant publication — un lien
+// « nous écrire » qui n'arrive nulle part est pire que pas de lien du tout.
+const SUPPORT_EMAIL = 'contact@tklink.app';
 const SUPPORT_PHONE = '+33612345678';
 
 const FAQ = [
@@ -16,7 +19,7 @@ const FAQ = [
   },
   {
     q: 'La livraison est-elle vraiment gratuite ?',
-    a: 'Oui. Freedoo ne prend pas de frais de livraison à l’utilisateur et n’ajoute aucun frais caché. Le prix affiché est le prix payé.',
+    a: 'Oui. TK LINK ne prend pas de frais de livraison à l’utilisateur et n’ajoute aucun frais caché. Le prix affiché est le prix payé.',
   },
   {
     q: 'Comment fonctionnent les points de fidélité ?',
@@ -31,7 +34,7 @@ const FAQ = [
     a: 'C’est la preuve de votre commande. Présentez-la au commerçant ou au livreur : elle contient le numéro de commande et le montant.',
   },
   {
-    q: 'Je suis commerçant, comment rejoindre Freedoo ?',
+    q: 'Je suis commerçant, comment rejoindre TK LINK ?',
     a: 'Depuis votre profil, « Devenir commerçant ». Vos deux premières ventes flash sont offertes, puis la commission reste sous le coût d’un terminal de paiement.',
   },
 ];
@@ -120,7 +123,7 @@ export function HelpScreen() {
             icon="mail"
             label="Écrivez-nous"
             value={SUPPORT_EMAIL}
-            onPress={() => open(`mailto:${SUPPORT_EMAIL}?subject=Aide%20Freedoo`)}
+            onPress={() => open(`mailto:${SUPPORT_EMAIL}?subject=Aide%20TK%20LINK`)}
           />
           <ContactRow
             testID="help-phone"
@@ -141,7 +144,7 @@ export function HelpScreen() {
         </View>
 
         <AppText variant="caption" className="mt-6 text-center text-ink-faint">
-          Freedoo v0.1 · Conçu par PROGIX · Lancement à Toulouse
+          TK LINK v0.1 · Conçu par PROGIX · Lancement à Toulouse
         </AppText>
       </ScrollView>
     </Screen>

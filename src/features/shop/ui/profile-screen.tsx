@@ -80,8 +80,7 @@ export function ProfileScreen({ canPublishOffers = false }: ProfileScreenProps =
   const invite = async () => {
     try {
       await Share.share({
-        message:
-          'Je déniche les meilleures ventes flash de mon quartier sur Freedoo ⚡ Télécharge l’app : https://freedoo.app',
+        message: 'Je déniche les meilleures ventes flash de mon quartier sur TK LINK ⚡',
       });
     } catch {
       // partage indisponible (web) — sans effet pour la démo
@@ -116,7 +115,7 @@ export function ProfileScreen({ canPublishOffers = false }: ProfileScreenProps =
         <View className="mb-5 gap-3 rounded-card bg-ink p-5">
           <View className="flex-row items-center gap-2">
             <Feather name="gift" size={16} color={colors.brand500} />
-            <AppText className="font-sans-semibold text-ink-inverse">Fidélité Freedoo</AppText>
+            <AppText className="font-sans-semibold text-ink-inverse">Fidélité TK LINK</AppText>
           </View>
           <View className="flex-row items-baseline gap-2">
             {/* lineHeight obligatoire : sans lui AppText garde la hauteur de
@@ -191,7 +190,7 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
         {/* Invite — bouton simple ; le bouton signature vit désormais sur les fiches produit. */}
         <View className="mb-5 gap-2 rounded-card border border-line bg-surface-muted p-5">
           <AppText variant="title" className="text-lg">
-            Partagez Freedoo
+            Partagez TK LINK
           </AppText>
           <AppText variant="caption" className="mb-1">
             Un proche rejoint le quartier ? Offrez-lui l’app d’un simple geste.
@@ -199,7 +198,7 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
           <Pressable
             testID="invite-button"
             accessibilityRole="button"
-            accessibilityLabel="Partager l’application Freedoo"
+            accessibilityLabel="Partager l’application TK LINK"
             onPress={invite}
             className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
           >
@@ -286,7 +285,7 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
         </View>
 
         <AppText variant="caption" className="mt-6 text-center text-ink-faint">
-          Freedoo v0.1 · Conçu par PROGIX
+          TK LINK v0.1 · Conçu par PROGIX
         </AppText>
       </ScrollView>
 
