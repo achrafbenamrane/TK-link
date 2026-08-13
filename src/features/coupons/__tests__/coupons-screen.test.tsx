@@ -31,14 +31,15 @@ describe('<CouponsScreen /> — le portefeuille', () => {
     expect(screen.getByTestId('coupons-empty')).toBeTruthy();
   });
 
-  it('ne propose PAS de saisir un code ici — il se saisit dans La Chasse', () => {
-    // Le champ a déménagé à côté des jeux. Le laisser en double ferait deux
-    // sources de vérité pour une même action, et l'une finirait par diverger.
+  it('ne montre QUE le portefeuille, sans raccourci vers d’où l’on vient', () => {
+    // Gagner un coupon se fait dans La Chasse, et c'est de là qu'on arrive
+    // ici : des raccourcis en tête de page renverraient vers l'écran
+    // précédent — un aller-retour, pas un chemin.
+    useCouponsStore.getState().grantEarnedCoupon({ kind: 'percent', pct: 10 }, 'Bien joué');
     render(<CouponsScreen />);
 
     expect(screen.queryByTestId('coupon-code-input')).toBeNull();
-    // Mais on DIT où il est : arriver ici avec un code en main et ne rien
-    // trouver serait une impasse.
-    expect(screen.getByTestId('coupon-goto-promo')).toBeTruthy();
+    expect(screen.queryByTestId('coupon-goto-promo')).toBeNull();
+    expect(screen.queryByTestId('coupon-play')).toBeNull();
   });
 });

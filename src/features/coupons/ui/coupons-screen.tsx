@@ -1,6 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { ScrollView, Pressable, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { AppText, Screen } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
@@ -9,16 +8,18 @@ import { selectWallet, useCouponsStore } from '../model/store';
 import { CouponTicket } from './coupon-ticket';
 
 /**
- * LE PORTEFEUILLE — ce qu'on possède, et rien d'autre.
+ * LE PORTEFEUILLE — ce qu'on possède, et RIEN d'autre.
  *
- * La saisie d'un code promo n'est plus ici : elle vit dans La Chasse, à côté
- * des jeux, parce qu'un code arrive par un flyer ou par Instagram et se perd
- * si l'on doit le chercher trois écrans plus loin. Cette page ne fait donc
- * qu'une chose — montrer les coupons détenus — et le dit à qui vient avec un
- * code en main plutôt que de le laisser chercher un champ absent.
+ * Gagner des coupons se fait dans La Chasse : le champ de code et l'accès aux
+ * jeux y sont réunis, et c'est de là qu'on arrive ici. Reproduire ces deux
+ * raccourcis en tête de page les faisait pointer vers l'écran d'où l'on
+ * venait — un aller-retour, pas un chemin. Une page qui montre une chose n'a
+ * pas besoin de proposer autre chose avant de l'avoir montrée.
+ *
+ * Seul l'état vide garde une indication : là, il n'y a rien à regarder, et ne
+ * rien dire laisserait devant un écran blanc.
  */
 export function CouponsScreen() {
-  const router = useRouter();
   const wallet = useCouponsStore(selectWallet);
   const available = wallet.filter((c) => c.usedAt === null);
 
@@ -33,44 +34,6 @@ export function CouponsScreen() {
             Gagnés en jouant, ou reçus par code.
           </AppText>
         </View>
-
-        {/* Les deux sources, dans l'ordre où elles servent. */}
-        <Pressable
-          testID="coupon-play"
-          accessibilityRole="button"
-          accessibilityLabel="Jouer pour gagner des coupons"
-          onPress={() => router.push('/jeux')}
-          className="mb-2.5 flex-row items-center gap-3 rounded-card bg-ink p-3.5 active:opacity-90"
-        >
-          <View className="h-10 w-10 items-center justify-center rounded-pill bg-brand-500">
-            <Feather name="gift" size={18} color={colors.inkInverse} />
-          </View>
-          <View className="flex-1">
-            <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 14 }}>
-              Jouez, gagnez des coupons
-            </AppText>
-            <AppText variant="caption" className="text-ink-inverse/60" style={{ fontSize: 11.5 }}>
-              Cartes mémoire, quiz… un coupon à gagner.
-            </AppText>
-          </View>
-          <Feather name="chevron-right" size={18} color={colors.inkInverse} />
-        </Pressable>
-
-        {/* Où saisir un code — la question qu'on se pose EN ARRIVANT ici. */}
-        <Pressable
-          testID="coupon-goto-promo"
-          accessibilityRole="button"
-          accessibilityLabel="Saisir un code promo dans La Chasse"
-          onPress={() => router.push('/chasse')}
-          className="mb-5 flex-row items-center gap-3 rounded-card border border-line bg-surface-muted p-3.5 active:opacity-80"
-        >
-          <Feather name="tag" size={16} color={colors.brand600} />
-          <AppText variant="caption" className="flex-1 text-ink-muted" style={{ fontSize: 12.5 }}>
-            Vous avez un code ? Il se saisit dans{' '}
-            <AppText className="font-sans-bold">La Chasse</AppText>.
-          </AppText>
-          <Feather name="chevron-right" size={16} color={colors.inkFaint} />
-        </Pressable>
 
         <View className="mb-2 flex-row items-baseline justify-between">
           <AppText variant="title" className="text-lg">
