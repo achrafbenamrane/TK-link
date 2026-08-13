@@ -1,9 +1,12 @@
 import './globals.css';
 
+// Le titre et la description sont ce qu'on lit dans un résultat de recherche
+// ou dans un aperçu de lien partagé — souvent avant la page elle-même. Ils
+// décrivaient le matériel abandonné ; ils disent maintenant ce que l'app fait.
 export const metadata = {
-  title: 'TK LINK — La dématérialisation du ticket de caisse',
+  title: 'TK LINK — Les ventes flash de votre quartier',
   description:
-    'En caisse, le lecteur TK LINK remplace l’imprimante papier. Le ticket arrive dans l’application, devient une facture certifiée, et ses données partent classées vers votre comptable. Particuliers et professionnels, partout en France.',
+    'Les commerçants près de chez vous bradent ce qui doit partir aujourd’hui : −30, −50, −70 %. Chaque offre a un compte à rebours et un stock qui fond. Application gratuite, sans engagement, à Toulouse pour commencer.',
 };
 
 export default function RootLayout({ children }) {

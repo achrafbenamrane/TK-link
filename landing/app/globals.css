@@ -270,230 +270,214 @@ img {
   }
 }
 
-/* ------------------------------------------------- scène « passage carte »
+/* --------------------------------------------------- scène « vente flash »
  *
- * Le geste du produit, en 3D CSS : la carte s'approche, touche le lecteur,
- * les ondes partent, le ticket sort. Une seule boucle de 7 s, animée
- * uniquement en transform/opacity — donc sur le compositeur, sans à-coups.
+ * Ce que l'application vend vraiment : une offre qui expire. Le compte à
+ * rebours, la remise, le stock qui fond, le prix barré. Elle a remplacé la
+ * scène du passage de carte — ce matériel ne sera pas réalisé.
  */
-.scene {
+.flash-scene {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 18px;
 }
 
-.scene-stage {
+.fs-phone {
   position: relative;
-  width: min(100%, 420px);
-  height: 330px;
-  perspective: 1100px;
-  perspective-origin: 50% 42%;
-}
-
-/* ----------------------------------------------------------- le lecteur */
-.reader {
-  position: absolute;
-  left: 50%;
-  bottom: 18px;
-  width: 330px;
-  margin-left: -165px;
-}
-.reader-svg {
-  width: 100%;
-  display: block;
-  overflow: visible;
-}
-
-/* Le témoin passe au citron pendant le passage de la carte. */
-.reader-led-dot {
-  fill: #b7c6ae;
-  animation: led 7s ease-out infinite;
-}
-@keyframes led {
-  0%,
-  28% {
-    fill: #b7c6ae;
-    filter: none;
-  }
-  32%,
-  46% {
-    fill: #c3f53c;
-    filter: drop-shadow(0 0 6px rgba(195, 245, 60, 0.95));
-  }
-  56%,
-  100% {
-    fill: #b7c6ae;
-    filter: none;
-  }
-}
-
-/*
- * Ondes du sans-contact : posées sur le plan du dessus, donc écrasées
- * verticalement pour suivre la perspective du boîtier.
- */
-.ping {
-  position: absolute;
-  left: 50%;
-  top: 42%;
-  width: 150px;
-  height: 150px;
-  margin: -75px 0 0 -75px;
-  border-radius: 50%;
-  border: 2.5px solid var(--lime);
-  opacity: 0;
-  transform: scaleY(0.42) scale(0.3);
-  animation: ping 7s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
-}
-.ping-2 {
-  animation-delay: 0.18s;
-}
-.ping-3 {
-  animation-delay: 0.36s;
-}
-@keyframes ping {
-  0%,
-  30% {
-    opacity: 0;
-    transform: scaleY(0.42) scale(0.3);
-  }
-  34% {
-    opacity: 0.85;
-  }
-  52% {
-    opacity: 0;
-    transform: scaleY(0.42) scale(2.2);
-  }
-  100% {
-    opacity: 0;
-    transform: scaleY(0.42) scale(2.2);
-  }
-}
-
-/* ------------------------------------------------------------- la carte */
-.tkcard {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  width: 208px;
-  height: 132px;
-  margin-left: -104px;
-  transform-style: preserve-3d;
-  animation: tap 7s cubic-bezier(0.45, 0, 0.25, 1) infinite;
-}
-.tkcard-face {
-  width: 100%;
-  height: 100%;
-  border-radius: 16px;
-  background: linear-gradient(145deg, #ffffff 0%, #f0f5ec 100%);
+  width: min(330px, 84vw);
+  padding: 16px 14px 22px;
+  border-radius: 30px;
+  background: linear-gradient(170deg, #0f2418, #0a1a11 62%);
+  border: 1px solid rgba(242, 247, 240, 0.1);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.8) inset,
-    0 22px 40px rgba(4, 26, 12, 0.44);
-  padding: 16px 18px;
+    0 40px 90px rgba(2, 14, 7, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.fs-head {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: space-between;
+  margin-bottom: 14px;
+  padding: 0 4px;
 }
-.tkcard-no {
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 13px;
-  letter-spacing: 3px;
-  color: #4d5b50;
+.fs-brand {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: -0.5px;
+  color: #f2f7f0;
 }
-
-/*
- * La carte descend depuis la droite, se pose une demi-seconde sur le lecteur
- * (c'est là que les ondes partent, à 30–34 %), puis repart.
- */
-/*
- * Le lecteur est désormais peint de face (trapèze), sans rotation sur Z : la
- * carte se pose donc à plat dessus, sans le décalage de 24° d'avant.
- */
-@keyframes tap {
-  0% {
-    transform: translate3d(130px, -60px, 200px) rotateX(54deg) rotateZ(-6deg);
-    opacity: 0;
-  }
-  12% {
-    opacity: 1;
-  }
-  30% {
-    transform: translate3d(0, 104px, 22px) rotateX(64deg) rotateZ(0deg);
-  }
-  40% {
-    transform: translate3d(0, 104px, 22px) rotateX(64deg) rotateZ(0deg);
-  }
-  62% {
-    transform: translate3d(104px, -46px, 205px) rotateX(56deg) rotateZ(-6deg);
-    opacity: 1;
-  }
-  74%,
+.fs-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(242, 247, 240, 0.62);
+}
+.fs-live i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lime);
+  animation: fs-blink 2.4s ease-in-out infinite;
+}
+@keyframes fs-blink {
+  0%,
   100% {
-    transform: translate3d(140px, -74px, 225px) rotateX(54deg) rotateZ(-4deg);
-    opacity: 0;
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
   }
 }
 
-/* --------------------------------------------- le ticket dématérialisé */
-.eticket {
+.fs-card {
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fdfdfb;
+  box-shadow: 0 18px 40px rgba(2, 14, 7, 0.4);
+}
+
+.fs-visual {
+  position: relative;
+  height: 128px;
+  background: radial-gradient(120% 90% at 30% 20%, #f6ddd2, #e8bfae 60%, #d9a894);
+}
+.fs-visual-alt {
+  height: 92px;
+  background: radial-gradient(120% 90% at 30% 20%, #dcd9ef, #b9b3d6);
+}
+
+.fs-timer,
+.fs-off,
+.fs-stock {
   position: absolute;
-  left: 50%;
-  bottom: 96px;
-  width: 132px;
-  margin-left: -66px;
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px 14px 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 5px 10px;
+  line-height: 1;
+}
+.fs-timer {
+  top: 10px;
+  left: 10px;
+  background: rgba(15, 26, 18, 0.88);
+  color: #f2f7f0;
+}
+.fs-timer-hot {
+  background: #d84420;
+}
+.fs-clock {
+  width: 9px;
+  height: 9px;
+  border: 1.6px solid currentColor;
+  border-radius: 50%;
+  position: relative;
+}
+.fs-clock::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 2.6px;
+  width: 1.4px;
+  height: 3.4px;
+  background: currentColor;
+}
+.fs-count {
+  font-variant-numeric: tabular-nums;
+}
+.fs-off {
+  bottom: 10px;
+  left: 10px;
+  background: var(--brand, #0f8a4c);
+  color: #fff;
+  font-size: 14px;
+  font-family: var(--font-display), sans-serif;
+  padding: 5px 11px;
+  border-radius: 10px;
+}
+.fs-stock {
+  bottom: 10px;
+  right: 10px;
+  background: #d84420;
+  color: #fff;
+}
+
+.fs-body {
+  padding: 12px 14px 14px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  box-shadow: 0 18px 34px rgba(4, 26, 12, 0.34);
-  opacity: 0;
-  animation: rise 7s ease-out infinite;
+  gap: 6px;
 }
-.eticket-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: #dbe5d6;
+.fs-merchant {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6d7a6f;
 }
-.eticket-bar.short {
-  width: 62%;
+.fs-title {
+  font-family: var(--font-display), sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f1a12;
+  margin: 0;
+  letter-spacing: -0.3px;
 }
-.eticket-check {
-  position: absolute;
-  right: -12px;
-  bottom: -12px;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--brand);
+.fs-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: #e6eae2;
+  overflow: hidden;
+}
+.fs-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #d84420;
+}
+.fs-prices {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+}
+.fs-now {
+  font-family: var(--font-display), sans-serif;
+  font-size: 24px;
+  color: #d84420;
+  letter-spacing: -0.6px;
+}
+.fs-was {
+  font-size: 13px;
+  font-weight: 600;
+  color: #8a958b;
+  text-decoration-color: #d84420;
+}
+.fs-grab {
+  margin-left: auto;
+  background: var(--brand, #0f8a4c);
   color: #fff;
-  font-weight: 800;
-  display: grid;
-  place-items: center;
-  box-shadow: 0 6px 14px rgba(11, 108, 59, 0.45);
-}
-@keyframes rise {
-  0%,
-  34% {
-    opacity: 0;
-    transform: translateY(26px) scale(0.9);
-  }
-  46% {
-    opacity: 1;
-    transform: translateY(-30px) scale(1);
-  }
-  72% {
-    opacity: 1;
-    transform: translateY(-52px) scale(1);
-  }
-  86%,
-  100% {
-    opacity: 0;
-    transform: translateY(-70px) scale(0.96);
-  }
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 7px 13px;
+  border-radius: 999px;
 }
 
+.fs-card-peek {
+  margin-top: 12px;
+  opacity: 0.55;
+  transform: scale(0.94);
+  transform-origin: top center;
+}
+
+/* Le bandeau sous la scène d'accroche. Tout ce qui décrivait le lecteur et la
+ * carte a été retiré avec la scène : ce matériel ne sera pas réalisé.
+ */
 .scene-caption {
   display: inline-flex;
   align-items: center;
@@ -523,36 +507,11 @@ img {
   }
 }
 
-@media (max-width: 520px) {
-  .scene-stage {
-    height: 280px;
-    transform: scale(0.86);
-  }
-}
-
-/* Sans animation : on fige la scène au moment du contact, qui est l'image
-   la plus parlante — carte posée sur le lecteur, ticket sorti. */
+/* Sans animation : la scène d'accroche cesse de clignoter. */
 @media (prefers-reduced-motion: reduce) {
-  .tkcard,
-  .eticket,
-  .ping,
-  .reader-led-dot,
+  .fs-live i,
   .scene-caption .dot {
     animation: none;
-  }
-  .tkcard {
-    transform: translate3d(0, 104px, 22px) rotateX(64deg) rotateZ(0deg);
-  }
-  .eticket {
-    opacity: 1;
-    transform: translateY(-40px);
-  }
-  .ping-1 {
-    opacity: 0.5;
-    transform: scaleY(0.42) scale(1.5);
-  }
-  .reader-led-dot {
-    fill: #c3f53c;
   }
 }
 
@@ -649,70 +608,6 @@ img {
 .step p {
   color: var(--ink-muted);
   font-size: 15px;
-}
-
-/* ------------------------------------------------ le matériel du commerçant */
-.kit {
-  margin-top: 22px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 18px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
-  padding: 28px 24px;
-}
-.kit-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 5px;
-}
-.kit-item b {
-  font-size: 15px;
-  margin-top: 8px;
-}
-.kit-item span {
-  font-size: 13.5px;
-  color: var(--ink-muted);
-  max-width: 24ch;
-}
-
-/* Les objets, dessinés — mêmes proportions que le matériel réel. */
-.kit-shape {
-  display: grid;
-  place-items: center;
-  font-family: Unbounded, sans-serif;
-  font-weight: 800;
-  font-size: 13px;
-  color: var(--forest);
-  background: linear-gradient(150deg, #fff, #eef3ea);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 10px 20px rgba(4, 26, 12, 0.12);
-  border: 1px solid var(--line);
-}
-.kit-box {
-  width: 84px;
-  height: 84px;
-  border-radius: 14px;
-}
-.kit-reader {
-  width: 76px;
-  height: 56px;
-  border-radius: 12px;
-}
-.kit-key {
-  width: 30px;
-  height: 74px;
-  border-radius: 8px;
-  background: linear-gradient(#fff, #dfe8da);
-}
-.kit-card {
-  width: 92px;
-  height: 58px;
-  border-radius: 9px;
 }
 
 /* --------------------------------------------------------------- publics */

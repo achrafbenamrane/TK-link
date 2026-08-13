@@ -1,15 +1,26 @@
 import Interactions from './interactions';
-import ScanScene from './scan-scene';
+import FlashScene from './flash-scene';
 
 /**
  * Site vitrine TK LINK.
  *
- * L'ordre suit celui de la vidéo de marque, parce qu'il fonctionne : on pose
- * d'abord le problème (le papier), puis la solution (la dématérialisation),
- * puis le fonctionnement, et seulement ensuite ce que chacun y gagne.
+ * ⚠️ RÉÉCRITE le 13/08/2026 sur arbitrage de la conduite de projet. La page
+ * racontait le matériel — un lecteur en caisse, une carte sans contact, le
+ * ticket dématérialisé — sur le modèle de la vidéo de marque. Deux problèmes :
+ * **ce matériel ne sera pas réalisé**, et la page parlait d'abord aux
+ * commerçants alors que l'application s'adresse d'abord aux clients.
  *
- * Les chiffres sont ceux du client — 30 Md de tickets par an en France, 150 000
- * tonnes de papier, 1,8 M d'arbres, 75 Md de litres d'eau.
+ * Le message tient désormais en une phrase, celle de la demande : l'app sert à
+ * **obtenir des offres flash, des promotions importantes avec des dates
+ * courtes**. Tout le reste — fidélité, jeux, factures — vient après, parce que
+ * c'est après que ça se découvre.
+ *
+ * Ce qui subsiste du récit d'origine : la disparition du papier, qui reste
+ * vraie sans matériel (une commande honorée produit son ticket dans l'app), et
+ * la comptabilité, qui parle aux commerçants — donc placée en fin de page.
+ *
+ * Les chiffres du papier sont ceux du client — 30 Md de tickets par an en
+ * France, 150 000 tonnes de papier, 1,8 M d'arbres, 75 Md de litres d'eau.
  */
 export default function Page() {
   return (
@@ -23,10 +34,10 @@ export default function Page() {
             TK<span>LINK</span>
           </a>
           <nav className="nav-links" aria-label="Navigation principale">
-            <a href="#probleme">Le problème</a>
             <a href="#fonctionnement">Comment ça marche</a>
+            <a href="#app">L’application</a>
             <a href="#publics">Pour qui</a>
-            <a href="#compta">Comptabilité</a>
+            <a href="#commercants">Commerçants</a>
           </nav>
           <a className="btn btn-lime" href="#telecharger">
             Obtenir l’app
@@ -38,14 +49,14 @@ export default function Page() {
       <section className="hero" id="hero">
         <div className="wrap hero-grid">
           <div>
-            <p className="eyebrow">Dématérialisation du ticket de caisse</p>
+            <p className="eyebrow">Les ventes flash de votre quartier</p>
             <h1>
-              Le ticket papier <em>a fait son temps.</em>
+              Des prix qui tombent, <em>et qui ne reviennent pas.</em>
             </h1>
             <p className="lead">
-              En caisse, l’imprimante est remplacée par un lecteur TK LINK. Vous présentez votre
-              carte : le ticket arrive directement dans l’application, devient une facture, et ses
-              données partent déjà classées vers votre comptable.
+              Les commerçants près de chez vous bradent ce qui doit partir aujourd’hui : −30, −50,
+              −70 %. Chaque offre a un compte à rebours et un stock qui fond. Vous la prenez, ou
+              elle disparaît.
             </p>
             <div className="hero-cta">
               <a className="btn btn-lime" href="#telecharger">
@@ -56,126 +67,50 @@ export default function Page() {
               </a>
             </div>
             <p className="hero-note">
-              Pour les particuliers et les professionnels · Déploiement partout en France
+              Gratuit · Sans engagement · Les commerces de votre quartier, à Toulouse d’abord
             </p>
           </div>
 
-          <ScanScene />
-        </div>
-      </section>
-
-      {/* -------------------------------------------------------- problème */}
-      <section className="sec sec-dark" id="probleme">
-        <div className="wrap">
-          <div className="sec-head r">
-            <p className="eyebrow">Chaque année, en France</p>
-            <h2>Un reçu qu’on jette coûte un arbre qu’on abat.</h2>
-            <p>
-              Le ticket de caisse est le document le plus imprimé — et le plus vite jeté. Mis bout à
-              bout, voilà ce qu’il représente.
-            </p>
-          </div>
-
-          <div className="stats r">
-            <div className="stat">
-              <div className="v">30 Md</div>
-              <div className="k">de tickets de caisse imprimés</div>
-            </div>
-            <div className="stat">
-              <div className="v">150 000 t</div>
-              <div className="k">de papier consommé</div>
-            </div>
-            <div className="stat">
-              <div className="v">1,8 M</div>
-              <div className="k">d’arbres abattus</div>
-            </div>
-            <div className="stat">
-              <div className="v">75 Md L</div>
-              <div className="k">d’eau utilisés</div>
-            </div>
-          </div>
-
-          <p className="stats-note r">
-            Les tickets et factures papier doivent disparaître. C’est exactement ce que fait TK
-            LINK.
-          </p>
+          <FlashScene />
         </div>
       </section>
 
       {/* --------------------------------------------------- fonctionnement */}
-      <section className="sec" id="fonctionnement">
+      <section className="sec sec-dark" id="fonctionnement">
         <div className="wrap">
           <div className="sec-head r">
             <p className="eyebrow">Comment ça marche</p>
-            <h2>Quatre gestes, et plus rien à imprimer.</h2>
+            <h2>Trois gestes, et c’est à vous.</h2>
             <p>
-              Le commerçant garde sa caisse. On y branche un lecteur, et l’imprimante papier n’a
-              plus lieu d’être.
+              Pas de carte à demander, pas de matériel à installer. Vous téléchargez, vous dites ce
+              qui vous intéresse, et les bonnes affaires arrivent.
             </p>
           </div>
 
           <div className="steps r">
             <div className="step">
               <div className="n" />
-              <h3>Un lecteur en caisse</h3>
+              <h3>Dites ce qui vous intéresse</h3>
               <p>
-                Le lecteur TK LINK se relie à la caisse enregistreuse et remplace l’imprimante par
-                une imprimante virtuelle.
+                Restauration, high-tech, mode, beauté, sport… On ne vous montrera pas les promotions
+                d’une boucherie si vous êtes venu pour du matériel informatique.
               </p>
             </div>
             <div className="step">
               <div className="n" />
-              <h3>Une carte, ou une pastille</h3>
+              <h3>Attrapez avant que ça parte</h3>
               <p>
-                Le client reçoit une carte TK LINK — ou colle une pastille sans contact sur sa
-                propre carte bancaire.
+                Chaque offre affiche son compte à rebours et ce qu’il en reste. Un geste pour la
+                réserver — le stock se met à jour pour tout le monde en même temps.
               </p>
             </div>
             <div className="step">
               <div className="n" />
-              <h3>Le ticket arrive</h3>
+              <h3>Récupérez ou faites livrer</h3>
               <p>
-                Il présente sa carte après l’achat : le reçu est numérisé et s’affiche
-                instantanément dans l’application sécurisée.
+                Vous passez au comptoir, ou on vous l’apporte. Le ticket arrive dans l’application :
+                plus de bout de papier froissé le jour de l’échange.
               </p>
-            </div>
-            <div className="step">
-              <div className="n" />
-              <h3>La facture suit</h3>
-              <p>
-                Le ticket devient une facture certifiée, transmise au commerçant et à son comptable.
-                Sans ressaisie.
-              </p>
-            </div>
-          </div>
-
-          {/* Le matériel remis au commerçant */}
-          <div className="kit r">
-            <div className="kit-item">
-              <div className="kit-shape kit-box">
-                <span>TK</span>
-              </div>
-              <b>Le boîtier</b>
-              <span>Relie la caisse au réseau TK LINK.</span>
-            </div>
-            <div className="kit-item">
-              <div className="kit-shape kit-reader">
-                <span>TK</span>
-              </div>
-              <b>Le lecteur</b>
-              <span>Prend la place de l’imprimante, sur le comptoir.</span>
-            </div>
-            <div className="kit-item">
-              <div className="kit-shape kit-key" />
-              <b>La clé</b>
-              <span>Installe l’imprimante virtuelle sur la caisse.</span>
-            </div>
-            <div className="kit-item">
-              <div className="kit-shape kit-card">
-                <span>TK</span>
-              </div>
-              <b>La carte ou la pastille</b>
-              <span>Remise au client — ou collée sur sa carte bancaire.</span>
             </div>
           </div>
         </div>
@@ -186,40 +121,49 @@ export default function Page() {
         <div className="wrap">
           <div className="sec-head r">
             <p className="eyebrow">Pour qui</p>
-            <h2>Trois usages, une seule carte.</h2>
+            <h2>D’abord pour vous. Ensuite pour votre quartier.</h2>
           </div>
 
           <div className="cards r">
             <div className="card">
-              <span className="tag">Commerçant</span>
-              <h3>Plus de rouleaux à changer</h3>
-              <p>Un lecteur relié à votre caisse, et le papier sort du budget.</p>
+              <span className="tag">Vous</span>
+              <h3>Payer moins, près de chez vous</h3>
+              <p>
+                Les invendus du jour, à l’heure où ils doivent partir. Ce que vous auriez acheté de
+                toute façon, à moitié prix.
+              </p>
               <ul>
-                <li>Installation guidée de l’imprimante virtuelle</li>
-                <li>Vos offres visibles dans l’app de vos clients</li>
-                <li>Vos factures classées, prêtes pour la compta</li>
+                <li>Des offres triées selon ce qui vous intéresse</li>
+                <li>Un compte à rebours et un stock réels, jamais gonflés</li>
+                <li>À récupérer sur place ou à faire livrer</li>
               </ul>
             </div>
 
             <div className="card">
-              <span className="tag">Particulier</span>
-              <h3>Tous vos reçus au même endroit</h3>
-              <p>Fini le ticket froissé au fond de la poche le jour de l’échange.</p>
+              <span className="tag">Votre commerçant</span>
+              <h3>Vendre au lieu de jeter</h3>
+              <p>
+                Une vente flash se publie en deux minutes, depuis un ordinateur. Ce qui allait à la
+                poubelle trouve preneur avant la fermeture.
+              </p>
               <ul>
-                <li>Vos tickets classés, cherchables, jamais perdus</li>
-                <li>Des points sur chaque achat</li>
-                <li>Promos, catalogue et cadeaux réservés aux porteurs</li>
+                <li>Cinq opérations gratuites pour commencer</li>
+                <li>Les clients du quartier prévenus immédiatement</li>
+                <li>Commandes et factures suivies au même endroit</li>
               </ul>
             </div>
 
             <div className="card">
-              <span className="tag">Professionnel</span>
-              <h3>La note de frais se remplit seule</h3>
-              <p>Votre comptable vous remet votre carte : le reste est automatique.</p>
+              <span className="tag">Le quartier</span>
+              <h3>Moins d’invendus, moins de papier</h3>
+              <p>
+                Chaque offre attrapée est un produit qui ne finit pas à la benne — et un ticket qui
+                ne s’imprime pas.
+              </p>
               <ul>
-                <li>Ticket transformé en facture certifiée</li>
-                <li>Achats en magasin comme en ligne</li>
-                <li>Export compatible avec votre logiciel comptable</li>
+                <li>Des commerces indépendants, pas des enseignes</li>
+                <li>Des tickets numériques, conservés deux ans</li>
+                <li>Des points échangeables contre un arbre planté</li>
               </ul>
             </div>
           </div>
@@ -232,12 +176,12 @@ export default function Page() {
           <div className="r">
             <p className="eyebrow">L’application</p>
             <h2 style={{ fontSize: 'clamp(28px,4vw,40px)', margin: '12px 0 14px' }}>
-              Vos achats vous rapportent.
+              La chasse aux bonnes affaires.
             </h2>
             <p style={{ color: 'var(--ink-muted)', marginBottom: 22 }}>
-              Chaque passage de carte crédite des points. Ils s’échangent contre des réductions, des
-              produits offerts — ou un arbre planté. Et parce qu’attendre en caisse n’a rien
-              d’amusant, l’app propose aussi des jeux qui rapportent.
+              Un onglet réunit tout ce qui part maintenant : les dernières minutes, les offres
+              réservées aux membres, et de quoi gagner des coupons en jouant. Chaque achat crédite
+              des points, échangeables contre des réductions — ou un arbre planté.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <a className="btn btn-primary" href="#telecharger">
@@ -252,18 +196,18 @@ export default function Page() {
           <div className="phone r" aria-hidden="true">
             <div className="ph-logo">TK LINK</div>
             <ul className="menu">
-              <li>CARTE FIDÉLITÉ</li>
-              <li>PROMO</li>
-              <li>CATALOGUE</li>
-              <li>BONUS POINT</li>
-              <li>CADEAUX</li>
+              <li>DERNIÈRE CHANCE</li>
+              <li>OFFRES MEMBRES</li>
+              <li>MINI-JEUX</li>
+              <li>MES COUPONS</li>
+              <li>MES POINTS</li>
             </ul>
           </div>
         </div>
       </section>
 
       {/* ----------------------------------------------------------- compta */}
-      <section className="sec sec-paper" id="compta">
+      <section className="sec sec-paper" id="commercants">
         <div className="wrap split">
           <div className="fields r">
             <div className="fi">
@@ -301,19 +245,55 @@ export default function Page() {
           </div>
 
           <div className="r">
-            <p className="eyebrow">Comptabilité</p>
+            <p className="eyebrow">Vous êtes commerçant</p>
             <h2 style={{ fontSize: 'clamp(28px,4vw,40px)', margin: '12px 0 14px' }}>
-              La saisie est déjà faite.
+              Vendez l’invendu. La paperasse suit toute seule.
             </h2>
             <p style={{ color: 'var(--ink-muted)', marginBottom: 18 }}>
-              Notre IA lit les documents collectés, en extrait les données, effectue la saisie des
-              écritures et les classe par code fournisseur. Le comptable n’a plus qu’à les
-              télécharger.
+              Vous publiez une vente flash depuis votre navigateur : un prix, une quantité, une
+              durée. Elle apparaît immédiatement chez les clients du quartier qui cherchent ce que
+              vous vendez.
             </p>
-            <p style={{ color: 'var(--ink-muted)' }}>
-              L’export est compatible avec tous les logiciels comptables du marché — aucune
-              migration à prévoir.
+            <p style={{ color: 'var(--ink-muted)', marginBottom: 18 }}>
+              Chaque vente honorée produit son ticket, puis sa facture certifiée, classée et prête
+              pour votre comptable. Sans ressaisie, et sans un mètre de papier thermique.
             </p>
+            <a className="btn btn-primary" href="/pro">
+              Ouvrir l’espace professionnel
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* -------------------------------------------------------- le papier */}
+      <section className="sec sec-dark" id="impact">
+        <div className="wrap">
+          <div className="sec-head r">
+            <p className="eyebrow">Chaque année, en France</p>
+            <h2>Un reçu qu’on jette coûte un arbre qu’on abat.</h2>
+            <p>
+              Le ticket de caisse est le document le plus imprimé — et le plus vite jeté. Chaque
+              vente passée par TK LINK en supprime un.
+            </p>
+          </div>
+
+          <div className="stats r">
+            <div className="stat">
+              <div className="v">30 Md</div>
+              <div className="k">de tickets de caisse imprimés</div>
+            </div>
+            <div className="stat">
+              <div className="v">150 000 t</div>
+              <div className="k">de papier consommé</div>
+            </div>
+            <div className="stat">
+              <div className="v">1,8 M</div>
+              <div className="k">d’arbres abattus</div>
+            </div>
+            <div className="stat">
+              <div className="v">75 Md L</div>
+              <div className="k">d’eau utilisés</div>
+            </div>
           </div>
         </div>
       </section>
@@ -322,9 +302,9 @@ export default function Page() {
       <section className="sec" id="telecharger">
         <div className="wrap">
           <div className="cta r">
-            <h2>Passez au ticket qui ne se perd pas.</h2>
+            <h2>Les prochaines ventes flash sont déjà en ligne.</h2>
             <p>
-              Rejoignez les commerces qui ont éteint leur imprimante. Déploiement partout en France.
+              Gratuit, sans engagement. Les commerces de votre quartier, à Toulouse pour commencer.
             </p>
             <div className="cta-row">
               <a className="btn btn-lime" href="#telecharger">
@@ -347,19 +327,20 @@ export default function Page() {
                 TK<span>LINK</span>
               </div>
               <p style={{ maxWidth: '34ch' }}>
-                La dématérialisation du ticket de caisse. Moins de papier, plus de services.
+                Les ventes flash de votre quartier. Des prix qui tombent, et qui ne reviennent pas.
               </p>
             </div>
             <div className="foot-col">
               <h4>Produit</h4>
               <a href="#fonctionnement">Comment ça marche</a>
+              <a href="#app">L’application</a>
               <a href="#publics">Pour qui</a>
-              <a href="#compta">Comptabilité</a>
               <a href="/pro">Espace professionnel</a>
             </div>
             <div className="foot-col">
               <h4>En savoir plus</h4>
-              <a href="#probleme">Notre impact</a>
+              <a href="#commercants">Vous êtes commerçant</a>
+              <a href="#impact">Notre impact</a>
               <a href="#telecharger">Obtenir l’app</a>
             </div>
           </div>
