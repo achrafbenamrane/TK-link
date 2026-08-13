@@ -129,7 +129,7 @@ describe('rôle — CDC §4', () => {
 });
 
 describe('<OnboardingScreen />', () => {
-  it('déroule le parcours consommateur et ne termine qu’une fois rempli', () => {
+  it('propose le compte AVANT la personnalisation, et ne termine qu’une fois rempli', () => {
     const onDone = jest.fn();
     render(<OnboardingScreen onDone={onDone} />);
 
@@ -137,40 +137,37 @@ describe('<OnboardingScreen />', () => {
     expect(screen.getByTestId('onboarding-screen')).toBeTruthy();
     fireEvent.press(screen.getByTestId('onboarding-next'));
 
-    // 2 — rôle (CDC §4)
+    // 2 — le compte, tout de suite après l’accroche. Rien n’a encore été
+    // demandé : on ne récapitule donc pas, on donne des raisons.
+    expect(screen.getByTestId('onboarding-signup')).toBeTruthy();
+    expect(screen.getByTestId('onboarding-account-perks')).toBeTruthy();
+    expect(useOnboardingStore.getState().completed).toBe(false);
+    fireEvent.press(screen.getByTestId('onboarding-next')); // « Continuer sans compte »
+
+    // 3 — rôle (CDC §4)
     expect(screen.getByTestId('role-consommateur')).toBeTruthy();
     fireEvent.press(screen.getByTestId('role-consommateur'));
     fireEvent.press(screen.getByTestId('onboarding-next'));
 
-    // 3 — avatar : la galerie entière est là, et un tap choisit.
+    // 4 — avatar
     expect(screen.getByTestId('avatar-random')).toBeTruthy();
     fireEvent.press(screen.getByTestId(`avatar-${AVATARS[2]!.id}`));
     expect(useOnboardingStore.getState().avatar).toEqual({ preset: 2 });
     fireEvent.press(screen.getByTestId('onboarding-next'));
 
-    // 4 — profil
+    // 5 — profil
     fireEvent.press(screen.getByTestId('holder-pro'));
     fireEvent.press(screen.getByTestId('medium-pastille'));
-    expect(useOnboardingStore.getState().holderType).toBe('pro');
-    expect(useOnboardingStore.getState().medium).toBe('pastille');
     fireEvent.press(screen.getByTestId('onboarding-next'));
 
-    // 5 — intérêts : incomplet, donc on n’avance pas
+    // 6 — intérêts : incomplet, donc on n’avance pas
     fireEvent.press(screen.getByTestId('onboarding-next'));
-    expect(screen.getByTestId('onboarding-firstname')).toBeTruthy(); // toujours là
+    expect(screen.getByTestId('onboarding-firstname')).toBeTruthy();
     expect(useOnboardingStore.getState().completed).toBe(false);
 
-    // On remplit, et là ça passe.
     fireEvent.changeText(screen.getByTestId('onboarding-firstname'), 'Sofiane');
     fireEvent.press(screen.getByTestId('interest-restauration'));
     fireEvent.press(screen.getByTestId('onboarding-next'));
-
-    // 6 — le compte : rien n’est encore terminé, on propose.
-    expect(screen.getByTestId('onboarding-signup')).toBeTruthy();
-    expect(onDone).not.toHaveBeenCalled();
-    expect(useOnboardingStore.getState().completed).toBe(false);
-
-    fireEvent.press(screen.getByTestId('onboarding-next')); // « Continuer sans compte »
 
     expect(onDone).toHaveBeenCalledWith('app');
     expect(useOnboardingStore.getState().completed).toBe(true);
@@ -180,10 +177,9 @@ describe('<OnboardingScreen />', () => {
 
   it('l’étape compte mène à l’inscription ou à la connexion', () => {
     const onDone = jest.fn();
-    useOnboardingStore.setState({ firstName: 'Sofiane', interests: ['restauration'] });
     render(<OnboardingScreen onDone={onDone} />);
 
-    for (let i = 0; i < 5; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
+    fireEvent.press(screen.getByTestId('onboarding-next')); // impact → compte
 
     fireEvent.press(screen.getByTestId('onboarding-signup'));
     expect(onDone).toHaveBeenCalledWith('sign-up');
@@ -192,16 +188,24 @@ describe('<OnboardingScreen />', () => {
     expect(useOnboardingStore.getState().completed).toBe(true);
   });
 
-  it('l’avatar reste modifiable depuis l’étape compte', () => {
-    useOnboardingStore.setState({ firstName: 'Sofiane', interests: ['restauration'] });
+  it('ne redemande PAS le prénom quand l’inscription l’a déjà donné', () => {
+    // Le vrai motif du changement : l’inscription du CDC §5 collecte déjà le
+    // prénom. Le redemander deux écrans plus loin donne l’impression que rien
+    // n’a été retenu.
+    useOnboardingStore.setState({ firstName: 'Sofiane' });
+    render(<OnboardingScreen onDone={jest.fn()} hasAccount />);
+
+    for (let i = 0; i < 4; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
+
+    expect(screen.getByTestId('interest-restauration')).toBeTruthy();
+    expect(screen.queryByTestId('onboarding-firstname')).toBeNull();
+  });
+
+  it('demande le prénom à qui a refusé le compte', () => {
     render(<OnboardingScreen onDone={jest.fn()} />);
     for (let i = 0; i < 5; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
 
-    fireEvent.press(screen.getByTestId('onboarding-identity'));
-
-    expect(screen.getByTestId('avatar-random')).toBeTruthy();
-    fireEvent.press(screen.getByTestId(`avatar-${AVATARS[4]!.id}`));
-    expect(useOnboardingStore.getState().avatar).toEqual({ preset: 4 });
+    expect(screen.getByTestId('onboarding-firstname')).toBeTruthy();
   });
 
   it('ne propose pas de compte à qui vient de se connecter', () => {
@@ -209,31 +213,27 @@ describe('<OnboardingScreen />', () => {
     useOnboardingStore.setState({ firstName: 'Sofiane', interests: ['restauration'] });
     render(<OnboardingScreen onDone={onDone} hasAccount />);
 
+    expect(screen.queryByTestId('onboarding-signup')).toBeNull();
     for (let i = 0; i < 5; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
 
-    expect(screen.queryByTestId('onboarding-signup')).toBeNull();
     expect(onDone).toHaveBeenCalledWith('app');
   });
 
   it('saute l’étape particulier / pro pour un commerçant — CDC §4', () => {
     render(<OnboardingScreen onDone={jest.fn()} />);
-    fireEvent.press(screen.getByTestId('onboarding-next')); // impact → rôle
+    fireEvent.press(screen.getByTestId('onboarding-next')); // impact → compte
+    fireEvent.press(screen.getByTestId('onboarding-next')); // compte → rôle
     fireEvent.press(screen.getByTestId('role-commercant'));
     fireEvent.press(screen.getByTestId('onboarding-next')); // rôle → avatar
     fireEvent.press(screen.getByTestId('onboarding-next')); // avatar → …
 
-    // La question particulier / pro n’a pas de sens pour un commerçant :
-    // on tombe directement sur les rayons.
     expect(screen.queryByTestId('holder-particulier')).toBeNull();
     expect(screen.getByTestId('onboarding-firstname')).toBeTruthy();
   });
 
   it('propose les huit catégories du CDC', () => {
     render(<OnboardingScreen onDone={jest.fn()} />);
-    fireEvent.press(screen.getByTestId('onboarding-next'));
-    fireEvent.press(screen.getByTestId('onboarding-next'));
-    fireEvent.press(screen.getByTestId('onboarding-next'));
-    fireEvent.press(screen.getByTestId('onboarding-next'));
+    for (let i = 0; i < 5; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
 
     for (const key of ['restauration', 'high-tech', 'maison', 'mode', 'auto', 'services']) {
       expect(screen.getByTestId(`interest-${key}`)).toBeTruthy();
@@ -243,17 +243,18 @@ describe('<OnboardingScreen />', () => {
   it('permet de revenir en arrière', () => {
     render(<OnboardingScreen onDone={jest.fn()} />);
     fireEvent.press(screen.getByTestId('onboarding-next'));
-    expect(screen.getByTestId('role-consommateur')).toBeTruthy();
+    expect(screen.getByTestId('onboarding-signup')).toBeTruthy();
     fireEvent.press(screen.getByTestId('onboarding-back'));
-    // Retour à l'accroche : plus de choix de rôle à l'écran.
-    expect(screen.queryByTestId('role-consommateur')).toBeNull();
+    // Retour à l'accroche : plus de proposition de compte à l'écran.
+    expect(screen.queryByTestId('onboarding-signup')).toBeNull();
   });
 });
 
 describe('rôles proposés dans l’app — décision client du 2026-08-10', () => {
   it('ne propose PAS le grossiste : il passe par l’espace pro web', () => {
     render(<OnboardingScreen onDone={jest.fn()} />);
-    fireEvent.press(screen.getByTestId('onboarding-next'));
+    fireEvent.press(screen.getByTestId('onboarding-next')); // impact → compte
+    fireEvent.press(screen.getByTestId('onboarding-next')); // compte → rôle
 
     expect(screen.getByTestId('role-consommateur')).toBeTruthy();
     expect(screen.getByTestId('role-commercant')).toBeTruthy();

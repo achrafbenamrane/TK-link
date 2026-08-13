@@ -20,15 +20,17 @@ appId: com.progix.freedoo.dev
 - assertVisible:
     id: 'onboarding-screen'
 - tapOn:
-    id: 'onboarding-next'
+    id: 'onboarding-next' # accroche → compte
+- tapOn:
+    id: 'onboarding-next' # « Continuer sans compte »
 - tapOn:
     id: 'role-consommateur'
 - tapOn:
-    id: 'onboarding-next'
+    id: 'onboarding-next' # rôle → avatar
 - tapOn:
-    id: 'onboarding-next'
+    id: 'onboarding-next' # avatar → profil
 - tapOn:
-    id: 'onboarding-next'
+    id: 'onboarding-next' # profil → intérêts
 - tapOn:
     id: 'onboarding-firstname'
 - inputText: 'Sofiane'
@@ -36,8 +38,6 @@ appId: com.progix.freedoo.dev
     id: 'interest-restauration'
 - tapOn:
     id: 'onboarding-next'
-- tapOn:
-    id: 'onboarding-next' # « Continuer sans compte »
 
 # L'accueil : le déstockage, avec de vraies offres.
 - assertVisible:

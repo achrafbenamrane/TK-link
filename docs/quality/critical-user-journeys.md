@@ -9,13 +9,16 @@ enforces).
 
 - **Owner :** squad produit TK LINK
 - **Flow :** `.maestro/flows/smoke.yaml`
-- **Journey :** ouvrir l’app → écran de bienvenue → « Passer » → onboarding
-  (rôle, avatar, prénom, centres d’intérêt) → « Continuer sans compte » →
-  l’accueil affiche le déstockage et sa recherche.
+- **Journey :** ouvrir l’app → écran de bienvenue → « Passer » → onboarding :
+  l’accroche, puis **la proposition de compte**, puis la personnalisation
+  (rôle, avatar, prénom, centres d’intérêt) → l’accueil affiche le déstockage
+  et sa recherche.
 - **Edge cases agents must try :** relancer après avoir terminé l’onboarding
   (on ne doit PAS le revoir), tuer l’app entre deux étapes puis relancer,
   « Se connecter » depuis la bienvenue, refuser la géolocalisation, mode
-  « réduire les animations » (les scènes doivent se figer, pas disparaître).
+  « réduire les animations » (les scènes doivent se figer, pas disparaître),
+  **créer un compte puis revenir** (le prénom ne doit PAS être redemandé à
+  l’étape des centres d’intérêt).
 - **Performance budget :** premier rendu visible < 2 s après l’écran de
   démarrage, sur un Android milieu de gamme.
 

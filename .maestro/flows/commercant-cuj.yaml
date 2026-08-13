@@ -17,11 +17,13 @@ appId: com.progix.freedoo.dev
 - tapOn:
     id: 'welcome-skip'
 - tapOn:
-    id: 'onboarding-next'
+    id: 'onboarding-next' # accroche → compte
+- tapOn:
+    id: 'onboarding-next' # « Continuer sans compte »
 - tapOn:
     id: 'role-commercant'
 - tapOn:
-    id: 'onboarding-next'
+    id: 'onboarding-next' # rôle → avatar
 - tapOn:
     id: 'onboarding-next' # avatar : celui par défaut suffit
 - tapOn:
@@ -31,8 +33,6 @@ appId: com.progix.freedoo.dev
     id: 'interest-restauration'
 - tapOn:
     id: 'onboarding-next'
-- tapOn:
-    id: 'onboarding-next' # « Continuer sans compte »
 
 # ------------------------------------------------------- publier un invendu
 - tapOn: 'Compte'

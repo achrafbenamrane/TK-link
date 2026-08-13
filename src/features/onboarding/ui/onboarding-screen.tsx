@@ -43,38 +43,55 @@ type Step = 'impact' | 'role' | 'avatar' | 'profil' | 'interets' | 'compte';
  * Les étapes, adaptées au rôle — CDC §4 : « L'onboarding devra être adapté au
  * rôle sélectionné. »
  *
+ * **Le compte vient AVANT la personnalisation.** Rôle, avatar et centres
+ * d'intérêt décrivent quelqu'un ; tant que ce quelqu'un n'a pas de compte, ils
+ * ne décrivent qu'un téléphone. Les recueillir d'abord, c'était demander un
+ * quart d'heure de réglages puis, à la fin, un mot de passe — et perdre le
+ * tout si la personne fermait l'app.
+ *
+ * Le SIRET ne s'y oppose pas, contrairement à ce qu'on avait supposé. Le CDC
+ * §5 est explicite : « l'accès et la consultation des offres se font avec les
+ * mêmes informations, mais pour passer commande, le SIRET doit être
+ * renseigné ». Il n'est donc PAS exigé à l'inscription — c'est la commande qui
+ * le réclame, et cette garde existe déjà (`merchant/model/store.ts`).
+ *
+ * L'écran d'impact reste en tête : c'est lui qui donne une raison de créer le
+ * compte. Réclamer un mot de passe avant d'avoir rien montré reste le meilleur
+ * moyen de perdre quelqu'un.
+ *
  * L'étape « profil » demande particulier ou professionnel : la question n'a de
  * sens que pour un consommateur. Un commerçant ou un grossiste est un
  * professionnel par définition, lui poser la question serait un faux choix.
- *
- * Le compte vient EN DERNIER, et jamais avant le rôle : l'inscription du CDC
- * §5 dépend du rôle (le SIRET n'est demandé qu'aux professionnels), et
- * réclamer un mot de passe à quelqu'un qui n'a encore rien vu du produit est
- * le meilleur moyen de le perdre.
  */
 function stepsFor(role: Role, hasAccount: boolean): Step[] {
-  const steps: Step[] =
+  const after: Step[] =
     role === 'consommateur'
-      ? ['impact', 'role', 'avatar', 'profil', 'interets']
-      : ['impact', 'role', 'avatar', 'interets'];
-  return hasAccount ? steps : [...steps, 'compte'];
+      ? ['role', 'avatar', 'profil', 'interets']
+      : ['role', 'avatar', 'interets'];
+  return hasAccount ? ['impact', ...after] : ['impact', 'compte', ...after];
 }
 
 /** Ce que l'étape « intérêts » veut dire selon le rôle. */
-const INTEREST_COPY: Record<Role, { title: string; subtitle: string; label: string }> = {
+const INTEREST_COPY: Record<
+  Role,
+  { title: string; subtitle: string; subtitleNamed: string; label: string }
+> = {
   consommateur: {
     title: 'Presque fini',
     subtitle: 'Votre prénom, et ce qui vous intéresse — pour trier vos offres.',
+    subtitleNamed: 'Ce qui vous intéresse — pour trier vos offres.',
     label: 'Ce que vous achetez le plus',
   },
   commercant: {
     title: 'Votre commerce',
     subtitle: 'Votre prénom, et vos rayons — pour vous montrer les bons lots.',
+    subtitleNamed: 'Vos rayons — pour vous montrer les bons lots.',
     label: 'Ce que vous vendez',
   },
   grossiste: {
     title: 'Votre activité',
     subtitle: 'Votre prénom, et vos rayons — pour cibler les bons commerçants.',
+    subtitleNamed: 'Vos rayons — pour cibler les bons commerçants.',
     label: 'Ce que vous distribuez',
   },
 };
@@ -109,6 +126,13 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
   const canContinue = step === 'interets' ? canFinish(firstName, interests) : true;
   const copy = INTEREST_COPY[role];
   const onAccountStep = step === 'compte';
+  /**
+   * L'inscription a-t-elle déjà donné le prénom ?
+   *
+   * Gelé au montage : sans cela, le champ disparaîtrait sous les doigts de
+   * quelqu'un qui n'a pas de compte, à la première lettre tapée.
+   */
+  const [knowsName] = useState(() => firstName.trim().length > 0);
   const label = onAccountStep ? 'Continuer sans compte' : isLast ? 'Commencer' : 'Continuer';
 
   /** Clôt l'accueil des nouveaux et dit à la route où aller ensuite. */
@@ -284,25 +308,34 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
 
         {step === 'interets' ? (
           <View className="gap-5">
-            <Header title={copy.title} subtitle={copy.subtitle} />
+            <Header
+              title={knowsName && firstName ? `Presque fini, ${firstName}` : copy.title}
+              subtitle={knowsName ? copy.subtitleNamed : copy.subtitle}
+            />
 
-            <View className="gap-2">
-              <AppText variant="caption" className="text-ink-muted">
-                Votre prénom
-              </AppText>
-              <TextInput
-                testID="onboarding-firstname"
-                value={firstName}
-                onChangeText={setFirstName}
-                placeholder="Ex. Sofiane"
-                placeholderTextColor={colors.inkFaint}
-                className="rounded-control bg-surface-muted px-4 font-sans text-ink"
-                style={{ height: 50, fontSize: 16 }}
-                autoCapitalize="words"
-                returnKeyType="done"
-                accessibilityLabel="Votre prénom"
-              />
-            </View>
+            {/* Le prénom n'est demandé que si l'inscription ne l'a pas déjà
+                donné. Poser deux fois la même question à deux écrans d'écart
+                donne l'impression que rien n'a été retenu — et sur un
+                formulaire, c'est la première raison d'abandonner. */}
+            {knowsName ? null : (
+              <View className="gap-2">
+                <AppText variant="caption" className="text-ink-muted">
+                  Votre prénom
+                </AppText>
+                <TextInput
+                  testID="onboarding-firstname"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  placeholder="Ex. Sofiane"
+                  placeholderTextColor={colors.inkFaint}
+                  className="rounded-control bg-surface-muted px-4 font-sans text-ink"
+                  style={{ height: 50, fontSize: 16 }}
+                  autoCapitalize="words"
+                  returnKeyType="done"
+                  accessibilityLabel="Votre prénom"
+                />
+              </View>
+            )}
 
             <View className="gap-2">
               <AppText variant="caption" className="text-ink-muted">
@@ -353,33 +386,39 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
               subtitle="Créez votre compte pour garder vos points, vos coupons et votre carte — même en changeant de téléphone."
             />
 
-            {/* La carte d'identité qu'on vient de composer. On peut encore
-                changer d'avatar d'ici : c'est le dernier moment où on le voit
-                avant qu'il ne parte sur la carte de fidélité et dans les jeux. */}
-            <Pressable
-              testID="onboarding-identity"
-              accessibilityRole="button"
-              accessibilityLabel="Changer mon avatar"
-              onPress={() => setStep('avatar')}
-              className="flex-row items-center gap-4 rounded-card bg-surface-muted p-4"
+            {/* Ce que le compte apporte, en trois lignes.
+                Cet emplacement montrait auparavant l'avatar et les centres
+                d'intérêt déjà choisis — un récapitulatif. Le compte passant
+                désormais AVANT la personnalisation, il n'y a plus rien à
+                récapituler : on donne donc une raison de le créer plutôt qu'un
+                miroir de ce qui n'existe pas encore. */}
+            <View
+              testID="onboarding-account-perks"
+              className="gap-2.5 rounded-card bg-surface-muted p-4"
             >
-              <AvatarView avatar={avatar} size={64} />
-              <View className="flex-1">
-                <AppText variant="title" className="text-lg">
-                  {firstName || 'Vous'}
-                </AppText>
-                <AppText variant="caption" className="text-ink-faint">
-                  {ROLE_LABEL[role]} · {interests.length} centre
-                  {interests.length > 1 ? 's' : ''} d’intérêt
-                </AppText>
-                <View className="mt-1 flex-row items-center gap-1">
-                  <Feather name="edit-2" size={11} color={colors.brand600} />
-                  <AppText className="font-sans-semibold text-brand-600" style={{ fontSize: 11.5 }}>
-                    Changer d’avatar
+              {[
+                {
+                  icon: 'award',
+                  text: 'Vos points et vos coupons vous suivent, même en changeant de téléphone.',
+                },
+                { icon: 'credit-card', text: 'Votre carte de fidélité, avec votre avatar dessus.' },
+                {
+                  icon: 'zap',
+                  text: 'Les ventes flash près de chez vous, triées selon ce qui vous intéresse.',
+                },
+              ].map((perk) => (
+                <View key={perk.icon} className="flex-row items-start gap-3">
+                  <Feather name={perk.icon as 'award'} size={15} color={colors.brand600} />
+                  <AppText
+                    variant="caption"
+                    className="flex-1 text-ink-muted"
+                    style={{ fontSize: 12.5 }}
+                  >
+                    {perk.text}
                   </AppText>
                 </View>
-              </View>
-            </Pressable>
+              ))}
+            </View>
 
             <View className="gap-2">
               <Pressable
@@ -450,7 +489,9 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
 
         {step === 'interets' && !canContinue ? (
           <AppText variant="caption" className="text-center text-ink-faint">
-            Indiquez votre prénom et au moins un centre d’intérêt.
+            {knowsName
+              ? 'Choisissez au moins un centre d’intérêt.'
+              : 'Indiquez votre prénom et au moins un centre d’intérêt.'}
           </AppText>
         ) : null}
 
