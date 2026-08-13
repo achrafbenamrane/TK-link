@@ -12,20 +12,34 @@
  *   2. npm run screens:import
  */
 import { createRequire } from 'node:module';
-import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync } from 'node:fs';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
-let Jimp;
-try {
-  Jimp = require('jimp-compact');
-} catch {
+
+/**
+ * `jimp-compact` est installé à la RACINE du dépôt, pas dans `landing/`.
+ * On tente les deux plutôt que d'imposer une seconde installation : le paquet
+ * ne sert qu'à cette opération, une fois de temps en temps.
+ */
+function loadJimp() {
+  for (const id of [
+    'jimp-compact',
+    path.join(process.cwd(), '..', 'node_modules', 'jimp-compact'),
+  ]) {
+    try {
+      return require(id);
+    } catch {
+      /* on essaie le suivant */
+    }
+  }
   console.error(
-    '\n✗ « jimp-compact » est absent.\n' +
-      '  Il ne sert qu\u2019à cette opération : `npm i -D jimp-compact` dans landing/.\n',
+    '\n✗ « jimp-compact » est introuvable, ni ici ni à la racine du dépôt.\n' +
+      '  Lancez `npm install` à la racine, ou `npm i -D jimp-compact` ici.\n',
   );
   process.exit(1);
 }
+const Jimp = loadJimp();
 
 const ROOT = process.cwd();
 const OUT = path.join(ROOT, 'public', 'screens');
@@ -43,8 +57,22 @@ if (!existsSync(IN)) {
   console.log(`Dossier créé : ${path.relative(ROOT, IN)}`);
 }
 
+/**
+ * Le format RÉEL du fichier, lu dans ses premiers octets.
+ *
+ * Une capture enregistrée depuis un navigateur arrive souvent SANS extension.
+ * Filtrer sur le nom ne trouvait alors rien, et le script annonçait « rien à
+ * intégrer » alors que les six fichiers étaient là.
+ */
+function readable(file) {
+  const head = readFileSync(file).subarray(0, 8);
+  if (head[0] === 0xff && head[1] === 0xd8) return true; // JPEG
+  if (head[0] === 0x89 && head[1] === 0x50) return true; // PNG
+  return false;
+}
+
 const files = readdirSync(IN)
-  .filter((f) => /\.(jpe?g|png)$/i.test(f))
+  .filter((f) => f !== '.gitkeep' && readable(path.join(IN, f)))
   .sort();
 
 if (files.length === 0) {
