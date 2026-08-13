@@ -64,3 +64,6 @@ assets/avatars/source/
 # Dépôt temporaire des photos produit : seules les images traitées sont versionnées.
 assets/images/products/_incoming/*
 !assets/images/products/_incoming/README.md
+
+.vercel
+.env*

@@ -14,7 +14,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
-const EXPECTED = 'tklink-landing';
+/**
+ * Le projet Vercel autorisé. Nommé « tklink » à sa création le 13/08/2026 —
+ * ce qui compte n'est pas ce nom précis mais l'INTERDIT ci-dessous.
+ */
+const EXPECTED = 'tklink';
 /** Les projets qu'un déploiement TK LINK ne doit jamais toucher. */
 const FORBIDDEN = { landing: 'linkygroup.com — le site Linky' };
 
