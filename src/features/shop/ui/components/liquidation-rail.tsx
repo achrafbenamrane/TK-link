@@ -26,6 +26,21 @@ type Props = {
   onCatch?: (dealId: string) => void;
 };
 
+/**
+ * Dimensions de la carte, en pixels et NON en classes utilitaires.
+ *
+ * Même raison que sur la carte flash (`flash-card.tsx`) : une classe de taille
+ * inédite est silencieusement ignorée par la feuille NativeWind déjà compilée
+ * sur l'appareil, et le bloc s'effondre sans rien signaler. Une largeur dont
+ * dépend la lisibilité ne se confie pas à un cache de styles.
+ *
+ * 232 et non 192 : à l'ancienne largeur, le prix barré et le bouton
+ * « Attraper » se disputaient la même ligne et le bouton se faisait rogner —
+ * on lisait « Att ».
+ */
+const CARD_WIDTH = 232;
+const IMAGE_HEIGHT = 132;
+
 /** Le fond du badge d'urgence : rouge pour la dernière chance, ink sinon. */
 function badgeColor(deal: Deal): string {
   return urgencyOf(deal) === 'critique' ? colors.danger : colors.ink;
@@ -63,21 +78,41 @@ export function LiquidationRail({ limit = 8, onCatch }: Props) {
             accessibilityRole="button"
             accessibilityLabel={`${deal.title}, ${deal.price.toFixed(2)} euros`}
             onPress={() => router.push(`/produit/${deal.id}`)}
-            className="w-48 overflow-hidden rounded-card border border-line bg-surface"
+            style={{ width: CARD_WIDTH }}
+            className="overflow-hidden rounded-card border border-line bg-surface"
           >
             <View
-              className="h-24 items-center justify-center"
-              style={{ backgroundColor: deal.tint }}
+              className="items-center justify-center"
+              style={{ height: IMAGE_HEIGHT, backgroundColor: deal.tint }}
             >
-              <ProductImage deal={deal} emojiSize={40} />
+              <ProductImage deal={deal} emojiSize={44} />
 
-              <View
-                className="absolute left-2 top-2 rounded-pill px-2 py-0.5"
-                style={{ backgroundColor: badgeColor(deal) }}
-              >
-                <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 9 }}>
-                  {liquidationLabel(deal).toUpperCase()}
-                </AppText>
+              {/* Les deux pastilles du haut dans UNE rangée, pas deux calages
+                  indépendants. Posées chacune dans son coin, elles se
+                  rejoignaient dès que le libellé s'allongeait — « DERNIÈRE
+                  CHANCE » touchait le compte à rebours. Une rangée ne peut pas
+                  se chevaucher : elle répartit, et le libellé cède la place. */}
+              <View className="absolute left-2 right-2 top-2 flex-row items-start justify-between gap-1.5">
+                <View
+                  className="rounded-pill px-2 py-0.5"
+                  style={{ backgroundColor: badgeColor(deal), flexShrink: 1 }}
+                >
+                  <AppText
+                    className="font-sans-bold text-ink-inverse"
+                    style={{ fontSize: 9 }}
+                    numberOfLines={1}
+                  >
+                    {liquidationLabel(deal).toUpperCase()}
+                  </AppText>
+                </View>
+
+                <View
+                  className="flex-row items-center gap-1 rounded-pill bg-ink/85 px-2 py-0.5"
+                  style={{ flexShrink: 0 }}
+                >
+                  <Feather name="clock" size={9} color={colors.inkInverse} />
+                  <Countdown seconds={deal.endsInSeconds} className="text-xs text-ink-inverse" />
+                </View>
               </View>
 
               {pct ? (
@@ -87,11 +122,6 @@ export function LiquidationRail({ limit = 8, onCatch }: Props) {
                   </AppText>
                 </View>
               ) : null}
-
-              <View className="absolute right-2 top-2 flex-row items-center gap-1 rounded-pill bg-ink/85 px-2 py-0.5">
-                <Feather name="clock" size={9} color={colors.inkInverse} />
-                <Countdown seconds={deal.endsInSeconds} className="text-xs text-ink-inverse" />
-              </View>
             </View>
 
             <View className="gap-1.5 p-3">
@@ -122,8 +152,18 @@ export function LiquidationRail({ limit = 8, onCatch }: Props) {
                 </AppText>
               </View>
 
-              <View className="mt-0.5 flex-row items-center justify-between">
-                <PriceTag price={deal.price} oldPrice={deal.oldPrice} size={17} />
+              {/* Le prix rétrécit, le bouton jamais.
+                  Sans contrainte, c'est LE BOUTON que le moteur de mise en page
+                  rogne quand la ligne déborde — on lisait « Att ». Un prix
+                  tronqué se remarque ; un bouton tronqué ne se tape plus.
+                  En `style` et non en classes `shrink` : celles-ci n'existent
+                  nulle part ailleurs dans le projet, donc elles ne vaudraient
+                  rien tant que Metro n'a pas recompilé la feuille — le piège
+                  décrit dans docs/architecture/styling.md. */}
+              <View className="mt-0.5 flex-row items-center justify-between gap-2">
+                <View style={{ flexShrink: 1 }}>
+                  <PriceTag price={deal.price} oldPrice={deal.oldPrice} size={17} />
+                </View>
 
                 <Pressable
                   testID={`liquidation-catch-${deal.id}`}
@@ -134,6 +174,7 @@ export function LiquidationRail({ limit = 8, onCatch }: Props) {
                     addToCart(deal.id);
                     onCatch?.(deal.id);
                   }}
+                  style={{ flexShrink: 0 }}
                   className={cn(
                     'flex-row items-center gap-1 rounded-pill px-3 py-2 active:opacity-85',
                     deal.stockLeft > 0 ? 'bg-brand-500' : 'bg-surface-sunken',
