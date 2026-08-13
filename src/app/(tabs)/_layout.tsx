@@ -120,7 +120,11 @@ export default function TabsLayout() {
         name="profil"
         options={{
           title: 'Compte',
-          tabBarIcon: ({ color }) => <Feather name="settings" size={22} color={color} />,
+          // Un bonhomme, pas un engrenage. L'onglet mène au profil, à la carte
+          // de fidélité, aux points et aux adresses — pas à des réglages. Un
+          // engrenage promet la configuration de l'app : on le cherche pour
+          // couper les notifications, et on tombe sur sa carte de fidélité.
+          tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} />,
         }}
       />
 
