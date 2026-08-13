@@ -1,11 +1,13 @@
 /**
  * PUBLIC API of the coupons feature.
  *
- * Deux sources de coupons — les jeux et les codes promo — un seul portefeuille,
- * consommé au panier. Il n'y a plus d'écran dédié : la saisie d'un code vit
- * dans La Chasse, et les coupons se choisissent au moment de payer.
+ * Deux sources — les jeux et les codes promo — un seul portefeuille, consommé
+ * au panier. La SAISIE d'un code vit dans La Chasse (un code se perd si on
+ * doit le chercher) ; le portefeuille garde son écran, atteint depuis le
+ * compte, pour voir ce qu'on possède.
  */
 export { PromoCodeField } from './ui/promo-code-field';
+export { CouponsScreen } from './ui/coupons-screen';
 export { useCouponsStore, selectWallet, selectAvailableCoupons } from './model/store';
 export type { HeldCoupon, Discount } from './model/schema';
 export { discountAmountCents, formatDiscount } from './lib/coupons';
