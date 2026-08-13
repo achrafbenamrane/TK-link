@@ -1,6 +1,5 @@
 import Interactions from './interactions';
 import AppShowcase from './app-showcase';
-import FlashScene from './flash-scene';
 
 /**
  * Site vitrine TK LINK.
@@ -36,7 +35,6 @@ export default function Page() {
           </a>
           <nav className="nav-links" aria-label="Navigation principale">
             <a href="#fonctionnement">Comment ça marche</a>
-            <a href="#app">L’application</a>
             <a href="#publics">Pour qui</a>
             <a href="#commercants">Commerçants</a>
           </nav>
@@ -171,37 +169,6 @@ export default function Page() {
         </div>
       </section>
 
-      {/* ------------------------------------------------------------- app */}
-      <section className="sec" id="app">
-        <div className="wrap split">
-          <div className="r">
-            <p className="eyebrow">L’application</p>
-            <h2 style={{ fontSize: 'clamp(28px,4vw,40px)', margin: '12px 0 14px' }}>
-              La chasse aux bonnes affaires.
-            </h2>
-            <p style={{ color: 'var(--ink-muted)', marginBottom: 22 }}>
-              Un onglet réunit tout ce qui part maintenant : les dernières minutes, les offres
-              réservées aux membres, et de quoi gagner des coupons en jouant. Chaque achat crédite
-              des points, échangeables contre des réductions — ou un arbre planté.
-            </p>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <a className="btn btn-primary" href="#telecharger">
-                Obtenir l’app
-              </a>
-              <a className="btn btn-outline" href="/pro">
-                Voir l’espace pro
-              </a>
-            </div>
-          </div>
-
-          {/* La carte flash animée. L'iPhone, lui, est en tête de page : c'est
-              le produit, il doit se voir AVANT qu'on ait à faire défiler. */}
-          <div className="r">
-            <FlashScene />
-          </div>
-        </div>
-      </section>
-
       {/* ----------------------------------------------------------- compta */}
       <section className="sec sec-paper" id="commercants">
         <div className="wrap split">
@@ -329,7 +296,6 @@ export default function Page() {
             <div className="foot-col">
               <h4>Produit</h4>
               <a href="#fonctionnement">Comment ça marche</a>
-              <a href="#app">L’application</a>
               <a href="#publics">Pour qui</a>
               <a href="/pro">Espace professionnel</a>
             </div>
