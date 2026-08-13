@@ -6,14 +6,26 @@ import '../pro/pro.css';
 import { FREE_OPERATIONS, PACKS } from '../pro/billing';
 import { formatDate } from '../pro/data';
 import './admin.css';
-import { COMMISSION_PCT, MEMBERS, MONTHS, ROLE_INFO, TOTALS, formatEuros } from './data';
+import {
+  APPLICATIONS,
+  COMMISSION_PCT,
+  MEMBERS,
+  MONTHS,
+  REFUSAL_REASONS,
+  ROLE_INFO,
+  TOTALS,
+  formatEuros,
+} from './data';
 
 /**
  * SUPER ADMIN — CDC §17 : « statistiques et gestion des inscrits », côté Farid.
  *
- * Trois questions, trois onglets, dans l'ordre où on se les pose en ouvrant un
- * back-office : est-ce que ça marche (vue d'ensemble), qui est là (inscrits),
- * combien ça rapporte (revenus).
+ * Quatre questions, quatre onglets, dans l'ordre où on se les pose en ouvrant
+ * un back-office : qui attend à la porte (demandes), est-ce que ça marche (vue
+ * d'ensemble), qui est là (inscrits), combien ça rapporte (revenus).
+ *
+ * Les demandes viennent en TÊTE parce qu'elles sont la seule chose qui se périme :
+ * un commerçant qui attend trois jours son accès va vendre ailleurs.
  *
  * Réutilise la coquille de l'espace pro (`pro.css`) : même barre latérale,
  * mêmes tableaux, mêmes pastilles. Un second système de composants pour trois
@@ -23,6 +35,7 @@ import { COMMISSION_PCT, MEMBERS, MONTHS, ROLE_INFO, TOTALS, formatEuros } from 
  * donc que sur l'état local ; elle montre le geste, pas encore son effet.
  */
 const TABS = [
+  { key: 'applications', label: 'Demandes', icon: '✉' },
   { key: 'overview', label: 'Vue d’ensemble', icon: '▦' },
   { key: 'members', label: 'Inscrits', icon: '👤' },
   { key: 'revenue', label: 'Revenus', icon: '€' },
@@ -36,11 +49,23 @@ const ROLE_FILTERS = [
 ];
 
 export default function AdminPage() {
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState('applications');
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [suspended, setSuspended] = useState(() => new Set());
   const [toast, setToast] = useState(null);
+
+  /**
+   * L'issue de chaque dossier : `{ [id]: { decision, reason } }`.
+   *
+   * Le dossier reste À L'ÉCRAN une fois tranché, avec sa décision et son motif.
+   * Le faire disparaître priverait de tout recours en cas de fausse manœuvre —
+   * et un refus est plus difficile à rattraper qu'une acceptation.
+   */
+  const [decisions, setDecisions] = useState({});
+  /** Le dossier dont on est en train d'écrire le motif de refus. */
+  const [refusing, setRefusing] = useState(null);
+  const [reason, setReason] = useState('');
 
   const notify = (message) => {
     setToast(message);
@@ -60,6 +85,24 @@ export default function AdminPage() {
         : `${member.name} est suspendu — ses offres ne sont plus visibles.`,
     );
   };
+
+  const accept = (app) => {
+    setDecisions((d) => ({ ...d, [app.id]: { decision: 'accepted' } }));
+    setRefusing(null);
+    notify(`${app.shop} est accepté — son espace professionnel est ouvert.`);
+  };
+
+  const confirmRefusal = (app) => {
+    // Un refus sans motif est un mur : le demandeur ne saura pas quoi corriger,
+    // et rappellera. Le champ est donc obligatoire.
+    if (!reason.trim()) return;
+    setDecisions((d) => ({ ...d, [app.id]: { decision: 'refused', reason: reason.trim() } }));
+    setRefusing(null);
+    setReason('');
+    notify(`${app.shop} est refusé — le motif lui a été transmis.`);
+  };
+
+  const pending = APPLICATIONS.filter((a) => !decisions[a.id]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -111,6 +154,173 @@ export default function AdminPage() {
       </aside>
 
       <main className="tkpro-main">
+        {/* ------------------------------------------------------ demandes */}
+        {tab === 'applications' ? (
+          <>
+            <div className="tkpro-head">
+              <div>
+                <h1>Demandes d’inscription</h1>
+                <p>
+                  Aucun professionnel ne publie avant d’avoir été validé ici. Ouvrez le
+                  justificatif, puis tranchez.
+                </p>
+              </div>
+              <span className="tkadmin-count">{pending.length} en attente</span>
+            </div>
+
+            <div className="tkadmin-apps">
+              {APPLICATIONS.map((app) => {
+                const verdict = decisions[app.id];
+                const missingSiret = !app.siret;
+                return (
+                  <article key={app.id} className="tkadmin-app">
+                    <header>
+                      <div>
+                        <h2>{app.shop}</h2>
+                        <p>
+                          {ROLE_INFO[app.role]?.label ?? app.role} · {app.activity}
+                        </p>
+                      </div>
+                      {verdict ? (
+                        <span
+                          className={
+                            verdict.decision === 'accepted'
+                              ? 'tkadmin-verdict-pill tkadmin-ok'
+                              : 'tkadmin-verdict-pill tkadmin-ko'
+                          }
+                        >
+                          {verdict.decision === 'accepted' ? 'Accepté' : 'Refusé'}
+                        </span>
+                      ) : (
+                        <span className="tkadmin-verdict-pill">
+                          Reçue le {formatDate(app.submittedAt)}
+                        </span>
+                      )}
+                    </header>
+
+                    <dl className="tkadmin-fields">
+                      <div>
+                        <dt>Responsable</dt>
+                        <dd>{app.contact}</dd>
+                      </div>
+                      <div>
+                        <dt>E-mail</dt>
+                        <dd>{app.email}</dd>
+                      </div>
+                      <div>
+                        <dt>Téléphone</dt>
+                        <dd>{app.phone}</dd>
+                      </div>
+                      <div>
+                        <dt>SIRET</dt>
+                        <dd className={missingSiret ? 'tkadmin-missing' : undefined}>
+                          {app.siret || 'Non renseigné'}
+                        </dd>
+                      </div>
+                      <div className="tkadmin-wide">
+                        <dt>Adresse</dt>
+                        <dd>{app.address}</dd>
+                      </div>
+                    </dl>
+
+                    {/* Le justificatif. Sans document à lire, « accepter » ne
+                        serait qu’un bouton. */}
+                    {app.document ? (
+                      <a
+                        className="tkadmin-doc"
+                        href={app.document.href}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <span aria-hidden="true">📄</span>
+                        <span className="tkadmin-doc-label">
+                          <b>{app.document.name}</b>
+                          <small>PDF · s’ouvre dans un nouvel onglet</small>
+                        </span>
+                        <span className="tkadmin-doc-go">Ouvrir</span>
+                      </a>
+                    ) : (
+                      <p className="tkadmin-nodoc">
+                        Aucun justificatif joint — à réclamer avant toute validation.
+                      </p>
+                    )}
+
+                    {verdict ? (
+                      <p className="tkadmin-outcome">
+                        {verdict.decision === 'refused' ? (
+                          <>
+                            <b>Motif transmis :</b> {verdict.reason}
+                          </>
+                        ) : (
+                          'Espace professionnel ouvert. Le commerçant peut publier ses ventes flash.'
+                        )}
+                      </p>
+                    ) : refusing === app.id ? (
+                      <div className="tkadmin-refuse">
+                        <label htmlFor={`reason-${app.id}`}>Motif du refus</label>
+                        <div className="tkadmin-reasons">
+                          {REFUSAL_REASONS.map((r) => (
+                            <button key={r} type="button" onClick={() => setReason(r)}>
+                              {r}
+                            </button>
+                          ))}
+                        </div>
+                        <textarea
+                          id={`reason-${app.id}`}
+                          rows={3}
+                          value={reason}
+                          onChange={(e) => setReason(e.target.value)}
+                          placeholder="Ce texte sera envoyé au demandeur — dites-lui quoi corriger."
+                        />
+                        <div className="tkadmin-actions">
+                          <button
+                            type="button"
+                            className="tkadmin-btn tkadmin-btn-danger"
+                            disabled={!reason.trim()}
+                            onClick={() => confirmRefusal(app)}
+                          >
+                            Confirmer le refus
+                          </button>
+                          <button
+                            type="button"
+                            className="tkadmin-btn tkadmin-btn-ghost"
+                            onClick={() => {
+                              setRefusing(null);
+                              setReason('');
+                            }}
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="tkadmin-actions">
+                        <button
+                          type="button"
+                          className="tkadmin-btn tkadmin-btn-accept"
+                          onClick={() => accept(app)}
+                        >
+                          Accepter
+                        </button>
+                        <button
+                          type="button"
+                          className="tkadmin-btn tkadmin-btn-ghost"
+                          onClick={() => {
+                            setRefusing(app.id);
+                            setReason('');
+                          }}
+                        >
+                          Refuser
+                        </button>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
+
         {/* ------------------------------------------------- vue d'ensemble */}
         {tab === 'overview' ? (
           <>

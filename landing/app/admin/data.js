@@ -235,3 +235,68 @@ export const TOTALS = {
 TOTALS.revenueCents = TOTALS.commissionCents + TOTALS.packsCents;
 
 export { COMMISSION_PCT };
+
+/* ------------------------------------------------------ demandes d'inscription
+ *
+ * Les professionnels ne rejoignent pas la plateforme tout seuls : un humain
+ * regarde leur dossier avant de leur ouvrir la porte. Sans ce filtre, n'importe
+ * qui publie des ventes flash au nom d'un commerce qui n'est pas le sien.
+ *
+ * Chaque dossier porte donc son justificatif — un Kbis pour une société — que
+ * l'administrateur doit pouvoir OUVRIR avant de trancher. Un bouton « accepter »
+ * sans document à lire ne serait qu'un bouton.
+ *
+ * ⚠️ Dossiers simulés. Le PDF joint est une démonstration filigranée, sans
+ * valeur juridique ; le vrai document sera téléversé par le demandeur.
+ */
+export const APPLICATIONS = [
+  {
+    id: 'app_1',
+    shop: 'Maison Hammamet',
+    contact: 'Karim Ben Salah',
+    email: 'karim@maison-hammamet.fr',
+    phone: '06 21 45 09 33',
+    role: 'commercant',
+    activity: 'Boucherie · charcuterie',
+    siret: '89321450700018',
+    address: '24 avenue Jean Baylet, 31100 Toulouse',
+    submittedAt: '2026-08-12T09:14:00',
+    document: { name: 'Extrait Kbis — Maison Hammamet', href: '/demo/kbis-maison-hammamet.pdf' },
+  },
+  {
+    id: 'app_2',
+    shop: 'Techno Sud',
+    contact: 'Lucie Marchand',
+    email: 'contact@technosud.fr',
+    phone: '05 61 22 88 40',
+    role: 'commercant',
+    activity: 'High-tech · reconditionné',
+    siret: '80412339500027',
+    address: '8 rue du Taur, 31000 Toulouse',
+    submittedAt: '2026-08-12T16:02:00',
+    document: { name: 'Extrait Kbis — Techno Sud', href: '/demo/kbis-maison-hammamet.pdf' },
+  },
+  {
+    id: 'app_3',
+    shop: 'Grossiste Occitan',
+    contact: 'Paul Rives',
+    email: 'p.rives@grossiste-occitan.fr',
+    phone: '05 34 77 12 05',
+    role: 'grossiste',
+    activity: 'Fruits et légumes · gros',
+    // SIRET volontairement absent : le dossier est incomplet, et l'écran doit
+    // le montrer AVANT que quelqu'un ne l'accepte par réflexe.
+    siret: '',
+    address: 'MIN de Toulouse, 31200 Toulouse',
+    submittedAt: '2026-08-13T07:41:00',
+    document: null,
+  },
+];
+
+/** Motifs de refus les plus fréquents — un clic vaut mieux qu'une phrase à écrire. */
+export const REFUSAL_REASONS = [
+  'Kbis illisible ou absent',
+  'SIRET non renseigné',
+  'Activité hors périmètre',
+  'Coordonnées invérifiables',
+];
