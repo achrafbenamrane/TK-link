@@ -3,6 +3,14 @@ import { fireEvent, render, screen } from '@/shared/testing/render';
 import { PromoCodeField } from '../ui/promo-code-field';
 import { selectAvailableCoupons, useCouponsStore } from '../model/store';
 
+// Préfixe `mock` obligatoire : Babel remonte `jest.mock` au-dessus des
+// imports, et seule cette convention autorise la fabrique à voir la variable.
+const mockPush = jest.fn();
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn() }),
+}));
+
 describe('<PromoCodeField /> — la saisie d’un code dans La Chasse', () => {
   it('crédite un coupon quand le code est valide', () => {
     const before = selectAvailableCoupons(useCouponsStore.getState()).length;
@@ -49,5 +57,15 @@ describe('<PromoCodeField /> — la saisie d’un code dans La Chasse', () => {
 
     expect(screen.queryByTestId('hub-promo-feedback')).toBeNull();
     expect(selectAvailableCoupons(useCouponsStore.getState()).length).toBe(before);
+  });
+
+  it('mène au portefeuille depuis le même bloc', () => {
+    // Le bouton et le champ partagent un encadré : « ce que j'ai » puis
+    // « comment en avoir plus », répondus d'un seul regard.
+    render(<PromoCodeField />);
+
+    fireEvent.press(screen.getByTestId('hub-my-coupons'));
+
+    expect(mockPush).toHaveBeenCalledWith('/coupons');
   });
 });

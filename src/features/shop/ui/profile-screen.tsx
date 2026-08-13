@@ -257,24 +257,12 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
 
         {/* Menu */}
         <View className="rounded-card border border-line bg-surface px-4">
-          {/* « Mes coupons » en vert, seule ligne mise en avant de la liste.
-              C'est la seule qui donne accès à quelque chose qu'on POSSÈDE —
-              les autres mènent à des réglages. Un fond de marque le dit sans
-              qu'on ait à lire toute la liste. */}
-          <Pressable
+          <Row
             testID="profile-coupons"
-            accessibilityRole="button"
-            accessibilityLabel="Mes coupons"
+            icon={<Feather name="tag" size={17} color={colors.ink} />}
+            label="Mes coupons"
             onPress={() => router.push('/coupons')}
-            className="mb-1 flex-row items-center gap-3 rounded-control bg-brand-500 px-3 py-3 active:bg-brand-600"
-          >
-            <View className="h-9 w-9 items-center justify-center rounded-control bg-ink-inverse/20">
-              <Feather name="tag" size={17} color={colors.inkInverse} />
-            </View>
-            <AppText className="flex-1 font-sans-bold text-ink-inverse">Mes coupons</AppText>
-            <Feather name="chevron-right" size={18} color={colors.inkInverse} />
-          </Pressable>
-
+          />
           <Row
             testID="profile-empreinte"
             icon={<Ionicons name="finger-print" size={18} color={colors.ink} />}

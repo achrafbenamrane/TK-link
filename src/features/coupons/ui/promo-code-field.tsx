@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
@@ -18,18 +19,22 @@ const FAILURE_FR: Record<RedeemFailure, string> = {
 };
 
 /**
- * LA SAISIE D'UN CODE PROMO, là où l'on gagne des coupons.
+ * LE BLOC COUPONS de La Chasse : ce qu'on possède, puis comment en obtenir.
  *
- * Elle vivait sur une page « Mes coupons » qu'il fallait aller chercher depuis
- * le compte. Un code arrive par Instagram ou par un flyer : on l'a en main
- * quelques secondes, et le chercher trois écrans plus loin suffit à le perdre.
- * Il se saisit donc dans La Chasse, juste au-dessus des jeux — l'autre façon
- * d'obtenir un coupon. Les deux sources se lisent ensemble.
+ * Les deux tiennent dans UN seul encadré, et c'est le sujet. Séparés, ils
+ * posaient deux fois la même question à deux endroits — « où sont mes
+ * coupons ? », « où saisir mon code ? » — alors qu'on y répond d'un même
+ * regard : voici ton portefeuille, voici comment le remplir.
+ *
+ * Un code arrive par Instagram ou par un flyer : on l'a en main quelques
+ * secondes, et le chercher trois écrans plus loin suffit à le perdre. D'où sa
+ * place ici, juste au-dessus des jeux — l'autre façon d'obtenir un coupon.
  *
  * Le composant se suffit à lui-même : il porte sa saisie, son verdict et sa
- * remise à zéro. Rien à câbler côté écran d'accueil.
+ * remise à zéro. Rien à câbler côté écran.
  */
 export function PromoCodeField() {
+  const router = useRouter();
   const redeemPromo = useCouponsStore((s) => s.redeemPromo);
   const [code, setCode] = useState('');
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -46,9 +51,30 @@ export function PromoCodeField() {
   };
 
   return (
-    <View testID="hub-promo" className="mx-5 gap-2 rounded-card bg-surface-muted p-4">
+    <View testID="hub-promo" className="mx-5 gap-3 rounded-card bg-surface-muted p-4">
+      {/* Le portefeuille EN PREMIER : on regarde ce qu'on a avant de chercher
+          à en ajouter. Vert, parce que c'est l'action qui mène à quelque
+          chose qu'on possède déjà. */}
+      <Pressable
+        testID="hub-my-coupons"
+        accessibilityRole="button"
+        accessibilityLabel="Voir mes coupons"
+        onPress={() => router.push('/coupons')}
+        className="flex-row items-center gap-3 rounded-control bg-brand-500 px-3.5 py-3 active:bg-brand-600"
+      >
+        <View className="h-9 w-9 items-center justify-center rounded-control bg-ink-inverse/20">
+          <Feather name="tag" size={17} color={colors.inkInverse} />
+        </View>
+        <AppText className="flex-1 font-sans-bold text-ink-inverse" style={{ fontSize: 14.5 }}>
+          Mes coupons
+        </AppText>
+        <Feather name="chevron-right" size={18} color={colors.inkInverse} />
+      </Pressable>
+
+      <View className="h-px bg-line" />
+
       <View className="flex-row items-center gap-2">
-        <Feather name="tag" size={15} color={colors.brand600} />
+        <Feather name="plus-circle" size={15} color={colors.brand600} />
         <AppText className="font-sans-bold text-ink" style={{ fontSize: 14 }}>
           Vous avez un code ?
         </AppText>
