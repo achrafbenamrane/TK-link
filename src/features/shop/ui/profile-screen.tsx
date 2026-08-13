@@ -60,9 +60,27 @@ type ProfileScreenProps = {
    * simplement pas le renvoi vers l'espace pro.
    */
   canPublishOffers?: boolean;
+  /**
+   * L'avatar CHOISI à l'inscription, rendu par la route.
+   *
+   * Même raison que `canPublishOffers` : l'avatar vit dans `onboarding`, que
+   * la boutique n'importe pas. L'entête affichait jusqu'ici une pastille noire
+   * avec un « F » — une initiale codée en dur, sans rapport avec la personne
+   * qui regarde l'écran.
+   */
+  renderAvatar?: () => ReactNode;
+  /** Le nom saisi à l'inscription. Vide tant qu'il n'y en a pas. */
+  name?: string;
+  /** Une ligne de contexte VRAIE — le rôle, pas un quartier inventé. */
+  subtitle?: string;
 };
 
-export function ProfileScreen({ canPublishOffers = false }: ProfileScreenProps = {}) {
+export function ProfileScreen({
+  canPublishOffers = false,
+  renderAvatar,
+  name,
+  subtitle,
+}: ProfileScreenProps = {}) {
   const router = useRouter();
   const points = useShopStore(selectPoints);
   // On s'abonne à la référence STABLE (`s.vouchers`) puis on filtre en mémo :
@@ -94,21 +112,27 @@ export function ProfileScreen({ canPublishOffers = false }: ProfileScreenProps =
           <AppText variant="display">Profil</AppText>
         </View>
 
-        <View className="mb-4 flex-row items-center gap-3 rounded-card border border-line bg-surface p-4">
-          <View className="h-14 w-14 items-center justify-center rounded-pill bg-ink">
-            <AppText className="font-display text-ink-inverse" style={{ fontSize: 22 }}>
-              F
-            </AppText>
+        {/* L'identité RÉELLE : l'avatar choisi, le nom saisi.
+            Le crayon a disparu avec les données factices : rien n'éditait le
+            profil, et une icône qui promet une action inexistante coûte plus
+            cher que son absence. */}
+        <View
+          testID="profile-identity"
+          className="mb-4 flex-row items-center gap-3 rounded-card border border-line bg-surface p-4"
+        >
+          <View className="h-14 w-14 overflow-hidden rounded-pill bg-surface-muted">
+            {renderAvatar ? renderAvatar() : null}
           </View>
           <View className="flex-1">
-            <AppText variant="title" className="text-lg">
-              Farid
+            <AppText variant="title" className="text-lg" numberOfLines={1}>
+              {name?.trim() ? name : 'Votre profil'}
             </AppText>
-            <AppText variant="caption" className="text-ink-faint">
-              Empalot · Toulouse
-            </AppText>
+            {subtitle ? (
+              <AppText variant="caption" className="text-ink-faint" numberOfLines={1}>
+                {subtitle}
+              </AppText>
+            ) : null}
           </View>
-          <Feather name="edit-2" size={18} color={colors.inkMuted} />
         </View>
 
         {/* Loyalty */}
