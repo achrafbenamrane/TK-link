@@ -443,3 +443,40 @@
   flex: 1;
   min-width: 220px;
 }
+
+/* Un tableau par rôle. Le titre porte l'information que le tri ne donnait
+   pas : combien y en a-t-il, et de quel type. */
+.tkadmin-group {
+  margin-bottom: 26px;
+}
+.tkadmin-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.tkadmin-group-head h2 {
+  font-size: 17px;
+  margin: 0;
+}
+.tkadmin-group-head span {
+  font-size: 13px;
+  color: #6d7a6f;
+}
+
+/* La parole du plaignant, citée telle quelle : c'est elle qu'on instruit. */
+.tkadmin-quote {
+  margin: 0;
+  padding: 12px 16px;
+  border-left: 3px solid #d8e0d5;
+  background: #f7faf5;
+  border-radius: 0 10px 10px 0;
+  font-size: 14px;
+  font-style: italic;
+  color: #3d4a3f;
+}
+
+.tkadmin-count-hot {
+  background: #fdeae5;
+  color: #b8371a;
+}

@@ -300,3 +300,77 @@ export const REFUSAL_REASONS = [
   'Activité hors périmètre',
   'Coordonnées invérifiables',
 ];
+
+/* ------------------------------------------------------------------ litiges
+ *
+ * Les cas viennent du CDC §22, qui les énumère sans les trancher : « client
+ * absent, commerçant indisponible, commande incorrecte, produit manquant ou
+ * incorrect, retard, annulation, problème de paiement, problème de livraison ».
+ * Le document ajoute que ces situations « devront être précisées avec Farid » —
+ * l'écran les rend donc VISIBLES et traçables, sans inventer de règle
+ * d'arbitrage automatique qui n'a pas été validée.
+ *
+ * Le montant est celui de la commande : c'est lui qui décide de l'urgence, un
+ * litige à 4 € et un litige à 90 € ne s'instruisent pas de la même façon.
+ */
+export const DISPUTE_KINDS = {
+  absent: 'Client absent',
+  indisponible: 'Commerçant indisponible',
+  incorrecte: 'Commande incorrecte',
+  manquant: 'Produit manquant ou incorrect',
+  retard: 'Retard',
+  annulation: 'Annulation',
+  paiement: 'Problème de paiement',
+  livraison: 'Problème de livraison',
+};
+
+export const DISPUTES = [
+  {
+    id: 'lit_1',
+    kind: 'manquant',
+    order: 'CMD-2026-0841',
+    merchant: 'Maison Hammamet',
+    customer: 'Sofiane Belkacem',
+    amountCents: 2490,
+    openedAt: '2026-08-13T08:12:00',
+    message:
+      'Deux pièces annoncées, une seule dans le sachet. Photo du contenu jointe à la commande.',
+  },
+  {
+    id: 'lit_2',
+    kind: 'retard',
+    order: 'CMD-2026-0838',
+    merchant: 'Le Comptoir du Midi',
+    customer: 'Claire Mounier',
+    amountCents: 1780,
+    openedAt: '2026-08-12T19:40:00',
+    message: 'Livraison annoncée à 19 h, reçue à 21 h 15. Le plat était froid.',
+  },
+  {
+    id: 'lit_3',
+    kind: 'paiement',
+    order: 'CMD-2026-0829',
+    merchant: 'Techno Sud',
+    customer: 'Yanis Legrand',
+    amountCents: 8900,
+    openedAt: '2026-08-11T14:05:00',
+    message: 'Montant débité deux fois. Le client demande le remboursement du doublon.',
+  },
+  {
+    id: 'lit_4',
+    kind: 'absent',
+    order: 'CMD-2026-0812',
+    merchant: 'Cinéma Le Lumière',
+    customer: 'Inès Fabre',
+    amountCents: 490,
+    openedAt: '2026-08-10T22:50:00',
+    message: 'Place non retirée avant la séance. Le commerçant refuse le remboursement.',
+  },
+];
+
+/** Ce qu'un administrateur peut décider. Trois issues, pas davantage. */
+export const DISPUTE_OUTCOMES = [
+  { key: 'refund', label: 'Rembourser le client', tone: 'ko' },
+  { key: 'merchant', label: 'Donner raison au commerçant', tone: 'ok' },
+  { key: 'gesture', label: 'Geste commercial', tone: 'mid' },
+];

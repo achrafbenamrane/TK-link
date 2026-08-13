@@ -9,6 +9,9 @@ import './admin.css';
 import {
   APPLICATIONS,
   COMMISSION_PCT,
+  DISPUTES,
+  DISPUTE_KINDS,
+  DISPUTE_OUTCOMES,
   MEMBERS,
   MONTHS,
   REFUSAL_REASONS,
@@ -20,9 +23,10 @@ import {
 /**
  * SUPER ADMIN — CDC §17 : « statistiques et gestion des inscrits », côté Farid.
  *
- * Quatre questions, quatre onglets, dans l'ordre où on se les pose en ouvrant
- * un back-office : qui attend à la porte (demandes), est-ce que ça marche (vue
- * d'ensemble), qui est là (inscrits), combien ça rapporte (revenus).
+ * Cinq questions, cinq onglets, dans l'ordre où on se les pose en ouvrant un
+ * back-office : qui attend à la porte (demandes), est-ce que ça marche (vue
+ * d'ensemble), qui est là (comptes), qu'est-ce qui coince (litiges), combien ça
+ * rapporte (revenus).
  *
  * Les demandes viennent en TÊTE parce qu'elles sont la seule chose qui se périme :
  * un commerçant qui attend trois jours son accès va vendre ailleurs.
@@ -37,8 +41,23 @@ import {
 const TABS = [
   { key: 'applications', label: 'Demandes', icon: '✉' },
   { key: 'overview', label: 'Vue d’ensemble', icon: '▦' },
-  { key: 'members', label: 'Inscrits', icon: '👤' },
+  { key: 'members', label: 'Comptes', icon: '👤' },
+  { key: 'disputes', label: 'Litiges', icon: '⚖' },
   { key: 'revenue', label: 'Revenus', icon: '€' },
+];
+
+/**
+ * Les trois rôles du CDC §3, chacun avec son tableau.
+ *
+ * Un tableau unique trié par rôle obligeait à chercher : « combien ai-je de
+ * grossistes ? » demandait de compter des lignes. Trois tableaux titrés
+ * répondent d'un regard — c'est la demande de la conduite de projet, et elle
+ * a raison, un back-office se lit plus qu'il ne se parcourt.
+ */
+const ROLE_GROUPS = [
+  { role: 'grossiste', title: 'Grossistes', who: 'Fournisseur', metric: 'Lots publiés' },
+  { role: 'commercant', title: 'Commerçants', who: 'Enseigne', metric: 'Offres publiées' },
+  { role: 'consommateur', title: 'Utilisateurs', who: 'Utilisateur', metric: 'Commandes' },
 ];
 
 const ROLE_FILTERS = [
@@ -68,6 +87,10 @@ export default function AdminPage() {
   const [reason, setReason] = useState('');
   /** Ce qu'on regarde : ce qui attend, ou ce qui a déjà été tranché. */
   const [appFilter, setAppFilter] = useState('pending');
+  /** L'issue de chaque litige : `{ [id]: { outcome, note } }`. */
+  const [rulings, setRulings] = useState({});
+  const [ruling, setRuling] = useState(null);
+  const [note, setNote] = useState('');
 
   /**
    * L'instant présent, posé APRÈS le montage.
@@ -139,6 +162,19 @@ export default function AdminPage() {
     });
     notify(`${app.shop} revient dans les demandes en attente.`);
   };
+
+  const settle = (dispute, outcome) => {
+    // Une décision de litige engage de l'argent : elle s'accompagne toujours
+    // d'une note, faute de quoi personne ne saura, dans un mois, pourquoi
+    // 89 € ont été rendus.
+    if (!note.trim()) return;
+    setRulings((r) => ({ ...r, [dispute.id]: { outcome, note: note.trim() } }));
+    setRuling(null);
+    setNote('');
+    notify(`Litige ${dispute.order} tranché.`);
+  };
+
+  const openDisputes = DISPUTES.filter((d) => !rulings[d.id]);
 
   const pending = APPLICATIONS.filter((a) => !decisions[a.id]);
   const handled = APPLICATIONS.filter((a) => decisions[a.id]);
@@ -584,8 +620,8 @@ export default function AdminPage() {
           <>
             <div className="tkpro-head">
               <div>
-                <h1>Inscrits</h1>
-                <p>Qui utilise TK LINK, et à quel titre — CDC §3.</p>
+                <h1>Comptes</h1>
+                <p>Trois rôles, trois tableaux — CDC §3.</p>
               </div>
             </div>
 
@@ -610,69 +646,230 @@ export default function AdminPage() {
               ))}
             </div>
 
-            <div className="tkpro-card">
-              <div className="tkpro-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Inscrit</th>
-                      <th>Rôle</th>
-                      <th>SIRET</th>
-                      <th>Depuis</th>
-                      <th className="num">Activité</th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((m) => {
-                      const off = suspended.has(m.id);
-                      return (
-                        <tr key={m.id} className={off ? 'tkadmin-off' : undefined}>
-                          <td>
-                            <b>{m.name}</b>
-                            <div className="tkadmin-sub">{m.city}</div>
-                          </td>
-                          <td>
-                            <span className={`tkpro-tag ${ROLE_INFO[m.role].tone}`}>
-                              {ROLE_INFO[m.role].label}
-                            </span>
-                          </td>
-                          <td>
-                            {m.role === 'consommateur' ? (
-                              <span className="tkadmin-sub">—</span>
-                            ) : m.siret ? (
-                              <span className="tkadmin-mono">{m.siret}</span>
-                            ) : (
-                              <span className="tkadmin-missing">manquant</span>
-                            )}
-                          </td>
-                          <td>{formatDate(m.joinedAt)}</td>
-                          <td className="num">
-                            {m.role === 'consommateur'
-                              ? `${m.orders} commande${m.orders > 1 ? 's' : ''}`
-                              : `${m.offers} offre${m.offers > 1 ? 's' : ''}`}
-                          </td>
-                          <td className="num">
-                            <button
-                              type="button"
-                              className="tkpro-btn"
-                              onClick={() => toggleSuspend(m)}
-                            >
-                              {off ? 'Réactiver' : 'Suspendre'}
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            {ROLE_GROUPS.map((group) => {
+              const rows = filtered.filter((m) => m.role === group.role);
+              if (roleFilter !== 'all' && roleFilter !== group.role) return null;
+              return (
+                <section key={group.role} className="tkadmin-group">
+                  <div className="tkadmin-group-head">
+                    <h2>{group.title}</h2>
+                    <span>
+                      {rows.length} compte{rows.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+
+                  {rows.length === 0 ? (
+                    <p className="tkadmin-empty">Aucun compte dans cette catégorie.</p>
+                  ) : (
+                    <div className="tkpro-card">
+                      <div className="tkpro-scroll">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>{group.who}</th>
+                              <th>SIRET</th>
+                              <th>Depuis</th>
+                              <th className="num">{group.metric}</th>
+                              <th />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rows.map((m) => {
+                              const off = suspended.has(m.id);
+                              return (
+                                <tr key={m.id} className={off ? 'tkadmin-off' : undefined}>
+                                  <td>
+                                    <b>{m.name}</b>
+                                    <div className="tkadmin-sub">{m.city}</div>
+                                  </td>
+                                  <td>
+                                    {m.role === 'consommateur' ? (
+                                      <span className="tkadmin-sub">—</span>
+                                    ) : m.siret ? (
+                                      <span className="tkadmin-mono">{m.siret}</span>
+                                    ) : (
+                                      <span className="tkadmin-missing">manquant</span>
+                                    )}
+                                  </td>
+                                  <td>{m.justAccepted ? 'à l’instant' : formatDate(m.joinedAt)}</td>
+                                  <td className="num">
+                                    {m.role === 'consommateur'
+                                      ? `${m.orders} commande${m.orders > 1 ? 's' : ''}`
+                                      : `${m.offers} offre${m.offers > 1 ? 's' : ''}`}
+                                  </td>
+                                  <td className="num">
+                                    <button
+                                      type="button"
+                                      className="tkpro-btn"
+                                      onClick={() => toggleSuspend(m)}
+                                    >
+                                      {off ? 'Réactiver' : 'Suspendre'}
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+
+            <p className="tkpro-note">
+              {filtered.length} compte{filtered.length > 1 ? 's' : ''} affiché
+              {filtered.length > 1 ? 's' : ''}. La suspension coupe la visibilité des offres sans
+              supprimer le compte — la suppression définitive relève de la demande de l’utilisateur.
+            </p>
+          </>
+        ) : null}
+
+        {/* -------------------------------------------------------- litiges */}
+        {tab === 'disputes' ? (
+          <>
+            <div className="tkpro-head">
+              <div>
+                <h1>Litiges</h1>
+                <p>
+                  Les commandes qui ont mal tourné — CDC §22. Le cahier des charges énumère les cas
+                  ; il ne dit pas encore qui a raison.
+                </p>
               </div>
+              <span
+                className={
+                  openDisputes.length ? 'tkadmin-count tkadmin-count-hot' : 'tkadmin-count'
+                }
+              >
+                {openDisputes.length} ouvert{openDisputes.length > 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {DISPUTES.length === 0 ? (
+              <p className="tkadmin-empty">Aucun litige. C’est le meilleur des tableaux vides.</p>
+            ) : null}
+
+            <div className="tkadmin-apps">
+              {DISPUTES.map((dispute) => {
+                const verdict = rulings[dispute.id];
+                return (
+                  <article key={dispute.id} className="tkadmin-app">
+                    <header>
+                      <div>
+                        <h2>{DISPUTE_KINDS[dispute.kind]}</h2>
+                        <p>
+                          {dispute.order} · {dispute.merchant}
+                        </p>
+                      </div>
+                      <span
+                        className={
+                          verdict
+                            ? 'tkadmin-verdict-pill tkadmin-ok'
+                            : 'tkadmin-verdict-pill tkadmin-late'
+                        }
+                      >
+                        {verdict ? 'Tranché' : `Ouvert · ${formatEuros(dispute.amountCents)}`}
+                      </span>
+                    </header>
+
+                    <dl className="tkadmin-fields">
+                      <div>
+                        <dt>Client</dt>
+                        <dd>{dispute.customer}</dd>
+                      </div>
+                      <div>
+                        <dt>Commerçant</dt>
+                        <dd>{dispute.merchant}</dd>
+                      </div>
+                      <div>
+                        <dt>Montant en jeu</dt>
+                        <dd>{formatEuros(dispute.amountCents)}</dd>
+                      </div>
+                      <div>
+                        <dt>Ouvert le</dt>
+                        <dd>{formatDate(dispute.openedAt)}</dd>
+                      </div>
+                    </dl>
+
+                    <p className="tkadmin-quote">« {dispute.message} »</p>
+
+                    {verdict ? (
+                      <div className="tkadmin-outcome">
+                        <p>
+                          <b>
+                            {DISPUTE_OUTCOMES.find((o) => o.key === verdict.outcome)?.label ??
+                              verdict.outcome}
+                          </b>{' '}
+                          — {verdict.note}
+                        </p>
+                        <button
+                          type="button"
+                          className="tkadmin-btn tkadmin-btn-ghost"
+                          onClick={() =>
+                            setRulings((r) => {
+                              const next = { ...r };
+                              delete next[dispute.id];
+                              return next;
+                            })
+                          }
+                        >
+                          Rouvrir le litige
+                        </button>
+                      </div>
+                    ) : ruling === dispute.id ? (
+                      <div className="tkadmin-refuse">
+                        <label htmlFor={`note-${dispute.id}`}>Motif de la décision</label>
+                        <textarea
+                          id={`note-${dispute.id}`}
+                          rows={3}
+                          value={note}
+                          onChange={(e) => setNote(e.target.value)}
+                          placeholder="Ce que vous avez vérifié, et pourquoi vous tranchez ainsi."
+                        />
+                        <div className="tkadmin-actions">
+                          {DISPUTE_OUTCOMES.map((o) => (
+                            <button
+                              key={o.key}
+                              type="button"
+                              className={
+                                o.tone === 'ko'
+                                  ? 'tkadmin-btn tkadmin-btn-danger'
+                                  : o.tone === 'ok'
+                                    ? 'tkadmin-btn tkadmin-btn-accept'
+                                    : 'tkadmin-btn tkadmin-btn-ghost'
+                              }
+                              disabled={!note.trim()}
+                              onClick={() => settle(dispute, o.key)}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="tkadmin-actions">
+                        <button
+                          type="button"
+                          className="tkadmin-btn tkadmin-btn-accept"
+                          onClick={() => {
+                            setRuling(dispute.id);
+                            setNote('');
+                          }}
+                        >
+                          Instruire ce litige
+                        </button>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
             </div>
 
             <p className="tkpro-note">
-              {filtered.length} inscrit{filtered.length > 1 ? 's' : ''} affiché
-              {filtered.length > 1 ? 's' : ''}. La suspension coupe la visibilité des offres sans
-              supprimer le compte — la suppression définitive relève de la demande de l’utilisateur.
+              Le CDC §22 énumère ces situations mais précise qu’elles « devront être précisées avec
+              Farid ». Aucun arbitrage automatique n’est appliqué : l’écran trace la décision d’un
+              humain, et exige qu’elle soit motivée.
             </p>
           </>
         ) : null}
