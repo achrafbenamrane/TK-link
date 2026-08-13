@@ -378,3 +378,68 @@
 .tkadmin-btn-ghost:hover {
   border-color: #8a958b;
 }
+
+/* Filtre en attente / traitées. Deux états, pas un menu : au-delà, on cherche
+   au lieu de trancher. */
+.tkadmin-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.tkadmin-filters button {
+  border: 1px solid #d8e0d5;
+  background: #fff;
+  color: #3d4a3f;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.tkadmin-filters button b {
+  margin-left: 6px;
+  color: #6d7a6f;
+}
+.tkadmin-filters button.is-on {
+  background: #0b6c3b;
+  border-color: #0b6c3b;
+  color: #fff;
+}
+.tkadmin-filters button.is-on b {
+  color: #c3f53c;
+}
+
+.tkadmin-count-zero {
+  background: #f1f4ef;
+  color: #6d7a6f;
+}
+
+/* Un dossier qui attend depuis plus d'un jour. C'est le seul chiffre de
+   l'écran qui doive faire agir : il se signale. */
+.tkadmin-late {
+  background: #fdeae5;
+  color: #b8371a;
+}
+
+.tkadmin-empty {
+  padding: 28px;
+  text-align: center;
+  color: #6d7a6f;
+  background: #f7faf5;
+  border: 1px dashed #d8e0d5;
+  border-radius: 14px;
+}
+
+.tkadmin-outcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.tkadmin-outcome p {
+  margin: 0;
+  flex: 1;
+  min-width: 220px;
+}

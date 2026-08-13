@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import '../pro/pro.css';
 import { FREE_OPERATIONS, PACKS } from '../pro/billing';
@@ -66,6 +66,19 @@ export default function AdminPage() {
   /** Le dossier dont on est en train d'écrire le motif de refus. */
   const [refusing, setRefusing] = useState(null);
   const [reason, setReason] = useState('');
+  /** Ce qu'on regarde : ce qui attend, ou ce qui a déjà été tranché. */
+  const [appFilter, setAppFilter] = useState('pending');
+
+  /**
+   * L'instant présent, posé APRÈS le montage.
+   *
+   * L'ancienneté d'un dossier ne peut pas être calculée pendant le rendu : la
+   * page est prérendue à la construction, et « il y a 3 h » n'y voudrait plus
+   * rien dire au chargement. Calculée côté serveur puis recalculée côté client,
+   * elle produirait en prime une divergence d'hydratation.
+   */
+  const [now, setNow] = useState(null);
+  useEffect(() => setNow(Date.now()), []);
 
   const notify = (message) => {
     setToast(message);
@@ -102,16 +115,68 @@ export default function AdminPage() {
     notify(`${app.shop} est refusé — le motif lui a été transmis.`);
   };
 
+  /** Revenir sur une décision — la fausse manœuvre doit être rattrapable. */
+  const reopen = (app) => {
+    setDecisions((d) => {
+      const next = { ...d };
+      delete next[app.id];
+      return next;
+    });
+    notify(`${app.shop} revient dans les demandes en attente.`);
+  };
+
   const pending = APPLICATIONS.filter((a) => !decisions[a.id]);
+  const handled = APPLICATIONS.filter((a) => decisions[a.id]);
+  const visibleApps = appFilter === 'pending' ? pending : handled;
+
+  /**
+   * Depuis combien de temps ce dossier attend.
+   *
+   * Au-delà de vingt-quatre heures on le signale : un professionnel qui attend
+   * son accès va publier ailleurs, et c'est le seul chiffre de cet écran qui
+   * doive faire agir.
+   */
+  const waiting = (iso) => {
+    if (now === null) return null;
+    const hours = Math.max(0, Math.round((now - new Date(iso).getTime()) / 3_600_000));
+    if (hours < 1) return { label: "moins d'une heure", late: false };
+    if (hours < 24) return { label: `${hours} h`, late: false };
+    const days = Math.round(hours / 24);
+    return { label: `${days} jour${days > 1 ? 's' : ''}`, late: true };
+  };
+
+  /**
+   * Les inscrits, plus ceux qu'on vient d'accepter.
+   *
+   * Sans cela, accepter un dossier ne se voyait NULLE PART : le bouton changeait
+   * une pastille et rien d'autre. Un commerçant validé doit apparaître parmi les
+   * inscrits — c'est ce qui prouve que la décision a un effet.
+   */
+  const acceptedMembers = useMemo(
+    () =>
+      APPLICATIONS.filter((a) => decisions[a.id]?.decision === 'accepted').map((a) => ({
+        id: a.id,
+        name: a.shop,
+        role: a.role,
+        city: a.address.split(',').pop().trim(),
+        daysAgo: 0,
+        orders: 0,
+        offers: 0,
+        spentCents: 0,
+        siret: a.siret,
+        justAccepted: true,
+      })),
+    [decisions],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return MEMBERS.filter((m) => {
+    return [...acceptedMembers, ...MEMBERS].filter((m) => {
       if (roleFilter !== 'all' && m.role !== roleFilter) return false;
       if (!q) return true;
       return `${m.name} ${m.city} ${m.siret}`.toLowerCase().includes(q);
     });
-  }, [query, roleFilter]);
+  }, [query, roleFilter, acceptedMembers]);
 
   /** Les commerçants qui font tourner la plateforme, par volume publié. */
   const topPros = useMemo(
@@ -165,11 +230,41 @@ export default function AdminPage() {
                   justificatif, puis tranchez.
                 </p>
               </div>
-              <span className="tkadmin-count">{pending.length} en attente</span>
+              <span
+                className={pending.length ? 'tkadmin-count' : 'tkadmin-count tkadmin-count-zero'}
+              >
+                {pending.length} en attente
+              </span>
             </div>
 
+            <div className="tkadmin-filters" role="tablist" aria-label="Filtrer les demandes">
+              {[
+                { key: 'pending', label: 'En attente', n: pending.length },
+                { key: 'handled', label: 'Traitées', n: handled.length },
+              ].map((tabItem) => (
+                <button
+                  key={tabItem.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={appFilter === tabItem.key}
+                  className={appFilter === tabItem.key ? 'is-on' : undefined}
+                  onClick={() => setAppFilter(tabItem.key)}
+                >
+                  {tabItem.label} <b>{tabItem.n}</b>
+                </button>
+              ))}
+            </div>
+
+            {visibleApps.length === 0 ? (
+              <p className="tkadmin-empty">
+                {appFilter === 'pending'
+                  ? 'Aucune demande en attente. Tout est traité.'
+                  : 'Aucune demande traitée pour le moment.'}
+              </p>
+            ) : null}
+
             <div className="tkadmin-apps">
-              {APPLICATIONS.map((app) => {
+              {visibleApps.map((app) => {
                 const verdict = decisions[app.id];
                 const missingSiret = !app.siret;
                 return (
@@ -192,8 +287,17 @@ export default function AdminPage() {
                           {verdict.decision === 'accepted' ? 'Accepté' : 'Refusé'}
                         </span>
                       ) : (
-                        <span className="tkadmin-verdict-pill">
-                          Reçue le {formatDate(app.submittedAt)}
+                        <span
+                          className={
+                            waiting(app.submittedAt)?.late
+                              ? 'tkadmin-verdict-pill tkadmin-late'
+                              : 'tkadmin-verdict-pill'
+                          }
+                          title={`Reçue le ${formatDate(app.submittedAt)}`}
+                        >
+                          {waiting(app.submittedAt)
+                            ? `En attente depuis ${waiting(app.submittedAt).label}`
+                            : `Reçue le ${formatDate(app.submittedAt)}`}
                         </span>
                       )}
                     </header>
@@ -246,15 +350,24 @@ export default function AdminPage() {
                     )}
 
                     {verdict ? (
-                      <p className="tkadmin-outcome">
-                        {verdict.decision === 'refused' ? (
-                          <>
-                            <b>Motif transmis :</b> {verdict.reason}
-                          </>
-                        ) : (
-                          'Espace professionnel ouvert. Le commerçant peut publier ses ventes flash.'
-                        )}
-                      </p>
+                      <div className="tkadmin-outcome">
+                        <p>
+                          {verdict.decision === 'refused' ? (
+                            <>
+                              <b>Motif transmis :</b> {verdict.reason}
+                            </>
+                          ) : (
+                            'Espace professionnel ouvert — le commerçant apparaît désormais dans les inscrits.'
+                          )}
+                        </p>
+                        <button
+                          type="button"
+                          className="tkadmin-btn tkadmin-btn-ghost"
+                          onClick={() => reopen(app)}
+                        >
+                          Revenir sur cette décision
+                        </button>
+                      </div>
                     ) : refusing === app.id ? (
                       <div className="tkadmin-refuse">
                         <label htmlFor={`reason-${app.id}`}>Motif du refus</label>
