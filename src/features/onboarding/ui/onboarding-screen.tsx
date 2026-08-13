@@ -78,19 +78,19 @@ const INTEREST_COPY: Record<
 > = {
   consommateur: {
     title: 'Presque fini',
-    subtitle: 'Votre prénom, et ce qui vous intéresse — pour trier vos offres.',
+    subtitle: 'Votre nom d’utilisateur, et ce qui vous intéresse — pour trier vos offres.',
     subtitleNamed: 'Ce qui vous intéresse — pour trier vos offres.',
     label: 'Ce que vous achetez le plus',
   },
   commercant: {
     title: 'Votre commerce',
-    subtitle: 'Votre prénom, et vos rayons — pour vous montrer les bons lots.',
+    subtitle: 'Votre nom d’utilisateur, et vos rayons — pour vous montrer les bons lots.',
     subtitleNamed: 'Vos rayons — pour vous montrer les bons lots.',
     label: 'Ce que vous vendez',
   },
   grossiste: {
     title: 'Votre activité',
-    subtitle: 'Votre prénom, et vos rayons — pour cibler les bons commerçants.',
+    subtitle: 'Votre nom d’utilisateur, et vos rayons — pour cibler les bons commerçants.',
     subtitleNamed: 'Vos rayons — pour cibler les bons commerçants.',
     label: 'Ce que vous distribuez',
   },
@@ -120,14 +120,14 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
   // on retombe alors sur le début plutôt que de calculer sur un index négatif.
   const index = Math.max(0, steps.indexOf(step));
   const isLast = index === steps.length - 1;
-  // Le prénom et les intérêts sont exigés à l'étape qui les demande, pas à la
+  // Le nom et les intérêts sont exigés à l'étape qui les demande, pas à la
   // fin : sinon le bouton se bloque sur l'écran du compte, loin des champs à
   // remplir, et plus rien n'indique quoi corriger.
   const canContinue = step === 'interets' ? canFinish(firstName, interests) : true;
   const copy = INTEREST_COPY[role];
   const onAccountStep = step === 'compte';
   /**
-   * L'inscription a-t-elle déjà donné le prénom ?
+   * L'inscription a-t-elle déjà donné un nom ?
    *
    * Gelé au montage : sans cela, le champ disparaîtrait sous les doigts de
    * quelqu'un qui n'a pas de compte, à la première lettre tapée.
@@ -313,26 +313,30 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
               subtitle={knowsName ? copy.subtitleNamed : copy.subtitle}
             />
 
-            {/* Le prénom n'est demandé que si l'inscription ne l'a pas déjà
+            {/* Le nom n'est demandé que si l'inscription ne l'a pas déjà
                 donné. Poser deux fois la même question à deux écrans d'écart
                 donne l'impression que rien n'a été retenu — et sur un
                 formulaire, c'est la première raison d'abandonner. */}
             {knowsName ? null : (
               <View className="gap-2">
                 <AppText variant="caption" className="text-ink-muted">
-                  Votre prénom
+                  Votre nom d’utilisateur
                 </AppText>
                 <TextInput
                   testID="onboarding-firstname"
                   value={firstName}
                   onChangeText={setFirstName}
-                  placeholder="Ex. Sofiane"
+                  placeholder="Ex. sofiane31"
                   placeholderTextColor={colors.inkFaint}
                   className="rounded-control bg-surface-muted px-4 font-sans text-ink"
                   style={{ height: 50, fontSize: 16 }}
-                  autoCapitalize="words"
+                  // Un nom d'utilisateur n'est pas un prénom : la majuscule
+                  // automatique transformerait « sofiane31 » en « Sofiane31 »
+                  // à l'insu de la personne qui l'a tapé.
+                  autoCapitalize="none"
+                  autoCorrect={false}
                   returnKeyType="done"
-                  accessibilityLabel="Votre prénom"
+                  accessibilityLabel="Votre nom d’utilisateur"
                 />
               </View>
             )}
@@ -491,7 +495,7 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
           <AppText variant="caption" className="text-center text-ink-faint">
             {knowsName
               ? 'Choisissez au moins un centre d’intérêt.'
-              : 'Indiquez votre prénom et au moins un centre d’intérêt.'}
+              : 'Indiquez votre nom d’utilisateur et au moins un centre d’intérêt.'}
           </AppText>
         ) : null}
 

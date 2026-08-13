@@ -41,9 +41,9 @@ export function toggleInterest(list: Interest[], key: Interest): Interest[] {
 }
 
 /**
- * L'onboarding est-il complet ? On n'exige que le strict nécessaire : un
- * prénom et au moins un centre d'intérêt. Bloquer sur davantage ferait fuir
- * avant même d'avoir vu l'app.
+ * L'onboarding est-il complet ? On n'exige que le strict nécessaire : un nom
+ * et au moins un centre d'intérêt. Bloquer sur davantage ferait fuir avant
+ * même d'avoir vu l'app.
  */
 export function canFinish(firstName: string, interests: Interest[]): boolean {
   return firstName.trim().length > 0 && interests.length > 0;
