@@ -20,14 +20,14 @@ describe('<WelcomeScreen />', () => {
     render(<WelcomeScreen />);
 
     expect(screen.getByTestId('welcome-screen')).toBeTruthy();
-    expect(screen.getByTestId('welcome-panel-carte')).toBeTruthy();
+    expect(screen.getByTestId('welcome-panel-flash')).toBeTruthy();
     expect(screen.getByTestId('welcome-panel-jeux')).toBeTruthy();
     expect(screen.getByTestId('welcome-panel-chasse')).toBeTruthy();
     // Les scènes animées sont là, pas seulement leurs titres.
-    // La scène de la carte est désormais du SVG et du Reanimated, sans
-    // contexte GL natif : elle se monte donc pour de vrai dans un test — ce
-    // que la version three.js interdisait.
-    expect(screen.getByTestId('welcome-card-scene')).toBeTruthy();
+    // Le premier plan montre une VENTE FLASH, plus une carte sur un lecteur :
+    // ce matériel ne sera pas réalisé, et la scène le vendait.
+    expect(screen.getByTestId('welcome-flash')).toBeTruthy();
+    expect(screen.queryByTestId('welcome-card-scene')).toBeNull();
     expect(screen.getByTestId('welcome-pacman')).toBeTruthy();
     expect(screen.getByTestId('welcome-hub')).toBeTruthy();
   });

@@ -78,7 +78,22 @@ export default function AdminPage() {
    * elle produirait en prime une divergence d'hydratation.
    */
   const [now, setNow] = useState(null);
-  useEffect(() => setNow(Date.now()), []);
+  useEffect(() => {
+    // Posé par un rappel, jamais dans le corps de l'effet : un `setState`
+    // synchrone y déclenche un second rendu en cascade, et le compilateur React
+    // le refuse à juste titre.
+    //
+    // L'intervalle n'est pas une astuce pour contourner la règle, il rend
+    // l'écran plus juste : un administrateur laisse ce tableau ouvert, et
+    // « en attente depuis 23 h » doit devenir « 1 jour » sans qu'il recharge.
+    const tick = () => setNow(Date.now());
+    const first = setTimeout(tick, 0);
+    const every = setInterval(tick, 60_000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(every);
+    };
+  }, []);
 
   const notify = (message) => {
     setToast(message);

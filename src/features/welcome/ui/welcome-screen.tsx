@@ -18,7 +18,7 @@ import { AppText } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { useWelcomeStore } from '../model/store';
-import { CardReaderScene } from './scenes/card-reader-scene';
+import { FlashScene } from './scenes/flash-scene';
 import { HubScene } from './scenes/hub-scene';
 import { PacmanScene } from './scenes/pacman-scene';
 import { TkMark } from './tk-mark';
@@ -35,10 +35,10 @@ type Panel = {
 
 const PANELS: Panel[] = [
   {
-    key: 'carte',
-    title: 'Votre carte,',
-    accent: 'un geste',
-    line: 'Passez-la sur le lecteur du commerçant : le ticket arrive dans l’app et les points tombent. Zéro papier.',
+    key: 'flash',
+    title: 'Des prix qui tombent,',
+    accent: 'et ne reviennent pas',
+    line: 'Les commerçants du quartier bradent ce qui doit partir aujourd’hui. Un compte à rebours, un stock qui fond : vous prenez, ou ça disparaît.',
   },
   {
     key: 'jeux',
@@ -159,7 +159,7 @@ export function WelcomeScreen() {
             style={{ width }}
             className="items-center justify-center py-2"
           >
-            {p.key === 'carte' ? <CardReaderScene size={stage} still={reduced} /> : null}
+            {p.key === 'flash' ? <FlashScene size={stage} still={reduced} /> : null}
             {p.key === 'jeux' ? <PacmanScene size={stage} still={reduced} /> : null}
             {p.key === 'chasse' ? <HubScene size={stage} still={reduced} /> : null}
           </View>
