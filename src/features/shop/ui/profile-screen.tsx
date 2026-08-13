@@ -246,18 +246,6 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
             onPress={() => router.push('/factures')}
           />
           <Row
-            testID="profile-coupons"
-            icon={<Feather name="tag" size={17} color={colors.ink} />}
-            label="Mes coupons"
-            onPress={() => router.push('/coupons')}
-          />
-          <Row
-            testID="profile-admin"
-            icon={<Feather name="sliders" size={17} color={colors.ink} />}
-            label="Espace admin · codes promo"
-            onPress={() => router.push('/admin/coupons')}
-          />
-          <Row
             testID="profile-adresses"
             icon={<Feather name="map-pin" size={17} color={colors.ink} />}
             label="Adresses de livraison"

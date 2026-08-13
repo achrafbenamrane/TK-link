@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 
-import { pickGameReward, selectWallet, useCouponsStore } from '@/features/coupons';
+import { PromoCodeField, pickGameReward, selectWallet, useCouponsStore } from '@/features/coupons';
 import { GamePlayer, GamesRail, type GameKey } from '@/features/games';
 import { HubScreen, useGameStore, type ChestReward } from '@/features/gamification';
 import { OffersRail, selectBalance, useLoyaltyStore } from '@/features/loyalty';
@@ -106,13 +106,14 @@ export default function ChasseRoute() {
       criticalCount={criticalCount}
       onChestOpened={onChestOpened}
       onOpenWallet={() => router.push('/carte')}
-      onOpenCoupons={() => router.push('/coupons')}
+      onUseCoupons={() => router.push('/panier')}
       onSeeAllDeals={() => router.push('/')}
       onSeeAllOffers={() => router.push('/offres')}
       onSeeAllGames={() => router.push('/jeux')}
       renderAvatar={() => <AvatarView avatar={avatar} size={48} />}
       renderLiquidation={() => <LiquidationRail onCatch={onCatch} />}
       renderOffers={() => <OffersRail />}
+      renderPromo={() => <PromoCodeField />}
       renderGames={() => (
         <GamesRail
           pools={{

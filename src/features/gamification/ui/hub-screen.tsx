@@ -43,7 +43,12 @@ type Props = {
    */
   onChestOpened?: (reward: ChestReward) => void;
   onOpenWallet?: () => void;
-  onOpenCoupons?: () => void;
+  /**
+   * Où mène le compteur de coupons. Il ouvrait un portefeuille dédié ; ce
+   * dernier a disparu, et un compteur qui ne mène nulle part est un cul-de-sac.
+   * Il pointe donc vers l'endroit où un coupon sert vraiment : le panier.
+   */
+  onUseCoupons?: () => void;
   onSeeAllDeals?: () => void;
   onSeeAllOffers?: () => void;
   onSeeAllGames?: () => void;
@@ -58,6 +63,13 @@ type Props = {
   renderOffers?: () => ReactNode;
   /** Le rail de mini-jeux. */
   renderGames?: () => ReactNode;
+  /**
+   * La saisie d'un code promo, injectée par la route.
+   *
+   * Le hub ne connaît pas la feature `coupons` (règle des frontières) : il
+   * réserve la place, la route y met le composant.
+   */
+  renderPromo?: () => ReactNode;
 };
 
 /** Chiffre + libellé, en pastille — le « butin » du chasseur. */
@@ -161,7 +173,7 @@ export function HubScreen({
   criticalCount = 0,
   onChestOpened,
   onOpenWallet,
-  onOpenCoupons,
+  onUseCoupons,
   onSeeAllDeals,
   onSeeAllOffers,
   onSeeAllGames,
@@ -169,6 +181,7 @@ export function HubScreen({
   renderLiquidation,
   renderOffers,
   renderGames,
+  renderPromo,
 }: Props) {
   const xp = useGameStore(selectXp);
   const streak = useGameStore(selectStreak);
@@ -288,7 +301,7 @@ export function HubScreen({
               icon="tag"
               value={`${couponsCount}`}
               label={couponsCount > 1 ? 'coupons' : 'coupon'}
-              onPress={onOpenCoupons}
+              onPress={onUseCoupons}
             />
           </View>
 
@@ -335,6 +348,10 @@ export function HubScreen({
           testID="hub-see-deals"
         />
         {renderLiquidation ? renderLiquidation() : null}
+
+        {/* Un code promo se saisit ICI, juste avant les jeux : ce sont les
+            deux façons d'obtenir un coupon, elles se lisent ensemble. */}
+        {renderPromo ? <View className="mt-6">{renderPromo()}</View> : null}
 
         {/* Mini-jeux */}
         <SectionHeader
