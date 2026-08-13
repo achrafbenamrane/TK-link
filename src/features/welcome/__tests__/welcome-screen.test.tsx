@@ -11,12 +11,6 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace, push: jest.fn(), back: jest.fn() }),
 }));
 
-// La scène 3D démarre un contexte GL natif : hors simulateur elle n'a rien à
-// faire dans un test unitaire. Le repli plat, lui, est bien monté ci-dessous.
-jest.mock('../ui/scenes/card-reader-3d', () => ({
-  CardReader3D: () => null,
-}));
-
 beforeEach(() => {
   useWelcomeStore.setState({ seen: false });
 });
@@ -30,6 +24,10 @@ describe('<WelcomeScreen />', () => {
     expect(screen.getByTestId('welcome-panel-jeux')).toBeTruthy();
     expect(screen.getByTestId('welcome-panel-chasse')).toBeTruthy();
     // Les scènes animées sont là, pas seulement leurs titres.
+    // La scène de la carte est désormais du SVG et du Reanimated, sans
+    // contexte GL natif : elle se monte donc pour de vrai dans un test — ce
+    // que la version three.js interdisait.
+    expect(screen.getByTestId('welcome-card-scene')).toBeTruthy();
     expect(screen.getByTestId('welcome-pacman')).toBeTruthy();
     expect(screen.getByTestId('welcome-hub')).toBeTruthy();
   });
