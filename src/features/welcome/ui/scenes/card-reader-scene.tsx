@@ -63,19 +63,25 @@ export function CardReaderScene({ size = 300, still = false }: Props) {
       style={{ width: size, height: size }}
       className="items-center justify-center"
     >
-      {/* Le ticket sort par la droite une fois l'échange fait. */}
+      {/* L'ORDRE DE DESSIN EST LE SUJET, pas un détail de mise en page.
+          React Native n'a pas de `z-index` fiable entre frères : c'est le
+          dernier rendu qui passe devant. Le lecteur était rendu en dernier, il
+          recouvrait donc la carte — on voyait une carte descendre puis
+          DISPARAÎTRE dans le boîtier, l'inverse du geste réel.
+          Du fond vers l'avant : le ticket, le lecteur, les ondes, la carte. */}
       <Ticket progress={progress} size={size} />
 
-      {/* Les ondes du sans-contact, décalées pour donner une pulsation. */}
+      <View style={{ position: 'absolute', bottom: size * 0.06 }}>
+        <ReaderArt width={size * 0.94} height={size * 0.64} />
+      </View>
+
+      {/* Les ondes partent de la surface du lecteur : devant lui, derrière la
+          carte qu'elles sont censées lire. */}
       <Ping progress={progress} size={size} delay={0} />
       <Ping progress={progress} size={size} delay={0.05} />
       <Ping progress={progress} size={size} delay={0.1} />
 
       <Card progress={progress} size={size} />
-
-      <View style={{ position: 'absolute', bottom: size * 0.06 }}>
-        <ReaderArt width={size * 0.94} height={size * 0.64} />
-      </View>
     </View>
   );
 }
@@ -93,13 +99,16 @@ function Card({ progress, size }: { progress: SharedValue<number>; size: number 
     const p = progress.value;
     // Trois segments, décrits par leurs points de passage. `interpolate`
     // s'occupe des transitions : une seule table à relire, pas trois branches.
+    // La carte s'arrête SUR la surface du lecteur, pas au centre du cadre.
+    // Le boîtier occupe le bas de la scène : son plateau se situe autour de
+    // 4 % sous le milieu, d'où la valeur d'arrivée positive.
     const y = interpolate(
       p,
       [0, CONTACT, LIFT, 1],
-      [-size * 0.42, -size * 0.02, -size * 0.02, -size * 0.42],
+      [-size * 0.44, size * 0.04, size * 0.04, -size * 0.44],
     );
-    const x = interpolate(p, [0, CONTACT, LIFT, 1], [size * 0.16, 0, 0, size * 0.16]);
-    const rotate = interpolate(p, [0, CONTACT, LIFT, 1], [-16, -4, -4, -16]);
+    const x = interpolate(p, [0, CONTACT, LIFT, 1], [size * 0.18, 0, 0, size * 0.18]);
+    const rotate = interpolate(p, [0, CONTACT, LIFT, 1], [-19, -5, -5, -19]);
     // Un rebond court au contact, amorti — le poids de l'objet.
     const bounce =
       p > CONTACT && p < LIFT
@@ -120,30 +129,33 @@ function Card({ progress, size }: { progress: SharedValue<number>; size: number 
         style,
         {
           position: 'absolute',
-          width: size * 0.56,
-          height: size * 0.35,
-          borderRadius: size * 0.045,
+          // Plus petite que le lecteur — une carte bancaire ne couvre pas le
+          // terminal, elle se pose dessus. À 0,56 elle le débordait, ce qui
+          // faisait lire l'objet comme une tablette posée sur un socle.
+          width: size * 0.42,
+          height: size * 0.265,
+          borderRadius: size * 0.035,
           backgroundColor: colors.brand600,
           shadowColor: '#02120a',
           shadowOpacity: 0.4,
-          shadowRadius: size * 0.05,
+          shadowRadius: size * 0.04,
           shadowOffset: { width: 0, height: size * 0.03 },
           elevation: 12,
           overflow: 'hidden',
         },
       ]}
     >
-      <View className="flex-1 justify-between" style={{ padding: size * 0.038 }}>
-        <TkMark size={size * 0.07} />
+      <View className="flex-1 justify-between" style={{ padding: size * 0.03 }}>
+        <TkMark size={size * 0.055} />
         <AppText
           className="font-sans-semibold text-ink-inverse/80"
-          style={{ fontSize: size * 0.042, letterSpacing: 2 }}
+          style={{ fontSize: size * 0.033, letterSpacing: 1.5 }}
         >
           7014 2299
         </AppText>
       </View>
       {/* La bande lime : la signature de la carte, lisible même petite. */}
-      <View style={{ height: size * 0.022, backgroundColor: colors.lime }} />
+      <View style={{ height: size * 0.017, backgroundColor: colors.lime }} />
     </Animated.View>
   );
 }
