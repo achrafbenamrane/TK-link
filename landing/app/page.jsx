@@ -1,4 +1,5 @@
 import Interactions from './interactions';
+import AppShowcase from './app-showcase';
 import FlashScene from './flash-scene';
 
 /**
@@ -171,7 +172,7 @@ export default function Page() {
       </section>
 
       {/* ------------------------------------------------------------- app */}
-      <section className="sec" id="app">
+      <section className="sec sec-dark" id="app">
         <div className="wrap split">
           <div className="r">
             <p className="eyebrow">L’application</p>
@@ -193,15 +194,11 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="phone r" aria-hidden="true">
-            <div className="ph-logo">TK LINK</div>
-            <ul className="menu">
-              <li>DERNIÈRE CHANCE</li>
-              <li>OFFRES MEMBRES</li>
-              <li>MINI-JEUX</li>
-              <li>MES COUPONS</li>
-              <li>MES POINTS</li>
-            </ul>
+          {/* L'application elle-même, dans un appareil. La maquette dessinée
+              qui occupait cette place montrait un menu inventé ; on montre
+              maintenant les vrais écrans. */}
+          <div className="r">
+            <AppShowcase />
           </div>
         </div>
       </section>

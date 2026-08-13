@@ -67,3 +67,7 @@ assets/images/products/_incoming/*
 
 .vercel
 .env*
+
+# Captures brutes du téléphone : seules les versions optimisées sont versionnées.
+landing/public/screens/_incoming/*
+!landing/public/screens/_incoming/.gitkeep

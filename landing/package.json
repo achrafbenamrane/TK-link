@@ -8,7 +8,8 @@
     "start": "next start",
     "predeploy": "node scripts/guard-project.mjs",
     "deploy": "npm run predeploy && vercel --prod",
-    "deploy:preview": "npm run predeploy && vercel"
+    "deploy:preview": "npm run predeploy && vercel",
+    "screens:import": "node scripts/import-screens.mjs"
   },
   "dependencies": {
     "next": "^15.1.0",
