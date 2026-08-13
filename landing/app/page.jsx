@@ -72,7 +72,7 @@ export default function Page() {
             </p>
           </div>
 
-          <FlashScene />
+          <AppShowcase />
         </div>
       </section>
 
@@ -172,7 +172,7 @@ export default function Page() {
       </section>
 
       {/* ------------------------------------------------------------- app */}
-      <section className="sec sec-dark" id="app">
+      <section className="sec" id="app">
         <div className="wrap split">
           <div className="r">
             <p className="eyebrow">L’application</p>
@@ -194,11 +194,10 @@ export default function Page() {
             </div>
           </div>
 
-          {/* L'application elle-même, dans un appareil. La maquette dessinée
-              qui occupait cette place montrait un menu inventé ; on montre
-              maintenant les vrais écrans. */}
+          {/* La carte flash animée. L'iPhone, lui, est en tête de page : c'est
+              le produit, il doit se voir AVANT qu'on ait à faire défiler. */}
           <div className="r">
-            <AppShowcase />
+            <FlashScene />
           </div>
         </div>
       </section>
