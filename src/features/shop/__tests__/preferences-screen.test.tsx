@@ -12,7 +12,7 @@ describe('<PreferencesScreen />', () => {
   it('n’enregistre RIEN tant qu’on n’a pas appliqué', () => {
     render(<PreferencesScreen onDone={jest.fn()} />);
     fireEvent.press(screen.getByTestId('pref-style-vegan'));
-    fireEvent.press(screen.getByTestId('pref-radius-30'));
+    fireEvent.press(screen.getByTestId('pref-radius-10'));
     // Le brouillon a changé, le store non.
     expect(useShopStore.getState().preferences).toEqual(DEFAULT_PREFERENCES);
   });
@@ -23,13 +23,13 @@ describe('<PreferencesScreen />', () => {
 
     fireEvent.press(screen.getByTestId('pref-style-vegan'));
     fireEvent.press(screen.getByTestId('pref-style-halal'));
-    fireEvent.press(screen.getByTestId('pref-radius-30'));
+    fireEvent.press(screen.getByTestId('pref-radius-10'));
     fireEvent.press(screen.getByTestId('pref-collect-livraison'));
     fireEvent.press(screen.getByTestId('pref-apply'));
 
     expect(useShopStore.getState().preferences).toEqual({
       collect: 'livraison',
-      radiusKm: 30,
+      radiusKm: 10,
       lifestyle: ['vegan', 'halal'],
     });
     expect(onDone).toHaveBeenCalled();

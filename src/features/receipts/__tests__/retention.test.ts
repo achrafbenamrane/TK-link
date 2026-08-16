@@ -34,18 +34,20 @@ const receipt = (over: Partial<Receipt> = {}): Receipt => ({
   ...over,
 });
 
-describe('durée de conservation — CDC §16', () => {
-  it('deux ans CALENDAIRES, pas 730 jours', () => {
+describe('durée de conservation — CDC V1.0 §9.6', () => {
+  it('DIX ans calendaires, pas 3 650 jours', () => {
     // Le piège des bissextiles : un décalage d'un jour sur une purge
     // automatique, c'est un document effacé la veille d'un contrôle.
     const r = receipt({ issuedAt: new Date(2024, 1, 29, 12).getTime() });
     const until = new Date(keptUntil(r));
-    expect(until.getFullYear()).toBe(2026);
-    expect(RETENTION_YEARS).toBe(2);
+    expect(until.getFullYear()).toBe(2034);
+    // Le V0.1 disait deux ans ; le V1.0 écarte explicitement cette règle et
+    // retient dix ans, durée légale des pièces comptables en France.
+    expect(RETENTION_YEARS).toBe(10);
   });
 
   it('un document tout juste échu est expiré, pas « encore valable »', () => {
-    const r = receipt({ issuedAt: new Date(2024, 7, 10, 12).getTime() });
+    const r = receipt({ issuedAt: new Date(2016, 7, 10, 12).getTime() });
     expect(isExpired(r, NOW)).toBe(true);
     expect(daysLeft(r, NOW)).toBe(0);
   });
@@ -53,17 +55,18 @@ describe('durée de conservation — CDC §16', () => {
   it('compte les jours restants pour un document récent', () => {
     const r = receipt({ issuedAt: new Date(2026, 7, 1, 12).getTime() });
     expect(isExpired(r, NOW)).toBe(false);
-    expect(daysLeft(r, NOW)).toBeGreaterThan(700);
+    // Dix ans moins quelques jours : le seuil monte avec la durée légale.
+    expect(daysLeft(r, NOW)).toBeGreaterThan(3600);
   });
 
   it('affiche la date jusqu’à laquelle on garde', () => {
-    expect(formatKeptUntil(receipt())).toBe('10/08/2026');
+    expect(formatKeptUntil(receipt())).toBe('10/08/2034');
   });
 });
 
 describe('purge', () => {
   it('efface ce qui est échu, garde le reste', () => {
-    const vieux = receipt({ id: 'vieux', issuedAt: new Date(2023, 0, 1).getTime() });
+    const vieux = receipt({ id: 'vieux', issuedAt: new Date(2015, 0, 1).getTime() });
     const recent = receipt({ id: 'recent', issuedAt: new Date(2026, 6, 1).getTime() });
 
     expect(purge([vieux, recent], NOW).map((r) => r.id)).toEqual(['recent']);
@@ -93,8 +96,10 @@ describe('store', () => {
   it('purgeExpired dit COMBIEN il a supprimé', () => {
     useReceiptsStore.setState({
       receipts: [
-        receipt({ id: 'a', issuedAt: new Date(2020, 0, 1).getTime() }),
-        receipt({ id: 'b', issuedAt: new Date(2021, 0, 1).getTime() }),
+        // Antérieurs de plus de DIX ans : 2020 et 2021 ne suffisent plus
+        // depuis que la durée légale est passée de deux à dix ans.
+        receipt({ id: 'a', issuedAt: new Date(2012, 0, 1).getTime() }),
+        receipt({ id: 'b', issuedAt: new Date(2013, 0, 1).getTime() }),
         receipt({ id: 'c', issuedAt: Date.now() }),
       ],
     });

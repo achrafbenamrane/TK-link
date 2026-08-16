@@ -1,3 +1,4 @@
+import { PersistedShopSchema, RadiusSchema } from '../model/schema';
 import {
   activeFilterCount,
   applyPreferences,
@@ -7,6 +8,7 @@ import {
   toggleLifeStyle,
   withinRadius,
   type Preferences,
+  RADII,
 } from '../lib/preferences';
 import type { Deal, Merchant } from '../model/schema';
 
@@ -189,7 +191,48 @@ describe('activeFilterCount', () => {
     expect(activeFilterCount(DEFAULT_PREFERENCES)).toBe(0);
     expect(activeFilterCount({ ...DEFAULT_PREFERENCES, lifestyle: ['vegan'] })).toBe(1);
     expect(
-      activeFilterCount({ collect: 'livraison', radiusKm: 30, lifestyle: ['vegan', 'halal'] }),
+      activeFilterCount({ collect: 'livraison', radiusKm: 10, lifestyle: ['vegan', 'halal'] }),
     ).toBe(4);
+  });
+});
+
+describe('rayons — CDC V1.0 §3.2', () => {
+  it('propose 1, 3, 5 et 10 km', () => {
+    // Bien plus serré que les 5/10/15/30 d’avant. Le §3.2 en donne la raison :
+    // « une bonne affaire n’a de valeur que si elle est accessible dans le
+    // temps restant » — trente kilomètres pour une offre qui expire dans vingt
+    // minutes n’est pas une offre.
+    expect([...RADII]).toEqual([1, 3, 5, 10]);
+  });
+
+  it('rabat un ancien rayon enregistré au lieu d’effacer tout l’état', () => {
+    // Un réglage à 15 ou 30 km traîne encore sur les téléphones. Le refuser
+    // ferait échouer la réhydratation et emporterait panier, commandes et
+    // favoris — pour un réglage d’affichage.
+    expect(RadiusSchema.parse(15)).toBe(10);
+    expect(RadiusSchema.parse(30)).toBe(10);
+    expect(RadiusSchema.parse(3)).toBe(3);
+  });
+
+  it('refuse tout de même une valeur qui n’a jamais existé', () => {
+    expect(() => RadiusSchema.parse(42)).toThrow();
+  });
+});
+
+describe('le défaut d’objet et le défaut de champ disent la même chose', () => {
+  it('un état SANS clé « preferences » se réhydrate sur le rayon par défaut', () => {
+    // Ces deux défauts vivent à deux endroits différents du schéma : celui du
+    // champ (`RadiusSchema.default`) et celui de l’objet entier. Les laisser
+    // diverger afficherait une pastille « filtre actif » sur une installation
+    // neuve, parce que le rayon rehydraté ne serait pas celui du réglage par
+    // défaut. Personne ne cherche un bug là.
+    const vide = PersistedShopSchema.parse({
+      cart: [],
+      favorites: [],
+      orders: [],
+      points: 0,
+    });
+    expect(vide.preferences.radiusKm).toBe(DEFAULT_PREFERENCES.radiusKm);
+    expect(activeFilterCount(vide.preferences)).toBe(0);
   });
 });

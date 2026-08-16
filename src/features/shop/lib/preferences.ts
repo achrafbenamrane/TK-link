@@ -16,7 +16,15 @@ export type CollectType = 'tous' | 'touch-collect' | 'livraison' | 'a-commander'
 export type LifeStyle = 'vegetarien' | 'vegan' | 'halal';
 
 /** Rayons proposés, en kilomètres (bornes de la maquette). */
-export const RADII = [5, 10, 15, 30] as const;
+/**
+ * Les rayons rapides — CDC V1.0 §3.2 : « par exemple 1 km, 3 km, 5 km, 10 km ».
+ *
+ * Bien plus serrés que les 5/10/15/30 précédents, et c'est le sujet : le §3.2
+ * explique pourquoi la distance est centrale — « une bonne affaire n'a de
+ * valeur que si elle est accessible dans le temps restant ». Trente kilomètres
+ * pour une offre qui expire dans vingt minutes n'est pas une offre.
+ */
+export const RADII = [1, 3, 5, 10] as const;
 export type Radius = (typeof RADII)[number];
 
 export type Preferences = {
@@ -27,7 +35,7 @@ export type Preferences = {
 
 export const DEFAULT_PREFERENCES: Preferences = {
   collect: 'tous',
-  radiusKm: 10,
+  radiusKm: 5,
   lifestyle: [],
 };
 

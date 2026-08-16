@@ -148,12 +148,26 @@ export const OrderStatusSchema = z.preprocess(
 );
 
 /**
+ * Le rayon de recherche — CDC V1.0 §3.2 : 1, 3, 5 ou 10 km.
+ *
+ * Les réglages déjà enregistrés peuvent valoir 15 ou 30 km, hérités des rayons
+ * précédents. Sans ce rabattement, `safeParse` échouerait à la réhydratation et
+ * emporterait TOUT l'état stocké — panier, commandes, favoris — pour un simple
+ * réglage d'affichage. On rabat donc sur le plus large des rayons désormais
+ * proposés plutôt que de refuser la valeur.
+ */
+export const RadiusSchema = z.preprocess(
+  (v) => (v === 15 || v === 30 ? 10 : v),
+  z.union([z.literal(1), z.literal(3), z.literal(5), z.literal(10)]),
+);
+
+/**
  * Le mode de retrait s'appelait 'click-collect' avant le CDC V1.0 §5.3, et les
  * commandes déjà stockées sur les téléphones portent encore cette valeur.
  *
- * Sans ce passage, `safeParse` échouerait à la réhydratation et le store repartirait
- * de zéro : tout l'historique de commandes disparaîtrait. Renommer une valeur d'énum
- * persistée n'est jamais un simple renommage.
+ * Sans ce passage, `safeParse` échouerait à la réhydratation et le store
+ * repartirait de zéro : tout l'historique de commandes disparaîtrait. Renommer
+ * une valeur d'énum persistée n'est jamais un simple renommage.
  */
 export const FulfilmentSchema = z.preprocess(
   (v) => (v === 'click-collect' ? 'touch-collect' : v),
@@ -327,9 +341,9 @@ export const PersistedShopSchema = z.object({
   preferences: z
     .object({
       collect: z.enum(['tous', 'touch-collect', 'livraison', 'a-commander']).default('tous'),
-      radiusKm: z.union([z.literal(5), z.literal(10), z.literal(15), z.literal(30)]).default(10),
+      radiusKm: RadiusSchema.default(5),
       lifestyle: z.array(z.enum(['vegetarien', 'vegan', 'halal'])).default([]),
     })
-    .default({ collect: 'tous', radiusKm: 10, lifestyle: [] }),
+    .default({ collect: 'tous', radiusKm: 5, lifestyle: [] }),
 });
 export type PersistedShop = z.infer<typeof PersistedShopSchema>;

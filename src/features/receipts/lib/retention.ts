@@ -20,8 +20,21 @@ import type { Receipt } from '../model/schema';
  * devient intestable et se met à dépendre de l'heure qu'il est.
  */
 
-/** Durée de conservation proposée par le CDC §23 Q8, en années. */
-export const RETENTION_YEARS = 2;
+/**
+ * Durée de conservation, en années — CDC V1.0 §9.6.
+ *
+ * DIX ans, et non deux. Le V0.1 proposait deux ans ; le V1.0 écarte
+ * explicitement cette règle : « la règle de suppression générale à 2 ans est
+ * écartée. Les pièces justificatives comptables, notamment les factures
+ * clients et fournisseurs, doivent être conservées 10 ans dans le cadre
+ * professionnel français lorsque TKLINK en assure la conservation pour le
+ * professionnel. »
+ *
+ * Ce n'est pas un réglage de confort : purger à deux ans effacerait des pièces
+ * qu'un contrôle peut réclamer huit ans plus tard. Le client a vérifié la
+ * source (Ministère de l'Économie) et l'a citée en référence R1 du document.
+ */
+export const RETENTION_YEARS = 10;
 
 /**
  * Jusqu'à quand ce document est conservé.
