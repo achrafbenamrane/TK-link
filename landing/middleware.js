@@ -58,13 +58,22 @@ export function middleware(request) {
     }
   }
 
-  return new Response('Accès réservé', {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': 'Basic realm="TK LINK — espace professionnel"',
-      'Content-Type': 'text/plain; charset=utf-8',
+  return new Response(
+    'Accès réservé. Rafraîchissez la page pour saisir le mot de passe (identifiant au choix).',
+    {
+      status: 401,
+      headers: {
+        // ASCII UNIQUEMENT. Un en-tête HTTP ne transporte que de l'ASCII : le
+        // tiret cadratin qui figurait ici faisait SUPPRIMER l'en-tête par le
+        // runtime, sans erreur. Conséquence invisible et totale — sans
+        // `WWW-Authenticate`, aucun navigateur n'ouvre de fenêtre de connexion,
+        // et la page se réduisait à « Accès réservé » sans aucun moyen d'entrer.
+        // Le back-office était donc inaccessible, pas protégé.
+        'WWW-Authenticate': 'Basic realm="TK LINK espace professionnel"',
+        'Content-Type': 'text/plain; charset=utf-8',
+      },
     },
-  });
+  );
 }
 
 export const config = {
