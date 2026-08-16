@@ -117,7 +117,7 @@ type ShopState = {
   checkout: (
     addressId?: string | null,
     applied?: AppliedDiscount | null,
-    /** Click & Collect ou livraison — CDC §12. */
+    /** Touch & Collect ou livraison — CDC §12. */
     fulfilment?: Fulfilment,
   ) => { ok: false } | { ok: true; orderId: string };
 };
@@ -348,7 +348,7 @@ export const useShopStore = create<ShopState>()(
           discount,
           couponCode: applied?.couponCode ?? null,
           // Pas de frais de livraison quand le client vient chercher — CDC §12.
-          deliveryFee: fulfilment === 'click-collect' ? 0 : DELIVERY_FEE,
+          deliveryFee: fulfilment === 'touch-collect' ? 0 : DELIVERY_FEE,
           fulfilment,
           status: 'creee',
           pointsEarned,
@@ -417,7 +417,7 @@ export function demoStatusFor(order: Order): Order['status'] {
   const elapsed = (Date.now() - order.createdAt) / 1000;
   // La fin du parcours dépend du mode de retrait — CDC §12.
   if (elapsed >= DEMO_DELIVERED_AFTER_S) {
-    return order.fulfilment === 'click-collect' ? 'recuperee' : 'livree';
+    return order.fulfilment === 'touch-collect' ? 'recuperee' : 'livree';
   }
   if (elapsed >= DEMO_SHIPPING_AFTER_S) return 'prete';
   if (elapsed >= DEMO_PREPARING_AFTER_S) return 'preparation';

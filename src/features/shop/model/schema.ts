@@ -136,6 +136,19 @@ export const OrderStatusSchema = z.preprocess(
   z.enum(ORDER_STATUSES),
 );
 
+/**
+ * Le mode de retrait s'appelait 'click-collect' avant le CDC V1.0 §5.3, et les
+ * commandes déjà stockées sur les téléphones portent encore cette valeur.
+ *
+ * Sans ce passage, `safeParse` échouerait à la réhydratation et le store repartirait
+ * de zéro : tout l'historique de commandes disparaîtrait. Renommer une valeur d'énum
+ * persistée n'est jamais un simple renommage.
+ */
+export const FulfilmentSchema = z.preprocess(
+  (v) => (v === 'click-collect' ? 'touch-collect' : v),
+  z.enum(FULFILMENTS),
+);
+
 export { ORDER_STATUSES, ORDER_STATUS_LABEL, FULFILMENTS, FULFILMENT_LABEL };
 export type { OrderStatus, Fulfilment };
 
@@ -180,11 +193,11 @@ export const OrderSchema = z.object({
    */
   managed: z.boolean().default(false),
   /**
-   * Click & Collect ou livraison — CDC §12. `.default('livraison')` : les
+   * Touch & Collect ou livraison — CDC V1.0 §5.3. `.default('livraison')` : les
    * commandes déjà stockées n'ont pas ce champ, et un champ requis effacerait
    * tout l'historique à la réhydratation.
    */
-  fulfilment: z.enum(FULFILMENTS).default('livraison'),
+  fulfilment: FulfilmentSchema.default('livraison'),
   status: OrderStatusSchema,
   pointsEarned: z.number().int().nonnegative(),
 });

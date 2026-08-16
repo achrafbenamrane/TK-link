@@ -150,9 +150,9 @@ describe('progression de commande (démo)', () => {
     expect(at(300)).toBe('livree');
   });
 
-  it('se termine « récupérée » en Click & Collect — CDC §12', () => {
+  it('se termine « récupérée » en Touch & Collect — CDC V1.0 §5.3', () => {
     useShopStore.setState({
-      orders: [{ ...orderAgedBy(300), fulfilment: 'click-collect' as const }],
+      orders: [{ ...orderAgedBy(300), fulfilment: 'touch-collect' as const }],
     });
     useShopStore.getState().syncOrderStatuses();
     expect(useShopStore.getState().orders[0]?.status).toBe('recuperee');

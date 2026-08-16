@@ -46,7 +46,7 @@ function hintFor(status: OrderStatus, fulfilment: Fulfilment): string {
     case 'preparation':
       return 'Le commerçant prépare votre commande';
     case 'prete':
-      return fulfilment === 'click-collect'
+      return fulfilment === 'touch-collect'
         ? 'À retirer en boutique, présentez votre QR code'
         : 'Confiée au livreur';
     case 'recuperee':
@@ -65,7 +65,7 @@ function formatDateTime(ms: number): string {
 /**
  * Fil vertical : où en est la commande, et ce qu'il reste à attendre.
  *
- * Les étapes viennent du mode de retrait — un Click & Collect ne se termine pas
+ * Les étapes viennent du mode de retrait — un Touch & Collect ne se termine pas
  * par « livrée ». Un statut hors parcours (annulée, remboursée) n'a pas d'index
  * sur la frise : on n'allume alors aucune étape plutôt que d'en désigner une au
  * hasard, ce qui laisserait croire que la commande avance encore.
@@ -176,7 +176,7 @@ export function OrderDetailScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-5 pb-10">
         {/* La carte n'a de sens qu'en course : avant, il n'y a rien à suivre ;
-            après, le trajet est terminé. Et jamais en Click & Collect, où
+            après, le trajet est terminé. Et jamais en Touch & Collect, où
             personne ne se déplace vers le client. */}
         {order.status === 'prete' && order.fulfilment === 'livraison' && address ? (
           <DeliveryTracker order={order} address={address} />
@@ -187,7 +187,7 @@ export function OrderDetailScreen() {
         </View>
 
         {/* Adresse — l'ancienne commande n'en a pas, on ne montre rien plutôt
-            qu'un bloc vide. Inutile aussi en Click & Collect : le client vient. */}
+            qu'un bloc vide. Inutile aussi en Touch & Collect : le client vient. */}
         {address && order.fulfilment === 'livraison' ? (
           <View className="mb-4 flex-row gap-3 rounded-card border border-line bg-surface p-4">
             <Feather name="map-pin" size={16} color={colors.brand500} />

@@ -13,7 +13,7 @@ const order = (over: Partial<Order> = {}): Order => ({
   discount: 0,
   couponCode: null,
   deliveryFee: 0,
-  fulfilment: 'click-collect',
+  fulfilment: 'touch-collect',
   status: 'recuperee',
   pointsEarned: 19,
   managed: false,

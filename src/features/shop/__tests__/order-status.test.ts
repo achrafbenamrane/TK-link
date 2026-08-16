@@ -1,5 +1,6 @@
 import {
   canTransition,
+  FULFILMENT_LABEL,
   isActive,
   isFinal,
   nextStatuses,
@@ -10,6 +11,7 @@ import {
   timelineIndex,
   type OrderStatus,
 } from '../lib/order-status';
+import { FulfilmentSchema } from '../model/schema';
 
 describe('statuts — CDC §11', () => {
   it('reprend les dix statuts du cahier des charges', () => {
@@ -83,11 +85,11 @@ describe('machine à états', () => {
   });
 });
 
-describe('Click & Collect vs livraison — CDC §12', () => {
+describe('Touch & Collect vs livraison — CDC §12', () => {
   it('une commande à retirer se termine « récupérée », jamais « livrée »', () => {
-    expect(nextStatuses('prete', 'click-collect')).toContain('recuperee');
-    expect(nextStatuses('prete', 'click-collect')).not.toContain('livree');
-    expect(canTransition('prete', 'livree', 'click-collect')).toBe(false);
+    expect(nextStatuses('prete', 'touch-collect')).toContain('recuperee');
+    expect(nextStatuses('prete', 'touch-collect')).not.toContain('livree');
+    expect(canTransition('prete', 'livree', 'touch-collect')).toBe(false);
   });
 
   it('une commande livrée se termine « livrée », jamais « récupérée »', () => {
@@ -97,14 +99,14 @@ describe('Click & Collect vs livraison — CDC §12', () => {
   });
 
   it('laisse annuler dans les deux modes', () => {
-    expect(nextStatuses('prete', 'click-collect')).toContain('annulee');
+    expect(nextStatuses('prete', 'touch-collect')).toContain('annulee');
     expect(nextStatuses('prete', 'livraison')).toContain('annulee');
   });
 });
 
 describe('frise du client', () => {
   it('se termine par l’étape correspondant au mode', () => {
-    expect(timelineFor('click-collect').at(-1)).toBe('recuperee');
+    expect(timelineFor('touch-collect').at(-1)).toBe('recuperee');
     expect(timelineFor('livraison').at(-1)).toBe('livree');
   });
 
@@ -117,8 +119,8 @@ describe('frise du client', () => {
     // Afficher « annulée » comme une étape d’avancement serait un mensonge.
     expect(timelineIndex('annulee', 'livraison')).toBeNull();
     expect(timelineIndex('remboursee', 'livraison')).toBeNull();
-    // « livrée » n’est pas une étape d’un parcours Click & Collect.
-    expect(timelineIndex('livree', 'click-collect')).toBeNull();
+    // « livrée » n’est pas une étape d’un parcours Touch & Collect.
+    expect(timelineIndex('livree', 'touch-collect')).toBeNull();
   });
 });
 
@@ -129,5 +131,32 @@ describe('isActive', () => {
     expect(isActive('livree')).toBe(false);
     expect(isActive('recuperee')).toBe(false);
     expect(isActive('annulee')).toBe(false);
+  });
+});
+
+describe('Touch & Collect — CDC V1.0 §5.3', () => {
+  it('relit une commande stockée sous l’ancien nom sans la perdre', () => {
+    // Renommer une valeur d'énum PERSISTÉE n'est pas un renommage : les
+    // commandes déjà sur les téléphones portent 'click-collect'. Sans ce
+    // passage, `safeParse` échouerait et le store repartirait de zéro —
+    // tout l'historique effacé, sans un message d'erreur.
+    const relu = FulfilmentSchema.parse('click-collect');
+    expect(relu).toBe('touch-collect');
+  });
+
+  it('accepte évidemment la valeur actuelle', () => {
+    expect(FulfilmentSchema.parse('touch-collect')).toBe('touch-collect');
+    expect(FulfilmentSchema.parse('livraison')).toBe('livraison');
+  });
+
+  it('refuse une valeur inconnue plutôt que de la laisser passer', () => {
+    expect(() => FulfilmentSchema.parse('drive')).toThrow();
+  });
+
+  it('n’emploie plus « Click & Collect » nulle part dans les libellés', () => {
+    for (const label of Object.values(FULFILMENT_LABEL)) {
+      expect(label).not.toMatch(/Click ?& ?Collect/i);
+    }
+    expect(FULFILMENT_LABEL['touch-collect']).toBe('Touch & Collect');
   });
 });

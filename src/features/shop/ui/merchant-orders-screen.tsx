@@ -56,7 +56,7 @@ function money(value: number): string {
  * geste suivant.
  *
  * Les transitions passent par la machine à états du §11 : impossible de
- * proposer « livrée » sur un Click & Collect, ni de ressusciter une commande
+ * proposer « livrée » sur un Touch & Collect, ni de ressusciter une commande
  * remboursée. C'est la même règle que côté client, testée une seule fois.
  */
 export function MerchantOrdersScreen({ dealIds, onBack }: Props) {

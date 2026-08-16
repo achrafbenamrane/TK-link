@@ -80,12 +80,12 @@ describe('<CartScreen /> — mode de retrait (CDC §12)', () => {
     expect(screen.getByTestId('cart-checkout')).toHaveTextContent(/Choisir une adresse/);
   });
 
-  it('bascule en Click & Collect : plus d’adresse, plus de blocage', () => {
+  it('bascule en Touch & Collect : plus d’adresse, plus de blocage', () => {
     render(<Harness />);
-    fireEvent.press(screen.getByTestId('cart-fulfilment-click-collect'));
+    fireEvent.press(screen.getByTestId('cart-fulfilment-touch-collect'));
 
     // L’adresse disparaît : c’est le client qui se déplace. Sans ce
-    // basculement, le Click & Collect resterait bloqué derrière un champ
+    // basculement, le Touch & Collect resterait bloqué derrière un champ
     // « adresse de livraison » qui n’a aucun sens pour lui.
     expect(screen.queryByTestId('cart-address')).not.toBeOnTheScreen();
     expect(screen.getByTestId('cart-collect-note')).toBeOnTheScreen();
@@ -94,7 +94,7 @@ describe('<CartScreen /> — mode de retrait (CDC §12)', () => {
 
   it('revient à la livraison si on le redemande', () => {
     render(<Harness />);
-    fireEvent.press(screen.getByTestId('cart-fulfilment-click-collect'));
+    fireEvent.press(screen.getByTestId('cart-fulfilment-touch-collect'));
     fireEvent.press(screen.getByTestId('cart-fulfilment-livraison'));
     expect(screen.getByTestId('cart-address')).toBeOnTheScreen();
   });

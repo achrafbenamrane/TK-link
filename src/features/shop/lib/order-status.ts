@@ -40,12 +40,20 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   remboursee: 'Remboursée',
 };
 
-/** Comment le client récupère sa commande — CDC §12. */
-export const FULFILMENTS = ['click-collect', 'livraison'] as const;
+/**
+ * Comment le client récupère sa commande — CDC V1.0 §5.3.
+ *
+ * « Touch & Collect » et non « Click & Collect » : le cahier des charges en fait
+ * un INVARIANT — « cette terminologie doit remplacer Click & Collect dans les
+ * écrans, notifications, interfaces professionnelles et documents produit ».
+ * C'est un nom de marque, pas un synonyme : le laisser dériver fragmenterait
+ * l'identité sur les seuls écrans que le client montre à ses commerçants.
+ */
+export const FULFILMENTS = ['touch-collect', 'livraison'] as const;
 export type Fulfilment = (typeof FULFILMENTS)[number];
 
 export const FULFILMENT_LABEL: Record<Fulfilment, string> = {
-  'click-collect': 'Click & Collect',
+  'touch-collect': 'Touch & Collect',
   livraison: 'Livraison',
 };
 
@@ -76,14 +84,14 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 /**
  * Les suites possibles depuis ce statut, pour ce mode de retrait.
  *
- * Une commande en Click & Collect ne peut pas être « livrée », et une commande
+ * Une commande en Touch & Collect ne peut pas être « livrée », et une commande
  * en livraison ne peut pas être « récupérée » : ce sont deux fins de parcours
  * distinctes, pas deux mots pour la même chose.
  */
 export function nextStatuses(status: OrderStatus, fulfilment: Fulfilment): OrderStatus[] {
   const all = TRANSITIONS[status];
   if (status !== 'prete') return all;
-  const end: OrderStatus = fulfilment === 'click-collect' ? 'recuperee' : 'livree';
+  const end: OrderStatus = fulfilment === 'touch-collect' ? 'recuperee' : 'livree';
   return all.filter((s) => s === end || s === 'annulee');
 }
 
@@ -109,7 +117,7 @@ export function timelineFor(fulfilment: Fulfilment): OrderStatus[] {
     'payee',
     'preparation',
     'prete',
-    fulfilment === 'click-collect' ? 'recuperee' : 'livree',
+    fulfilment === 'touch-collect' ? 'recuperee' : 'livree',
   ];
 }
 

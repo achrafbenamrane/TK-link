@@ -44,7 +44,7 @@ export function CartScreen({ coupons }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [pickerOpen, setPickerOpen] = useState(false);
-  // CDC §12 — le Click & Collect fait partie du MVP. Livraison par défaut :
+  // CDC §12 — le Touch & Collect fait partie du MVP. Livraison par défaut :
   // c'est le mode que l'app proposait déjà, on ne change pas l'habitude sans
   // que l'utilisateur le demande.
   const [fulfilment, setFulfilment] = useState<Fulfilment>('livraison');
@@ -77,7 +77,7 @@ export function CartScreen({ coupons }: Props) {
 
   const handleCheckout = async () => {
     // L'adresse n'est indispensable qu'en livraison : exiger une adresse pour
-    // venir chercher en boutique bloquerait le Click & Collect sans raison.
+    // venir chercher en boutique bloquerait le Touch & Collect sans raison.
     if (fulfilment === 'livraison' && !address) {
       router.push('/adresses');
       return;
@@ -196,7 +196,7 @@ export function CartScreen({ coupons }: Props) {
         style={{ paddingBottom: insets.bottom + 12 }}
       >
         {/* Mode de retrait — CDC §12. Le choix se fait AVANT le total, parce
-            qu'il le change : le Click & Collect supprime les frais. */}
+            qu'il le change : le Touch & Collect supprime les frais. */}
         <View className="flex-row gap-2">
           {FULFILMENTS.map((f) => {
             const active = fulfilment === f;
@@ -214,7 +214,7 @@ export function CartScreen({ coupons }: Props) {
                 )}
               >
                 <Feather
-                  name={f === 'click-collect' ? 'shopping-bag' : 'truck'}
+                  name={f === 'touch-collect' ? 'shopping-bag' : 'truck'}
                   size={14}
                   color={active ? colors.inkInverse : colors.inkMuted}
                 />
@@ -310,9 +310,9 @@ export function CartScreen({ coupons }: Props) {
           </View>
         ) : null}
 
-        {/* En Click & Collect, l'adresse n'a rien à faire là : c'est le client
+        {/* En Touch & Collect, l'adresse n'a rien à faire là : c'est le client
             qui se déplace. */}
-        {fulfilment === 'click-collect' ? (
+        {fulfilment === 'touch-collect' ? (
           <View
             testID="cart-collect-note"
             className="flex-row items-center gap-3 rounded-control border border-line bg-surface-muted px-3 py-2.5"
@@ -385,7 +385,7 @@ export function CartScreen({ coupons }: Props) {
               {FULFILMENT_LABEL[fulfilment]}
             </AppText>
             <AppText className="font-sans-bold text-sm text-success">
-              {fulfilment === 'click-collect' || DELIVERY_FEE_EUR === 0
+              {fulfilment === 'touch-collect' || DELIVERY_FEE_EUR === 0
                 ? 'Offerte'
                 : `${DELIVERY_FEE_EUR.toFixed(2)}€`}
             </AppText>
@@ -405,7 +405,7 @@ export function CartScreen({ coupons }: Props) {
         >
           <Feather name="lock" size={16} color={colors.inkInverse} />
           <AppText className="font-sans-bold text-ink-inverse">
-            {fulfilment === 'click-collect' || address
+            {fulfilment === 'touch-collect' || address
               ? `Payer · ${total.toFixed(2)}€`
               : 'Choisir une adresse'}
           </AppText>

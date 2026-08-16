@@ -21,7 +21,7 @@ const order = (over: Partial<Order> = {}): Order => ({
   discount: 0,
   couponCode: null,
   deliveryFee: 0,
-  fulfilment: 'click-collect',
+  fulfilment: 'touch-collect',
   status: 'payee',
   pointsEarned: 18,
   managed: false,
@@ -74,7 +74,7 @@ describe('<MerchantOrdersScreen /> — CDC §11 et §18', () => {
   });
 
   it('ne propose jamais un chemin interdit par la machine à états', () => {
-    // Click & Collect : « livrée » n'a aucun sens, seul « récupérée » existe.
+    // Touch & Collect : « livrée » n'a aucun sens, seul « récupérée » existe.
     useShopStore.setState({ orders: [order({ status: 'prete' })] });
     render(<MerchantOrdersScreen dealIds={[MINE]} />);
 
