@@ -157,7 +157,6 @@ describe('<OnboardingScreen />', () => {
 
     // 5 — profil
     fireEvent.press(screen.getByTestId('holder-pro'));
-    fireEvent.press(screen.getByTestId('medium-pastille'));
     fireEvent.press(screen.getByTestId('onboarding-next'));
 
     // 6 — intérêts : incomplet, donc on n’avance pas
@@ -259,5 +258,27 @@ describe('rôles proposés dans l’app — décision client du 2026-08-10', () 
     expect(screen.getByTestId('role-consommateur')).toBeTruthy();
     expect(screen.getByTestId('role-commercant')).toBeTruthy();
     expect(screen.queryByTestId('role-grossiste')).toBeNull();
+  });
+});
+
+describe('plus de support physique — décision client du 16/08/2026', () => {
+  it('ne demande plus de choisir entre la carte et la pastille', () => {
+    // « On reste uniquement sur du soft. » Le CDC V1.0 ne mentionne plus aucun
+    // matériel : demander à quelqu'un de choisir un support qui n'existera pas
+    // est une promesse qu'on ne tiendra pas.
+    render(<OnboardingScreen onDone={jest.fn()} />);
+    for (let i = 0; i < 4; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
+
+    expect(screen.getByTestId('holder-particulier')).toBeTruthy();
+    expect(screen.queryByTestId('medium-carte')).toBeNull();
+    expect(screen.queryByTestId('medium-pastille')).toBeNull();
+  });
+
+  it('garde le champ dans le profil enregistré, avec son défaut', () => {
+    // Le retirer du schéma PERSISTÉ ferait échouer `safeParse` sur les profils
+    // déjà en place, et effacerait prénom, avatar, rôle et centres d'intérêt —
+    // pour supprimer une valeur que plus personne ne lit.
+    const profil = OnboardingSchema.parse({});
+    expect(profil.medium).toBe('carte');
   });
 });

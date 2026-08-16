@@ -105,13 +105,11 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
   const interests = useOnboardingStore(selectInterests);
   const role = useOnboardingStore(selectRole);
   const holderType = useOnboardingStore((s) => s.holderType);
-  const medium = useOnboardingStore((s) => s.medium);
 
   const setFirstName = useOnboardingStore((s) => s.setFirstName);
   const setAvatar = useOnboardingStore((s) => s.setAvatar);
   const setRole = useOnboardingStore((s) => s.setRole);
   const setHolderType = useOnboardingStore((s) => s.setHolderType);
-  const setMedium = useOnboardingStore((s) => s.setMedium);
   const toggle = useOnboardingStore((s) => s.toggleInterest);
   const complete = useOnboardingStore((s) => s.complete);
 
@@ -207,7 +205,7 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
           <View className="gap-5">
             <Header
               title="Votre avatar"
-              subtitle="Il vous suivra sur votre carte, dans La Chasse et dans les jeux."
+              subtitle="Il vous suivra dans La Chasse, dans les jeux et sur vos tickets."
             />
             <View className="items-center gap-4">
               <AvatarView avatar={avatar} size={128} />
@@ -281,26 +279,6 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
                 detail="Vos tickets deviennent des factures, prêtes pour votre comptable."
                 selected={holderType === 'pro'}
                 onPress={() => setHolderType('pro')}
-              />
-            </View>
-
-            <View className="gap-2">
-              <AppText className="font-sans-semibold text-ink">Votre support</AppText>
-              <Choice
-                testID="medium-carte"
-                icon="credit-card"
-                title="La carte TK LINK"
-                detail="Remise par votre commerçant ou votre comptable."
-                selected={medium === 'carte'}
-                onPress={() => setMedium('carte')}
-              />
-              <Choice
-                testID="medium-pastille"
-                icon="disc"
-                title="La pastille"
-                detail="Collée sur votre carte bancaire — rien de plus à sortir."
-                selected={medium === 'pastille'}
-                onPress={() => setMedium('pastille')}
               />
             </View>
           </View>
@@ -387,7 +365,7 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
           <View className="gap-5">
             <Header
               title={firstName ? `Enchanté, ${firstName}` : 'Votre compte'}
-              subtitle="Créez votre compte pour garder vos points, vos coupons et votre carte — même en changeant de téléphone."
+              subtitle="Créez votre compte pour garder vos points et vos coupons — même en changeant de téléphone."
             />
 
             {/* Ce que le compte apporte, en trois lignes.
@@ -405,7 +383,7 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
                   icon: 'award',
                   text: 'Vos points et vos coupons vous suivent, même en changeant de téléphone.',
                 },
-                { icon: 'credit-card', text: 'Votre carte de fidélité, avec votre avatar dessus.' },
+                { icon: 'award', text: 'Vos points de fidélité, commerce par commerce.' },
                 {
                   icon: 'zap',
                   text: 'Les ventes flash près de chez vous, triées selon ce qui vous intéresse.',

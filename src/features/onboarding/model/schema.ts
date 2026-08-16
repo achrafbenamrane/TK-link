@@ -59,6 +59,16 @@ export const OnboardingSchema = z.object({
    */
   siret: z.string().default(''),
   holderType: z.enum(['particulier', 'pro']).default('particulier'),
+  /**
+   * Support physique — CONSERVÉ mais plus demandé.
+   *
+   * Le client a écarté le matériel (« on reste uniquement sur du soft ») et le
+   * CDC V1.0 n'en parle plus : l'onboarding ne pose donc plus la question.
+   * Le champ, lui, reste dans le schéma PERSISTÉ. Le retirer ferait échouer
+   * `safeParse` sur les profils déjà enregistrés, et effacerait prénom, avatar,
+   * rôle et centres d'intérêt — pour supprimer une valeur que plus personne ne
+   * lit. On le laisse mourir de sa belle mort, avec son défaut.
+   */
   medium: z.enum(['carte', 'pastille']).default('carte'),
   /**
    * Tolérant par construction : les installations d'avant le CDC contiennent
