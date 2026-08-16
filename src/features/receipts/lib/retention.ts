@@ -78,7 +78,34 @@ export function purge(
   nowMs: number,
   years: number = RETENTION_YEARS,
 ): Receipt[] {
-  return receipts.filter((r) => r.pinned || !isExpired(r, nowMs, years));
+  return receipts.filter((r) => r.pinned || !isPurgeable(r, nowMs, years));
+}
+
+/**
+ * Ce document peut-il être supprimé par la purge automatique ?
+ *
+ * Les dix ans du §9.6 visent « les pièces justificatives comptables » — pas
+ * tous les documents. Le CDC §9.1 en distingue quatre, et deux échappent à
+ * cette horloge :
+ *
+ *  • une GARANTIE se périme avec le produit, pas avec l'exercice comptable ;
+ *    la supprimer d'office ferait disparaître une preuve d'achat que le client
+ *    aurait encore pu faire valoir. Le CDC ne fixe pas sa durée : on ne la
+ *    devine pas, on ne purge pas.
+ *  • un ticket de PRÉPARATION n'est pas un document du client (§6.3) : il ne
+ *    devrait jamais arriver ici. S'il y arrive, on le laisse à la purge
+ *    ordinaire plutôt que de lui offrir dix ans d'archive.
+ *
+ * L'asymétrie est voulue : garder trop longtemps coûte du stockage, supprimer
+ * trop tôt coûte une preuve.
+ */
+export function isPurgeable(
+  receipt: Receipt,
+  nowMs: number,
+  years: number = RETENTION_YEARS,
+): boolean {
+  if (receipt.kind === 'garantie') return false;
+  return isExpired(receipt, nowMs, years);
 }
 
 /** Combien de documents la prochaine purge emporterait. */

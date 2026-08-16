@@ -14,6 +14,7 @@ export {
   type IncomingReceipt,
 } from './model/store';
 export type { Receipt, ReceiptCategory, ReceiptChannel, ReceiptKind } from './model/schema';
+export { RECEIPT_KIND_LABEL, isAccounting, isCustomerFacing } from './model/schema';
 export {
   formatMoney,
   formatGrams,
@@ -27,6 +28,7 @@ export {
   CATEGORY_LABEL,
 } from './lib/receipts';
 export {
+  isPurgeable,
   RETENTION_YEARS,
   daysLeft,
   expiringCount,

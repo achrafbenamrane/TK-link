@@ -33,19 +33,65 @@ export const ReceiptLineSchema = z.object({
 export type ReceiptLine = z.infer<typeof ReceiptLineSchema>;
 
 /**
- * Où l'achat a eu lieu. La vidéo montre les deux : passage en caisse avec la
- * carte, et commande en ligne rattachée au même compte.
+ * Où l'achat a eu lieu : retiré en boutique (Touch & Collect) ou livré.
+ *
+ * `store` et `online` sont les identifiants historiques ; ils décrivent
+ * aujourd'hui le mode de remise, plus un canal de vente.
  */
 export const ReceiptChannelSchema = z.enum(['store', 'online']);
 export type ReceiptChannel = z.infer<typeof ReceiptChannelSchema>;
 
 /**
- * Un ticket devient une facture automatiquement. On garde l'état parce que
- * l'utilisateur voit les deux : le ticket qu'il vient de recevoir, puis la
- * facture certifiée qui part au comptable.
+ * LES QUATRE DOCUMENTS DU CDC V1.0 §9.1 — et ils ne se confondent pas.
+ *
+ * Le cahier des charges est formel : « ces objets ne doivent pas être confondus
+ * dans la base de données ni dans les workflows ». Ils n'ont ni le même
+ * destinataire, ni la même valeur, ni la même durée de vie :
+ *
+ *  • `preparation` — le ticket de préparation. Document OPÉRATIONNEL, pour la
+ *    cuisine, le comptoir ou l'atelier. Il ne sort jamais du commerce, ne prouve
+ *    rien et n'a aucune valeur comptable (§6.3).
+ *  • `ticket` — le justificatif de transaction remis au client (§9.1).
+ *  • `facture` — le document FISCAL, quand il est requis. C'est lui, et lui
+ *    seul, que le §9.6 fait conserver dix ans.
+ *  • `garantie` — la preuve d'achat rattachée à un produit, dont la durée de
+ *    vie suit celle de la garantie, pas celle de l'exercice comptable.
+ *
+ * Le code n'en connaissait que deux, et traitait tout comme un justificatif.
+ * Conséquence concrète : un ticket de cuisine aurait été conservé dix ans et
+ * compté dans les documents du client.
  */
-export const ReceiptKindSchema = z.enum(['ticket', 'facture']);
+export const ReceiptKindSchema = z.enum(['preparation', 'ticket', 'facture', 'garantie']);
 export type ReceiptKind = z.infer<typeof ReceiptKindSchema>;
+
+/** Ce que chaque type est, en une ligne — pour les écrans et les filtres. */
+export const RECEIPT_KIND_LABEL: Record<ReceiptKind, string> = {
+  preparation: 'Ticket de préparation',
+  ticket: 'Ticket',
+  facture: 'Facture',
+  garantie: 'Garantie',
+};
+
+/**
+ * Ce document engage-t-il la comptabilité ?
+ *
+ * Seules les pièces justificatives comptables relèvent des dix ans du §9.6. Un
+ * ticket de cuisine et une preuve de garantie n'ont rien à y faire — les
+ * conserver aussi longtemps gonfle l'archive sans rien prouver.
+ */
+export function isAccounting(kind: ReceiptKind): boolean {
+  return kind === 'facture' || kind === 'ticket';
+}
+
+/**
+ * Ce document est-il destiné au CLIENT ?
+ *
+ * Le ticket de préparation est un document d'atelier : le faire apparaître dans
+ * l'espace Documents du client afficherait la cuisine du commerçant.
+ */
+export function isCustomerFacing(kind: ReceiptKind): boolean {
+  return kind !== 'preparation';
+}
 
 /**
  * Famille de dépense — sert au classement « par code fournisseur » côté
