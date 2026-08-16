@@ -160,11 +160,21 @@ export function DealsMap({ deals, category }: Props) {
         <Mapbox.MapView
           style={{ width: box.width, height: box.height }}
           styleURL={Mapbox.StyleURL.Light}
-          // Android : TextureView plutôt que GLSurfaceView. La SurfaceView vit
-          // dans sa propre couche et ignore le clipping/la position que React
-          // Native lui donne — mauvais compagnon pour la carte de détail qu'on
-          // superpose ici.
-          surfaceView={false}
+          // ⚠️ Ne pas remettre `surfaceView={false}` sans avoir vérifié la carte
+          // sur un vrai téléphone.
+          //
+          // Ce composant forçait TextureView, pour que la fiche de détail qu'on
+          // superpose ne soit pas masquée par la couche GL. Le remède a coûté
+          // plus cher que le mal : sur l'APK du 16/08, la carte s'affichait
+          // ENTIÈREMENT GRISE. TextureView n'est pas le chemin de rendu par
+          // défaut de @rnmapbox/maps (`surfaceView: true` l'est), et c'est le
+          // plus fragile — d'autant plus sous la Nouvelle Architecture, activée
+          // par défaut depuis le SDK 56.
+          //
+          // On revient donc au défaut de la bibliothèque. Si la fiche de détail
+          // repasse derrière la carte, c'est un défaut VISIBLE et local ; une
+          // carte grise, elle, rend l'écran entier inutilisable.
+          //
           // Jeton refusé, style injoignable, téléphone hors ligne : tout passe
           // par là. Sans ce rappel, l'échec est parfaitement silencieux.
           onMapLoadingError={() => setStyleFailed(true)}
