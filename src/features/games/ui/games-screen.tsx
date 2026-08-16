@@ -128,7 +128,7 @@ export function GamesScreen({ imagePool, quizPool, words, onWin, onBack }: Props
           <AppText variant="caption" className="flex-1 text-ink-muted">
             Chaque victoire débloque un{' '}
             <AppText className="font-sans-bold text-ink">coupon</AppText> à utiliser sur votre
-            prochain passage en caisse.
+            prochaine commande.
           </AppText>
         </View>
       </ScrollView>

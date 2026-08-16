@@ -145,7 +145,7 @@ export function GiftsScreen({ onBack }: Props) {
                   <View className="flex-row items-center gap-1.5">
                     <Feather name="check-circle" size={14} color={colors.brand600} />
                     <AppText variant="caption" className="text-brand-700">
-                      Déjà échangé — présentez votre carte en caisse.
+                      Déjà échangé — présentez ce code au commerçant.
                     </AppText>
                   </View>
                 ) : null}

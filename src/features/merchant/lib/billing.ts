@@ -1,5 +1,7 @@
+import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
+
 /**
- * LE MODÈLE ÉCONOMIQUE — CDC §9 et §21.
+ * LE MODÈLE ÉCONOMIQUE — CDC V1.0 §5.4, §6.2 et §10.2.
  *
  * Deux règles, et elles décident de tout le reste de l'espace commerçant :
  *
@@ -15,11 +17,25 @@
  * testables sans monter un seul écran.
  */
 
-/** Opérations offertes avant le premier pack — CDC §9. */
-export const FREE_OPERATIONS = 5;
+/**
+ * Opérations offertes avant le premier pack — CDC V1.0 §6.2.
+ *
+ * Le cahier des charges en fait une EXIGENCE : « le nombre 5 doit être un
+ * paramètre Super Admin, et non une constante inscrite dans le code ». La
+ * valeur vient donc des réglages de plateforme ; ce module ne fait que la
+ * relayer, pour que les écrans continuent d'avoir un seul point d'entrée.
+ */
+export const FREE_OPERATIONS = PLATFORM_SETTINGS.freeOperations;
 
-/** Commission prélevée par TK LINK sur chaque vente, en pourcent — CDC §21. */
-export const COMMISSION_PCT = 5;
+/**
+ * Commission TK LINK sur les transactions B2C, en pourcent — CDC §5.4.
+ *
+ * ⚠️ B2C UNIQUEMENT. Le §10.2 et la Remarque 1 interdisent explicitement de
+ * reporter ce taux sur le B2B : « le taux de 5 % B2C ne doit pas être copié
+ * automatiquement […] aucun taux B2B ne doit être codé en dur ». Le taux B2B
+ * vaut `null` dans les réglages tant que Farid n'a pas tranché.
+ */
+export const COMMISSION_PCT = PLATFORM_SETTINGS.commissionB2cPct;
 
 export type Pack = {
   id: string;

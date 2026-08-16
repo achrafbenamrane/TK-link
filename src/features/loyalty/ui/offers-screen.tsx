@@ -34,7 +34,7 @@ export function OffersScreen() {
             Offres
           </AppText>
           <AppText variant="caption" className="mt-0.5">
-            Réservées aux porteurs de la carte TK LINK.
+            Réservées aux membres TK LINK.
           </AppText>
         </View>
 
@@ -155,7 +155,7 @@ export function OffersScreen() {
         <View className="mt-6 flex-row items-center gap-2 rounded-card bg-surface-muted p-4">
           <Feather name="credit-card" size={17} color={colors.brand600} />
           <AppText variant="caption" className="flex-1 text-ink-muted">
-            Présentez votre carte en caisse : la remise s’applique et vos points sont crédités
+            Présentez votre code au commerçant : la remise s’applique et vos points sont crédités
             automatiquement.
           </AppText>
         </View>

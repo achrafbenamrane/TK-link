@@ -22,7 +22,7 @@ type Props = {
 /**
  * Un « QR » décoratif, dessiné depuis le numéro de carte.
  *
- * Ce n'est PAS un vrai QR code : en production, le code présenté en caisse est
+ * Ce n'est PAS un vrai QR code : en production, le code présenté au commerçant est
  * généré et signé côté serveur (sinon il serait falsifiable). Ici on donne au
  * commerçant quelque chose de crédible à scanner pour la démo, dérivé du numéro
  * pour qu'il reste stable d'un affichage à l'autre.
@@ -86,7 +86,7 @@ export function LoyaltyCardScreen({ onOpenGifts }: Props) {
             Ma carte
           </AppText>
           <AppText variant="caption" className="mt-0.5">
-            Présentez-la au lecteur en caisse.
+            Présentez ce code au commerçant.
           </AppText>
         </View>
 
@@ -101,7 +101,7 @@ export function LoyaltyCardScreen({ onOpenGifts }: Props) {
                 TK LINK
               </AppText>
               <AppText variant="caption" className="text-ink-inverse/60">
-                {card?.medium === 'pastille' ? 'Pastille sans contact' : 'Carte de fidélité'}
+                Carte de fidélité
                 {holderType === 'pro' ? ' · Pro' : ''}
               </AppText>
             </View>

@@ -138,7 +138,7 @@ export function ReceiptsScreen({ onOpenReceipt }: Props) {
             <AppText variant="caption" className="text-center">
               {query
                 ? 'Essayez un autre mot — enseigne, produit ou référence.'
-                : 'Présentez votre carte TK LINK en caisse : vos tickets arriveront ici.'}
+                : 'Vos tickets arrivent ici dès qu’une commande est honorée.'}
             </AppText>
           </View>
         ) : (
