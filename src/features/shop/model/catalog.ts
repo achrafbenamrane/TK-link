@@ -179,6 +179,9 @@ export const DEALS: Deal[] = [
    */
   {
     id: 'd_cinema',
+    // Retrait sur place : une prestation ne se livre pas. Laisser le défaut
+    // « les deux » promettrait une livraison impossible.
+    fulfilments: ['touch-collect'],
     title: 'Place de cinéma · séance du soir',
     merchantId: 'm_lumiere',
     category: 'services',
@@ -205,6 +208,9 @@ export const DEALS: Deal[] = [
   },
   {
     id: 'd_cine_duo',
+    // Retrait sur place : une prestation ne se livre pas. Laisser le défaut
+    // « les deux » promettrait une livraison impossible.
+    fulfilments: ['touch-collect'],
     title: 'Duo cinéma + boisson',
     merchantId: 'm_lumiere',
     category: 'services',
@@ -231,6 +237,9 @@ export const DEALS: Deal[] = [
   },
   {
     id: 'd_cine_vost',
+    // Retrait sur place : une prestation ne se livre pas. Laisser le défaut
+    // « les deux » promettrait une livraison impossible.
+    fulfilments: ['touch-collect'],
     title: 'Place de cinéma · version originale',
     merchantId: 'm_lumiere',
     category: 'services',
@@ -256,6 +265,9 @@ export const DEALS: Deal[] = [
   },
   {
     id: 'd_cine_tardif',
+    // Retrait sur place : une prestation ne se livre pas. Laisser le défaut
+    // « les deux » promettrait une livraison impossible.
+    fulfilments: ['touch-collect'],
     title: 'Séance tardive',
     merchantId: 'm_lumiere',
     category: 'services',
@@ -282,6 +294,9 @@ export const DEALS: Deal[] = [
   },
   {
     id: 'd_bowling',
+    // Retrait sur place : une prestation ne se livre pas. Laisser le défaut
+    // « les deux » promettrait une livraison impossible.
+    fulfilments: ['touch-collect'],
     title: 'Partie de bowling · 1 h',
     merchantId: 'm_bowling',
     category: 'services',
@@ -511,6 +526,9 @@ export const DEALS: Deal[] = [
   },
   {
     id: 'd_soin',
+    // Retrait sur place : une prestation ne se livre pas. Laisser le défaut
+    // « les deux » promettrait une livraison impossible.
+    fulfilments: ['touch-collect'],
     diet: ['vegetarien', 'vegan'] as ('vegetarien' | 'vegan')[],
     title: 'Coffret soin visage bio',
     merchantId: 'm_bulle',
@@ -528,6 +546,9 @@ export const DEALS: Deal[] = [
   },
   {
     id: 'd_padel',
+    // Retrait sur place : une prestation ne se livre pas. Laisser le défaut
+    // « les deux » promettrait une livraison impossible.
+    fulfilments: ['touch-collect'],
     title: 'Raquette de padel',
     merchantId: 'm_sprint',
     category: 'sport',
@@ -545,6 +566,9 @@ export const DEALS: Deal[] = [
   },
   {
     id: 'd_revision',
+    // Retrait sur place : une prestation ne se livre pas. Laisser le défaut
+    // « les deux » promettrait une livraison impossible.
+    fulfilments: ['touch-collect'],
     title: 'Révision + vidange',
     merchantId: 'm_garage',
     category: 'auto',
@@ -562,6 +586,9 @@ export const DEALS: Deal[] = [
   },
   {
     id: 'd_poterie',
+    // Retrait sur place : une prestation ne se livre pas. Laisser le défaut
+    // « les deux » promettrait une livraison impossible.
+    fulfilments: ['touch-collect'],
     title: 'Atelier poterie · 2 h',
     merchantId: 'm_evasion',
     category: 'services',

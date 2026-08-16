@@ -148,7 +148,7 @@ export function LiquidationRail({ limit = 8, onCatch }: Props) {
                   className={cn(low ? 'font-sans-semibold text-danger' : 'text-ink-faint')}
                   style={{ fontSize: 10.5 }}
                 >
-                  {deal.stockLeft > 0 ? `Plus que ${deal.stockLeft}` : 'Épuisé'}
+                  {deal.stockLeft > 0 ? `${deal.stockLeft} / ${deal.stockTotal}` : 'Épuisé'}
                 </AppText>
               </View>
 

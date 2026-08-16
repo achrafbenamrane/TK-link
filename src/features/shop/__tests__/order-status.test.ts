@@ -12,6 +12,7 @@ import {
   type OrderStatus,
 } from '../lib/order-status';
 import { FulfilmentSchema } from '../model/schema';
+import { formatCountdown } from '../ui/components/countdown';
 
 describe('statuts — CDC §11', () => {
   it('reprend les dix statuts du cahier des charges', () => {
@@ -158,5 +159,21 @@ describe('Touch & Collect — CDC V1.0 §5.3', () => {
       expect(label).not.toMatch(/Click ?& ?Collect/i);
     }
     expect(FULFILMENT_LABEL['touch-collect']).toBe('Touch & Collect');
+  });
+});
+
+describe('le compte à rebours garde trois blocs — affiches client', () => {
+  it('affiche les heures même quand il en reste zéro', () => {
+    // Le format passait de « 1:01:12 » à « 01:12 » sous l’heure : la pastille
+    // se rétrécissait au milieu du décompte, et « 04:31 » ne dit pas s’il
+    // reste quatre minutes ou quatre heures. Les affiches montrent toujours
+    // trois blocs.
+    expect(formatCountdown(45)).toBe('00:00:45');
+    expect(formatCountdown(4 * 60 + 31)).toBe('00:04:31');
+    expect(formatCountdown(3600 + 72)).toBe('01:01:12');
+  });
+
+  it('ne descend jamais sous zéro', () => {
+    expect(formatCountdown(-10)).toBe('00:00:00');
   });
 });

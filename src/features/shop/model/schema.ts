@@ -107,6 +107,17 @@ export type Deal = {
    * une côte de bœuf n'a pas d'horaire de projection.
    */
   screening?: Screening;
+  /**
+   * Comment cette offre se récupère — CDC V1.0 §4.2 étape 7 : le commerçant
+   * « choisit Touch & Collect, livraison ou les deux ».
+   *
+   * Absent = les deux. Ce n'est pas une paresse : la majorité des offres
+   * acceptent les deux modes, et exiger le champ sur les vingt-et-une offres
+   * du catalogue de démonstration n'apprendrait rien à personne. Les offres
+   * qui NE PEUVENT PAS être livrées, elles, doivent le dire — on ne livre pas
+   * une place de cinéma.
+   */
+  fulfilments?: Fulfilment[];
 };
 
 /* ---- State that hits storage → validated with Zod ---- */

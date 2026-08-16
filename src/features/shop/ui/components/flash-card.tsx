@@ -8,6 +8,7 @@ import { colors } from '@/shared/theme/colors';
 
 import { getMerchant } from '../../model/catalog';
 import { distanceKm, formatDistance } from '../../lib/geo';
+import { fulfilmentIcon, fulfilmentLabel } from '../../lib/fulfilment';
 import { screeningLabel } from '../../lib/screening';
 import { discountPct, liquidationLabel, urgencyOf } from '../../lib/urgency';
 import type { Deal } from '../../model/schema';
@@ -127,9 +128,7 @@ export function FlashCard({ deal }: Props) {
         >
           <Feather name="package" size={12} color={colors.inkInverse} />
           <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 12.5 }}>
-            {deal.stockLeft > 0
-              ? `${deal.stockLeft} restant${deal.stockLeft > 1 ? 's' : ''}`
-              : 'Épuisé'}
+            {deal.stockLeft > 0 ? `${deal.stockLeft} / ${deal.stockTotal}` : 'Épuisé'}
           </AppText>
         </View>
       </View>
@@ -180,6 +179,20 @@ export function FlashCard({ deal }: Props) {
         ) : null}
 
         {/* Le prix domine tout le bas de la carte. */}
+        {/* Le mode de retrait — neuvième information exigée par le CDC §3.1, et
+            la seule qui manquait. Quelqu'un qui repère une offre à 8 km ne la
+            traite pas pareil selon qu'il devra aller la chercher ou qu'on la
+            lui apporte ; l'apprendre au panier est trop tard. */}
+        <View
+          testID={`deal-${deal.id}-fulfilment`}
+          className="mt-0.5 flex-row items-center gap-1.5"
+        >
+          <Feather name={fulfilmentIcon(deal)} size={13} color={colors.brand600} />
+          <AppText className="font-sans-semibold text-brand-600" style={{ fontSize: 12 }}>
+            {fulfilmentLabel(deal)}
+          </AppText>
+        </View>
+
         <View className="mt-1 flex-row items-end">
           <View className="flex-1">
             <PriceTag price={deal.price} oldPrice={deal.oldPrice} size={34} />

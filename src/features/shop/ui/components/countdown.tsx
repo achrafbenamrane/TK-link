@@ -3,13 +3,19 @@ import { useEffect, useState } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
 
-function format(total: number): string {
+/**
+ * Toujours HH:MM:SS, même sous l'heure.
+ *
+ * Le format changeait de longueur en passant sous soixante minutes — « 01:12 »
+ * après « 1:01:12 ». Deux défauts : la pastille se rétrécissait d'un coup au
+ * milieu du compte à rebours, et « 04:31 » est ambigu à la lecture (quatre
+ * minutes ou quatre heures ?). Les affiches du client tranchent : elles
+ * montrent « 00 : 28 : 45 » et « 00:15:45 », toujours trois blocs.
+ */
+export function formatCountdown(total: number): string {
   const s = Math.max(0, total);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
   const p = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-  return h > 0 ? `${p(h)}:${p(m)}:${p(sec)}` : `${p(m)}:${p(sec)}`;
+  return `${p(Math.floor(s / 3600))}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}`;
 }
 
 type Props = {
@@ -35,7 +41,7 @@ export function Countdown({ seconds, className }: Props) {
       className={cn('font-sans-semibold', className)}
       style={{ fontVariant: ['tabular-nums'] }}
     >
-      {format(left)}
+      {formatCountdown(left)}
     </AppText>
   );
 }
