@@ -53,14 +53,14 @@ export const ACTION_LABEL = {
 };
 
 /**
- * Les suites possibles. Une commande en Click & Collect ne peut pas être
+ * Les suites possibles. Une commande en Touch & Collect ne peut pas être
  * « livrée », et une commande en livraison ne peut pas être « récupérée » :
  * deux fins de parcours distinctes, pas deux mots pour la même chose.
  */
 export function nextStatuses(status, fulfilment) {
   const all = TRANSITIONS[status] ?? [];
   if (status !== 'prete') return all;
-  const end = fulfilment === 'click-collect' ? 'recuperee' : 'livree';
+  const end = fulfilment === 'touch-collect' ? 'recuperee' : 'livree';
   return all.filter((s) => s === end || s === 'annulee');
 }
 
@@ -79,7 +79,7 @@ export const ORDERS = [
     id: 'TK-4821',
     customer: 'Sofiane B.',
     minutesAgo: 4,
-    fulfilment: 'click-collect',
+    fulfilment: 'touch-collect',
     status: 'payee',
     lines: [
       { label: 'Plateau de viennoiseries', qty: 2, unitCents: 900 },
@@ -98,7 +98,7 @@ export const ORDERS = [
     id: 'TK-4819',
     customer: 'Yanis T.',
     minutesAgo: 38,
-    fulfilment: 'click-collect',
+    fulfilment: 'touch-collect',
     status: 'prete',
     lines: [{ label: 'Panier anti-gaspi', qty: 1, unitCents: 490 }],
   },
@@ -106,7 +106,7 @@ export const ORDERS = [
     id: 'TK-4818',
     customer: 'Inès F.',
     minutesAgo: 96,
-    fulfilment: 'click-collect',
+    fulfilment: 'touch-collect',
     status: 'recuperee',
     lines: [{ label: 'Brunch du dimanche', qty: 2, unitCents: 1450 }],
   },

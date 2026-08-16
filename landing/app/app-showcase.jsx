@@ -34,7 +34,7 @@ const SCREENS = [
   },
   {
     src: '/screens/panier.jpg',
-    title: 'Click & Collect',
+    title: 'Touch & Collect',
     line: 'Retrait en boutique ou livraison, coupons appliqués, points crédités.',
   },
   {

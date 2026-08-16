@@ -161,7 +161,7 @@ export default function Page() {
               </p>
               <ul>
                 <li>Des commerces indépendants, pas des enseignes</li>
-                <li>Des tickets numériques, conservés deux ans</li>
+                <li>Des tickets numériques, gardés dans l’application</li>
                 <li>Des points échangeables contre un arbre planté</li>
               </ul>
             </div>

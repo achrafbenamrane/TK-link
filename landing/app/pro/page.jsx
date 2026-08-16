@@ -32,7 +32,7 @@ import {
  *    l'export attendu par le comptable
  *  • Offres — ce qui apparaît dans l'app des clients
  *
- * Les données sont simulées (pas de back-end ni de lecteur branché) mais elles
+ * Les données sont simulées (aucun back-end) mais elles
  * ont exactement la forme du schéma de l'app mobile : le jour où l'API arrive,
  * seule la source change.
  */
@@ -182,7 +182,7 @@ export default function ProPage() {
         <div className="tkpro-side-foot">
           Le Comptoir du Midi
           <br />
-          Lecteur TK LINK connecté
+          Espace professionnel
         </div>
       </aside>
 
@@ -193,7 +193,7 @@ export default function ProPage() {
             <div className="tkpro-head">
               <div>
                 <h1>Tableau de bord</h1>
-                <p>Ce que votre caisse a produit, sans une seule impression.</p>
+                <p>Ce que vos ventes flash ont produit, sans une seule impression.</p>
               </div>
             </div>
 
@@ -264,7 +264,7 @@ export default function ProPage() {
             </div>
 
             <p className="tkpro-note">
-              Chaque passage de carte remplace un ticket imprimé. Le document part au client, la
+              Chaque vente honorée remplace un ticket imprimé. Le document part au client, la
               facture à votre comptable, et les données sont déjà classées.
             </p>
           </>
@@ -296,7 +296,7 @@ export default function ProPage() {
                         <b>{o.customer}</b>
                         <span>
                           {o.id} · {sinceLabel(o.placedAt)} ·{' '}
-                          {o.fulfilment === 'click-collect' ? 'Click & Collect' : 'Livraison'}
+                          {o.fulfilment === 'touch-collect' ? 'Touch & Collect' : 'Livraison'}
                         </span>
                       </div>
                       <span className={`tkpro-tag ${isActive(o.status) ? 'flash' : 'ticket'}`}>
@@ -528,7 +528,7 @@ export default function ProPage() {
             <div className="tkpro-head">
               <div>
                 <h1>Offres</h1>
-                <p>Ce que vos clients voient dans l’app, sur leur carte TK LINK.</p>
+                <p>Ce que vos clients voient dans l’app.</p>
               </div>
               <button
                 type="button"
@@ -602,8 +602,8 @@ export default function ProPage() {
 
             <p className="tkpro-note">
               Une offre publiée ici apparaît immédiatement dans l’app des clients, et la remise
-              s’applique au passage de la carte en caisse. TK LINK prélève {COMMISSION_PCT}&nbsp;%
-              sur chaque vente (CDC §21).
+              s’applique à chaque vente conclue. TK LINK prélève {COMMISSION_PCT}&nbsp;% sur chaque
+              vente (CDC §21).
             </p>
           </>
         ) : null}

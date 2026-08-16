@@ -22,7 +22,28 @@ const PROTECTED = ['/pro', '/admin'];
 
 export function middleware(request) {
   const password = process.env.TKLINK_PRO_PASSWORD;
-  if (!password) return;
+
+  /**
+   * Variable absente : ouvert en développement, FERMÉ en production.
+   *
+   * L'ancienne version laissait passer dans tous les cas — « pas de mot de
+   * passe, pas de serrure ». Confortable en local, mais c'est un défaut qui
+   * s'ouvre du mauvais côté : un oubli de configuration au déploiement, et
+   * `/pro` et `/admin` — des inscrits, des SIRET, des chiffres d'affaires —
+   * deviennent publics sans que rien ne le signale. Une serrure qui s'ouvre
+   * quand la clé manque n'est pas une serrure.
+   *
+   * En production, l'absence de variable renvoie donc une erreur explicite
+   * plutôt qu'un accès libre : un back-office indisponible se remarque et se
+   * corrige ; un back-office ouvert ne se remarque pas.
+   */
+  if (!password) {
+    if (process.env.VERCEL_ENV !== 'production') return;
+    return new Response(
+      'Espace professionnel indisponible : la variable TKLINK_PRO_PASSWORD n’est pas configurée.',
+      { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } },
+    );
+  }
 
   const { pathname } = request.nextUrl;
   if (!PROTECTED.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return;
