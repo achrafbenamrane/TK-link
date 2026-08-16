@@ -89,6 +89,16 @@ export type Deal = {
   oldPrice?: number;
   unit?: string; // « la pièce », « les 500 g »…
   rating: number;
+  /**
+   * Le nombre d'avis derrière la note — les quatre affiches du client l'exigent
+   * à côté du « 4,8/5 ».
+   *
+   * Une note nue ne vaut rien : « 5,0 » sur un avis et « 4,6 » sur deux cents
+   * ne disent pas la même chose, et c'est le second qui rassure. Optionnel
+   * parce qu'une offre peut n'avoir aucun avis — l'affichage se tait alors,
+   * plutôt que d'écrire « 0 avis » sous une note inventée.
+   */
+  reviewCount?: number;
   stockTotal: number;
   stockLeft: number;
   endsInSeconds: number; // amorce du compte à rebours

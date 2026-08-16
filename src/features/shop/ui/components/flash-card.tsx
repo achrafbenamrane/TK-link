@@ -145,11 +145,24 @@ export function FlashCard({ deal }: Props) {
             >
               {merchant?.name}
             </AppText>
+            {/* La note ET le nombre d'avis, comme sur les affiches du client.
+                Une note nue ne prouve rien : « 5,0 » sur un avis rassure moins
+                que « 4,6 » sur deux cents. Le compte se tait s'il est absent,
+                plutôt que d'afficher « 0 » sous une note. */}
             <View className="flex-row items-center gap-0.5">
               <Ionicons name="star" size={11} color={colors.brand500} />
               <AppText variant="caption" className="font-sans-semibold text-ink">
                 {deal.rating.toFixed(1)}
               </AppText>
+              {deal.reviewCount ? (
+                <AppText
+                  testID={`deal-${deal.id}-reviews`}
+                  variant="caption"
+                  className="text-ink-faint"
+                >
+                  ({deal.reviewCount})
+                </AppText>
+              ) : null}
             </View>
           </View>
           <View className="flex-row items-center gap-1">

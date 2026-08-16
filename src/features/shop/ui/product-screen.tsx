@@ -9,7 +9,7 @@ import { colors } from '@/shared/theme/colors';
 
 import { getDeal, getMerchant } from '../model/catalog';
 import { useShopStore } from '../model/store';
-import { Countdown } from './components/countdown';
+import { Countdown, CountdownBlocks } from './components/countdown';
 import { ProductImage } from './components/product-image';
 import { QtyStepper } from './components/qty-stepper';
 import { ScreeningStrip } from './components/screening-strip';
@@ -132,6 +132,12 @@ export function ProductScreen({ dealId }: Props) {
             <View className="flex-row items-center gap-1">
               <Ionicons name="star" size={14} color={colors.brand500} />
               <AppText variant="label">{deal.rating.toFixed(1)}</AppText>
+              {/* Le nombre d'avis, exigé par les affiches à côté de la note. */}
+              {deal.reviewCount ? (
+                <AppText testID="product-reviews" variant="caption" className="text-ink-faint">
+                  ({deal.reviewCount} avis)
+                </AppText>
+              ) : null}
               <Feather name="chevron-right" size={16} color={colors.inkFaint} />
             </View>
           </Pressable>
@@ -176,15 +182,33 @@ export function ProductScreen({ dealId }: Props) {
             {deal.description}
           </AppText>
 
+          {/* LE COMPTE À REBOURS DES AFFICHES — trois blocs, les unités écrites
+              dessous. C'est l'élément que les quatre affiches du client mettent
+              en avant, et il manquait : la fiche n'en montrait qu'une pastille
+              de la taille d'une étiquette, posée sur la photo. Ici il précède
+              immédiatement le stock, parce que le temps et la quantité sont les
+              deux faces de la même urgence — et qu'ils se lisent ensemble. */}
+          <View className="gap-2.5 rounded-card border border-line bg-surface-muted p-4">
+            <AppText variant="label">Fin de l’offre dans</AppText>
+            <CountdownBlocks testID="product-countdown" seconds={deal.endsInSeconds} size={30} />
+          </View>
+
           {/* Stock */}
           <View className="gap-1.5 rounded-card border border-line bg-surface-muted p-4">
             <View className="flex-row items-center justify-between">
               <AppText variant="label">Stock de la vente flash</AppText>
+              {/* Le ratio est TOUJOURS affiché — les affiches montrent
+                  « 27 / 100 », jamais un compte seul. « Plus que 4 ! » disait
+                  l'urgence en effaçant l'échelle : sans le total, on ne sait pas
+                  si l'offre part vite ou si elle était petite. L'urgence passe
+                  donc par la couleur, et le chiffre reste complet. */}
               <AppText
+                testID="product-stock"
                 variant="caption"
-                className={low ? 'font-sans-semibold text-brand-600' : 'text-ink-muted'}
+                className={low ? 'font-sans-bold text-brand-600' : 'text-ink-muted'}
               >
-                {low ? `Plus que ${deal.stockLeft} !` : `${deal.stockLeft} / ${deal.stockTotal}`}
+                {deal.stockLeft} / {deal.stockTotal}
+                {low ? ' · dernières pièces' : ''}
               </AppText>
             </View>
             <View className="h-2 overflow-hidden rounded-pill bg-surface-sunken">
@@ -224,9 +248,14 @@ export function ProductScreen({ dealId }: Props) {
           onPress={addAndGo}
           className="flex-1 flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-4 active:bg-brand-600"
         >
+          {/* « J'EN PROFITE » — l'appel à l'action des quatre affiches, et le
+              seul de la fiche. « Ajouter » décrit un geste d'interface ; « j'en
+              profite » dit ce qu'on y gagne, et c'est le mot que le client a
+              choisi pour sa marque. Le montant reste collé au bouton : personne
+              ne doit découvrir le total à l'écran suivant. */}
           <Feather name="shopping-bag" size={17} color={colors.inkInverse} />
           <AppText className="font-sans-bold text-ink-inverse">
-            Ajouter · {total.toFixed(2)}€
+            J’EN PROFITE · {total.toFixed(2)}€
           </AppText>
         </Pressable>
       </View>
