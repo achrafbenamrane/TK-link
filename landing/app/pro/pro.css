@@ -745,3 +745,10 @@
   padding: 7px 12px;
   font-size: 13px;
 }
+
+/* Mention discrète dans un en-tête de carte — « données de démonstration ». */
+.tkpro-note-inline {
+  font-size: 12px;
+  color: #8a958b;
+  white-space: nowrap;
+}

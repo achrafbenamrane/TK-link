@@ -161,7 +161,7 @@ export const OFFERS = [
     id: 'o2',
     title: 'Happy hour 17 h – 19 h',
     claim: '2 + 1',
-    audience: 'Membres TKtime',
+    audience: 'Membres TK LINK',
     flash: true,
     live: true,
   },
@@ -177,8 +177,80 @@ export const OFFERS = [
     id: 'o4',
     title: 'Café offert dès 15 €',
     claim: 'Offert',
-    audience: 'Membres TKtime',
+    audience: 'Membres TK LINK',
     flash: true,
     live: false,
   },
 ];
+
+/* ------------------------------------------------- performance par Flash
+ *
+ * CDC V1.0 §11.3 : le commerçant doit voir, pour chaque opération, les vues,
+ * la quantité initiale / vendue / restante, le chiffre d'affaires généré, la
+ * durée avant épuisement, le taux de conversion et la répartition entre
+ * Touch & Collect et livraison.
+ *
+ * Le document dit pourquoi, et c'est l'argument commercial de TK LINK :
+ * « le commerçant doit pouvoir répondre objectivement à — qu'est-ce que TKLINK
+ * m'a rapporté ? ». Sans ces chiffres, la conversion vers les offres payantes
+ * repose sur une impression.
+ *
+ * ⚠️ Données SIMULÉES, comme tout ce portail. Les vues, en particulier, ne
+ * peuvent venir que d'un back-end : le §12.2 en fait la source de vérité.
+ */
+export const FLASH_STATS = [
+  {
+    id: 'o1',
+    title: 'Formule déjeuner',
+    views: 412,
+    initial: 40,
+    sold: 37,
+    revenueCents: 44_030,
+    /** Minutes écoulées entre la publication et l'épuisement. `null` = pas épuisé. */
+    soldOutInMin: 74,
+    touchCollect: 29,
+    delivery: 8,
+  },
+  {
+    id: 'o2',
+    title: 'Happy hour 17 h – 19 h',
+    views: 268,
+    initial: 25,
+    sold: 25,
+    revenueCents: 18_750,
+    soldOutInMin: 41,
+    touchCollect: 25,
+    delivery: 0,
+  },
+  {
+    id: 'o3',
+    title: 'Brunch du dimanche',
+    views: 197,
+    initial: 30,
+    sold: 12,
+    revenueCents: 21_600,
+    soldOutInMin: null,
+    touchCollect: 7,
+    delivery: 5,
+  },
+];
+
+/** Ce qu'il reste : la quantité initiale moins ce qui est parti. */
+export const remaining = (s) => Math.max(0, s.initial - s.sold);
+
+/**
+ * Le taux de conversion, en pourcent — ventes rapportées aux vues.
+ *
+ * Zéro vue donne zéro, jamais une division par zéro : une offre publiée il y a
+ * dix secondes ne doit pas afficher « Infinity % ».
+ */
+export const conversionPct = (s) => (s.views > 0 ? Math.round((s.sold / s.views) * 100) : 0);
+
+/** « 1 h 14 » ou « — » tant que l'offre n'est pas épuisée. */
+export function formatSoldOut(min) {
+  if (min === null || min === undefined) return '—';
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, '0')}`;
+}

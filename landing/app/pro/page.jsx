@@ -12,7 +12,17 @@ import {
   operationsLeft,
   PACKS,
 } from './billing';
-import { DOCUMENTS, formatDate, formatMoney, OFFERS, PAPER_G_PER_RECEIPT } from './data';
+import {
+  conversionPct,
+  DOCUMENTS,
+  FLASH_STATS,
+  formatDate,
+  formatMoney,
+  formatSoldOut,
+  OFFERS,
+  PAPER_G_PER_RECEIPT,
+  remaining,
+} from './data';
 import OfferForm from './offer-form';
 import {
   ACTION_LABEL,
@@ -220,6 +230,59 @@ export default function ProPage() {
                   {DOCUMENTS.length} tickets non imprimés · {totals.points} points offerts
                 </div>
               </div>
+            </div>
+
+            {/* CDC V1.0 §11.3 — ce que chaque Flash a réellement produit.
+                Le document en donne la raison : « le commerçant doit pouvoir
+                répondre objectivement à — qu'est-ce que TKLINK m'a rapporté ? ».
+                Sans ces chiffres, la conversion vers les offres payantes repose
+                sur une impression. */}
+            <div className="tkpro-card">
+              <div className="tkpro-card-head">
+                <h2>Performance de vos Flash</h2>
+                <span className="tkpro-note-inline">Données de démonstration</span>
+              </div>
+              <div className="tkpro-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Opération</th>
+                      <th className="num">Vues</th>
+                      <th className="num">Vendu / initial</th>
+                      <th className="num">Reste</th>
+                      <th className="num">Conversion</th>
+                      <th className="num">Épuisé en</th>
+                      <th className="num">Chiffre d’affaires</th>
+                      <th>Retrait / livraison</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {FLASH_STATS.map((f) => (
+                      <tr key={f.id}>
+                        <td>
+                          <b>{f.title}</b>
+                        </td>
+                        <td className="num">{f.views}</td>
+                        <td className="num">
+                          {f.sold} / {f.initial}
+                        </td>
+                        <td className="num">{remaining(f)}</td>
+                        <td className="num">{conversionPct(f)}&nbsp;%</td>
+                        <td className="num">{formatSoldOut(f.soldOutInMin)}</td>
+                        <td className="num">{formatMoney(f.revenueCents)}</td>
+                        <td>
+                          {f.touchCollect} Touch &amp; Collect · {f.delivery} livraison
+                          {f.delivery > 1 ? 's' : ''}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="tkpro-note">
+                « Épuisé en » compte le temps entre la publication et la dernière unité vendue —
+                c’est lui qui dit si le prix était juste ou si la quantité était trop large.
+              </p>
             </div>
 
             <div className="tkpro-card">
