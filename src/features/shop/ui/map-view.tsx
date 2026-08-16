@@ -69,6 +69,20 @@ export function DealsMap({ deals, category }: Props) {
   const [routing, setRouting] = useState(false);
   /** Taille réelle du conteneur — la carte attend de la connaître pour se monter. */
   const [box, setBox] = useState<{ width: number; height: number } | null>(null);
+  /**
+   * Le chargement du fond de carte a-t-il échoué, et a-t-il fini par aboutir ?
+   *
+   * Un fond gris sans un mot est le pire des retours : impossible de savoir, sur
+   * l'APK de quelqu'un d'autre, si le style a été REFUSÉ (jeton, réseau) ou s'il
+   * a été chargé mais jamais PEINT (surface GL). Les deux donnent le même gris,
+   * et appellent des corrections opposées. Le SDK v10 n'expose pas la raison,
+   * mais il dit lequel des deux cas s'est produit — c'est déjà l'essentiel.
+   *
+   * Les deux événements ne s'excluent pas (documentation @rnmapbox/maps) : on ne
+   * signale donc l'échec que si le chargement n'a jamais abouti.
+   */
+  const [styleFailed, setStyleFailed] = useState(false);
+  const [styleLoaded, setStyleLoaded] = useState(false);
 
   // Un changement de filtre invalide la sélection : garder une route vers une
   // bulle qui vient de disparaître n'aurait aucun sens. Ajustement PENDANT le
@@ -151,6 +165,10 @@ export function DealsMap({ deals, category }: Props) {
           // Native lui donne — mauvais compagnon pour la carte de détail qu'on
           // superpose ici.
           surfaceView={false}
+          // Jeton refusé, style injoignable, téléphone hors ligne : tout passe
+          // par là. Sans ce rappel, l'échec est parfaitement silencieux.
+          onMapLoadingError={() => setStyleFailed(true)}
+          onDidFinishLoadingMap={() => setStyleLoaded(true)}
           scaleBarEnabled={false}
           logoPosition={{ bottom: 96, left: 12 }}
           attributionPosition={{ bottom: 96, left: 92 }}
@@ -207,6 +225,23 @@ export function DealsMap({ deals, category }: Props) {
             );
           })}
         </Mapbox.MapView>
+      ) : null}
+
+      {/* L'échec du fond de carte, dit à voix haute. Il se superpose sans
+          démonter la carte : les bulles de prix, elles, restent utilisables. */}
+      {styleFailed && !styleLoaded ? (
+        <View
+          testID="map-load-error"
+          className="absolute inset-x-4 top-4 rounded-card bg-ink/90 px-4 py-3"
+        >
+          <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 13 }}>
+            Fond de carte indisponible
+          </AppText>
+          <AppText className="mt-1 text-ink-inverse/80" style={{ fontSize: 12 }}>
+            Le style n’a pas pu être chargé. Vérifiez la connexion — les prix restent affichés et
+            cliquables.
+          </AppText>
+        </View>
       ) : null}
 
       {/* Carte de détail — remonte l'essentiel sans quitter la carte. */}
