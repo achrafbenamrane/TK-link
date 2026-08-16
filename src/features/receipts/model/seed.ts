@@ -1,11 +1,12 @@
 import { certificateFor, splitVat } from '../lib/receipts';
-import type { Receipt, ReceiptCategory, ReceiptChannel, ReceiptLine } from './schema';
+import type { Receipt, ReceiptCategory, ReceiptChannel, ReceiptKind, ReceiptLine } from './schema';
 
 /**
  * Tickets de démonstration.
  *
- * En production, un ticket arrive quand le client passe sa carte sur le lecteur
- * en caisse. Le matériel n'étant pas branché, on sème un historique crédible
+ * En production, un ticket arrive quand la commande est réglée — le CDC V1.0 a
+ * retiré tout le matériel du périmètre (« on reste uniquement sur du soft »),
+ * il n'y a donc ni lecteur ni carte. Sans back-end, on sème un historique
  * pour que l'app ait de la matière : recherche, groupement par mois, dépenses
  * par catégorie et conversion en facture sont ainsi démontrables.
  *
@@ -23,6 +24,16 @@ type Spec = {
   channel?: ReceiptChannel;
   /** Facture pro : échéance à 30 jours. */
   invoice?: boolean;
+  /**
+   * Force le type du document — CDC §9.1.
+   *
+   * Par défaut, `invoice` décide entre facture et ticket. Mais la GARANTIE est
+   * un troisième cas : c'est une preuve d'achat rattachée à un produit, dont la
+   * durée de vie suit celle de la garantie et non l'exercice comptable. Sans
+   * elle dans le jeu de démonstration, le filtre correspondant serait toujours
+   * vide — un filtre qui ne rend jamais rien se lit comme une panne.
+   */
+  kind?: ReceiptKind;
 };
 
 const SPECS: Spec[] = [
@@ -110,6 +121,16 @@ const SPECS: Spec[] = [
     daysAgo: 41,
     lines: [{ label: 'Place — séance 20 h 30', qty: 2, unitCents: 1120 }],
   },
+  // Une garantie — le quatrième document du §9.1. Un achat d'électronique est
+  // le cas typique : c'est la preuve qu'on cherche deux ans plus tard, quand
+  // l'appareil tombe en panne et que le ticket a disparu depuis longtemps.
+  {
+    merchant: 'Atelier Son — Capitole',
+    category: 'autre',
+    daysAgo: 96,
+    kind: 'garantie',
+    lines: [{ label: 'Casque audio sans fil — garantie 2 ans', qty: 1, unitCents: 8900 }],
+  },
 ];
 
 /** Construit l'historique de démonstration, daté par rapport à `now`. */
@@ -138,8 +159,11 @@ export function seedReceipts(now: number = Date.now()): Receipt[] {
       pinned: false,
       orderId: '',
     };
-    return spec.invoice
-      ? { ...base, kind: 'facture' as const, certificateId: certificateFor(base) }
-      : { ...base, kind: 'ticket' as const, certificateId: '' };
+    const kind: ReceiptKind = spec.kind ?? (spec.invoice ? 'facture' : 'ticket');
+    // Seule la facture porte un certificat : c'est elle que le §9.6 fait
+    // conserver dix ans, et donc elle seule qu'il faut pouvoir prouver intacte.
+    return kind === 'facture'
+      ? { ...base, kind, certificateId: certificateFor(base) }
+      : { ...base, kind, certificateId: '' };
   });
 }

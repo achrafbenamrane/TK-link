@@ -2,20 +2,34 @@ import { Feather } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import {
   ecoImpact,
+  filterReceipts,
   formatGrams,
   formatLiters,
   formatMoney,
   groupByMonth,
-  searchReceipts,
 } from '../lib/receipts';
 import { RETENTION_YEARS } from '../lib/retention';
+import { isCustomerFacing, RECEIPT_KIND_LABEL, ReceiptKindSchema } from '../model/schema';
+import type { ReceiptKind } from '../model/schema';
 import { selectReceipts, useReceiptsStore } from '../model/store';
 import { ReceiptRow } from './components/receipt-row';
+
+/**
+ * Les types proposés au filtre — CDC §9.1.
+ *
+ * Le ticket de PRÉPARATION est délibérément absent : le §6.3 en fait un
+ * document d'atelier, pour la cuisine ou le comptoir. Il ne sort jamais du
+ * commerce, et l'offrir au filtre du client afficherait les coulisses du
+ * commerçant. `isCustomerFacing` porte déjà cette règle — on la réutilise au
+ * lieu d'écrire la liste à la main, pour qu'un futur type l'hérite tout seul.
+ */
+const KINDS: ReceiptKind[] = ReceiptKindSchema.options.filter(isCustomerFacing);
 
 type Props = {
   /** Ouvre le détail d'un ticket (la route décide de la navigation). */
@@ -43,6 +57,8 @@ export function ReceiptsScreen({ onOpenReceipt }: Props) {
   // Zustand v5 (voir docs/quality/quality-score.md).
   const receipts = useReceiptsStore(selectReceipts);
   const [query, setQuery] = useState('');
+  /** `null` = tous les types. Voir `filterReceipts`. */
+  const [kind, setKind] = useState<ReceiptKind | null>(null);
 
   const [monthStart, monthEnd] = useMemo(() => currentMonthRange(), []);
 
@@ -55,7 +71,10 @@ export function ReceiptsScreen({ onOpenReceipt }: Props) {
   );
 
   const eco = useMemo(() => ecoImpact(receipts.length), [receipts.length]);
-  const filtered = useMemo(() => searchReceipts(receipts, query), [receipts, query]);
+  const filtered = useMemo(
+    () => filterReceipts(receipts, { query, kind }),
+    [receipts, query, kind],
+  );
   const groups = useMemo(() => groupByMonth(filtered), [filtered]);
 
   return (
@@ -108,7 +127,7 @@ export function ReceiptsScreen({ onOpenReceipt }: Props) {
             testID="receipts-search"
             value={query}
             onChangeText={setQuery}
-            placeholder="Enseigne, produit, référence…"
+            placeholder="Enseigne, produit, date, montant…"
             placeholderTextColor={colors.inkFaint}
             className="flex-1 font-sans text-ink"
             style={{ fontSize: 15 }}
@@ -127,6 +146,29 @@ export function ReceiptsScreen({ onOpenReceipt }: Props) {
             </Pressable>
           ) : null}
         </View>
+
+        {/* Filtre par type — CDC §9.1. Les quatre documents existaient déjà
+            dans le modèle mais ne se voyaient nulle part : le client ne pouvait
+            pas isoler ses factures de ses tickets, ni retrouver une garantie. */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="mt-3"
+          contentContainerClassName="gap-2 pr-5"
+        >
+          <KindChip label="Tous" active={kind === null} onPress={() => setKind(null)} />
+          {KINDS.map((k) => (
+            <KindChip
+              key={k}
+              testID={`receipts-kind-${k}`}
+              label={RECEIPT_KIND_LABEL[k]}
+              active={kind === k}
+              // Re-toucher le filtre actif le relâche : sinon il n'existe aucun
+              // moyen de revenir à « Tous » sans viser une autre puce.
+              onPress={() => setKind((prev) => (prev === k ? null : k))}
+            />
+          ))}
+        </ScrollView>
 
         {/* Historique groupé par mois */}
         {groups.length === 0 ? (
@@ -176,6 +218,40 @@ export function ReceiptsScreen({ onOpenReceipt }: Props) {
         </View>
       </ScrollView>
     </Screen>
+  );
+}
+
+/** Une puce de filtre. Vert plein quand elle est active — l'identité de marque. */
+function KindChip({
+  label,
+  active,
+  onPress,
+  testID,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  testID?: string;
+}) {
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`Filtrer sur ${label}`}
+      onPress={onPress}
+      className={cn(
+        'rounded-pill border px-3.5 py-2',
+        active ? 'border-brand-500 bg-brand-500' : 'border-line bg-surface',
+      )}
+    >
+      <AppText
+        className={cn('font-sans-semibold', active ? 'text-ink-inverse' : 'text-ink-muted')}
+        style={{ fontSize: 13 }}
+      >
+        {label}
+      </AppText>
+    </Pressable>
   );
 }
 

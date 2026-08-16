@@ -1,4 +1,5 @@
-import type { Receipt, ReceiptCategory, ReceiptLine } from '../model/schema';
+import { RECEIPT_KIND_LABEL } from '../model/schema';
+import type { Receipt, ReceiptCategory, ReceiptKind, ReceiptLine } from '../model/schema';
 
 /**
  * Logique pure du ticket dématérialisé — aucun rendu, aucun aléa caché.
@@ -117,13 +118,63 @@ const fold = (s: string): string =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 
+/**
+ * Tout ce sur quoi un document peut être retrouvé — CDC §9.1.
+ *
+ * Le document exige la recherche « par commerce, date, montant et type ». La
+ * version précédente n'indexait que l'enseigne, la référence et les libellés :
+ * chercher « 24,90 » ou « août » ne rendait rien, alors que ce sont deux façons
+ * parfaitement naturelles de retrouver un achat dont on a oublié le nom.
+ *
+ * Le montant est indexé sous ses DEUX écritures, virgule et point : on tape
+ * avec son clavier, pas avec la locale de l'application. La date l'est sous
+ * forme numérique et en toutes lettres, pour la même raison — « 12/08 » et
+ * « août » désignent le même achat.
+ */
+function haystack(r: Receipt): string {
+  const d = new Date(r.issuedAt);
+  const jour = String(d.getDate()).padStart(2, '0');
+  const mois = String(d.getMonth() + 1).padStart(2, '0');
+  const annee = d.getFullYear();
+  const moisEnLettres = d.toLocaleDateString('fr-FR', { month: 'long' });
+  const euros = (r.totalCents / 100).toFixed(2);
+
+  return fold(
+    [
+      r.merchant,
+      r.reference,
+      r.lines.map((l) => l.label).join(' '),
+      RECEIPT_KIND_LABEL[r.kind],
+      `${jour}/${mois}/${annee}`,
+      `${jour}/${mois}`,
+      moisEnLettres,
+      String(annee),
+      euros,
+      euros.replace('.', ','),
+    ].join(' '),
+  );
+}
+
 export function searchReceipts(receipts: Receipt[], query: string): Receipt[] {
   const q = fold(query.trim());
   if (!q) return receipts;
-  return receipts.filter((r) => {
-    const hay = fold(`${r.merchant} ${r.reference} ${r.lines.map((l) => l.label).join(' ')}`);
-    return hay.includes(q);
-  });
+  return receipts.filter((r) => haystack(r).includes(q));
+}
+
+/**
+ * La recherche du §9.1, filtre de type compris.
+ *
+ * `kind` à `null` veut dire « tous les types », et non « aucun ». La nuance
+ * compte : un filtre vide qui ne rendrait rien laisserait croire que l'espace
+ * Documents est vide.
+ */
+export function filterReceipts(
+  receipts: Receipt[],
+  options: { query?: string; kind?: ReceiptKind | null } = {},
+): Receipt[] {
+  const { query = '', kind = null } = options;
+  const parType = kind ? receipts.filter((r) => r.kind === kind) : receipts;
+  return searchReceipts(parType, query);
 }
 
 /* ─── Impact évité ──────────────────────────────────────────────────────────

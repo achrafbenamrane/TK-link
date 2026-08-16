@@ -9,6 +9,7 @@ import {
   WATER_L_PER_RECEIPT,
   groupByMonth,
   linesTotalCents,
+  filterReceipts,
   searchReceipts,
   splitVat,
   toInvoice,
@@ -166,6 +167,57 @@ describe('searchReceipts', () => {
 
   it('rend tout pour une requête vide', () => {
     expect(searchReceipts(list, '   ')).toHaveLength(3);
+  });
+
+  /**
+   * CDC §9.1 — « recherche par commerce, date, montant et type ».
+   *
+   * Les trois derniers manquaient : la recherche n'indexait que l'enseigne, la
+   * référence et les libellés. Or on retrouve très souvent un achat par son
+   * montant ou son mois, précisément quand on a oublié le nom du commerce.
+   */
+  it('trouve par MONTANT, à la virgule comme au point', () => {
+    const cher = mk({ id: 'd', merchant: 'Fnac', totalCents: 2490 });
+    expect(searchReceipts([...list, cher], '24,90').map((r) => r.id)).toEqual(['d']);
+    expect(searchReceipts([...list, cher], '24.90').map((r) => r.id)).toEqual(['d']);
+  });
+
+  it('trouve par DATE, en chiffres comme en toutes lettres', () => {
+    // Le helper date tout au 12 mars 2026.
+    expect(searchReceipts(list, '12/03')).toHaveLength(3);
+    expect(searchReceipts(list, 'mars')).toHaveLength(3);
+    expect(searchReceipts(list, '2026')).toHaveLength(3);
+    expect(searchReceipts(list, 'janvier')).toHaveLength(0);
+  });
+
+  it('trouve par TYPE de document', () => {
+    const facture = mk({ id: 'f', kind: 'facture' });
+    expect(searchReceipts([...list, facture], 'facture').map((r) => r.id)).toEqual(['f']);
+  });
+});
+
+describe('filterReceipts — §9.1', () => {
+  const list = [
+    mk({ id: 't', kind: 'ticket', merchant: 'Monoprix' }),
+    mk({ id: 'f', kind: 'facture', merchant: 'Bureau Vallée' }),
+    mk({ id: 'g', kind: 'garantie', merchant: 'Atelier Son' }),
+  ];
+
+  it('sans type, ne retire rien', () => {
+    expect(filterReceipts(list)).toHaveLength(3);
+    expect(filterReceipts(list, { kind: null })).toHaveLength(3);
+  });
+
+  it('isole un type', () => {
+    expect(filterReceipts(list, { kind: 'garantie' }).map((r) => r.id)).toEqual(['g']);
+  });
+
+  it('combine le type et la recherche', () => {
+    expect(filterReceipts(list, { kind: 'facture', query: 'bureau' }).map((r) => r.id)).toEqual([
+      'f',
+    ]);
+    // Le type gagne : « Monoprix » existe, mais pas en facture.
+    expect(filterReceipts(list, { kind: 'facture', query: 'monoprix' })).toHaveLength(0);
   });
 });
 
