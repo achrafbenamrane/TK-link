@@ -36,12 +36,17 @@ const STATUS_ICON: Record<OrderStatus, FeatherName> = {
   creee: 'file-text',
   paiement_attente: 'clock',
   payee: 'credit-card',
+  acceptee: 'thumbs-up',
   preparation: 'package',
   prete: 'check-circle',
+  en_livraison: 'truck',
   recuperee: 'shopping-bag',
   livree: 'check',
+  refusee: 'slash',
   annulee: 'x-circle',
+  remboursement_en_cours: 'rotate-ccw',
   remboursee: 'corner-up-left',
+  litige: 'alert-triangle',
 };
 
 function formatDate(ts: number): string {

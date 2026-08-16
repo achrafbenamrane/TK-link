@@ -15,18 +15,35 @@ import { FulfilmentSchema } from '../model/schema';
 import { formatCountdown } from '../ui/components/countdown';
 
 describe('statuts — CDC §11', () => {
-  it('reprend les dix statuts du cahier des charges', () => {
+  /**
+   * Les statuts du CDC, ENRICHIS de ce que les schémas du client ont tranché.
+   *
+   * « Acceptée » et « En livraison » manquaient : le fichier portait une note
+   * disant qu'on attendait l'arbitrage de Farid. Les quatre schémas remis le
+   * 16/08/2026 les dessinent noir sur blanc — la question était déjà répondue,
+   * dans un document qu'on n'avait pas encore lu.
+   *
+   * S'y ajoutent les états d'exception du §5.2, que les schémas ne montrent pas
+   * parce qu'ils décrivent le parcours nominal : refusée, remboursement en
+   * cours, litige.
+   */
+  it('reprend les statuts du CDC et ceux des schémas client', () => {
     expect([...ORDER_STATUSES]).toEqual([
       'panier',
       'creee',
       'paiement_attente',
       'payee',
+      'acceptee',
       'preparation',
       'prete',
+      'en_livraison',
       'recuperee',
       'livree',
+      'refusee',
       'annulee',
+      'remboursement_en_cours',
       'remboursee',
+      'litige',
     ]);
   });
 
@@ -49,8 +66,10 @@ describe('machine à états', () => {
       'creee',
       'paiement_attente',
       'payee',
+      'acceptee',
       'preparation',
       'prete',
+      'en_livraison',
       'livree',
     ];
     for (let i = 0; i < path.length - 1; i++) {
@@ -77,8 +96,22 @@ describe('machine à états', () => {
   });
 
   it('permet encore de rembourser une commande annulée', () => {
-    // Annulée après paiement : l’argent doit pouvoir revenir.
-    expect(canTransition('annulee', 'remboursee', 'livraison')).toBe(true);
+    // Annulée après paiement : l’argent doit pouvoir revenir — en passant par
+    // « remboursement en cours », parce que le virement prend des jours et que
+    // le client doit voir cette attente plutôt qu'un « remboursée » qui ment.
+    expect(canTransition('annulee', 'remboursement_en_cours', 'livraison')).toBe(true);
+    expect(canTransition('remboursement_en_cours', 'remboursee', 'livraison')).toBe(true);
+  });
+
+  it('oblige un refus à rendre l’argent', () => {
+    // Une commande payée puis refusée par le commerçant ne peut pas s'arrêter
+    // là : l'argent est déjà pris.
+    expect(canTransition('payee', 'refusee', 'livraison')).toBe(true);
+    expect(nextStatuses('refusee', 'livraison')).toEqual(['remboursement_en_cours']);
+  });
+
+  it('ne laisse pas un litige s’enterrer', () => {
+    expect(nextStatuses('litige', 'livraison').length).toBeGreaterThan(0);
   });
 
   it('ne connaît qu’un seul état terminal', () => {
@@ -93,10 +126,13 @@ describe('Touch & Collect vs livraison — CDC §12', () => {
     expect(canTransition('prete', 'livree', 'touch-collect')).toBe(false);
   });
 
-  it('une commande livrée se termine « livrée », jamais « récupérée »', () => {
-    expect(nextStatuses('prete', 'livraison')).toContain('livree');
+  it('une commande livrée passe par le livreur, jamais par « récupérée »', () => {
+    // « Prête » ne mène plus directement chez le client en livraison : elle
+    // mène au livreur. C'est l'étape la plus attendue du parcours.
+    expect(nextStatuses('prete', 'livraison')).toContain('en_livraison');
     expect(nextStatuses('prete', 'livraison')).not.toContain('recuperee');
     expect(canTransition('prete', 'recuperee', 'livraison')).toBe(false);
+    expect(canTransition('en_livraison', 'livree', 'livraison')).toBe(true);
   });
 
   it('laisse annuler dans les deux modes', () => {
@@ -113,7 +149,11 @@ describe('frise du client', () => {
 
   it('situe la commande sur la frise', () => {
     expect(timelineIndex('creee', 'livraison')).toBe(0);
-    expect(timelineIndex('livree', 'livraison')).toBe(5);
+    // La livraison compte une étape de plus que le retrait.
+    expect(timelineIndex('livree', 'livraison')).toBe(timelineFor('livraison').length - 1);
+    expect(timelineIndex('recuperee', 'touch-collect')).toBe(
+      timelineFor('touch-collect').length - 1,
+    );
   });
 
   it('sort de la frise ce qui n’en fait pas partie', () => {
@@ -132,6 +172,11 @@ describe('isActive', () => {
     expect(isActive('livree')).toBe(false);
     expect(isActive('recuperee')).toBe(false);
     expect(isActive('annulee')).toBe(false);
+    expect(isActive('refusee')).toBe(false);
+    // Un litige et un remboursement en cours restent « en cours » : ce sont
+    // exactement les commandes qu'on veut retrouver en haut de sa liste.
+    expect(isActive('litige')).toBe(true);
+    expect(isActive('remboursement_en_cours')).toBe(true);
   });
 });
 

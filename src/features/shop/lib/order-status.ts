@@ -6,10 +6,16 @@
  * neutres et la machine à états est isolée ici, pour qu'un changement de
  * vocabulaire ne se propage pas dans les écrans.
  *
- * ⚠️ Manque à la liste du CDC : un statut « en cours de livraison », entre
- * « prête » et « livrée ». L'app le montrait déjà (suivi du livreur). En
- * attendant l'arbitrage de Farid, une commande confiée au livreur reste
- * « prête » — voir la question remontée dans le plan de conformité.
+ * ✅ Deux questions ouvertes le sont restées jusqu'aux schémas remis le
+ * 16/08/2026 : le client y dessine lui-même « Acceptée » entre le paiement et
+ * la préparation, et « En livraison » entre « Prête » et « Livrée ». Ce n'était
+ * donc pas à nous d'arbitrer — c'était déjà tranché, dans un document qu'on
+ * n'avait pas encore. Voir docs/product/parcours-clients.md.
+ *
+ * Ajouter une valeur à cet énum est SANS RISQUE pour les commandes déjà
+ * stockées : les anciennes valeurs restent valides à la réhydratation. En
+ * renommer une, en revanche, les effacerait toutes — c'est ce qui a failli
+ * arriver avec « Click & Collect ».
  */
 
 export const ORDER_STATUSES = [
@@ -17,12 +23,22 @@ export const ORDER_STATUSES = [
   'creee',
   'paiement_attente',
   'payee',
+  // Le commerçant a vu la commande et s'engage à la préparer. Le schéma du
+  // client en fait une étape à part, et il a raison : entre « payée » et « en
+  // préparation », le client attend sans savoir si quelqu'un l'a lue.
+  'acceptee',
   'preparation',
   'prete',
+  'en_livraison',
   'recuperee',
   'livree',
+  // ─── États d'exception — CDC §5.2. Les schémas ne les montrent pas (ce sont
+  // des visuels de parcours nominal), le cahier des charges les exige.
+  'refusee',
   'annulee',
+  'remboursement_en_cours',
   'remboursee',
+  'litige',
 ] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -32,12 +48,17 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   creee: 'Commande créée',
   paiement_attente: 'Paiement en attente',
   payee: 'Payée',
+  acceptee: 'Acceptée',
   preparation: 'En préparation',
   prete: 'Prête',
+  en_livraison: 'En livraison',
   recuperee: 'Récupérée',
   livree: 'Livrée',
+  refusee: 'Refusée',
   annulee: 'Annulée',
+  remboursement_en_cours: 'Remboursement en cours',
   remboursee: 'Remboursée',
+  litige: 'Litige',
 };
 
 /**
@@ -71,14 +92,26 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   panier: ['creee', 'annulee'],
   creee: ['paiement_attente', 'annulee'],
   paiement_attente: ['payee', 'annulee'],
-  payee: ['preparation', 'annulee', 'remboursee'],
-  preparation: ['prete', 'annulee'],
-  prete: ['recuperee', 'livree', 'annulee'],
-  recuperee: ['remboursee'],
-  livree: ['remboursee'],
+  // Une commande payée que le commerçant REFUSE doit partir au remboursement :
+  // l'argent est déjà pris. C'est le seul chemin honnête.
+  payee: ['acceptee', 'refusee', 'annulee', 'remboursement_en_cours'],
+  acceptee: ['preparation', 'annulee', 'remboursement_en_cours'],
+  preparation: ['prete', 'annulee', 'remboursement_en_cours'],
+  prete: ['recuperee', 'en_livraison', 'annulee'],
+  en_livraison: ['livree', 'litige'],
+  recuperee: ['remboursement_en_cours', 'litige'],
+  livree: ['remboursement_en_cours', 'litige'],
+  // Un refus laisse l'argent à rendre : il ne se termine pas sur lui-même.
+  refusee: ['remboursement_en_cours'],
   // Une commande annulée après paiement doit encore pouvoir être remboursée.
-  annulee: ['remboursee'],
+  annulee: ['remboursement_en_cours'],
+  // Le remboursement est un ÉTAT, pas un instant : entre la décision et le
+  // virement il se passe des jours, et le client doit voir cette attente
+  // plutôt qu'un « remboursée » qui ment sur son compte en banque.
+  remboursement_en_cours: ['remboursee'],
   remboursee: [],
+  // Un litige se résout dans un sens ou dans l'autre — il ne s'enterre pas.
+  litige: ['remboursement_en_cours', 'recuperee', 'livree'],
 };
 
 /**
@@ -91,7 +124,8 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 export function nextStatuses(status: OrderStatus, fulfilment: Fulfilment): OrderStatus[] {
   const all = TRANSITIONS[status];
   if (status !== 'prete') return all;
-  const end: OrderStatus = fulfilment === 'touch-collect' ? 'recuperee' : 'livree';
+  // En livraison, « prête » mène au livreur — pas directement chez le client.
+  const end: OrderStatus = fulfilment === 'touch-collect' ? 'recuperee' : 'en_livraison';
   return all.filter((s) => s === end || s === 'annulee');
 }
 
@@ -104,9 +138,16 @@ export function isFinal(status: OrderStatus): boolean {
   return TRANSITIONS[status].length === 0;
 }
 
-/** La commande est-elle encore en cours, du point de vue du client ? */
+/**
+ * La commande est-elle encore en cours, du point de vue du client ?
+ *
+ * Un litige et un remboursement en cours comptent pour « en cours » : ce sont
+ * exactement les commandes qu'on veut retrouver en haut de sa liste, pas
+ * classées avec celles qui sont réglées.
+ */
 export function isActive(status: OrderStatus): boolean {
-  return !['recuperee', 'livree', 'annulee', 'remboursee'].includes(status);
+  const termines: OrderStatus[] = ['recuperee', 'livree', 'refusee', 'annulee', 'remboursee'];
+  return !termines.includes(status);
 }
 
 /** Le parcours nominal affiché au client, selon son mode de retrait. */
@@ -115,9 +156,14 @@ export function timelineFor(fulfilment: Fulfilment): OrderStatus[] {
     'creee',
     'paiement_attente',
     'payee',
+    'acceptee',
     'preparation',
     'prete',
-    fulfilment === 'touch-collect' ? 'recuperee' : 'livree',
+    // La livraison a une étape de plus que le retrait, et c'est la plus
+    // attendue de tout le parcours : « c'est parti, ça arrive ».
+    ...(fulfilment === 'touch-collect'
+      ? (['recuperee'] as OrderStatus[])
+      : (['en_livraison', 'livree'] as OrderStatus[])),
   ];
 }
 
@@ -139,10 +185,18 @@ export const STATUS_TONE: Record<OrderStatus, StatusTone> = {
   creee: 'attente',
   paiement_attente: 'attente',
   payee: 'encours',
+  acceptee: 'encours',
   preparation: 'encours',
   prete: 'encours',
+  en_livraison: 'encours',
   recuperee: 'succes',
   livree: 'succes',
+  refusee: 'echec',
   annulee: 'echec',
+  // Un remboursement en cours n'est pas un échec pour le client : c'est de
+  // l'attente, et son argent revient. Le peindre en rouge l'inquiéterait sans
+  // raison — le rouge est réservé à ce qui a définitivement mal tourné.
+  remboursement_en_cours: 'attente',
   remboursee: 'echec',
+  litige: 'echec',
 };

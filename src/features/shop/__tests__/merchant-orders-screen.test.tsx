@@ -61,16 +61,19 @@ describe('<MerchantOrdersScreen /> — CDC §11 et §18', () => {
     useShopStore.setState({ orders: [order()] });
     render(<MerchantOrdersScreen dealIds={[MINE]} />);
 
-    fireEvent.press(screen.getByTestId('merchant-order-o_1-preparation'));
+    // Depuis « payée », le commerçant ACCEPTE d'abord — le schéma du client en
+    // fait une étape à part, et il a raison : entre le paiement et la mise en
+    // préparation, le client attend sans savoir si quelqu'un l'a lue.
+    fireEvent.press(screen.getByTestId('merchant-order-o_1-acceptee'));
 
     const updated = useShopStore.getState().orders[0]!;
-    expect(updated.status).toBe('preparation');
+    expect(updated.status).toBe('acceptee');
     // `managed` est ce qui empêche la simulation d'écraser la décision du
     // commerçant à la seconde suivante.
     expect(updated.managed).toBe(true);
 
     useShopStore.getState().syncOrderStatuses();
-    expect(useShopStore.getState().orders[0]!.status).toBe('preparation');
+    expect(useShopStore.getState().orders[0]!.status).toBe('acceptee');
   });
 
   it('ne propose jamais un chemin interdit par la machine à états', () => {

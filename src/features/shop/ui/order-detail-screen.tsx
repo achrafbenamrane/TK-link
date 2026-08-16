@@ -26,12 +26,17 @@ const STEP_ICON: Record<OrderStatus, FeatherName> = {
   creee: 'file-text',
   paiement_attente: 'clock',
   payee: 'credit-card',
+  acceptee: 'thumbs-up',
   preparation: 'package',
   prete: 'check-circle',
+  en_livraison: 'truck',
   recuperee: 'shopping-bag',
   livree: 'truck',
+  refusee: 'slash',
   annulee: 'x-circle',
+  remboursement_en_cours: 'rotate-ccw',
   remboursee: 'corner-up-left',
+  litige: 'alert-triangle',
 };
 
 /** Ce que chaque étape veut dire pour le client, selon son mode de retrait. */
