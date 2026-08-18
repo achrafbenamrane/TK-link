@@ -3,15 +3,7 @@
 import { useMemo, useState } from 'react';
 
 import './pro.css';
-import {
-  canPublish,
-  COMMISSION_PCT,
-  formatCents,
-  freeLeft,
-  FREE_OPERATIONS,
-  operationsLeft,
-  PACKS,
-} from './billing';
+import { COMMISSION_PCT, freeLeft } from './billing';
 import {
   conversionPct,
   DOCUMENTS,
@@ -83,7 +75,6 @@ export default function ProPage() {
   const [offers, setOffers] = useState(OFFERS);
   const [composing, setComposing] = useState(false);
   const [used, setUsed] = useState(OFFERS.length);
-  const [purchased, setPurchased] = useState(0);
 
   /* --- Commandes reçues (CDC §11 et §18). --- */
   const [orders, setOrders] = useState(ORDERS);
@@ -93,9 +84,10 @@ export default function ProPage() {
 
   const waiting = orders.filter((o) => isActive(o.status)).length;
 
-  const left = operationsLeft(used, purchased);
-  const free = freeLeft(used);
-  const allowed = canPublish(used, purchased);
+  // Plus de packs achetés : seules les opérations offertes comptent, tant que
+  // la tarification n'est pas arbitrée par le client (CDC §14).
+  const left = freeLeft(used);
+  const allowed = left > 0;
 
   const selected = useMemo(() => DOCUMENTS.find((d) => d.id === selectedId) ?? null, [selectedId]);
 
@@ -607,33 +599,20 @@ export default function ProPage() {
               </button>
             </div>
 
-            {/* Le quota du CDC §9, affiché AVANT d'être subi. */}
+            {/* Ce qu'il reste à publier, et rien d'autre.
+                Ce bandeau vendait des packs — « 191 opérations disponibles, dont
+                1 offerte », avec trois boutons à 9,90 / 24,90 / 69,00 €. Deux
+                défauts. Il était illisible : personne ne comprend un solde qui
+                mélange des crédits offerts et des crédits achetés. Et surtout
+                ces prix étaient INVENTÉS : le §14 du CDC classe « la tarification
+                des packs » parmi les points volontairement non tranchés, et
+                interdit de leur donner une valeur. Montrer un tarif au client
+                sur son propre espace pro, c'est décider à sa place. */}
             <div className={allowed ? 'tkpro-quota' : 'tkpro-quota empty'}>
               <div>
                 <b>
-                  {left} opération{left > 1 ? 's' : ''} disponible{left > 1 ? 's' : ''}
+                  {left} offre{left > 1 ? 's' : ''} flash disponible{left > 1 ? 's' : ''}
                 </b>
-                <span>
-                  {free > 0
-                    ? `Dont ${free} offerte${free > 1 ? 's' : ''} — les ${FREE_OPERATIONS} premières sont gratuites.`
-                    : 'Vos opérations gratuites sont consommées : prenez un pack pour continuer.'}
-                </span>
-              </div>
-              <div className="tkpro-packs">
-                {PACKS.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className="tkpro-pack"
-                    onClick={() => {
-                      setPurchased((n) => n + p.operations);
-                      notify(`${p.label} crédité — ${p.operations} opérations.`);
-                    }}
-                  >
-                    <b>{p.operations}</b>
-                    <span>{formatCents(p.priceCents)}</span>
-                  </button>
-                ))}
               </div>
             </div>
 
