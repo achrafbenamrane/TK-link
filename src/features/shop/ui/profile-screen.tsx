@@ -73,10 +73,21 @@ type ProfileScreenProps = {
   name?: string;
   /** Une ligne de contexte VRAIE — le rôle, pas un quartier inventé. */
   subtitle?: string;
+  /**
+   * Repasser du côté consommateur.
+   *
+   * Rendu par la route, comme le reste de ce qui touche au rôle. Sans cette
+   * sortie, la bascule vers l'espace commerçant serait un piège : l'accueil
+   * devient « Lots des grossistes », les ventes flash disparaissent, et plus
+   * rien ne ramène en arrière. Une porte qui ne s'ouvre que dans un sens est un
+   * défaut, pas une fonctionnalité.
+   */
+  onLeaveMerchantSpace?: () => void;
 };
 
 export function ProfileScreen({
   canPublishOffers = false,
+  onLeaveMerchantSpace,
   renderAvatar,
   name,
   subtitle,
@@ -236,6 +247,26 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
             s'approvisionner (son accueil, ce sont les lots des grossistes) ;
             publier et suivre ses commandes se fait sur l'espace pro. On le dit
             plutôt que de laisser chercher. */}
+        {canPublishOffers && onLeaveMerchantSpace ? (
+          <Pressable
+            testID="profile-leave-merchant"
+            accessibilityRole="button"
+            accessibilityLabel="Revenir à l’application consommateur"
+            onPress={onLeaveMerchantSpace}
+            className="mb-4 flex-row items-center gap-3 rounded-card border border-line bg-surface-muted p-4 active:opacity-70"
+          >
+            <Feather name="repeat" size={16} color={colors.inkMuted} />
+            <View className="flex-1">
+              <AppText className="font-sans-bold text-ink" style={{ fontSize: 14 }}>
+                Revenir à l’app consommateur
+              </AppText>
+              <AppText variant="caption" className="text-ink-faint">
+                Démo : bascule le rôle de ce téléphone. En production, c’est le compte qui décide.
+              </AppText>
+            </View>
+          </Pressable>
+        ) : null}
+
         {canPublishOffers ? (
           <View className="mb-4 gap-2 rounded-card bg-surface-inverse p-4">
             <View className="flex-row items-center gap-2">

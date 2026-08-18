@@ -42,7 +42,22 @@ const SELLING_POINTS = [
   { icon: 'users' as const, text: 'Visible par tout votre quartier' },
 ];
 
-export function MerchantScreen() {
+type Props = {
+  /**
+   * Ouvrir l'espace commerçant pour de bon.
+   *
+   * L'interface existe déjà — l'accueil d'un commerçant, ce sont les lots des
+   * grossistes et non les ventes flash — mais le RÔLE ne se choisissait qu'à
+   * l'accueil des nouveaux. Qui était entré comme particulier n'avait plus
+   * aucun moyen d'y accéder, et pouvait en conclure qu'elle n'existait pas.
+   *
+   * La bascule vit dans la route : `shop` et `onboarding` sont deux tranches
+   * distinctes, et une tranche n'importe pas sa voisine.
+   */
+  onOpenMerchantSpace?: () => void;
+};
+
+export function MerchantScreen({ onOpenMerchantSpace }: Props = {}) {
   const submitted = useShopStore((s) => s.merchantApplication);
   const submit = useShopStore((s) => s.submitMerchantApplication);
 
@@ -86,11 +101,26 @@ export function MerchantScreen() {
             Merci {submitted.contactName}. La demande de {submitted.shopName} va être étudiée par
             notre équipe, et la réponse vous sera envoyée par e-mail à {submitted.email} sous 48 h.
           </AppText>
-          {/* Honnêteté : pas de back-end pour l'instant, la demande reste locale. */}
+          {onOpenMerchantSpace ? (
+            <View className="mt-2 w-full">
+              <Button
+                testID="merchant-open-space"
+                label="Découvrir mon espace commerçant"
+                onPress={onOpenMerchantSpace}
+              />
+            </View>
+          ) : null}
+
+          {/* Honnêteté : pas de back-end pour l'instant, la demande reste locale.
+              Et surtout, cet aperçu N'EST PAS une validation : le §12.2 du CDC
+              fait du serveur la source de vérité sur les droits. Laisser croire
+              qu'une demande s'auto-approuve serait un mensonge d'interface. */}
           <View className="mt-3 flex-row gap-2 rounded-card border border-line bg-surface-muted p-3">
             <Feather name="info" size={15} color={colors.inkFaint} />
             <AppText variant="caption" className="flex-1 text-ink-faint">
               Démo : la demande est enregistrée sur cet appareil, pas encore envoyée à un serveur.
+              L’aperçu ci-dessus montre l’espace commerçant sans attendre la validation — en
+              production, c’est le Super Admin qui l’ouvre.
             </AppText>
           </View>
         </View>

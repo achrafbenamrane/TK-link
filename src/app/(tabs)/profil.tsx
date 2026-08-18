@@ -23,6 +23,7 @@ import { canPublishOffers, ROLE_LABEL } from '@/shared/lib/roles';
  */
 export default function ProfilRoute() {
   const role = useOnboardingStore(selectRole);
+  const setRole = useOnboardingStore((s) => s.setRole);
   const avatar = useOnboardingStore(selectAvatar);
   const firstName = useOnboardingStore(selectFirstName);
 
@@ -32,6 +33,7 @@ export default function ProfilRoute() {
       renderAvatar={() => <AvatarView avatar={avatar} size={56} />}
       name={firstName}
       subtitle={ROLE_LABEL[role]}
+      onLeaveMerchantSpace={() => setRole('consommateur')}
     />
   );
 }
