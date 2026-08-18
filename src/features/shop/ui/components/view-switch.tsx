@@ -26,7 +26,11 @@ export function ViewSwitch({ value, onChange }: Props) {
   return (
     <View
       accessibilityRole="tablist"
-      className="flex-row rounded-pill border border-line bg-surface-muted p-1"
+      // Pleine largeur, et les deux moitiés à parts égales. Le sélecteur était
+      // coincé à droite d'un en-tête déjà chargé, entre l'identité et deux
+      // autres boutons : « on ne le remarque pas ». Il occupe désormais sa
+      // propre ligne, et sa largeur lui vaut d'être vu.
+      className="w-full flex-row rounded-pill border border-line bg-surface-muted p-1"
     >
       {OPTIONS.map((option) => {
         const active = value === option.key;
@@ -39,18 +43,18 @@ export function ViewSwitch({ value, onChange }: Props) {
             accessibilityLabel={`Afficher en ${option.label.toLowerCase()}`}
             onPress={() => onChange(option.key)}
             className={cn(
-              'flex-row items-center gap-1.5 rounded-pill px-3.5 py-1.5',
+              'flex-1 flex-row items-center justify-center gap-1.5 rounded-pill px-3.5 py-2',
               active && 'bg-ink',
             )}
           >
             <Feather
               name={option.icon}
-              size={14}
+              size={15}
               color={active ? colors.inkInverse : colors.inkMuted}
             />
             <AppText
               className={cn(
-                'text-xs',
+                'text-sm',
                 active ? 'font-sans-bold text-ink-inverse' : 'font-sans-medium text-ink-muted',
               )}
             >

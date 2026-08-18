@@ -220,19 +220,31 @@ export function HomeScreen({
             <AppText className="font-display text-ink" style={{ fontSize: 20 }}>
               TK<AppText className="text-brand-500"> LINK</AppText>
             </AppText>
+            {/* Une seule ligne. « Toulouse · Centre » se cassait en deux parce
+                que l'en-tête portait cinq éléments de front ; le sélecteur de
+                vue étant descendu, la place existe — et `numberOfLines` la
+                garantit même sur un écran étroit. */}
             <View className="mt-0.5 flex-row items-center gap-1">
               <Feather name="map-pin" size={12} color={colors.inkFaint} />
-              <AppText variant="caption" className="text-ink-faint">
+              <AppText variant="caption" className="flex-1 text-ink-faint" numberOfLines={1}>
                 Toulouse · Centre
               </AppText>
             </View>
           </View>
         </View>
         <View className="flex-row items-center gap-2">
-          <ViewSwitch value={view} onChange={setView} />
           <PreferencesButton />
           <CartButton />
         </View>
+      </View>
+
+      {/* Le sélecteur Liste / Carte, seul sur sa ligne.
+          Il était logé à droite de l'en-tête, entre l'identité et deux autres
+          boutons — « on ne le remarque pas ». C'est pourtant lui qui commande
+          la bascule entre les deux façons de parcourir les offres : il mérite
+          sa propre ligne et toute la largeur. */}
+      <View className="px-5 pb-3">
+        <ViewSwitch value={view} onChange={setView} />
       </View>
 
       {/* Vue carte : même état de filtre que la liste, un seul `deals`. */}
