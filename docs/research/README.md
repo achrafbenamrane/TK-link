@@ -18,6 +18,7 @@ the matching brief first so you copy the _verified current_ pattern, not a guess
 | [04-design-and-prompting.md](04-design-and-prompting.md)         | Phase 4 & 7 — premium UI attributes, design tokens, the professional AI design brief                                     |
 | [05-agent-skill-architecture.md](05-agent-skill-architecture.md) | Phases 5 & 6 — skills, plugins, hooks, subagents, AI-legible docs                                                        |
 | [06-payments-analytics-stack.md](06-payments-analytics-stack.md) | Phases 2,3,6 — RevenueCat + Supabase + PostHog + Sentry decision                                                         |
+| [08-zelty-caisse-restaurants.md](08-zelty-caisse-restaurants.md) | Le raccordement à une caisse de restaurant et le routage POS/KDS du CDC §6.4                                             |
 | [07-community-sentiment.md](07-community-sentiment.md)           | Anytime — the lived-experience/forum view of what actually bites builders in our situation, and how it sharpens the plan |
 
 **Provenance.** Compiled 2026-06-18 by six parallel web-research passes against primary sources
