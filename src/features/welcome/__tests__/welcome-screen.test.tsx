@@ -22,14 +22,18 @@ describe('<WelcomeScreen />', () => {
     expect(screen.getByTestId('welcome-screen')).toBeTruthy();
     expect(screen.getByTestId('welcome-panel-flash')).toBeTruthy();
     expect(screen.getByTestId('welcome-panel-jeux')).toBeTruthy();
-    expect(screen.getByTestId('welcome-panel-chasse')).toBeTruthy();
+    expect(screen.getByTestId('welcome-panel-proximite')).toBeTruthy();
     // Les scènes animées sont là, pas seulement leurs titres.
     // Le premier plan montre une VENTE FLASH, plus une carte sur un lecteur :
     // ce matériel ne sera pas réalisé, et la scène le vendait.
     expect(screen.getByTestId('welcome-flash')).toBeTruthy();
     expect(screen.queryByTestId('welcome-card-scene')).toBeNull();
     expect(screen.getByTestId('welcome-pacman')).toBeTruthy();
-    expect(screen.getByTestId('welcome-hub')).toBeTruthy();
+    // « La Chasse » a été retirée le 18/08 : deux panneaux sur trois parlaient
+    // de jeux, alors que l'app sert à obtenir des promotions sur un temps
+    // court. Sa place revient aux offres personnalisées et proches.
+    expect(screen.queryByTestId('welcome-hub')).toBeNull();
+    expect(screen.getByTestId('welcome-nearby')).toBeTruthy();
   });
 
   it('« Commencer » marque l’accueil vu et enchaîne sur l’onboarding', () => {

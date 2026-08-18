@@ -19,7 +19,7 @@ import { colors } from '@/shared/theme/colors';
 
 import { useWelcomeStore } from '../model/store';
 import { FlashScene } from './scenes/flash-scene';
-import { HubScene } from './scenes/hub-scene';
+import { NearbyScene } from './scenes/nearby-scene';
 import { PacmanScene } from './scenes/pacman-scene';
 import { TkMark } from './tk-mark';
 
@@ -45,16 +45,21 @@ const PANELS: Panel[] = [
     line: 'Les commerçants du quartier bradent ce qui doit partir aujourd’hui. Un compte à rebours, un stock qui fond : vous prenez, ou ça disparaît.',
   },
   {
+    // Panneau ajouté le 18/08, à la place de « La Chasse ». Deux panneaux sur
+    // trois parlaient de jeux, alors que l'app sert à obtenir des promotions
+    // sur un temps court : « un seul panneau suffit ». Celui-ci prend la place
+    // libérée pour dire ce que le parcours consommateur promet aux étapes 3
+    // et 4 — centres d'intérêt, puis localisation.
+    key: 'proximite',
+    title: 'Des offres personnalisées,',
+    accent: 'tout près de chez vous',
+    line: 'Choisissez vos catégories préférées et découvrez les offres flash qui correspondent à côté de chez vous.',
+  },
+  {
     key: 'jeux',
     title: 'Jouez,',
     accent: 'gagnez pour de vrai',
     line: 'Des mini-jeux qui donnent de vrais coupons — à présenter en caisse, pas des points en l’air.',
-  },
-  {
-    key: 'chasse',
-    title: 'La',
-    accent: 'Chasse',
-    line: 'Invendus à sauver, missions du jour, coffre et trophées : tout ce qui rapporte, au même endroit.',
   },
 ];
 
@@ -165,7 +170,7 @@ export function WelcomeScreen() {
           >
             {p.key === 'flash' ? <FlashScene size={stage} still={reduced} /> : null}
             {p.key === 'jeux' ? <PacmanScene size={stage} still={reduced} /> : null}
-            {p.key === 'chasse' ? <HubScene size={stage} still={reduced} /> : null}
+            {p.key === 'proximite' ? <NearbyScene size={stage} still={reduced} /> : null}
           </View>
         ))}
       </ScrollView>
