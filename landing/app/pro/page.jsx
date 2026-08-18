@@ -26,8 +26,9 @@ import {
 import OfferForm from './offer-form';
 import {
   ACTION_LABEL,
+  merchantActions,
+  pathTo,
   isActive,
-  nextStatuses,
   ORDER_STATUS_LABEL,
   ORDERS,
   sinceLabel,
@@ -348,7 +349,7 @@ export default function ProPage() {
 
             <div className="tkpro-orders">
               {orders.map((o) => {
-                const options = nextStatuses(o.status, o.fulfilment);
+                const gestes = merchantActions(o.status, o.fulfilment);
                 return (
                   <div
                     className={isActive(o.status) ? 'tkpro-order' : 'tkpro-order done'}
@@ -379,21 +380,22 @@ export default function ProPage() {
                     <div className="foot">
                       <b>{formatMoney(o.totalCents)}</b>
                       <div className="actions">
-                        {options.map((status, i) => (
+                        {gestes.map((geste) => (
                           <button
-                            key={status}
+                            key={geste.target}
                             type="button"
-                            className={
-                              i === 0 && status !== 'annulee' && status !== 'remboursee'
-                                ? 'tkpro-btn primary'
-                                : 'tkpro-btn'
-                            }
+                            disabled={!geste.enabled}
+                            className={geste.tone === 'primary' ? 'tkpro-btn primary' : 'tkpro-btn'}
                             onClick={() => {
-                              advance(o.id, status);
-                              notify(`${o.id} — ${ORDER_STATUS_LABEL[status]}.`);
+                              // Un seul geste peut valoir deux transitions —
+                              // « mettre en préparation » accepte au passage.
+                              const chemin = pathTo(o.status, geste.target, o.fulfilment);
+                              for (const etape of chemin) advance(o.id, etape);
+                              const dernier = chemin[chemin.length - 1] ?? geste.target;
+                              notify(`${o.id} — ${ORDER_STATUS_LABEL[dernier]}.`);
                             }}
                           >
-                            {ACTION_LABEL[status] ?? ORDER_STATUS_LABEL[status]}
+                            {ACTION_LABEL[geste.target] ?? ORDER_STATUS_LABEL[geste.target]}
                           </button>
                         ))}
                       </div>
@@ -404,9 +406,11 @@ export default function ProPage() {
             </div>
 
             <p className="tkpro-note">
-              Les gestes proposés suivent la machine à états du CDC §11 : une commande en Click
-              &amp; Collect ne peut pas être « livrée », et une commande remboursée ne repart pas en
-              préparation. Ce sont les mêmes règles que dans l’application du commerçant.
+              Les mêmes gestes sur toutes les commandes, dans le même ordre : seuls ceux que la
+              commande autorise sont actifs. Une commande en Touch &amp; Collect se remet en main
+              propre et ne peut pas être « livrée » ; refuser une commande payée déclenche le
+              remboursement, ce n’est pas un geste séparé. Ce sont les règles du CDC §5.2, et les
+              mêmes que dans l’application du commerçant.
             </p>
           </>
         ) : null}

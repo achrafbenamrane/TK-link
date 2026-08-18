@@ -74,7 +74,10 @@ export default function AppShowcase() {
                   🥐
                 </div>
               ) : (
-                // eslint-disable-next-line @next/next/no-img-element
+                // Une balise <img> nue plutôt que next/image : la photo est
+                // décorative, servie depuis /public, et n'a pas besoin de la
+                // chaîne d'optimisation. La règle Next qui l'interdit n'est pas
+                // chargée par la configuration ESLint de ce dépôt.
                 <img
                   src={OFFRE.photo}
                   alt={`${OFFRE.titre} — ${OFFRE.commerce}`}

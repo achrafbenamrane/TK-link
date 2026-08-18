@@ -26,19 +26,35 @@ type Props = {
   onBack?: () => void;
 };
 
-/** Ce que le commerçant doit faire ensuite, dit avec ses mots à lui. */
+/**
+ * Ce que le commerçant doit faire ensuite, dit avec ses mots à lui.
+ *
+ * Le remboursement n'y figure PAS, et c'est délibéré : ce n'est pas un geste,
+ * c'est une conséquence. Refuser une commande déjà payée déclenche le
+ * remboursement — `refusee` ne mène d'ailleurs nulle part ailleurs. Un bouton
+ * séparé laisserait croire qu'on peut refuser sans rendre l'argent.
+ *
+ * Après une remise, ce qui arrive n'est pas un remboursement spontané mais une
+ * réclamation : d'où « Ouvrir un litige », qui décide ensuite du remboursement.
+ * Mêmes libellés que l'espace pro web — un commerçant qui passe de son comptoir
+ * à son ordinateur doit retrouver les mêmes mots.
+ */
 const ACTION_LABEL: Partial<Record<OrderStatus, string>> = {
-  payee: 'Accepter',
+  acceptee: 'Accepter',
   preparation: 'En préparation',
   prete: 'C’est prêt',
   recuperee: 'Remise au client',
+  en_livraison: 'Remise au livreur',
   livree: 'Livrée',
-  annulee: 'Refuser',
+  refusee: 'Refuser',
+  litige: 'Ouvrir un litige',
 };
 
 /** Couleur de la pastille de statut : ce qui attend une action doit ressortir. */
 function toneOf(status: OrderStatus): string {
-  if (status === 'annulee' || status === 'remboursee') return 'bg-surface-sunken text-ink-faint';
+  const eteints: OrderStatus[] = ['refusee', 'annulee', 'remboursee', 'remboursement_en_cours'];
+  if (eteints.includes(status)) return 'bg-surface-sunken text-ink-faint';
+  if (status === 'litige') return 'bg-danger/10 text-danger';
   if (status === 'recuperee' || status === 'livree') return 'bg-brand-50 text-brand-700';
   return 'bg-ink text-ink-inverse';
 }
