@@ -36,8 +36,12 @@ type Panel = {
 const PANELS: Panel[] = [
   {
     key: 'flash',
-    title: 'Des prix qui tombent,',
-    accent: 'et ne reviennent pas',
+    // Formulation demandée par la conduite de projet le 18/08 : « des prix qui
+    // tombent » décrivait le MÉCANISME, pas le bénéfice, et ne se comprenait
+    // pas au premier coup d'œil. Celle-ci dit ce qu'on y gagne et pourquoi il
+    // faut se dépêcher — les deux arguments de la vente flash, en six mots.
+    title: 'Des prix imbattables,',
+    accent: 'pour un temps limité',
     line: 'Les commerçants du quartier bradent ce qui doit partir aujourd’hui. Un compte à rebours, un stock qui fond : vous prenez, ou ça disparaît.',
   },
   {

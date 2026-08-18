@@ -25,7 +25,6 @@ const CYCLE = 5200;
  */
 const OFFER = {
   merchant: 'Boulangerie Saint-Cyprien',
-  area: 'Saint-Cyprien',
   title: 'Panier viennoiseries',
   emoji: '🥐',
   price: '4,50€',
@@ -117,27 +116,31 @@ function Identity({ size }: { size: number }) {
       <View
         className="items-center justify-center"
         style={{
-          width: size * 0.115,
-          height: size * 0.115,
-          borderRadius: size * 0.0575,
+          width: size * 0.1,
+          height: size * 0.1,
+          borderRadius: size * 0.05,
           backgroundColor: LIME_VEIL,
         }}
       >
-        <AppText style={{ fontSize: size * 0.055 }}>{OFFER.emoji}</AppText>
+        <AppText style={{ fontSize: size * 0.048 }}>{OFFER.emoji}</AppText>
       </View>
 
       <View className="flex-1">
+        {/* Le quartier n'est PAS répété ici : « Boulangerie Saint-Cyprien ·
+            Saint-Cyprien » disait deux fois la même chose et débordait, ce qui
+            tronquait la ligne en « Saint-C… ». Le nom de l'enseigne le porte
+            déjà. */}
         <AppText
           className="font-sans-medium"
           numberOfLines={1}
-          style={{ fontSize: size * 0.034, color: INK_SOFT }}
+          style={{ fontSize: size * 0.033, color: INK_SOFT }}
         >
-          {OFFER.merchant} · {OFFER.area}
+          {OFFER.merchant}
         </AppText>
         <AppText
           className="font-display text-ink-inverse"
           numberOfLines={1}
-          style={{ fontSize: size * 0.05 }}
+          style={{ fontSize: size * 0.046 }}
         >
           {OFFER.title}
         </AppText>
@@ -147,74 +150,52 @@ function Identity({ size }: { size: number }) {
 }
 
 /**
- * LE MÉCANISME : l'ancien prix tombe, le nouveau prend sa place.
+ * LES DEUX PRIX, TOUJOURS LISIBLES — et c'est une correction, pas un choix.
  *
- * Les deux prix occupent le même bloc, de hauteur fixe : sans cela, la carte
- * changerait de taille à chaque tour et tout le reste sauterait avec elle.
- * L'ancien est en position absolue et sort par le bas ; le nouveau reste dans
- * le flux et monte à sa rencontre.
+ * La première version faisait TOMBER l'ancien prix hors du bloc puis le faisait
+ * disparaître. Joli sur le papier, faux à l'usage : l'ancien prix n'était
+ * visible que pendant un cinquième du cycle. Le reste du temps, la carte
+ * montrait « 4,50 € » à côté d'un « -59 % » sans rien à quoi le comparer — la
+ * remise ne voulait plus rien dire, et la conduite de projet l'a vu tout de
+ * suite.
+ *
+ * Les deux prix sont donc PERMANENTS, côte à côte, comme sur la vraie carte de
+ * l'app. Plus aucune opacité animée non plus : une valeur qui va de 0 à 1 puis
+ * repart à 0 à chaque boucle fait clignoter le prix au raccord. Il ne reste
+ * qu'une pulsation d'échelle, qui anime sans jamais rien cacher.
  */
 function PriceDrop({ progress, size }: { progress: SharedValue<number>; size: number }) {
-  const oldStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 0.05, 0.22], [0, 1, 0], Extrapolation.CLAMP),
+  const priceStyle = useAnimatedStyle(() => ({
     transform: [
       {
-        translateY: interpolate(progress.value, [0, 0.22], [0, size * 0.075], Extrapolation.CLAMP),
-      },
-    ],
-  }));
-
-  const newStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0.14, 0.26, 0.94, 1], [0, 1, 1, 0], Extrapolation.CLAMP),
-    transform: [
-      {
-        translateY: interpolate(
-          progress.value,
-          [0.14, 0.31],
-          [size * 0.055, 0],
-          Extrapolation.CLAMP,
-        ),
-      },
-      // Un léger dépassement à l'arrivée : le prix « atterrit » au lieu de se
-      // téléporter. C'est ce qui fait lire une chute plutôt qu'un changement.
-      {
-        scale: interpolate(
-          progress.value,
-          [0.14, 0.31, 0.38],
-          [0.86, 1.06, 1],
-          Extrapolation.CLAMP,
-        ),
+        scale: interpolate(progress.value, [0, 0.14, 0.24], [0.94, 1.05, 1], Extrapolation.CLAMP),
       },
     ],
   }));
 
   const badgeStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0.3, 0.38, 0.94, 1], [0, 1, 1, 0], Extrapolation.CLAMP),
     transform: [
       {
-        scale: interpolate(progress.value, [0.3, 0.42, 0.5], [0.4, 1.16, 1], Extrapolation.CLAMP),
+        scale: interpolate(progress.value, [0.24, 0.36, 0.44], [0.9, 1.12, 1], Extrapolation.CLAMP),
       },
     ],
   }));
 
   return (
-    <View className="flex-row items-end justify-between" style={{ height: size * 0.165 }}>
-      <View className="flex-1 justify-end">
-        <Animated.View style={[oldStyle, { position: 'absolute', top: 0, left: 0 }]}>
-          <AppText
-            className="font-sans-semibold line-through"
-            style={{ fontSize: size * 0.045, color: INK_FADED }}
-          >
-            {OFFER.oldPrice}
-          </AppText>
-        </Animated.View>
-
-        <Animated.View style={newStyle}>
-          <AppText className="font-display" style={{ fontSize: size * 0.105, color: colors.lime }}>
-            {OFFER.price}
-          </AppText>
-        </Animated.View>
-      </View>
+    <View className="flex-row items-center justify-between" style={{ gap: size * 0.03 }}>
+      <Animated.View
+        style={[priceStyle, { flexDirection: 'row', alignItems: 'baseline', gap: size * 0.028 }]}
+      >
+        <AppText className="font-display" style={{ fontSize: size * 0.095, color: colors.lime }}>
+          {OFFER.price}
+        </AppText>
+        <AppText
+          className="font-sans-semibold line-through"
+          style={{ fontSize: size * 0.042, color: INK_FADED }}
+        >
+          {OFFER.oldPrice}
+        </AppText>
+      </Animated.View>
 
       <Animated.View
         style={[
@@ -222,14 +203,14 @@ function PriceDrop({ progress, size }: { progress: SharedValue<number>; size: nu
           {
             backgroundColor: colors.lime,
             borderRadius: size * 0.028,
-            paddingHorizontal: size * 0.04,
-            paddingVertical: size * 0.016,
+            paddingHorizontal: size * 0.038,
+            paddingVertical: size * 0.015,
           },
         ]}
       >
         <AppText
           className="font-display"
-          style={{ fontSize: size * 0.052, color: colors.forestDeep }}
+          style={{ fontSize: size * 0.05, color: colors.forestDeep }}
         >
           {OFFER.discount}
         </AppText>
