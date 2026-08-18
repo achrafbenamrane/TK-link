@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'rea
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Button, Screen, TextField } from '@/shared/ui';
+import { BackButton } from '@/shared/ui/back-button';
 import { colors } from '@/shared/theme/colors';
 
 import {
@@ -105,6 +106,7 @@ export function MerchantScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View className="pb-4 pt-2">
+            <BackButton fallbackHref="/profil" />
             <AppText variant="display" className="text-3xl">
               Devenir commerçant
             </AppText>

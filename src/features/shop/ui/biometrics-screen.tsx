@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Switch, View } from 'react-native';
 
 import { AppText, Screen } from '@/shared/ui';
+import { BackButton } from '@/shared/ui/back-button';
 import { colors } from '@/shared/theme/colors';
 
 import { authenticate, getBiometricSupport, type BiometricSupport } from '../lib/biometrics';
@@ -60,6 +61,7 @@ export function BiometricsScreen() {
   return (
     <Screen testID="biometrics-screen">
       <View className="pb-2 pt-2">
+        <BackButton fallbackHref="/profil" />
         <AppText variant="display" className="text-3xl">
           Empreinte
         </AppText>

@@ -4,6 +4,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
+import { BackButton } from '@/shared/ui/back-button';
 import { colors } from '@/shared/theme/colors';
 
 import {
@@ -44,6 +45,7 @@ export function PreferencesScreen({ onDone }: Props) {
     <Screen testID="preferences-screen" padded={false}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-5 pb-8">
         <View className="pb-4 pt-2">
+          <BackButton fallbackHref="/" />
           <AppText variant="display" className="text-2xl">
             Ma Fan Zone
           </AppText>

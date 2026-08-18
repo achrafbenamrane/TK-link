@@ -4,6 +4,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
+import { BackButton } from '@/shared/ui/back-button';
 import { colors } from '@/shared/theme/colors';
 
 import {
@@ -83,6 +84,7 @@ export function ReceiptsScreen({ onOpenReceipt }: Props) {
         {/* En-tête */}
         <View className="flex-row items-center justify-between pb-4 pt-2">
           <View>
+            <BackButton fallbackHref="/profil" />
             <AppText variant="display" className="text-2xl">
               Mes tickets
             </AppText>

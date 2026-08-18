@@ -4,6 +4,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { AppText, Screen } from '@/shared/ui';
+import { BackButton } from '@/shared/ui/back-button';
 import { colors } from '@/shared/theme/colors';
 
 import type { Order } from '../model/schema';
@@ -102,6 +103,7 @@ export function InvoicesScreen() {
   return (
     <Screen testID="invoices-screen">
       <View className="pb-4 pt-2">
+        <BackButton fallbackHref="/profil" />
         <AppText variant="display" className="text-3xl">
           Mes factures
         </AppText>

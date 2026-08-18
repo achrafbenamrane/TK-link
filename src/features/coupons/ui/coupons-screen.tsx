@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { ScrollView, View } from 'react-native';
 
 import { AppText, Screen } from '@/shared/ui';
+import { BackButton } from '@/shared/ui/back-button';
 import { colors } from '@/shared/theme/colors';
 
 import { selectWallet, useCouponsStore } from '../model/store';
@@ -27,6 +28,7 @@ export function CouponsScreen() {
     <Screen testID="coupons-screen">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-10">
         <View className="pb-4 pt-2">
+          <BackButton fallbackHref="/chasse" />
           <AppText variant="display" className="text-3xl">
             Mes coupons
           </AppText>

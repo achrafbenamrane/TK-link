@@ -1,6 +1,7 @@
 import { Alert, View } from 'react-native';
 
 import { AppText, Button, Screen } from '@/shared/ui';
+import { BackButton } from '@/shared/ui/back-button';
 
 import { useAuthStore } from '../model/store';
 
@@ -33,6 +34,7 @@ export function AccountScreen() {
 
   return (
     <Screen>
+      <BackButton fallbackHref="/profil" />
       <View className="flex-1 justify-end gap-3 pb-6">
         <Button
           testID="account-sign-out"

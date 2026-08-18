@@ -4,6 +4,7 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } fr
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Button, EmptyState, Screen, TextField } from '@/shared/ui';
+import { BackButton } from '@/shared/ui/back-button';
 import { colors } from '@/shared/theme/colors';
 
 import { AddressDraftSchema, type Address, type AddressDraft } from '../model/schema';
@@ -249,6 +250,7 @@ export function AddressesScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View className="pb-4 pt-2">
+            <BackButton fallbackHref="/profil" />
             <AppText variant="display" className="text-3xl">
               Adresses
             </AppText>

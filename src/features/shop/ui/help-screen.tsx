@@ -4,6 +4,7 @@ import { Linking, Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
+import { BackButton } from '@/shared/ui/back-button';
 import { colors } from '@/shared/theme/colors';
 
 // ⚠️ Adresse PROVISOIRE : aucun domaine TK LINK n'est enregistré à ce jour.
@@ -109,6 +110,7 @@ export function HelpScreen() {
     <Screen testID="help-screen">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-10">
         <View className="pb-4 pt-2">
+          <BackButton fallbackHref="/profil" />
           <AppText variant="display" className="text-3xl">
             Aide
           </AppText>
