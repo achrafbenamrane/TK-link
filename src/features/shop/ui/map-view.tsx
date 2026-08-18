@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import Mapbox from '@rnmapbox/maps';
 import { useRouter } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
@@ -83,6 +83,25 @@ export function DealsMap({ deals, category }: Props) {
    */
   const [styleFailed, setStyleFailed] = useState(false);
   const [styleLoaded, setStyleLoaded] = useState(false);
+  /**
+   * La surface a-t-elle reçu sa passe de mise en page ?
+   *
+   * Symptôme observé sur l'APK du 16/08 : la carte reste GRISE à la première
+   * ouverture — sans bannière d'erreur, donc le style se charge bien — puis
+   * s'affiche correctement dès qu'on quitte l'écran et qu'on y revient.
+   *
+   * La cause est dans le montage différé juste en dessous. Au premier rendu
+   * `box` vaut `null` : la carte n'est PAS dans l'arbre. Elle n'y entre qu'une
+   * fois la taille mesurée, donc dans un parent DÉJÀ mis en page — et la
+   * surface GL d'Android, attachée après coup, n'obtient plus la passe de
+   * layout qui déclenche son premier dessin. Revenir sur l'écran en provoque
+   * une, d'où la guérison spontanée.
+   *
+   * On garantit donc ce passage : la carte naît un pixel plus courte, puis
+   * reprend sa taille réelle. Un pixel est invisible à l'œil ; le changement de
+   * taille, lui, ne l'est pas pour la surface native.
+   */
+  const [settled, setSettled] = useState(false);
 
   // Un changement de filtre invalide la sélection : garder une route vers une
   // bulle qui vient de disparaître n'aurait aucun sens. Ajustement PENDANT le
@@ -94,6 +113,15 @@ export function DealsMap({ deals, category }: Props) {
     setSelectedId(null);
     setRoute(null);
   }
+
+  useEffect(() => {
+    if (!box || settled) return;
+    // Hors du corps de l'effet : un setState synchrone y est interdit, et il
+    // faut de toute façon que la frame de montage soit passée pour que le
+    // changement de taille compte comme une nouvelle.
+    const id = setTimeout(() => setSettled(true), 120);
+    return () => clearTimeout(id);
+  }, [box, settled]);
 
   const selected = useMemo(
     () => deals.find((d) => d.id === selectedId) ?? null,
@@ -158,7 +186,7 @@ export function DealsMap({ deals, category }: Props) {
           reléguée en bas avec du blanc au-dessus. */}
       {box ? (
         <Mapbox.MapView
-          style={{ width: box.width, height: box.height }}
+          style={{ width: box.width, height: settled ? box.height : box.height - 1 }}
           styleURL={Mapbox.StyleURL.Light}
           // ⚠️ Ne pas remettre `surfaceView={false}` sans avoir vérifié la carte
           // sur un vrai téléphone.
@@ -235,6 +263,27 @@ export function DealsMap({ deals, category }: Props) {
             );
           })}
         </Mapbox.MapView>
+      ) : null}
+
+      {/* Tant que le fond n'est pas peint, on le DIT.
+          « La map met du temps à s'afficher » est un reproche fondé : le
+          chargement du style prend un instant, et pendant ce temps l'écran est
+          un rectangle gris uni. Rien ne distingue « ça arrive » de « c'est
+          cassé » — et c'est exactement la confusion qu'on vient de passer deux
+          jours à démêler. Un indicateur coûte trois lignes et répond à la
+          question avant qu'elle soit posée. */}
+      {!styleLoaded && !styleFailed ? (
+        <View
+          testID="map-loading"
+          pointerEvents="none"
+          className="absolute inset-0 items-center justify-center gap-3"
+          style={{ backgroundColor: colors.surfaceMuted }}
+        >
+          <ActivityIndicator color={colors.brand500} />
+          <AppText variant="caption" className="text-ink-faint">
+            Chargement de la carte…
+          </AppText>
+        </View>
       ) : null}
 
       {/* L'échec du fond de carte, dit à voix haute. Il se superpose sans
