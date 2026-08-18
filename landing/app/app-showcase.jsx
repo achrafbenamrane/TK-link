@@ -3,158 +3,137 @@
 import { useEffect, useState } from 'react';
 
 /**
- * L'APPLICATION, dans un vrai téléphone.
+ * L'ILLUSTRATION DU HÉROS : une offre flash, en grand, dans un téléphone.
  *
- * Une capture posée à plat se regarde comme une image ; la même capture dans un
- * appareil se regarde comme un produit. D'où ce châssis dessiné en CSS plutôt
- * qu'une image de cadre : il reste net à tout agrandissement, s'adapte à la
- * largeur, et pèse zéro octet.
+ * Version précédente : un carrousel de six captures d'écran. Retour de la
+ * conduite de projet le 18/08 — « mets plutôt un téléphone avec une offre flash
+ * en gros, faut mettre l'accent sur les grosses promotions et le temps court,
+ * du premier coup d'œil ». Elle a raison sur le fond : une capture d'app
+ * entière réduite à la taille d'un téléphone de héros n'est lisible par
+ * personne. On y devine une interface, on n'y lit ni le prix ni la remise.
  *
- * Les écrans défilent seuls. Le défilement automatique n'est pas décoratif :
- * personne ne clique sur une flèche pour découvrir un produit qu'il ne connaît
- * pas encore. Chaque écran porte sa légende — sans elle, on voit une jolie
- * interface sans comprendre ce qu'elle fait.
+ * D'où une offre DESSINÉE, pas photographiée. Trois avantages qu'une capture
+ * n'a pas : la remise et le compte à rebours restent lisibles à toute taille,
+ * le décompte tourne vraiment — c'est le seul argument de la vente flash, et
+ * une image fixe ne peut pas le porter — et l'ensemble reste net sur un écran
+ * à haute densité.
+ *
+ * Le châssis reste dessiné en CSS : net à tout agrandissement, adaptable, zéro
+ * octet à télécharger.
  */
 
-const SCREENS = [
-  {
-    src: '/screens/accueil.jpg',
-    title: 'Ça part maintenant',
-    line: 'Les ventes flash près de chez vous, triées selon ce qui vous intéresse.',
-  },
-  {
-    src: '/screens/chasse.jpg',
-    title: 'La Chasse',
-    line: 'Coffre du jour, missions, trophées : de quoi revenir sans y être poussé.',
-  },
-  {
-    src: '/screens/favoris.jpg',
-    title: 'Vos coups de cœur',
-    line: 'Gardés à l’œil, avec leur compte à rebours — avant qu’ils ne s’envolent.',
-  },
-  {
-    src: '/screens/panier.jpg',
-    title: 'Touch & Collect',
-    line: 'Retrait en boutique ou livraison, coupons appliqués, points crédités.',
-  },
-  {
-    src: '/screens/commande.jpg',
-    title: 'Votre commande, suivie',
-    line: 'Du paiement au retrait, avec la facture en QR code à présenter.',
-  },
-  {
-    src: '/screens/profil.jpg',
-    title: 'Vos points',
-    line: 'Échangeables contre des bons d’achat — ou un arbre planté.',
-  },
-];
+/** L'offre montrée. Les vraies valeurs du catalogue (`d_viennoiseries`). */
+const OFFRE = {
+  photo: '/offre/d_viennoiseries.jpg',
+  commerce: 'Boulangerie Saint-Cyprien',
+  titre: 'Panier viennoiseries',
+  unite: 'le panier de 6',
+  prix: '4,50 €',
+  prixInitial: '11,00 €',
+  remise: '-59 %',
+  restant: 4,
+  total: 15,
+  distance: 'à 600 m',
+};
 
-/** Durée d'affichage d'un écran. Assez long pour lire la légende, pas plus. */
-const DWELL = 3400;
+/** Durée du compte à rebours affiché, en secondes. */
+const DEPART = 15 * 60;
+
+function deuxChiffres(n) {
+  return n < 10 ? `0${n}` : `${n}`;
+}
 
 export default function AppShowcase() {
-  const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-  /**
-   * Les captures qui n'ont pas pu être chargées.
-   *
-   * Tant qu'elles ne sont pas déposées, un `<img>` cassé afficherait l'icône
-   * grise du navigateur au milieu du téléphone — pire que rien. On montre à la
-   * place un panneau aux couleurs de la marque, portant le nom de l'écran :
-   * la démonstration reste lisible, et l'absence se voit sans faire accident.
-   */
-  const [missing, setMissing] = useState(() => new Set());
+  const [reste, setReste] = useState(DEPART);
+  const [photoKo, setPhotoKo] = useState(false);
 
   useEffect(() => {
-    if (paused) return undefined;
-    // Le défilement s'arrête si l'utilisateur a demandé moins d'animations :
-    // un carrousel qui tourne malgré la préférence système est une nuisance,
-    // pas un effet.
-    const reduced =
-      typeof window !== 'undefined' &&
-      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (reduced) return undefined;
-
-    const id = setInterval(() => setIndex((i) => (i + 1) % SCREENS.length), DWELL);
+    // Il reboucle plutôt que d'atteindre zéro : une vitrine qui affiche
+    // « 00:00:00 » annonce une offre expirée à tout visiteur arrivé trop tard.
+    const id = setInterval(() => setReste((v) => (v <= 1 ? DEPART : v - 1)), 1000);
     return () => clearInterval(id);
-  }, [paused]);
+  }, []);
 
-  const current = SCREENS[index];
+  const h = deuxChiffres(Math.floor(reste / 3600));
+  const m = deuxChiffres(Math.floor((reste % 3600) / 60));
+  const s = deuxChiffres(reste % 60);
+  const partis = Math.round(((OFFRE.total - OFFRE.restant) / OFFRE.total) * 100);
 
   return (
     <div className="showcase">
-      <div
-        className="iphone"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-      >
-        {/* Le châssis : rail de titane, puis la dalle. */}
-        <div className="iphone-rail" aria-hidden="true" />
-        <span className="iphone-btn iphone-action" aria-hidden="true" />
-        <span className="iphone-btn iphone-vol-up" aria-hidden="true" />
-        <span className="iphone-btn iphone-vol-down" aria-hidden="true" />
-        <span className="iphone-btn iphone-power" aria-hidden="true" />
-
+      {/* Le châssis reste celui qui existait : dessiné en CSS, net à tout
+          agrandissement, dimensionné par la hauteur pour ne pas étirer
+          l'accroche. Seul son CONTENU change. */}
+      <div className="iphone">
+        <div className="iphone-rail" />
         <div className="iphone-screen">
-          {SCREENS.map((s, i) =>
-            missing.has(s.src) ? (
-              <div
-                key={s.src}
-                className={
-                  i === index ? 'iphone-shot iphone-hold is-on' : 'iphone-shot iphone-hold'
-                }
-                aria-hidden="true"
-              >
-                <span>{s.title}</span>
+          <div className="offre">
+            <div className="offre-photo">
+              {photoKo ? (
+                <div className="offre-photo-repli" aria-hidden="true">
+                  🥐
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={OFFRE.photo}
+                  alt={`${OFFRE.titre} — ${OFFRE.commerce}`}
+                  onError={() => setPhotoKo(true)}
+                />
+              )}
+              <span className="offre-remise">{OFFRE.remise}</span>
+              <span className="offre-stock">
+                {OFFRE.restant} / {OFFRE.total}
+              </span>
+            </div>
+
+            {/* LE TEMPS QUI RESTE — l'élément le plus gros après la photo, avec
+                ses unités écrites dessous. Sans elles, « 00:14:52 » se lit
+                aussi bien quinze minutes que quinze heures, et l'urgence se
+                perd exactement là où elle doit porter. */}
+            <div className="offre-chrono" role="timer" aria-live="off">
+              {[
+                [h, 'H'],
+                [m, 'MIN'],
+                [s, 'SEC'],
+              ].map(([valeur, unite], i) => (
+                <div className="chrono-bloc" key={unite}>
+                  <div className="chrono-paire">
+                    <span className="chrono-valeur">{valeur}</span>
+                    <span className="chrono-unite">{unite}</span>
+                  </div>
+                  {i < 2 ? <span className="chrono-sep">:</span> : null}
+                </div>
+              ))}
+            </div>
+
+            <div className="offre-corps">
+              <p className="offre-commerce">
+                {OFFRE.commerce} · {OFFRE.distance}
+              </p>
+              <h3 className="offre-titre">{OFFRE.titre}</h3>
+              <p className="offre-unite">{OFFRE.unite}</p>
+
+              <div className="offre-prix">
+                <span className="prix-flash">{OFFRE.prix}</span>
+                <span className="prix-initial">{OFFRE.prixInitial}</span>
               </div>
-            ) : (
-              <img
-                key={s.src}
-                src={s.src}
-                alt={i === index ? `${s.title} — ${s.line}` : ''}
-                className={i === index ? 'iphone-shot is-on' : 'iphone-shot'}
-                aria-hidden={i === index ? undefined : 'true'}
-                loading={i === 0 ? 'eager' : 'lazy'}
-                draggable="false"
-                onError={() =>
-                  setMissing((current) => {
-                    const next = new Set(current);
-                    next.add(s.src);
-                    return next;
-                  })
-                }
-              />
-            ),
-          )}
 
-          {/* L'îlot dynamique, par-dessus la capture : les captures Android
-              n'en ont pas, et c'est lui qui fait lire « iPhone ». */}
-          <span className="iphone-island" aria-hidden="true" />
-          {/* Un reflet oblique, très faible. Sans lui la dalle paraît peinte. */}
-          <span className="iphone-gloss" aria-hidden="true" />
+              <div className="offre-jauge" aria-hidden="true">
+                <span style={{ width: `${partis}%` }} />
+              </div>
+              <p className="offre-restant">Plus que {OFFRE.restant} paniers</p>
+
+              <div className="offre-cta">J’EN PROFITE</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="showcase-caption">
-        <p className="showcase-title" key={current.title}>
-          {current.title}
-        </p>
-        <p className="showcase-line">{current.line}</p>
-
-        <div className="showcase-dots" role="tablist" aria-label="Écrans de l’application">
-          {SCREENS.map((s, i) => (
-            <button
-              key={s.src}
-              type="button"
-              role="tab"
-              aria-selected={i === index}
-              aria-label={s.title}
-              className={i === index ? 'is-on' : undefined}
-              onClick={() => setIndex(i)}
-            />
-          ))}
-        </div>
-      </div>
+      <p className="showcase-legende">
+        Une vraie offre de l’application : un prix cassé, un stock qui fond, et un compte à rebours
+        qui ne s’arrête pas.
+      </p>
     </div>
   );
 }

@@ -395,10 +395,20 @@ img {
 .step .n::before {
   content: '0' counter(step);
 }
+/* La carte est CLAIRE dans une section sombre : elle doit reprendre l'encre
+   foncée, sinon tout ce qui n'a pas de couleur explicite hérite du blanc de
+   `.sec-dark` — et disparaît sur le fond blanc de la carte. C'est exactement ce
+   qui est arrivé aux titres : les paragraphes, eux, avaient leur couleur, d'où
+   des cartes où seul le titre manquait. On remet l'encre sur toute la carte
+   plutôt que sur le seul `h3`, pour qu'un futur élément en hérite aussi. */
+.sec-dark .step {
+  color: var(--ink);
+}
 .step h3 {
   font-size: 18px;
   margin: 10px 0 8px;
   letter-spacing: -0.02em;
+  color: var(--ink);
 }
 .step p {
   color: var(--ink-muted);
@@ -638,24 +648,6 @@ footer {
   z-index: 1;
 }
 
-.iphone-shot {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top center;
-  opacity: 0;
-  transform: scale(1.04);
-  transition:
-    opacity 620ms cubic-bezier(0.22, 0.61, 0.36, 1),
-    transform 900ms cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-.iphone-shot.is-on {
-  opacity: 1;
-  transform: scale(1);
-}
-
 /* L'îlot dynamique. Les captures viennent d'un Android : sans lui, l'illusion
    tombe au premier regard. */
 .iphone-island {
@@ -714,26 +706,12 @@ footer {
   height: 10%;
 }
 
-/* ------------------------------------------------------------- la légende */
-.showcase-caption {
-  text-align: center;
-  max-width: 32ch;
-}
-
 @media (max-width: 940px) {
   /* En colonne, la hauteur d'écran n'est plus contrainte par le texte à
      côté : on redonne de la largeur à l'appareil. */
   .iphone {
     height: min(560px, 66vh);
   }
-}
-.showcase-title {
-  font-family: var(--font-display), sans-serif;
-  font-weight: 700;
-  font-size: 16.5px;
-  color: #f2f7f0;
-  margin: 0 0 4px;
-  animation: showcase-in 520ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 @keyframes showcase-in {
   from {
@@ -745,43 +723,7 @@ footer {
     transform: none;
   }
 }
-.showcase-line {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.45;
-  color: rgba(242, 247, 240, 0.66);
-}
-
-.showcase-dots {
-  display: flex;
-  justify-content: center;
-  gap: 7px;
-  margin-top: 12px;
-}
-.showcase-dots button {
-  width: 7px;
-  height: 7px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(242, 247, 240, 0.26);
-  cursor: pointer;
-  transition:
-    width 320ms ease,
-    background 320ms ease;
-}
-.showcase-dots button.is-on {
-  width: 22px;
-  background: var(--lime);
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .iphone-shot,
-  .showcase-title,
-  .showcase-dots button {
-    transition: none;
-    animation: none;
-  }
 }
 
 /* Le panneau d'attente, quand une capture n'est pas encore déposée. */
@@ -797,4 +739,195 @@ footer {
   font-weight: 700;
   font-size: 17px;
   color: rgba(242, 247, 240, 0.5);
+}
+
+/* --------------------------------------------------- l'offre du héros
+ *
+ * Elle remplace le carrousel de captures. Une capture d'app entière réduite à
+ * la taille d'un téléphone de héros n'est lisible par personne : on y devine
+ * une interface, on n'y lit ni le prix ni la remise. Tout est donc DESSINÉ, à
+ * des tailles choisies pour rester lisibles d'un coup d'œil.
+ */
+.offre {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--surface);
+}
+.offre-photo {
+  position: relative;
+  flex: 0 0 42%;
+  background: #f9ead1;
+  overflow: hidden;
+}
+.offre-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.offre-photo-repli {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 64px;
+}
+/* La remise est l'élément qui doit arrêter l'œil : elle est donc la plus
+   grosse chose de l'écran après la photo elle-même. */
+.offre-remise {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  background: var(--brand);
+  color: #fff;
+  font-family: Unbounded, sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+.offre-stock {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  background: rgba(15, 26, 18, 0.85);
+  color: #f2f7f0;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.offre-chrono {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 12px 10px;
+  background: var(--forest-deep);
+}
+.chrono-bloc {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.chrono-paire {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.chrono-valeur {
+  font-family: Unbounded, sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--lime);
+  font-variant-numeric: tabular-nums;
+  background: rgba(242, 247, 240, 0.08);
+  border-radius: 8px;
+  padding: 6px 8px;
+  min-width: 40px;
+  text-align: center;
+}
+/* L'unité sous le nombre. Sans elle, « 00:14:52 » se lit aussi bien quinze
+   minutes que quinze heures — et l'urgence se perd là où elle doit porter. */
+.chrono-unite {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(242, 247, 240, 0.55);
+}
+.chrono-sep {
+  font-family: Unbounded, sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  color: rgba(242, 247, 240, 0.35);
+  margin-top: 8px;
+}
+
+.offre-corps {
+  flex: 1;
+  padding: 14px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.offre-commerce {
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin: 0;
+}
+.offre-titre {
+  font-family: Unbounded, sans-serif;
+  font-size: 16px;
+  line-height: 1.2;
+  margin: 2px 0 0;
+  color: var(--ink);
+}
+.offre-unite {
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin: 0;
+}
+.offre-prix {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+}
+.prix-flash {
+  font-family: Unbounded, sans-serif;
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--brand);
+}
+/* Le prix barré reste TOUJOURS visible : une remise sans référence ne prouve
+   rien, et « -59 % » à côté d'un prix seul ne veut rien dire. */
+.prix-initial {
+  font-size: 15px;
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+.offre-jauge {
+  margin-top: 10px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.offre-jauge span {
+  display: block;
+  height: 100%;
+  background: var(--brand);
+  border-radius: 999px;
+}
+.offre-restant {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brand);
+  margin: 6px 0 0;
+}
+.offre-cta {
+  margin-top: auto;
+  text-align: center;
+  background: var(--lime);
+  color: var(--forest-deep);
+  font-family: Unbounded, sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.showcase-legende {
+  max-width: 34ch;
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink-muted);
+  margin: 0;
 }

@@ -49,8 +49,14 @@ export default function Page() {
         <div className="wrap hero-grid">
           <div>
             <p className="eyebrow">Les ventes flash de votre quartier</p>
+            {/* Formulation demandée par la conduite de projet le 18/08 : « des
+                prix qui tombent » décrivait le mécanisme, pas le bénéfice, et
+                ne se comprenait pas au premier coup d'œil. Celle-ci dit ce
+                qu'on y gagne et pourquoi il faut se dépêcher. Elle est alignée
+                sur le premier écran de l'application — vitrine et app doivent
+                promettre la même chose, mot pour mot. */}
             <h1>
-              Des prix qui tombent, <em>et qui ne reviennent pas.</em>
+              Des prix imbattables, <em>pour un temps limité.</em>
             </h1>
             <p className="lead">
               Les commerçants près de chez vous bradent ce qui doit partir aujourd’hui : −30, −50,
@@ -290,7 +296,7 @@ export default function Page() {
                 TK<span>LINK</span>
               </div>
               <p style={{ maxWidth: '34ch' }}>
-                Les ventes flash de votre quartier. Des prix qui tombent, et qui ne reviennent pas.
+                Les ventes flash de votre quartier. Des prix imbattables, pour un temps limité.
               </p>
             </div>
             <div className="foot-col">
