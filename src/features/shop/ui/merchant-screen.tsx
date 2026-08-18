@@ -78,9 +78,13 @@ export function MerchantScreen() {
           <AppText variant="display" className="text-center text-2xl">
             Demande envoyée
           </AppText>
+          {/* Ce que la demande DEVIENT, et par quel canal la réponse arrive.
+              « Nous revenons vers vous » ne dit ni où regarder ni quand
+              s'inquiéter : quelqu'un qui ne sait pas qu'il doit surveiller sa
+              boîte mail conclut au silence. */}
           <AppText variant="caption" className="text-center">
-            Merci {submitted.contactName} — nous revenons vers {submitted.shopName} sous 48 h pour
-            lancer vos premières ventes flash.
+            Merci {submitted.contactName}. La demande de {submitted.shopName} va être étudiée par
+            notre équipe, et la réponse vous sera envoyée par e-mail à {submitted.email} sous 48 h.
           </AppText>
           {/* Honnêteté : pas de back-end pour l'instant, la demande reste locale. */}
           <View className="mt-3 flex-row gap-2 rounded-card border border-line bg-surface-muted p-3">

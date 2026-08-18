@@ -363,10 +363,14 @@ export function HubScreen({
         />
         {renderGames ? renderGames() : null}
 
-        {/* Offres réservées aux membres */}
+        {/* Offres réservées aux membres.
+            « Porteurs de la carte » désignait un support physique que le CDC
+            V1.0 a retiré du périmètre — « on reste uniquement sur du soft ».
+            Promettre un objet qu'on ne fabriquera pas est le genre de détail
+            qui décrédibilise une démonstration entière. */}
         <SectionHeader
           title="Offres membres"
-          hint="Réservées aux porteurs de la carte"
+          hint="Réservées aux membres premium"
           actionLabel="Tout voir"
           onAction={onSeeAllOffers}
           testID="hub-see-offers"

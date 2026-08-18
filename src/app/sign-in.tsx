@@ -16,5 +16,12 @@ export default function SignInRoute() {
   const router = useRouter();
   const onCreateAccount = useCallback(() => router.push('/sign-up'), [router]);
   const onSignedIn = useCallback(() => router.replace('/'), [router]);
-  return <SignInScreen onCreateAccount={onCreateAccount} onSignedIn={onSignedIn} />;
+  const onMerchantSignUp = useCallback(() => router.push('/commercant'), [router]);
+  return (
+    <SignInScreen
+      onCreateAccount={onCreateAccount}
+      onSignedIn={onSignedIn}
+      onMerchantSignUp={onMerchantSignUp}
+    />
+  );
 }

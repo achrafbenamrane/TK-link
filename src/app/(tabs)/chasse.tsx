@@ -57,7 +57,7 @@ export default function ChasseRoute() {
     record('game');
     Alert.alert(
       'Gagné 🎉',
-      `+${reward.points} points\nCoupon ${coupon.code}\n\nRetrouvez-les sur votre carte.`,
+      `+${reward.points} points\nCoupon ${coupon.code}\n\nRetrouvez-les dans vos coupons.`,
       [
         { text: 'Plus tard', style: 'cancel' },
         { text: 'Voir ma carte', onPress: () => router.push('/carte') },

@@ -32,9 +32,18 @@ type Props = {
    * pas le relais — l'utilisateur croirait que rien ne s'est passé.
    */
   onSignedIn?: () => void;
+  /**
+   * Inscrire une BOUTIQUE, pas un compte de consommateur.
+   *
+   * Le formulaire existait déjà, mais on n'y accédait que depuis le profil —
+   * donc après s'être créé un compte de particulier. Un commerçant qui ouvre
+   * l'app pour référencer son commerce ne trouvait aucune porte là où il la
+   * cherche : l'écran de connexion.
+   */
+  onMerchantSignUp?: () => void;
 };
 
-export function SignInScreen({ onCreateAccount, onSignedIn }: Props = {}) {
+export function SignInScreen({ onCreateAccount, onSignedIn, onMerchantSignUp }: Props = {}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -180,6 +189,27 @@ export function SignInScreen({ onCreateAccount, onSignedIn }: Props = {}) {
                   <AppText className="font-sans-bold text-brand-600">Créer un compte</AppText>
                 </AppText>
               </Pressable>
+            ) : null}
+
+            {/* L'entrée des COMMERÇANTS. La navigation reste à la route, comme
+                pour « Créer un compte » : l'écran ne connaît pas les URL. */}
+            {onMerchantSignUp ? (
+              <View className="mt-1 border-t border-line pt-4">
+                <Pressable
+                  testID="auth-merchant"
+                  accessibilityRole="link"
+                  accessibilityLabel="Inscrire ma boutique sur TK LINK"
+                  onPress={onMerchantSignUp}
+                  className="py-2"
+                >
+                  <AppText variant="caption" className="text-center text-ink-muted">
+                    Vous êtes commerçant ?{' '}
+                    <AppText className="font-sans-bold text-brand-600">
+                      Inscrire ma boutique
+                    </AppText>
+                  </AppText>
+                </Pressable>
+              </View>
             ) : null}
           </View>
         </ScrollView>
