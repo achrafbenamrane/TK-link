@@ -37,7 +37,7 @@ type Props = {
   hasAccount?: boolean;
 };
 
-type Step = 'impact' | 'role' | 'avatar' | 'profil' | 'interets' | 'compte';
+type Step = 'role' | 'avatar' | 'profil' | 'interets' | 'compte';
 
 /**
  * Les étapes, adaptées au rôle — CDC §4 : « L'onboarding devra être adapté au
@@ -55,9 +55,11 @@ type Step = 'impact' | 'role' | 'avatar' | 'profil' | 'interets' | 'compte';
  * renseigné ». Il n'est donc PAS exigé à l'inscription — c'est la commande qui
  * le réclame, et cette garde existe déjà (`merchant/model/store.ts`).
  *
- * L'écran d'impact reste en tête : c'est lui qui donne une raison de créer le
- * compte. Réclamer un mot de passe avant d'avoir rien montré reste le meilleur
- * moyen de perdre quelqu'un.
+ * L'écran sur le ticket papier qui ouvrait le parcours a été RETIRÉ le
+ * 18/08/2026, sur décision de la conduite de projet. Il vendait la
+ * dématérialisation du ticket ; l'app vend des promotions sur un temps court.
+ * La création du compte ouvre donc directement — les trois panneaux d'accueil
+ * ont déjà donné la raison d'y aller, la répéter ici retardait tout le monde.
  *
  * L'étape « profil » demande particulier ou professionnel : la question n'a de
  * sens que pour un consommateur. Un commerçant ou un grossiste est un
@@ -68,7 +70,7 @@ function stepsFor(role: Role, hasAccount: boolean): Step[] {
     role === 'consommateur'
       ? ['role', 'avatar', 'profil', 'interets']
       : ['role', 'avatar', 'interets'];
-  return hasAccount ? ['impact', ...after] : ['impact', 'compte', ...after];
+  return hasAccount ? after : ['compte', ...after];
 }
 
 /** Ce que l'étape « intérêts » veut dire selon le rôle. */
@@ -98,7 +100,6 @@ const INTEREST_COPY: Record<
 
 export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
   const insets = useSafeAreaInsets();
-  const [step, setStep] = useState<Step>('impact');
 
   const firstName = useOnboardingStore(selectFirstName);
   const avatar = useOnboardingStore(selectAvatar);
@@ -114,6 +115,10 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
   const complete = useOnboardingStore((s) => s.complete);
 
   const steps = useMemo(() => stepsFor(role, hasAccount), [role, hasAccount]);
+  // La premiere etape se DEDUIT de la sequence, elle ne se recopie pas : c'est
+  // `stepsFor` qui decide, et un point de depart ecrit en dur finirait un jour
+  // par designer une etape absente de la liste — donc un ecran vide.
+  const [step, setStep] = useState<Step>(() => stepsFor(role, hasAccount)[0]!);
   // `indexOf` peut renvoyer -1 si le rôle vient de retirer l'étape courante :
   // on retombe alors sur le début plutôt que de calculer sur un index négatif.
   const index = Math.max(0, steps.indexOf(step));
@@ -168,8 +173,6 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
         contentContainerClassName="px-5 pb-6 pt-4"
         keyboardShouldPersistTaps="handled"
       >
-        {step === 'impact' ? <ImpactStep /> : null}
-
         {/* CDC §4 — le choix du rôle, avant tout le reste. */}
         {step === 'role' ? (
           <View className="gap-5">
@@ -504,52 +507,6 @@ function Header({ title, subtitle }: { title: string; subtitle: string }) {
         {title}
       </AppText>
       <AppText variant="caption">{subtitle}</AppText>
-    </View>
-  );
-}
-
-/** L'accroche : les chiffres de la marque, rendus concrets. */
-function ImpactStep() {
-  return (
-    <View className="gap-5">
-      <View className="gap-1.5">
-        <AppText variant="display" className="text-3xl">
-          Le ticket papier{'\n'}a fait son temps.
-        </AppText>
-        <AppText variant="caption">Chaque année, en France.</AppText>
-      </View>
-
-      <View className="overflow-hidden rounded-card bg-surface-inverse p-5">
-        <View className="gap-4">
-          <Stat value="30 milliards" label="de tickets de caisse imprimés" />
-          <Stat value="1,8 million" label="d’arbres abattus" />
-          <Stat value="75 milliards" label="de litres d’eau consommés" />
-        </View>
-      </View>
-
-      <View className="flex-row items-start gap-3 rounded-card bg-brand-50 p-4">
-        <Feather name="check-circle" size={20} color={colors.brand600} />
-        <AppText variant="caption" className="flex-1 text-brand-700">
-          Avec TK LINK, votre ticket arrive directement dans l’app. Rien à imprimer, rien à perdre —
-          et vos achats vous rapportent des points.
-        </AppText>
-      </View>
-    </View>
-  );
-}
-
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <View className="gap-0.5">
-      <AppText
-        className="font-display text-lime"
-        style={{ fontSize: 24, fontVariant: ['tabular-nums'] }}
-      >
-        {value}
-      </AppText>
-      <AppText variant="caption" className="text-ink-inverse/70">
-        {label}
-      </AppText>
     </View>
   );
 }

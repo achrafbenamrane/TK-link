@@ -133,9 +133,9 @@ describe('<OnboardingScreen />', () => {
     const onDone = jest.fn();
     render(<OnboardingScreen onDone={onDone} />);
 
-    // 1 — impact
+    // L'écran sur le ticket papier ouvrait le parcours ; il a été retiré le
+    // 18/08. La création du compte est donc la PREMIÈRE étape, sans détour.
     expect(screen.getByTestId('onboarding-screen')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('onboarding-next'));
 
     // 2 — le compte, tout de suite après l’accroche. Rien n’a encore été
     // demandé : on ne récapitule donc pas, on donne des raisons.
@@ -178,8 +178,6 @@ describe('<OnboardingScreen />', () => {
     const onDone = jest.fn();
     render(<OnboardingScreen onDone={onDone} />);
 
-    fireEvent.press(screen.getByTestId('onboarding-next')); // impact → compte
-
     fireEvent.press(screen.getByTestId('onboarding-signup'));
     expect(onDone).toHaveBeenCalledWith('sign-up');
     // L’onboarding est clos AVANT de partir : sinon la porte du layout
@@ -194,7 +192,9 @@ describe('<OnboardingScreen />', () => {
     useOnboardingStore.setState({ firstName: 'Sofiane' });
     render(<OnboardingScreen onDone={jest.fn()} hasAccount />);
 
-    for (let i = 0; i < 4; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
+    // rôle → avatar → profil → intérêts : un pas de moins depuis que
+    // l'écran sur le ticket papier a été retiré.
+    for (let i = 0; i < 3; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
 
     expect(screen.getByTestId('interest-restauration')).toBeTruthy();
     expect(screen.queryByTestId('onboarding-firstname')).toBeNull();
@@ -202,7 +202,7 @@ describe('<OnboardingScreen />', () => {
 
   it('demande le prénom à qui a refusé le compte', () => {
     render(<OnboardingScreen onDone={jest.fn()} />);
-    for (let i = 0; i < 5; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
+    for (let i = 0; i < 4; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
 
     expect(screen.getByTestId('onboarding-firstname')).toBeTruthy();
   });
@@ -213,14 +213,13 @@ describe('<OnboardingScreen />', () => {
     render(<OnboardingScreen onDone={onDone} hasAccount />);
 
     expect(screen.queryByTestId('onboarding-signup')).toBeNull();
-    for (let i = 0; i < 5; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
+    for (let i = 0; i < 4; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
 
     expect(onDone).toHaveBeenCalledWith('app');
   });
 
   it('saute l’étape particulier / pro pour un commerçant — CDC §4', () => {
     render(<OnboardingScreen onDone={jest.fn()} />);
-    fireEvent.press(screen.getByTestId('onboarding-next')); // impact → compte
     fireEvent.press(screen.getByTestId('onboarding-next')); // compte → rôle
     fireEvent.press(screen.getByTestId('role-commercant'));
     fireEvent.press(screen.getByTestId('onboarding-next')); // rôle → avatar
@@ -232,7 +231,7 @@ describe('<OnboardingScreen />', () => {
 
   it('propose les huit catégories du CDC', () => {
     render(<OnboardingScreen onDone={jest.fn()} />);
-    for (let i = 0; i < 5; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
+    for (let i = 0; i < 4; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
 
     for (const key of ['restauration', 'high-tech', 'maison', 'mode', 'auto', 'services']) {
       expect(screen.getByTestId(`interest-${key}`)).toBeTruthy();
@@ -241,18 +240,20 @@ describe('<OnboardingScreen />', () => {
 
   it('permet de revenir en arrière', () => {
     render(<OnboardingScreen onDone={jest.fn()} />);
-    fireEvent.press(screen.getByTestId('onboarding-next'));
+    // Le parcours ouvre sur la création du compte depuis le 18/08.
     expect(screen.getByTestId('onboarding-signup')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('onboarding-back'));
-    // Retour à l'accroche : plus de proposition de compte à l'écran.
+    fireEvent.press(screen.getByTestId('onboarding-next')); // compte → rôle
     expect(screen.queryByTestId('onboarding-signup')).toBeNull();
+    // Et l'on doit pouvoir y revenir : le retour est le seul moyen de créer un
+    // compte après avoir passé l'étape sans le vouloir.
+    fireEvent.press(screen.getByTestId('onboarding-back'));
+    expect(screen.getByTestId('onboarding-signup')).toBeTruthy();
   });
 });
 
 describe('rôles proposés dans l’app — décision client du 2026-08-10', () => {
   it('ne propose PAS le grossiste : il passe par l’espace pro web', () => {
     render(<OnboardingScreen onDone={jest.fn()} />);
-    fireEvent.press(screen.getByTestId('onboarding-next')); // impact → compte
     fireEvent.press(screen.getByTestId('onboarding-next')); // compte → rôle
 
     expect(screen.getByTestId('role-consommateur')).toBeTruthy();
@@ -267,7 +268,7 @@ describe('plus de support physique — décision client du 16/08/2026', () => {
     // matériel : demander à quelqu'un de choisir un support qui n'existera pas
     // est une promesse qu'on ne tiendra pas.
     render(<OnboardingScreen onDone={jest.fn()} />);
-    for (let i = 0; i < 4; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
+    for (let i = 0; i < 3; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
 
     expect(screen.getByTestId('holder-particulier')).toBeTruthy();
     expect(screen.queryByTestId('medium-carte')).toBeNull();
