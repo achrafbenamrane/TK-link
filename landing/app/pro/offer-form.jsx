@@ -34,9 +34,41 @@ const EMPTY = {
  *
  * Mêmes règles que l'app mobile, au centime près — voir `billing.js`.
  */
-export default function OfferForm({ onPublish, onCancel }) {
-  const [draft, setDraft] = useState(EMPTY);
+/**
+ * Une offre existante vers les champs du formulaire.
+ *
+ * Les montants sont stockés en CENTIMES et saisis en euros : la conversion se
+ * fait ici, une fois, plutôt que dans chaque champ. La virgule est la
+ * séparation française — un commerçant qui relit « 11.00 » doute de ce qu'il
+ * lit.
+ */
+function toDraft(offer) {
+  if (!offer) return EMPTY;
+  const euros = (cents) => (cents / 100).toFixed(2).replace('.', ',');
+  const minutes = Math.max(15, Math.round((offer.endsAt - Date.now()) / 60000));
+  return {
+    title: offer.title ?? '',
+    category: offer.category ?? 'restauration',
+    oldPrice: euros(offer.oldPriceCents ?? 0),
+    price: euros(offer.priceCents ?? 0),
+    stock: String(offer.stockTotal ?? ''),
+    // On retombe sur la durée proposée la plus proche : le champ est un choix
+    // fermé, une valeur hors liste n'y afficherait rien.
+    duration: DURATIONS.reduce(
+      (a, b) => (Math.abs(b - minutes) < Math.abs(a - minutes) ? b : a),
+      DURATIONS[0],
+    ),
+    description: offer.description ?? '',
+  };
+}
+
+export default function OfferForm({ onPublish, onCancel, initial = null }) {
+  // `initial` ne sert qu'au montage : le formulaire est remonté par sa clé
+  // quand on change d'offre, et une synchronisation continue écraserait la
+  // saisie en cours sous les doigts.
+  const [draft, setDraft] = useState(() => toDraft(initial));
   const [errors, setErrors] = useState({});
+  const modification = initial !== null;
 
   const set = (key, value) => {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -67,7 +99,9 @@ export default function OfferForm({ onPublish, onCancel }) {
       durationMinutes: draft.duration,
       description: draft.description.trim(),
     });
-    setDraft(EMPTY);
+    // On ne vide que la publication : après une modification, le formulaire se
+    // ferme, et le vider ferait clignoter des champs vides avant sa fermeture.
+    if (!modification) setDraft(EMPTY);
   };
 
   return (
@@ -180,7 +214,7 @@ export default function OfferForm({ onPublish, onCancel }) {
 
       <div className="tkpro-form-actions">
         <button type="submit" className="tkpro-btn primary">
-          Publier la vente flash
+          {modification ? 'Enregistrer les modifications' : 'Publier la vente flash'}
         </button>
         <button type="button" className="tkpro-btn" onClick={onCancel}>
           Annuler

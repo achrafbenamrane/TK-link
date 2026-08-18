@@ -1,19 +1,22 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import './pro.css';
-import { COMMISSION_PCT, freeLeft } from './billing';
+import { COMMISSION_PCT, formatCents, freeLeft } from './billing';
 import {
   conversionPct,
+  discountPct,
   DOCUMENTS,
   FLASH_STATS,
   formatDate,
+  MERCHANT,
   formatMoney,
   formatSoldOut,
   OFFERS,
   PAPER_G_PER_RECEIPT,
   remaining,
+  remainingLabel,
 } from './data';
 import OfferForm from './offer-form';
 import {
@@ -44,6 +47,7 @@ const TABS = [
   { key: 'orders', label: 'Commandes', icon: '📦' },
   { key: 'documents', label: 'Tickets & factures', icon: '🧾' },
   { key: 'offers', label: 'Offres', icon: '％' },
+  { key: 'profile', label: 'Mon commerce', icon: '🏪' },
 ];
 
 /** Un brouillon d'offre vers la carte affichée dans la liste. */
@@ -86,6 +90,22 @@ export default function ProPage() {
 
   // Plus de packs achetés : seules les opérations offertes comptent, tant que
   // la tarification n'est pas arbitrée par le client (CDC §14).
+  const [editing, setEditing] = useState(null);
+  const editingOffer = offers.find((o) => o.id === editing) ?? null;
+
+  /**
+   * Une SEULE horloge pour toutes les cartes.
+   *
+   * Un minuteur par carte ferait battre quatre rendus par seconde là où un
+   * suffit — et les comptes à rebours se décaleraient les uns des autres, ce
+   * qui se voit immédiatement sur une grille.
+   */
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const left = freeLeft(used);
   const allowed = left > 0;
 
@@ -628,23 +648,62 @@ export default function ProPage() {
               />
             ) : null}
 
+            {/* Les cartes montrent ce que le CLIENT voit — photo, les deux
+                prix, le temps restant, le stock. Un commerçant ne peut pas
+                piloter une offre dont il ne voit que l'accroche : c'est le prix
+                et le stock qui décident s'il faut la prolonger, la réapprovisionner
+                ou la retirer. Un clic ouvre la même carte en modification. */}
             <div className="tkpro-offers">
               {offers.map((o) => (
-                <div className="tkpro-offer" key={o.id}>
-                  <div className="claim">{o.claim}</div>
-                  <div className="body">
-                    <b>{o.title}</b>
-                    <span>{o.audience}</span>
-                    <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {o.flash ? <span className="tkpro-tag flash">FLASH</span> : null}
-                      <span className={`tkpro-tag ${o.live ? 'facture' : 'ticket'}`}>
-                        {o.live ? 'EN LIGNE' : 'HORS LIGNE'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <OfferCard
+                  key={o.id}
+                  offer={o}
+                  now={clock}
+                  onEdit={() => {
+                    setEditing(o.id);
+                    setComposing(false);
+                  }}
+                  onToggleLive={() => {
+                    setOffers((list) =>
+                      list.map((x) => (x.id === o.id ? { ...x, live: !x.live } : x)),
+                    );
+                    notify(`« ${o.title} » ${o.live ? 'retirée de l’app' : 'remise en ligne'}.`);
+                  }}
+                />
               ))}
             </div>
+
+            {/* La modification réutilise le formulaire de publication : deux
+                écrans pour les mêmes champs finiraient par diverger. */}
+            {editingOffer ? (
+              <OfferForm
+                key={editingOffer.id}
+                initial={editingOffer}
+                onPublish={(draft) => {
+                  setOffers((list) =>
+                    list.map((x) =>
+                      x.id === editingOffer.id
+                        ? {
+                            ...x,
+                            title: draft.title,
+                            category: draft.category,
+                            priceCents: draft.priceCents,
+                            oldPriceCents: draft.oldPriceCents,
+                            stockTotal: draft.stock,
+                            // On ne « rend » pas des unités déjà vendues : le
+                            // restant suit la nouvelle quantité sans la dépasser.
+                            stockLeft: Math.min(x.stockLeft, draft.stock),
+                            endsAt: Date.now() + draft.durationMinutes * 60 * 1000,
+                          }
+                        : x,
+                    ),
+                  );
+                  setEditing(null);
+                  notify(`« ${draft.title} » mise à jour.`);
+                }}
+                onCancel={() => setEditing(null)}
+              />
+            ) : null}
 
             <p className="tkpro-note">
               Une offre publiée ici apparaît immédiatement dans l’app des clients, et la remise
@@ -653,6 +712,7 @@ export default function ProPage() {
             </p>
           </>
         ) : null}
+        {tab === 'profile' ? <MerchantProfile onSave={notify} /> : null}
       </main>
 
       {toast ? (
@@ -661,6 +721,205 @@ export default function ProPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * UNE OFFRE, telle que le client la voit — et telle que le commerçant la pilote.
+ *
+ * Photo, remise, temps restant, stock, les deux prix : ce sont les informations
+ * du §3.1 du CDC, celles de la carte de l'app. Le commerçant qui ne voit que
+ * son accroche ne peut décider de rien ; celui qui voit qu'il reste 4 pièces
+ * sur 25 à trente-huit minutes de la fin sait s'il prolonge ou s'il réapprovisionne.
+ */
+function OfferCard({ offer, now, onEdit, onToggleLive }) {
+  const pct = discountPct(offer);
+  const fini = offer.endsAt <= now;
+  const partis = offer.stockTotal > 0 ? (offer.stockLeft / offer.stockTotal) * 100 : 0;
+  const bas = offer.stockLeft <= offer.stockTotal * 0.25;
+
+  return (
+    <article className={offer.live ? 'tkpro-offer' : 'tkpro-offer off'}>
+      <button
+        type="button"
+        className="tkpro-offer-open"
+        onClick={onEdit}
+        aria-label={`Modifier « ${offer.title} »`}
+      >
+        <div className="tkpro-offer-photo">
+          <img src={offer.photo} alt="" />
+          {pct > 0 ? <span className="tkpro-offer-remise">-{pct} %</span> : null}
+          <span className={bas ? 'tkpro-offer-stock bas' : 'tkpro-offer-stock'}>
+            {offer.stockLeft} / {offer.stockTotal}
+          </span>
+        </div>
+
+        <div className="tkpro-offer-body">
+          <h4>{offer.title}</h4>
+
+          <div className="tkpro-offer-prix">
+            <b>{formatCents(offer.priceCents)}</b>
+            <s>{formatCents(offer.oldPriceCents)}</s>
+          </div>
+
+          <div className="tkpro-offer-jauge">
+            <span style={{ width: `${Math.max(4, Math.round(partis))}%` }} />
+          </div>
+
+          <div className="tkpro-offer-meta">
+            {/* Une offre expirée le DIT. Laisser tourner « 00:00:00 » ferait
+                croire à une offre encore vivante, et le commerçant attendrait
+                des ventes qui ne viendront pas. */}
+            <span className={fini ? 'chrono fini' : 'chrono'}>
+              {fini ? 'Terminée' : remainingLabel(offer.endsAt, now)}
+            </span>
+            <span className={`tkpro-tag ${offer.live ? 'facture' : 'ticket'}`}>
+              {offer.live ? 'EN LIGNE' : 'HORS LIGNE'}
+            </span>
+          </div>
+        </div>
+      </button>
+
+      <div className="tkpro-offer-actions">
+        <button type="button" className="tkpro-btn" onClick={onEdit}>
+          Modifier
+        </button>
+        <button type="button" className="tkpro-btn" onClick={onToggleLive}>
+          {offer.live ? 'Retirer' : 'Remettre en ligne'}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+/**
+ * MON COMMERCE — tout ce qui identifie la boutique, au même endroit.
+ *
+ * Les informations étaient éparpillées : le nom dans l'en-tête, l'adresse nulle
+ * part, le KBIS uniquement dans le dossier du Super Admin. Un commerçant qui
+ * déménage ou change de numéro n'avait aucun endroit où le dire.
+ *
+ * Trois blocs, dans l'ordre où on les cherche : l'identité de la boutique, le
+ * contact et la banque, puis les pièces légales. Le KBIS se CONSULTE et ne se
+ * réécrit pas — remplacer un justificatif d'immatriculation n'est pas une
+ * modification de profil, c'est une nouvelle demande de validation.
+ */
+function MerchantProfile({ onSave }) {
+  const [form, setForm] = useState(MERCHANT);
+  const set = (key) => (event) => setForm((f) => ({ ...f, [key]: event.target.value }));
+
+  return (
+    <>
+      <div className="tkpro-card-head">
+        <h2>Mon commerce</h2>
+        <span className="tkpro-note-inline">Données de démonstration</span>
+      </div>
+
+      <form
+        className="tkpro-profile"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSave('Informations du commerce enregistrées.');
+        }}
+      >
+        <section className="tkpro-card">
+          <div className="tkpro-card-head">
+            <h2>La boutique</h2>
+          </div>
+
+          <div className="tkpro-identite">
+            <div className="tkpro-logo">
+              <img src={form.logo} alt={`Logo de ${form.shopName}`} />
+            </div>
+            <div>
+              <b>{form.shopName}</b>
+              <span>
+                {form.area} · {form.city}
+              </span>
+              <button type="button" className="tkpro-btn">
+                Changer le logo
+              </button>
+            </div>
+          </div>
+
+          <div className="tkpro-form-grid">
+            <Input label="Nom du magasin" value={form.shopName} onChange={set('shopName')} wide />
+            <Input label="Raison sociale" value={form.legalName} onChange={set('legalName')} wide />
+            <Input label="Adresse" value={form.address} onChange={set('address')} wide />
+            <Input label="Code postal" value={form.zip} onChange={set('zip')} />
+            <Input label="Ville" value={form.city} onChange={set('city')} />
+            <Input label="Quartier" value={form.area} onChange={set('area')} />
+            <Input label="Horaires" value={form.hours} onChange={set('hours')} wide />
+          </div>
+        </section>
+
+        <section className="tkpro-card">
+          <div className="tkpro-card-head">
+            <h2>Contact et paiement</h2>
+          </div>
+          <div className="tkpro-form-grid">
+            <Input
+              label="Responsable"
+              value={form.contactName}
+              onChange={set('contactName')}
+              wide
+            />
+            <Input label="E-mail" value={form.email} onChange={set('email')} wide />
+            <Input label="Téléphone" value={form.phone} onChange={set('phone')} />
+            {/* L'IBAN est MASQUÉ et non modifiable ici : changer un compte de
+                versement est l'opération que fraude toute plateforme de
+                paiement. Elle passe par une vérification, pas par un champ. */}
+            <Input label="IBAN de versement" value={form.iban} readOnly />
+          </div>
+        </section>
+
+        <section className="tkpro-card">
+          <div className="tkpro-card-head">
+            <h2>Pièces légales</h2>
+          </div>
+          <div className="tkpro-form-grid">
+            <Input label="SIRET" value={form.siret} readOnly />
+            <Input label="N° de TVA" value={form.tva} readOnly />
+          </div>
+
+          <div className="tkpro-kbis">
+            <div>
+              <b>{MERCHANT.kbis.filename}</b>
+              <span>
+                Déposé le {MERCHANT.kbis.uploadedAt} · {MERCHANT.kbis.status}
+              </span>
+            </div>
+            <button type="button" className="tkpro-btn">
+              Consulter
+            </button>
+          </div>
+
+          <p className="tkpro-note">
+            SIRET, TVA et KBIS ont été vérifiés à la validation du compte. Les modifier suppose une
+            nouvelle vérification : écrivez-nous plutôt que de les corriger ici.
+          </p>
+        </section>
+
+        <div className="tkpro-profile-foot">
+          <button type="submit" className="tkpro-btn primary">
+            Enregistrer
+          </button>
+          <span className="tkpro-note-inline">
+            Démonstration : rien n’est encore transmis à un serveur.
+          </span>
+        </div>
+      </form>
+    </>
+  );
+}
+
+/** Un champ de formulaire, libellé au-dessus — comme dans le reste du portail. */
+function Input({ label, value, onChange, wide = false, readOnly = false }) {
+  return (
+    <label className={wide ? 'tkpro-input wide' : 'tkpro-input'}>
+      <span>{label}</span>
+      <input value={value} onChange={onChange} readOnly={readOnly} disabled={readOnly} />
+    </label>
   );
 }
 

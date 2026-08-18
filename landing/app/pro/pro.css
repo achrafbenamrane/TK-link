@@ -440,32 +440,131 @@
   border-radius: 16px;
   overflow: hidden;
   display: flex;
+  flex-direction: column;
 }
-.tkpro-offer .claim {
-  background: var(--forest);
-  color: var(--lime);
+/* Une offre hors ligne se voit tout de suite : elle ne rapporte rien, et la
+   confondre avec une offre active fait attendre des ventes qui ne viendront pas. */
+.tkpro-offer.off {
+  opacity: 0.62;
+}
+/* Toute la carte est cliquable — c'est le geste attendu sur une vignette. Le
+   bouton « Modifier » reste dessous pour ceux qui naviguent au clavier ou qui
+   ne devinent pas qu'une image est un bouton. */
+.tkpro-offer-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.tkpro-offer-open:hover .tkpro-offer-photo img {
+  transform: scale(1.04);
+}
+
+.tkpro-offer-photo {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--paper);
+}
+.tkpro-offer-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+.tkpro-offer-remise {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  background: var(--brand);
+  color: #fff;
   font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
   font-weight: 800;
   font-size: 16px;
+  padding: 5px 9px;
+  border-radius: 10px;
+}
+.tkpro-offer-stock {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  background: rgba(15, 26, 18, 0.85);
+  color: #f2f7f0;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 5px 9px;
+  border-radius: 999px;
+}
+.tkpro-offer-stock.bas {
+  background: #b91c1c;
+}
+
+.tkpro-offer-body {
+  padding: 12px 14px 14px;
+}
+.tkpro-offer-body h4 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.25;
+}
+.tkpro-offer-prix {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+}
+.tkpro-offer-prix b {
+  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-size: 20px;
+  color: var(--brand);
+}
+.tkpro-offer-prix s {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+.tkpro-offer-jauge {
+  margin-top: 10px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.tkpro-offer-jauge span {
+  display: block;
+  height: 100%;
+  background: var(--brand);
+  border-radius: 999px;
+}
+.tkpro-offer-meta {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 16px 12px;
-  min-width: 92px;
-  text-align: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
 }
-.tkpro-offer .body {
-  padding: 12px 14px;
+.tkpro-offer-meta .chrono {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink);
+}
+.tkpro-offer-meta .chrono.fini {
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+.tkpro-offer-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+.tkpro-offer-actions .tkpro-btn {
   flex: 1;
-  min-width: 0;
-}
-.tkpro-offer .body b {
-  display: block;
-  font-size: 14px;
-}
-.tkpro-offer .body span {
-  font-size: 12.5px;
-  color: var(--ink-muted);
 }
 
 /* ---------------------------------------------------------------- mobile */
@@ -751,4 +850,93 @@
   font-size: 12px;
   color: #8a958b;
   white-space: nowrap;
+}
+
+/* ------------------------------------------------------ mon commerce */
+.tkpro-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+/* Le logo et le nom en tête : on doit reconnaître SA boutique avant de lire un
+   seul champ, sinon rien ne distingue cet écran d'un formulaire administratif. */
+.tkpro-identite {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.tkpro-logo {
+  width: 76px;
+  height: 76px;
+  border-radius: 18px;
+  overflow: hidden;
+  flex: none;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.tkpro-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.tkpro-identite > div:last-child {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+.tkpro-identite b {
+  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-size: 18px;
+}
+.tkpro-identite span {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.tkpro-identite .tkpro-btn {
+  margin-top: 4px;
+}
+
+/* Un champ verrouillé doit se VOIR verrouillé : gris, sans curseur de saisie.
+   Un champ qui refuse silencieusement la frappe fait douter du clavier. */
+.tkpro-input input:disabled {
+  background: var(--paper);
+  color: var(--ink-muted);
+  cursor: not-allowed;
+}
+
+.tkpro-kbis {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.tkpro-kbis div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.tkpro-kbis b {
+  font-size: 14px;
+}
+.tkpro-kbis span {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.tkpro-profile-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
