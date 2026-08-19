@@ -18,6 +18,7 @@ import {
   ROLE_INFO,
   TOTALS,
   formatEuros,
+  THREADS,
 } from './data';
 
 /**
@@ -44,6 +45,7 @@ const TABS = [
   { key: 'members', label: 'Comptes', icon: '👤' },
   { key: 'disputes', label: 'Litiges', icon: '⚖' },
   { key: 'revenue', label: 'Revenus', icon: '€' },
+  { key: 'contact', label: 'Messages', icon: '💬' },
 ];
 
 /**
@@ -990,6 +992,7 @@ export default function AdminPage() {
             </div>
           </>
         ) : null}
+        {tab === 'contact' ? <SupportInbox onSend={notify} /> : null}
       </main>
 
       {toast ? (
@@ -998,5 +1001,140 @@ export default function AdminPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** Le métier du correspondant, dit en un mot — on ne répond pas pareil aux deux. */
+const ROLE_LABEL = { commercant: 'Commerçant', grossiste: 'Grossiste' };
+
+/**
+ * MESSAGES — l'autre bout du fil ouvert dans les espaces pro et grossiste.
+ *
+ * Une messagerie n'a de valeur que BILATÉRALE. Un formulaire qui envoie dans le
+ * vide et une administration qui répond par e-mail hors de la plateforme, c'est
+ * une conversation coupée en deux : personne ne retrouve l'historique, et le
+ * professionnel ne sait même pas si son message est arrivé.
+ *
+ * Les fils non lus passent DEVANT, et le métier du correspondant est affiché
+ * avant le sujet : on ne répond pas la même chose à un commerçant du quartier
+ * et à un grossiste qui livre trente commerces.
+ */
+function SupportInbox({ onSend }) {
+  const [threads, setThreads] = useState(THREADS);
+  const [openId, setOpenId] = useState(THREADS[0]?.id ?? null);
+  const [reply, setReply] = useState('');
+
+  const ordered = [...threads].sort((a, b) => Number(b.unread) - Number(a.unread));
+  const open = threads.find((t) => t.id === openId) ?? null;
+
+  const send = (event) => {
+    event.preventDefault();
+    const text = reply.trim();
+    if (!text || !open) return;
+    setThreads((list) =>
+      list.map((t) =>
+        t.id === open.id
+          ? {
+              ...t,
+              // Répondre marque le fil comme traité : le laisser en gras après
+              // une réponse ferait retraiter le même dossier deux fois.
+              unread: false,
+              messages: [
+                ...t.messages,
+                { id: `m_${Date.now()}`, from: 'admin', at: 'À l’instant', body: text },
+              ],
+            }
+          : t,
+      ),
+    );
+    setReply('');
+    onSend(`Réponse envoyée à ${open.party}.`);
+  };
+
+  return (
+    <>
+      <div className="tkpro-head">
+        <div>
+          <h1>Messages</h1>
+          <p>Les demandes des commerçants et des grossistes, et vos réponses.</p>
+        </div>
+        <span
+          className={
+            ordered.some((t) => t.unread) ? 'tkadmin-count' : 'tkadmin-count tkadmin-count-zero'
+          }
+        >
+          {ordered.filter((t) => t.unread).length} sans réponse
+        </span>
+      </div>
+
+      <div className="tkadmin-inbox">
+        <ul className="tkadmin-threads">
+          {ordered.map((t) => (
+            <li key={t.id}>
+              <button
+                type="button"
+                className={t.id === openId ? 'is-on' : undefined}
+                onClick={() => setOpenId(t.id)}
+              >
+                <span className="who">
+                  <b>{t.party}</b>
+                  {t.unread ? <i className="dot" aria-label="Sans réponse" /> : null}
+                </span>
+                <span className="meta">
+                  {ROLE_LABEL[t.role]} · {t.subject}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <div className="tkadmin-thread">
+          {open ? (
+            <>
+              <div className="tkpro-card-head">
+                <h2>{open.party}</h2>
+                <span className="tkpro-note-inline">
+                  {ROLE_LABEL[open.role]} · {open.subject}
+                </span>
+              </div>
+
+              <div className="tkpro-fil">
+                {open.messages.map((m) => (
+                  <div className={m.from === 'admin' ? 'tkpro-msg moi' : 'tkpro-msg'} key={m.id}>
+                    <div className="tkpro-msg-head">
+                      <b>{m.from === 'admin' ? 'Équipe TK LINK' : open.party}</b>
+                      <span>{m.at}</span>
+                    </div>
+                    <p>{m.body}</p>
+                  </div>
+                ))}
+              </div>
+
+              <form className="tkpro-contact-form" onSubmit={send}>
+                <label className="tkpro-input wide">
+                  <span>Votre réponse</span>
+                  <textarea
+                    rows={4}
+                    value={reply}
+                    onChange={(e) => setReply(e.target.value)}
+                    placeholder="Répondez précisément — numéro de commande, date, montant."
+                  />
+                </label>
+                <div className="tkpro-profile-foot">
+                  <button type="submit" className="tkpro-btn primary" disabled={!reply.trim()}>
+                    Répondre
+                  </button>
+                  <span className="tkpro-note-inline">
+                    Démonstration : la réponse reste sur cette page.
+                  </span>
+                </div>
+              </form>
+            </>
+          ) : (
+            <p className="tkadmin-empty">Sélectionnez une conversation.</p>
+          )}
+        </div>
+      </div>
+    </>
   );
 }

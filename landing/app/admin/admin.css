@@ -480,3 +480,74 @@
   background: #fdeae5;
   color: #b8371a;
 }
+
+/* ------------------------------------------------------ messagerie support */
+.tkadmin-inbox {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) 1fr;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .tkadmin-inbox {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tkadmin-threads {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tkadmin-threads button {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.tkadmin-threads button:hover {
+  border-color: var(--brand);
+}
+.tkadmin-threads button.is-on {
+  border-color: var(--brand);
+  background: var(--brand-50, #e8f7ec);
+}
+.tkadmin-threads .who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tkadmin-threads .who b {
+  font-size: 14px;
+}
+/* Une pastille plutôt qu'un gras : le gras se confond avec le fil sélectionné,
+   et l'on ne saurait plus lequel attend une réponse. */
+.tkadmin-threads .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand);
+  flex: none;
+}
+.tkadmin-threads .meta {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.tkadmin-thread {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  padding: 18px;
+}

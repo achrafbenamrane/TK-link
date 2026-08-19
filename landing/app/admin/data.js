@@ -374,3 +374,71 @@ export const DISPUTE_OUTCOMES = [
   { key: 'merchant', label: 'Donner raison au commerçant', tone: 'ok' },
   { key: 'gesture', label: 'Geste commercial', tone: 'mid' },
 ];
+
+/* ------------------------------------------------- messagerie support
+ *
+ * Le pendant, côté administration, de l'onglet Contact des espaces pro et
+ * grossiste : « ajoute aussi une partie contact pour pouvoir échanger avec
+ * commerçants et grossistes si besoin ».
+ *
+ * Une messagerie n'a de valeur que si elle est BILATÉRALE. Un formulaire qui
+ * envoie dans le vide et une administration qui répond par e-mail en dehors de
+ * la plateforme, c'est une conversation coupée en deux : personne ne retrouve
+ * l'historique, et le professionnel ne sait pas si son message est arrivé.
+ *
+ * ⚠️ Fils simulés. Le §12.2 fait du serveur la source de vérité — ce qui est
+ * écrit ici ne quitte pas la page.
+ */
+export const THREADS = [
+  {
+    id: 'th_1',
+    party: 'Maison Hammamet',
+    role: 'commercant',
+    subject: 'Paiement ou versement',
+    unread: true,
+    messages: [
+      {
+        id: 'th1_m1',
+        from: 'pro',
+        at: 'Aujourd’hui · 09 h 41',
+        body: 'Bonjour, la vente de samedi n’apparaît pas sur mon relevé de versement. Commande TK-4802, 48,60 €.',
+      },
+    ],
+  },
+  {
+    id: 'th_2',
+    party: 'Occitanie Fruits & Légumes',
+    role: 'grossiste',
+    subject: 'Publication d’une offre',
+    unread: false,
+    messages: [
+      {
+        id: 'th2_m1',
+        from: 'pro',
+        at: 'Hier · 15 h 08',
+        body: 'Je n’arrive pas à publier un lot de 200 kg : le champ quantité refuse au-delà de 99.',
+      },
+      {
+        id: 'th2_m2',
+        from: 'admin',
+        at: 'Hier · 16 h 22',
+        body: 'Bonjour, la limite est corrigée depuis ce matin. Pouvez-vous réessayer et nous confirmer ?',
+      },
+    ],
+  },
+  {
+    id: 'th_3',
+    party: 'Techno Sud',
+    role: 'commercant',
+    subject: 'Mon compte et mes documents',
+    unread: true,
+    messages: [
+      {
+        id: 'th3_m1',
+        from: 'pro',
+        at: 'Lundi · 11 h 03',
+        body: 'Mon Kbis a été refusé mais je ne comprends pas pourquoi, il date de moins de trois mois.',
+      },
+    ],
+  },
+];
