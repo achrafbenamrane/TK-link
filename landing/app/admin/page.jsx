@@ -86,7 +86,7 @@ export default function AdminPage() {
   const [refusing, setRefusing] = useState(null);
   const [reason, setReason] = useState('');
   /** Ce qu'on regarde : ce qui attend, ou ce qui a déjà été tranché. */
-  const [appFilter, setAppFilter] = useState('pending');
+  const [appFilter, setAppFilter] = useState('commercant');
   /** L'issue de chaque litige : `{ [id]: { outcome, note } }`. */
   const [rulings, setRulings] = useState({});
   const [ruling, setRuling] = useState(null);
@@ -177,8 +177,29 @@ export default function AdminPage() {
   const openDisputes = DISPUTES.filter((d) => !rulings[d.id]);
 
   const pending = APPLICATIONS.filter((a) => !decisions[a.id]);
-  const handled = APPLICATIONS.filter((a) => decisions[a.id]);
-  const visibleApps = appFilter === 'pending' ? pending : handled;
+
+  /**
+   * Le tri se fait par MÉTIER, plus par état d'avancement.
+   *
+   * On séparait « en attente » et « traitées ». Deux défauts. L'onglet
+   * « traitées » restait vide au premier chargement — un onglet vide au démarrage
+   * ressemble à une panne. Et surtout, un commerçant et un grossiste ne se
+   * vérifient pas de la même façon : le second livre des professionnels, ses
+   * volumes et ses responsabilités n'ont rien à voir. Les mélanger dans une même
+   * file oblige à relire le rôle de chaque dossier avant de savoir quoi
+   * contrôler.
+   *
+   * L'avancement ne disparaît pas pour autant : chaque dossier porte son verdict,
+   * et les dossiers non traités passent devant. C'est l'information qu'on
+   * cherchait dans l'onglet, sans avoir à changer d'onglet.
+   */
+  const visibleApps = APPLICATIONS.filter((a) => a.role === appFilter).sort((a, b) => {
+    const traiteA = decisions[a.id] ? 1 : 0;
+    const traiteB = decisions[b.id] ? 1 : 0;
+    return traiteA - traiteB;
+  });
+
+  const parRole = (r) => APPLICATIONS.filter((a) => a.role === r).length;
 
   /**
    * Depuis combien de temps ce dossier attend.
@@ -290,8 +311,8 @@ export default function AdminPage() {
 
             <div className="tkadmin-filters" role="tablist" aria-label="Filtrer les demandes">
               {[
-                { key: 'pending', label: 'En attente', n: pending.length },
-                { key: 'handled', label: 'Traitées', n: handled.length },
+                { key: 'commercant', label: 'Commerçants', n: parRole('commercant') },
+                { key: 'grossiste', label: 'Grossistes', n: parRole('grossiste') },
               ].map((tabItem) => (
                 <button
                   key={tabItem.key}
@@ -308,9 +329,9 @@ export default function AdminPage() {
 
             {visibleApps.length === 0 ? (
               <p className="tkadmin-empty">
-                {appFilter === 'pending'
-                  ? 'Aucune demande en attente. Tout est traité.'
-                  : 'Aucune demande traitée pour le moment.'}
+                {appFilter === 'commercant'
+                  ? 'Aucune demande de commerçant pour le moment.'
+                  : 'Aucune demande de grossiste pour le moment.'}
               </p>
             ) : null}
 
