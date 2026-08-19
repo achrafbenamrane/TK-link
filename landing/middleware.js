@@ -18,7 +18,7 @@
  * qui prend le relais — voir `docs/security/checklist.md`.
  */
 
-const PROTECTED = ['/pro', '/admin'];
+const PROTECTED = ['/pro', '/grossiste', '/admin'];
 
 export function middleware(request) {
   const password = process.env.TKLINK_PRO_PASSWORD;
@@ -79,5 +79,5 @@ export function middleware(request) {
 export const config = {
   // On ne fait tourner le middleware que sur les chemins concernés : la vitrine
   // publique n'a aucune raison de payer ce détour à chaque visite.
-  matcher: ['/pro/:path*', '/admin/:path*'],
+  matcher: ['/pro/:path*', '/grossiste/:path*', '/admin/:path*'],
 };

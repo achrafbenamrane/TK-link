@@ -940,3 +940,56 @@
   gap: 12px;
   flex-wrap: wrap;
 }
+
+/* ------------------------------------------------------------ contact */
+.tkpro-fil {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.tkpro-msg {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--paper);
+  max-width: 72ch;
+}
+/* Ses propres messages sont alignés à droite et teintés : dans un fil, savoir
+   qui parle doit se lire à la forme, pas au nom. */
+.tkpro-msg.moi {
+  margin-left: auto;
+  background: var(--brand-50, #e8f7ec);
+  border-color: transparent;
+}
+.tkpro-msg-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.tkpro-msg-head b {
+  font-size: 13px;
+}
+.tkpro-msg-head span {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.tkpro-msg p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.tkpro-contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.tkpro-contact-form textarea {
+  font: inherit;
+  resize: vertical;
+}
