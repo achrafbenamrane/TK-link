@@ -60,6 +60,10 @@ const ROLE_GROUPS = [
   { role: 'grossiste', title: 'Grossistes', who: 'Fournisseur', metric: 'Lots publiés' },
   { role: 'commercant', title: 'Commerçants', who: 'Enseigne', metric: 'Offres publiées' },
   { role: 'consommateur', title: 'Utilisateurs', who: 'Utilisateur', metric: 'Commandes' },
+  // CDC §11.1 — les livreurs manquaient à l'annuaire, alors que le §7 en fait
+  // un profil à part entière. Un rôle absent du back-office est un rôle que
+  // personne ne peut suspendre.
+  { role: 'livreur', title: 'Livreurs', who: 'Livreur', metric: 'Courses' },
 ];
 
 const ROLE_FILTERS = [
@@ -67,6 +71,7 @@ const ROLE_FILTERS = [
   { key: 'consommateur', label: 'Consommateurs' },
   { key: 'commercant', label: 'Commerçants' },
   { key: 'grossiste', label: 'Grossistes' },
+  { key: 'livreur', label: 'Livreurs' },
 ];
 
 export default function AdminPage() {
@@ -708,6 +713,20 @@ export default function AdminPage() {
                                   <td>
                                     {m.role === 'consommateur' ? (
                                       <span className="tkadmin-sub">—</span>
+                                    ) : m.role === 'livreur' ? (
+                                      // Un livreur n'a pas de SIRET : ce qui
+                                      // l'autorise à porter un colis, c'est sa
+                                      // pièce d'identité (§7, étapes 3 et 4).
+                                      <>
+                                        {m.identite === 'vérifiée' ? (
+                                          <span className="tkadmin-sub">Identité vérifiée</span>
+                                        ) : (
+                                          <span className="tkadmin-missing">
+                                            Identité à vérifier
+                                          </span>
+                                        )}
+                                        <div className="tkadmin-sub">{m.zone}</div>
+                                      </>
                                     ) : m.siret ? (
                                       <span className="tkadmin-mono">{m.siret}</span>
                                     ) : (
@@ -718,7 +737,9 @@ export default function AdminPage() {
                                   <td className="num">
                                     {m.role === 'consommateur'
                                       ? `${m.orders} commande${m.orders > 1 ? 's' : ''}`
-                                      : `${m.offers} offre${m.offers > 1 ? 's' : ''}`}
+                                      : m.role === 'livreur'
+                                        ? `${m.deliveries} course${m.deliveries > 1 ? 's' : ''}`
+                                        : `${m.offers} offre${m.offers > 1 ? 's' : ''}`}
                                   </td>
                                   <td className="num">
                                     <button
@@ -737,6 +758,20 @@ export default function AdminPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* §7.2 — l'empreinte du livreur ne quitte JAMAIS son
+                      téléphone. Le dire ici n'est pas de la pédagogie : c'est
+                      le back-office qu'un contrôle regarde, et un administrateur
+                      qui croirait pouvoir « consulter l'empreinte » d'un livreur
+                      chercherait une donnée que TK LINK ne doit pas détenir. */}
+                  {group.role === 'livreur' && rows.length > 0 ? (
+                    <p className="tkpro-note">
+                      L’authentification biométrique des livreurs est <b>locale</b> : l’empreinte
+                      reste dans le matériel sécurisé du téléphone et n’est jamais transmise ni
+                      conservée par TK LINK (CDC §7.2). Rien n’est donc consultable ici — il n’y a
+                      rien à consulter.
+                    </p>
+                  ) : null}
                 </section>
               );
             })}

@@ -179,6 +179,55 @@ const RAW_MEMBERS = [
     orders: 15,
     spentCents: 21360,
   },
+  /**
+   * LES LIVREURS — CDC §11.1 : « le Super Admin doit gérer aussi les livreurs ».
+   *
+   * Ils manquaient à l'annuaire, alors que le §7 en fait un profil à part
+   * entière avec sa vérification d'identité et sa zone d'activité. Un rôle
+   * absent du back-office est un rôle que personne ne peut suspendre.
+   *
+   * ⚠️ `biometrie: 'locale'` n'est PAS une donnée cosmétique. Le §7.2 est
+   * explicite : TKLINK ne stocke jamais l'empreinte, elle reste dans le
+   * matériel sécurisé du téléphone. L'écran affiche donc où elle vit, et ne
+   * propose aucun moyen de la consulter — il n'y a rien à consulter.
+   */
+  {
+    id: 'u9',
+    name: 'Mehdi Lahlou',
+    role: 'livreur',
+    city: 'Toulouse · Saint-Cyprien',
+    daysAgo: 12,
+    zone: 'Centre + Saint-Cyprien',
+    deliveries: 84,
+    identite: 'vérifiée',
+    biometrie: 'locale',
+    spentCents: 0,
+  },
+  {
+    id: 'u10',
+    name: 'Camille Rey',
+    role: 'livreur',
+    city: 'Toulouse · Capitole',
+    daysAgo: 5,
+    zone: 'Hypercentre',
+    deliveries: 21,
+    identite: 'vérifiée',
+    biometrie: 'locale',
+    spentCents: 0,
+  },
+  {
+    id: 'u11',
+    name: 'Yacine Belhadj',
+    role: 'livreur',
+    city: 'Blagnac',
+    daysAgo: 1,
+    zone: 'Blagnac + Purpan',
+    deliveries: 0,
+    // Dossier en cours : l'écran doit le montrer AVANT qu'on lui confie un colis.
+    identite: 'à vérifier',
+    biometrie: 'locale',
+    spentCents: 0,
+  },
 ];
 
 export const MEMBERS = RAW_MEMBERS.map((m) => ({
