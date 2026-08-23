@@ -8,7 +8,7 @@ import { canPublish, PACKS } from '../lib/billing';
 import { seedWholesaleLots } from './seed';
 import {
   PersistedMerchantSchema,
-  type OfferDraft,
+  type OfferDraftInput,
   type PublishedOffer,
   type WholesaleOrder,
 } from './schema';
@@ -44,7 +44,7 @@ type MerchantState = {
   wholesaleOrders: WholesaleOrder[];
 
   /** Publie une offre flash. Échoue si le quota est épuisé — CDC §9. */
-  publish: (draft: OfferDraft, seller?: string, nowMs?: number) => PublishResult;
+  publish: (draft: OfferDraftInput, seller?: string, nowMs?: number) => PublishResult;
   /**
    * Commande un lot chez un grossiste — CDC §20.
    *
@@ -73,7 +73,11 @@ export const useMerchantStore = create<MerchantState>()(
 
       publish: (draft, seller = '', nowMs = Date.now()) => {
         const s = get();
-        if (!canPublish(s.used, s.purchased)) return { ok: false, reason: 'quota' };
+        // Un BROUILLON ne consomme rien et ne bute sur aucun quota : enregistrer
+        // une idée n'est pas la publier. Facturer le brouillon découragerait de
+        // préparer ses ventes à l'avance — exactement ce qu'on veut encourager.
+        const brouillon = draft.state === 'brouillon';
+        if (!brouillon && !canPublish(s.used, s.purchased)) return { ok: false, reason: 'quota' };
 
         const offer: PublishedOffer = {
           id: makeId(),
@@ -84,14 +88,19 @@ export const useMerchantStore = create<MerchantState>()(
           stock: draft.stock,
           stockLeft: draft.stock,
           durationMinutes: draft.durationMinutes,
-          description: draft.description,
+          description: draft.description ?? '',
           publishedAt: nowMs,
+          // Le brouillon dit « dans 1 h », le store dit à quelle heure. Zéro
+          // reste zéro : « tout de suite » n'a pas besoin d'être daté, et le
+          // laisser à zéro garde le comportement des offres d'avant le §4.2.
+          startsAt: draft.startInMinutes ? nowMs + draft.startInMinutes * 60_000 : 0,
+          state: draft.state ?? 'publiee',
           offline: false,
-          audience: draft.audience,
+          audience: draft.audience ?? 'clients',
           seller,
         };
 
-        set({ offers: [offer, ...s.offers], used: s.used + 1 });
+        set({ offers: [offer, ...s.offers], used: brouillon ? s.used : s.used + 1 });
         return { ok: true, offer };
       },
 

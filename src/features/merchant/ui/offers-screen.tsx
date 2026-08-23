@@ -104,12 +104,24 @@ export function MerchantOffersScreen({ audience = 'clients', seller = '', onBack
       return;
     }
     setMode('list');
-    Alert.alert(
-      'En ligne 🎉',
-      audience === 'clients'
-        ? `« ${result.offer.title} » est visible dans l’app des clients.`
-        : `« ${result.offer.title} » est visible des commerçants.`,
-    );
+
+    // Le message dit ce qui vient de se passer, pas ce qu'on espérait. Annoncer
+    // « en ligne » pour un brouillon ou une offre programmée ferait attendre
+    // des ventes qui ne peuvent pas venir.
+    const pour = audience === 'clients' ? 'des clients' : 'des commerçants';
+    if (result.offer.state === 'brouillon') {
+      Alert.alert(
+        'Brouillon enregistré',
+        `« ${result.offer.title} » est gardée de côté. Aucune opération n’a été consommée.`,
+      );
+    } else if (result.offer.startsAt > 0) {
+      Alert.alert(
+        'Programmée ⏱',
+        `« ${result.offer.title} » s’ouvrira toute seule et sera alors visible ${pour}.`,
+      );
+    } else {
+      Alert.alert('En ligne 🎉', `« ${result.offer.title} » est visible ${pour}.`);
+    }
   };
 
   const onBuy = (packId: string) => {

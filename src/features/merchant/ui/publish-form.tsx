@@ -62,6 +62,22 @@ function Field({
  * affiché EN DIRECT sous les prix. Découvrir la commission sur le relevé du
  * mois suivant est la meilleure façon de perdre un commerçant.
  */
+/**
+ * QUAND L'OFFRE PART — CDC §4.2, huitième étape : « publier ou programmer ».
+ *
+ * Des délais RELATIFS et non un calendrier. Un commerçant programme « ce soir »
+ * ou « demain matin », il ne cherche pas une date dans un mois — et un sélecteur
+ * de date complet sur mobile coûte une dépendance native pour un besoin que
+ * quatre boutons couvrent. Le jour où un cas réel demande une date lointaine,
+ * il sera temps.
+ */
+const STARTS = [
+  { minutes: 0, label: 'Maintenant' },
+  { minutes: 60, label: 'Dans 1 h' },
+  { minutes: 180, label: 'Dans 3 h' },
+  { minutes: 1440, label: 'Demain' },
+] as const;
+
 export function PublishForm({ onPublish, onCancel }: Props) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<Category>('restauration');
@@ -69,6 +85,7 @@ export function PublishForm({ onPublish, onCancel }: Props) {
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('');
   const [duration, setDuration] = useState<number>(60);
+  const [startIn, setStartIn] = useState<number>(0);
   const [description, setDescription] = useState('');
   const [errors, setErrors] = useState<Errors>({});
 
@@ -77,7 +94,7 @@ export function PublishForm({ onPublish, onCancel }: Props) {
   const qty = Number.parseInt(stock, 10) || 0;
   const potential = priceCents * qty;
 
-  const submit = () => {
+  const submit = (state: 'brouillon' | 'publiee') => {
     const parsed = OfferDraftSchema.safeParse({
       title,
       category,
@@ -86,6 +103,9 @@ export function PublishForm({ onPublish, onCancel }: Props) {
       stock: qty,
       durationMinutes: duration,
       description,
+      // Une intention, pas une date : c'est le store qui horodate.
+      startInMinutes: startIn,
+      state,
     });
 
     if (!parsed.success) {
@@ -274,17 +294,72 @@ export function PublishForm({ onPublish, onCancel }: Props) {
         </View>
       </View>
 
+      {/* Quand elle part — CDC §4.2. */}
+      <View className="gap-2">
+        <AppText variant="caption" className="font-sans-semibold text-ink-muted">
+          Mise en ligne
+        </AppText>
+        <View className="flex-row flex-wrap gap-2">
+          {STARTS.map((s) => (
+            <Pressable
+              key={s.minutes}
+              testID={`publish-start-${s.minutes}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: startIn === s.minutes }}
+              accessibilityLabel={`Mise en ligne : ${s.label}`}
+              onPress={() => setStartIn(s.minutes)}
+              className={cn(
+                'rounded-pill border px-3.5 py-2',
+                startIn === s.minutes ? 'border-brand-500 bg-brand-500' : 'border-line bg-surface',
+              )}
+            >
+              <AppText
+                className={cn(
+                  'font-sans-semibold',
+                  startIn === s.minutes ? 'text-ink-inverse' : 'text-ink-muted',
+                )}
+                style={{ fontSize: 13 }}
+              >
+                {s.label}
+              </AppText>
+            </Pressable>
+          ))}
+        </View>
+        {startIn > 0 ? (
+          <AppText variant="caption" className="text-ink-faint">
+            Elle restera invisible jusque-là, puis s’ouvrira toute seule pour{' '}
+            {duration < 60 ? `${duration} min` : `${duration / 60} h`}.
+          </AppText>
+        ) : null}
+      </View>
+
       <View className="gap-2">
         <Pressable
           testID="publish-submit"
           accessibilityRole="button"
           accessibilityLabel="Publier l’offre"
-          onPress={submit}
+          onPress={() => submit('publiee')}
           className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-4 active:bg-brand-600"
         >
           <Feather name="zap" size={17} color={colors.inkInverse} />
           <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 15 }}>
-            Publier la vente flash
+            {startIn === 0 ? 'Publier la vente flash' : 'Programmer la vente flash'}
+          </AppText>
+        </Pressable>
+
+        {/* Le brouillon — premier état du §4.1. Il ne consomme pas d'opération :
+            enregistrer une idée n'est pas la publier, et facturer le brouillon
+            découragerait de préparer ses ventes à l'avance. */}
+        <Pressable
+          testID="publish-draft"
+          accessibilityRole="button"
+          accessibilityLabel="Enregistrer en brouillon"
+          onPress={() => submit('brouillon')}
+          className="flex-row items-center justify-center gap-2 rounded-control border border-line py-3.5 active:opacity-70"
+        >
+          <Feather name="save" size={16} color={colors.inkMuted} />
+          <AppText className="font-sans-semibold text-ink-muted" style={{ fontSize: 14 }}>
+            Enregistrer en brouillon
           </AppText>
         </Pressable>
         <Pressable

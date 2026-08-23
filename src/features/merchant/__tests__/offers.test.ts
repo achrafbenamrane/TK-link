@@ -1,4 +1,14 @@
-import { discountPct, isLive, liveOffers, secondsLeft, soldCents, stateOf } from '../lib/offers';
+import {
+  discountPct,
+  endsAt,
+  isLive,
+  liveOffers,
+  secondsLeft,
+  soldCents,
+  startOf,
+  STATE_LABEL,
+  stateOf,
+} from '../lib/offers';
 import { OfferDraftSchema, type PublishedOffer } from '../model/schema';
 import { useMerchantStore } from '../model/store';
 
@@ -8,6 +18,8 @@ const offer = (over: Partial<PublishedOffer> = {}): PublishedOffer => ({
   id: 'o1',
   title: 'Plateau de viennoiseries',
   category: 'restauration',
+  startsAt: 0,
+  state: 'publiee',
   priceCents: 900,
   oldPriceCents: 1800,
   stock: 10,
@@ -148,5 +160,113 @@ describe('store commerçant', () => {
     useMerchantStore.getState().sellOne(id);
     useMerchantStore.getState().sellOne(id);
     expect(useMerchantStore.getState().offers[0]!.stockLeft).toBe(0);
+  });
+});
+
+/**
+ * LE CYCLE DE VIE DU §4.1 — les deux états qui manquaient.
+ *
+ * Le CDC en décrit six : brouillon, planifiée, active, épuisée, expirée,
+ * annulée. Le code n'en connaissait que quatre : tout commençait à la
+ * publication, et « publier ou programmer » (§4.2, étape 8) n'existait pas.
+ */
+describe('cycle de vie — CDC §4.1 et §4.2', () => {
+  it('un brouillon n’est jamais en ligne, quelle que soit l’heure', () => {
+    const o = offer({ state: 'brouillon' });
+    expect(stateOf(o, NOW)).toBe('brouillon');
+    expect(isLive(o, NOW)).toBe(false);
+    // Même avec du stock et du temps devant lui : il n'a pas été publié.
+    expect(liveOffers([o], NOW)).toEqual([]);
+  });
+
+  it('une offre programmée attend son heure', () => {
+    const demain = NOW + 24 * 3600 * 1000;
+    const o = offer({ startsAt: demain });
+    expect(stateOf(o, NOW)).toBe('planifiee');
+    expect(isLive(o, NOW)).toBe(false);
+    // Et elle s'ouvre toute seule le moment venu.
+    expect(stateOf(o, demain + 1000)).toBe('en-ligne');
+  });
+
+  it('fait courir la durée depuis le DÉBUT, pas depuis la création', () => {
+    const demain = NOW + 24 * 3600 * 1000;
+    // Une heure de vente, programmée pour demain : elle finit demain + 1 h.
+    const o = offer({ startsAt: demain, durationMinutes: 60 });
+    expect(endsAt(o)).toBe(demain + 60 * 60_000);
+    // Sans cela, une offre programmée naîtrait déjà expirée.
+    expect(stateOf(o, demain + 30 * 60_000)).toBe('en-ligne');
+  });
+
+  it('compte à rebours vers l’OUVERTURE tant qu’elle n’a pas commencé', () => {
+    const dans2h = NOW + 2 * 3600 * 1000;
+    const o = offer({ startsAt: dans2h });
+    // Le commerçant veut savoir quand ça part, pas quand ça finit.
+    expect(secondsLeft(o, NOW)).toBe(2 * 3600);
+  });
+
+  it('ne rallume jamais une offre retirée, même programmée', () => {
+    // Le retrait est une DÉCISION : aucun horaire ne doit la contredire.
+    const o = offer({ startsAt: NOW - 1000, offline: true });
+    expect(stateOf(o, NOW)).toBe('retiree');
+  });
+
+  it('garde le comportement des offres d’avant la programmation', () => {
+    // `startsAt: 0` — celles déjà enregistrées sur les téléphones. Elles
+    // démarrent à leur publication, exactement comme avant.
+    const o = offer({ startsAt: 0 });
+    expect(startOf(o)).toBe(o.publishedAt);
+    expect(stateOf(o, NOW)).toBe('en-ligne');
+  });
+
+  it('a un libellé pour chacun des six états', () => {
+    for (const etat of [
+      'brouillon',
+      'planifiee',
+      'en-ligne',
+      'epuisee',
+      'terminee',
+      'retiree',
+    ] as const) {
+      expect(STATE_LABEL[etat].length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('publier ou programmer — le quota', () => {
+  beforeEach(() => {
+    useMerchantStore.setState({ offers: [], used: 0, purchased: 0 });
+  });
+
+  const brouillon = {
+    title: 'Panier surprise',
+    category: 'restauration' as const,
+    priceCents: 500,
+    oldPriceCents: 1200,
+    stock: 10,
+    durationMinutes: 60,
+  };
+
+  it('n’entame pas le quota pour un brouillon', () => {
+    const avant = useMerchantStore.getState().used;
+    const r = useMerchantStore.getState().publish({ ...brouillon, state: 'brouillon' });
+    expect(r.ok).toBe(true);
+    // Enregistrer une idée n'est pas la publier.
+    expect(useMerchantStore.getState().used).toBe(avant);
+  });
+
+  it('laisse enregistrer un brouillon même quota épuisé', () => {
+    useMerchantStore.setState({ used: 99, purchased: 0 });
+    const r = useMerchantStore.getState().publish({ ...brouillon, state: 'brouillon' });
+    expect(r.ok).toBe(true);
+    // Alors qu'une publication, elle, est refusée.
+    const p = useMerchantStore.getState().publish(brouillon);
+    expect(p.ok).toBe(false);
+  });
+
+  it('entame le quota pour une offre programmée — elle SERA publiée', () => {
+    const avant = useMerchantStore.getState().used;
+    const r = useMerchantStore.getState().publish({ ...brouillon, startInMinutes: 60 });
+    expect(r.ok).toBe(true);
+    expect(useMerchantStore.getState().used).toBe(avant + 1);
   });
 });

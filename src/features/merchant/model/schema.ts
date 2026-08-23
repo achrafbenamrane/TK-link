@@ -41,6 +41,20 @@ export const OfferDraftSchema = z
     durationMinutes: z.number().int().positive(),
     description: z.string().trim().max(240).default(''),
     audience: z.enum(AUDIENCES).default('clients'),
+    /**
+     * PUBLIER OU PROGRAMMER — CDC §4.2, huitième étape.
+     *
+     * Un DÉLAI en minutes, pas une date. Le formulaire exprime une intention
+     * (« dans 1 h ») ; c'est le store qui l'horodate, avec l'horloge qu'il
+     * reçoit déjà en paramètre. Lire `Date.now()` dans un composant le rendrait
+     * impur — le compilateur React le refuse, et il a raison : une valeur qui
+     * change à chaque rendu n'a rien à faire dans un rendu.
+     *
+     * Zéro veut dire « tout de suite ».
+     */
+    startInMinutes: z.number().int().nonnegative().default(0),
+    /** Enregistrer sans publier — le premier état du §4.1. */
+    state: z.enum(['brouillon', 'publiee']).default('publiee'),
   })
   .refine((o) => o.oldPriceCents > o.priceCents, {
     // Sans cette règle on publierait des « promotions » plus chères que le prix
@@ -50,6 +64,17 @@ export const OfferDraftSchema = z
   });
 
 export type OfferDraft = z.infer<typeof OfferDraftSchema>;
+
+/**
+ * Le brouillon TEL QU'ON L'ÉCRIT, avant que Zod n'applique ses défauts.
+ *
+ * `z.infer` décrit la SORTIE du schéma : tout champ pourvu d'un défaut y est
+ * obligatoire, puisqu'il est garanti après analyse. Ce n'est pas ce qu'un
+ * appelant construit — il omet légitimement `startsAt` pour publier tout de
+ * suite. D'où ce type d'entrée, qui rend ces champs facultatifs là où on les
+ * écrit et garantis là où on les lit.
+ */
+export type OfferDraftInput = z.input<typeof OfferDraftSchema>;
 
 /** Une offre publiée, telle qu'elle est conservée. */
 export const PublishedOfferSchema = z.object({
@@ -63,6 +88,25 @@ export const PublishedOfferSchema = z.object({
   durationMinutes: z.number().int().positive(),
   description: z.string().default(''),
   publishedAt: z.number().int().positive(),
+  /**
+   * Quand l'offre COMMENCE — CDC §4.2, étape « publier ou programmer ».
+   *
+   * `0` veut dire « à la publication », et c'est aussi ce que valent les offres
+   * enregistrées avant l'ajout de ce champ. Un défaut est obligatoire ici : ce
+   * schéma relit des offres déjà présentes sur les téléphones, et un champ
+   * requis les ferait toutes échouer à la réhydratation.
+   */
+  startsAt: z.number().int().nonnegative().default(0),
+  /**
+   * L'INTENTION du commerçant — CDC §4.1.
+   *
+   * Seules deux valeurs se stockent, parce que seules deux se décident : garder
+   * au brouillon, ou publier. « Planifiée », « active », « épuisée » et
+   * « expirée » ne sont pas des décisions, ce sont des CONSTATS — ils se
+   * déduisent de l'heure et du stock. Les stocker obligerait à les tenir à jour,
+   * et un statut qui ment est pire qu'un statut absent.
+   */
+  state: z.enum(['brouillon', 'publiee']).default('publiee'),
   /** Retirée par le commerçant avant son terme. */
   offline: z.boolean().default(false),
   /** Public visé — CDC §20. Les offres d'avant le B2B sont pour les clients. */
