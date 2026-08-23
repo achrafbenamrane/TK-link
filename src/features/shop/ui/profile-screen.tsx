@@ -74,6 +74,13 @@ type ProfileScreenProps = {
   /** Une ligne de contexte VRAIE — le rôle, pas un quartier inventé. */
   subtitle?: string;
   /**
+   * Régler le barème de fidélité — CDC §8.3.
+   *
+   * Rendu par la route, comme tout ce qui traverse une tranche : les paliers
+   * vivent dans `loyalty`, que la boutique n'importe pas.
+   */
+  onOpenTiers?: () => void;
+  /**
    * Repasser du côté consommateur.
    *
    * Rendu par la route, comme le reste de ce qui touche au rôle. Sans cette
@@ -88,6 +95,7 @@ type ProfileScreenProps = {
 export function ProfileScreen({
   canPublishOffers = false,
   onLeaveMerchantSpace,
+  onOpenTiers,
   renderAvatar,
   name,
   subtitle,
@@ -247,6 +255,27 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
             s'approvisionner (son accueil, ce sont les lots des grossistes) ;
             publier et suivre ses commandes se fait sur l'espace pro. On le dit
             plutôt que de laisser chercher. */}
+        {canPublishOffers && onOpenTiers ? (
+          <Pressable
+            testID="profile-open-tiers"
+            accessibilityRole="button"
+            accessibilityLabel="Régler les paliers de fidélité"
+            onPress={onOpenTiers}
+            className="mb-4 flex-row items-center gap-3 rounded-card border border-line bg-surface p-4 active:opacity-70"
+          >
+            <Feather name="award" size={16} color={colors.brand600} />
+            <View className="flex-1">
+              <AppText className="font-sans-bold text-ink" style={{ fontSize: 14 }}>
+                Paliers de fidélité
+              </AppText>
+              <AppText variant="caption" className="text-ink-faint">
+                Ce que vos clients obtiennent, et à combien de points.
+              </AppText>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.inkFaint} />
+          </Pressable>
+        ) : null}
+
         {canPublishOffers && onLeaveMerchantSpace ? (
           <Pressable
             testID="profile-leave-merchant"

@@ -28,7 +28,34 @@ const CardSchema = z.object({
 });
 export type MerchantCard = z.infer<typeof CardSchema>;
 
-const PersistedSchema = z.object({ cards: z.record(z.string(), CardSchema).default({}) });
+/**
+ * Un palier tel qu'il se stocke — CDC §8.3.
+ *
+ * Le coût est plafonné : un palier à cent mille points n'est pas une
+ * récompense, c'est une carotte hors d'atteinte, et le §8.3 parle d'avantages
+ * que le client doit pouvoir obtenir.
+ */
+const TierSchema = z.object({
+  rank: z.number().int().positive(),
+  cost: z.number().int().positive().max(100_000),
+  reward: z.string().trim().min(1).max(60),
+});
+
+const PersistedSchema = z.object({
+  cards: z.record(z.string(), CardSchema).default({}),
+  /**
+   * Les paliers du commerçant — CDC §8.3 : « quatre paliers configurables ».
+   *
+   * Le défaut n'est pas décoratif : ce schéma relit des données déjà présentes
+   * sur les téléphones, enregistrées avant que les paliers ne soient
+   * modifiables. Sans lui, toutes les cartes de fidélité seraient effacées à la
+   * réhydratation — points, avantages réclamés et historique compris.
+   */
+  tiers: z
+    .array(TierSchema)
+    .min(1)
+    .default(() => DEFAULT_TIERS),
+});
 
 /** Les paliers, identiques pour toutes les enseignes de la démo. */
 export const DEFAULT_TIERS: Tier[] = [
@@ -62,6 +89,16 @@ const seedCards = (): Record<string, MerchantCard> => ({
 
 type State = {
   cards: Record<string, MerchantCard>;
+  /** Les paliers en vigueur chez ce commerçant — CDC §8.3. */
+  tiers: Tier[];
+  /**
+   * Redéfinit les paliers.
+   *
+   * Les avantages DÉJÀ RÉCLAMÉS ne sont pas repris : un client qui a obtenu sa
+   * boisson ne la rend pas parce que le commerçant a changé son barème. On
+   * renumérote donc les rangs sans toucher aux cartes.
+   */
+  setTiers: (tiers: Tier[]) => void;
   /** Crédite des points chez une enseigne (achat, jeu, bonus). */
   earn: (merchantId: string, points: number, label: string) => void;
   /** Réclame un palier atteint. Renvoie false si le palier n'est pas ouvert. */
@@ -80,6 +117,9 @@ export const useMerchantLoyaltyStore = create<State>()(
   persist(
     (set, get) => ({
       cards: seedCards(),
+      tiers: DEFAULT_TIERS,
+
+      setTiers: (tiers) => set({ tiers: tiers.map((t, i) => ({ ...t, rank: i + 1 })) }),
 
       earn: (merchantId, points, label) =>
         set((s) => {
@@ -98,7 +138,9 @@ export const useMerchantLoyaltyStore = create<State>()(
 
       claim: (merchantId, rank) => {
         const card = get().cards[merchantId];
-        const tier = DEFAULT_TIERS.find((t) => t.rank === rank);
+        // Les paliers du COMMERÇANT, pas ceux de la démo : depuis le §8.3 ils
+        // sont configurables, et réclamer doit suivre le barème en vigueur.
+        const tier = get().tiers.find((t) => t.rank === rank);
         if (!card || !tier) return false;
         if (card.claimed.includes(rank) || card.points < tier.cost) return false;
         set((s) => ({
@@ -137,7 +179,9 @@ export const useMerchantLoyaltyStore = create<State>()(
     {
       name: 'tklink-merchant-loyalty-v1',
       storage: createJSONStorage(() => asyncStorageBackend),
-      partialize: (s) => ({ cards: s.cards }),
+      // Les paliers se persistent avec les cartes : un barème reconfiguré ne
+      // doit pas revenir à celui de la démo au prochain lancement.
+      partialize: (s) => ({ cards: s.cards, tiers: s.tiers }),
       merge: (persisted, current) => {
         const parsed = PersistedSchema.safeParse(persisted);
         return parsed.success ? { ...current, ...parsed.data } : current;
@@ -148,3 +192,4 @@ export const useMerchantLoyaltyStore = create<State>()(
 
 /* ---- sélecteurs : tranche brute uniquement ---- */
 export const selectCards = (s: State) => s.cards;
+export const selectTiers = (s: State) => s.tiers;

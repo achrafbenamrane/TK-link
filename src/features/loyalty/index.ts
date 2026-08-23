@@ -50,3 +50,4 @@ export {
   type Tier,
   type TierState,
 } from './lib/tiers';
+export { TiersSettingsScreen } from './ui/tiers-settings-screen';

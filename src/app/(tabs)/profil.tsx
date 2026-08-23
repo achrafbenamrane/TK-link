@@ -5,6 +5,8 @@ import {
   selectRole,
   useOnboardingStore,
 } from '@/features/onboarding';
+import { useRouter } from 'expo-router';
+
 import { ProfileScreen } from '@/features/shop';
 import { canPublishOffers, ROLE_LABEL } from '@/shared/lib/roles';
 
@@ -24,6 +26,7 @@ import { canPublishOffers, ROLE_LABEL } from '@/shared/lib/roles';
 export default function ProfilRoute() {
   const role = useOnboardingStore(selectRole);
   const setRole = useOnboardingStore((s) => s.setRole);
+  const router = useRouter();
   const avatar = useOnboardingStore(selectAvatar);
   const firstName = useOnboardingStore(selectFirstName);
 
@@ -34,6 +37,7 @@ export default function ProfilRoute() {
       name={firstName}
       subtitle={ROLE_LABEL[role]}
       onLeaveMerchantSpace={() => setRole('consommateur')}
+      onOpenTiers={() => router.push('/paliers')}
     />
   );
 }

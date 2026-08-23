@@ -7,7 +7,7 @@ import { AppText, Screen } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
 
 import { nextTier, pointsToGo, reachedCount, tierProgress, tierState } from '../lib/tiers';
-import { DEFAULT_TIERS, selectCards, useMerchantLoyaltyStore } from '../model/merchant-store';
+import { selectCards, selectTiers, useMerchantLoyaltyStore } from '../model/merchant-store';
 
 type Props = {
   merchantId: string;
@@ -26,6 +26,8 @@ const PRESETS = [20, 50, 100];
  */
 export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, onBack }: Props) {
   const cards = useMerchantLoyaltyStore(selectCards);
+  // Les paliers viennent du commerçant depuis le §8.3, ils ne sont plus figés.
+  const tiers = useMerchantLoyaltyStore(selectTiers);
   const claim = useMerchantLoyaltyStore((s) => s.claim);
   const transfer = useMerchantLoyaltyStore((s) => s.transfer);
 
@@ -38,8 +40,8 @@ export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, 
     () => cards[merchantId] ?? { points: 0, claimed: [], history: [] },
     [cards, merchantId],
   );
-  const reached = reachedCount(DEFAULT_TIERS, card.points);
-  const goal = nextTier(DEFAULT_TIERS, card.points);
+  const reached = reachedCount(tiers, card.points);
+  const goal = nextTier(tiers, card.points);
 
   const onShare = async () => {
     const c = transfer(merchantId, amount);
@@ -94,7 +96,7 @@ export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, 
           <View className="mb-4 gap-2 rounded-card bg-surface-muted p-4">
             <View className="flex-row items-center justify-between">
               <AppText className="font-sans-semibold text-ink">
-                Palier {goal.rank}/{DEFAULT_TIERS.length}
+                Palier {goal.rank}/{tiers.length}
               </AppText>
               <AppText variant="caption" className="text-brand-600">
                 encore {pointsToGo(goal, card.points)} points
@@ -119,7 +121,7 @@ export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, 
         {/* Onglets */}
         <View className="mb-3 flex-row gap-2">
           {[
-            { key: 'avantages' as const, label: `Avantages ${reached}/${DEFAULT_TIERS.length}` },
+            { key: 'avantages' as const, label: `Avantages ${reached}/${tiers.length}` },
             { key: 'historique' as const, label: 'Mon historique' },
           ].map((t) => (
             <Pressable
@@ -149,7 +151,7 @@ export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, 
         {/* Paliers */}
         {tab === 'avantages' ? (
           <View className="gap-2.5">
-            {DEFAULT_TIERS.map((tier) => {
+            {tiers.map((tier) => {
               const state = tierState(tier, card.points, card.claimed);
               return (
                 <View
@@ -177,7 +179,7 @@ export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, 
                   <View className="flex-1 gap-0.5">
                     <View className="flex-row items-center gap-2">
                       <AppText variant="caption" className="text-ink-faint">
-                        {tier.rank}/{DEFAULT_TIERS.length}
+                        {tier.rank}/{tiers.length}
                       </AppText>
                       {state === 'available' ? (
                         <View className="rounded-pill bg-brand-500 px-2 py-0.5">
