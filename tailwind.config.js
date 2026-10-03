@@ -16,6 +16,9 @@
  */
 module.exports = {
   content: ['./src/**/*.{ts,tsx}'],
+  // Mode Nuit / Jour choisi par l'utilisateur (maquettes du client, 03/10/2026) :
+  // « class » permet de le basculer à la main, ce que « media » interdit.
+  darkMode: 'class',
   presets: [require('nativewind/preset')],
   theme: {
     extend: {

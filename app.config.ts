@@ -102,7 +102,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // blockedPermissions: ['android.permission.RECORD_AUDIO'],
   },
   web: {
-    output: 'static',
+    // Application mobile : le web ne sert qu'à l'aperçu navigateur des écrans.
+    // « single » évite le rendu serveur, qui plante sur les modules natifs
+    // (`window is not defined`).
+    output: 'single',
     favicon: './assets/images/favicon.png',
   },
   plugins: [
