@@ -14,6 +14,12 @@ export { LiquidationRail } from './ui/components/liquidation-rail';
 export { orderToTransaction, producesReceipt, type Transaction } from './lib/transactions';
 export { selectOrders } from './model/store';
 export { pointsByMerchant } from './lib/points';
+export {
+  isHonoured,
+  isMerchantOrder,
+  summarizeOrder,
+  type OrderSummary,
+} from './lib/order-summary';
 export { getUserCoord } from './lib/location';
 export { authenticate as authenticateBiometric } from './lib/biometrics';
 export {
@@ -32,12 +38,11 @@ export {
 export { BiometricsScreen } from './ui/biometrics-screen';
 export { InvoicesScreen } from './ui/invoices-screen';
 export { AddressesScreen } from './ui/addresses-screen';
-export { MerchantScreen } from './ui/merchant-screen';
 export { MerchantOrdersScreen } from './ui/merchant-orders-screen';
 export { MerchantDetailScreen } from './ui/merchant-detail-screen';
 export { useShopStore, selectCartCount, selectCartSubtotal } from './model/store';
-export { getMerchant, MERCHANTS } from './model/catalog';
+export { getDeal, getMerchant, MERCHANTS } from './model/catalog';
 /** Le contrat d'une offre affichable — sert aux routes qui en fabriquent une
  *  à partir d'une autre feature (les ventes flash du commerçant, CDC §9). */
 export type { Deal } from './model/schema';
-export { LOCAL_MERCHANT_ID } from './model/catalog';
+export { LOCAL_MERCHANT_ID, LOCAL_MERCHANT_DEAL_IDS } from './model/catalog';

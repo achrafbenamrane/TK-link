@@ -1,15 +1,17 @@
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
-import { SignUpScreen } from '@/features/auth';
+import { SignUpScreen, type SignUpProfile } from '@/features/auth';
 import { AvatarPicker, selectRole, useOnboardingStore } from '@/features/onboarding';
+import { useShopStore } from '@/features/shop';
+import type { Role } from '@/shared/lib/roles';
 
 /**
  * INSCRIPTION — CDC V1.0 §2.2.
  *
  * La route compose : le rôle et l'avatar viennent de l'onboarding, le
- * formulaire vit dans `auth`. Les deux features s'ignorent ; c'est ici
- * qu'elles se rencontrent.
+ * formulaire vit dans `auth`, la demande du commerçant dans `shop`. Les trois
+ * features s'ignorent ; c'est ici qu'elles se rencontrent.
  *
  * Le compte ouvre le parcours (étape 2 du parcours du client) ; une fois
  * inscrit — ou en continuant sans compte — on enchaîne sur les centres
@@ -19,16 +21,33 @@ import { AvatarPicker, selectRole, useOnboardingStore } from '@/features/onboard
 export default function SignUpRoute() {
   const router = useRouter();
   const role = useOnboardingStore(selectRole);
+  const setRole = useOnboardingStore((s) => s.setRole);
   const setFirstName = useOnboardingStore((s) => s.setFirstName);
   const setSiret = useOnboardingStore((s) => s.setSiret);
+  const submitMerchantApplication = useShopStore((s) => s.submitMerchantApplication);
 
   const onProfile = useCallback(
-    ({ firstName, siret }: { firstName: string; siret: string }) => {
-      setFirstName(firstName);
-      setSiret(siret);
+    (p: SignUpProfile) => {
+      setFirstName(p.firstName);
+      setSiret(p.siret);
+      // Un professionnel dépose en même temps la fiche de son commerce.
+      if (role !== 'consommateur' && p.category !== '') {
+        submitMerchantApplication({
+          shopName: p.shopName,
+          category: p.category,
+          contactName: `${p.firstName} ${p.lastName}`.trim(),
+          phone: p.phone,
+          email: p.email,
+          area: p.location || p.address,
+          address: p.address,
+          modes: p.modes,
+        });
+      }
     },
-    [setFirstName, setSiret],
+    [role, setFirstName, setSiret, submitMerchantApplication],
   );
+
+  const onRoleChange = useCallback((next: Role) => setRole(next), [setRole]);
   const toOnboarding = useCallback(() => router.replace('/onboarding'), [router]);
   const toSignIn = useCallback(() => router.replace('/sign-in'), [router]);
 
@@ -36,10 +55,11 @@ export default function SignUpRoute() {
     <SignUpScreen
       role={role}
       renderAvatar={() => <AvatarPicker />}
+      onRoleChange={onRoleChange}
       onProfile={onProfile}
       onSignedUp={toOnboarding}
       onSignIn={toSignIn}
-      onSkip={toOnboarding}
+      {...(role === 'consommateur' ? { onSkip: toOnboarding } : {})}
     />
   );
 }

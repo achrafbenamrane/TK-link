@@ -1,28 +1,27 @@
-import { useRouter } from 'expo-router';
-import { useCallback } from 'react';
+import { useEffect } from 'react';
 
-import { MerchantScreen } from '@/features/shop';
-import { useOnboardingStore } from '@/features/onboarding';
+import { selectRole, useOnboardingStore } from '@/features/onboarding';
+
+import SignUpRoute from './sign-up';
 
 /**
- * Inscription d'une boutique — et seul point où `shop` et `onboarding` se
- * rencontrent.
+ * LA PORTE DES COMMERÇANTS — « Créer mon compte commerçant ».
  *
- * L'espace commerçant existe déjà : pour un compte `commercant`, l'accueil
- * devient « Lots des grossistes » et les commandes deviennent « Mes achats ».
- * Mais le rôle ne se choisissait qu'à l'accueil des nouveaux : qui était entré
- * comme particulier ne pouvait plus jamais y accéder. C'est la route qui bascule
- * le rôle, parce qu'une tranche n'importe pas sa voisine.
+ * C'est la même inscription que celle des consommateurs, dans sa variante
+ * professionnelle (nom du commerce, catégorie, SIRET, adresse, modes de remise,
+ * bascule Commerçant / Grossiste). La route n'a donc qu'une chose à faire : poser
+ * le rôle avant de la montrer — qui arrive ici veut un compte professionnel.
+ *
+ * Un grossiste y est accueilli aussi (onglet « Grossiste »), mais ses outils
+ * vivent sur le portail web : décision du client du 10/08/2026.
  */
 export default function MerchantRoute() {
-  const router = useRouter();
+  const role = useOnboardingStore(selectRole);
   const setRole = useOnboardingStore((s) => s.setRole);
 
-  const onOpenMerchantSpace = useCallback(() => {
-    setRole('commercant');
-    // `replace` et non `push` : on ne revient pas sur un formulaire déjà envoyé.
-    router.replace('/');
-  }, [router, setRole]);
+  useEffect(() => {
+    if (role === 'consommateur') setRole('commercant');
+  }, [role, setRole]);
 
-  return <MerchantScreen onOpenMerchantSpace={onOpenMerchantSpace} />;
+  return <SignUpRoute />;
 }

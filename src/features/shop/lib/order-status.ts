@@ -137,9 +137,16 @@ export function nextStatuses(status: OrderStatus, fulfilment: Fulfilment): Order
  * Les gestes que le commerçant se voit proposer — CDC V1.1 : « le paiement vaut
  * acceptation, sans étape intermédiaire ». Même machine à états, sans le geste
  * « Accepter » : il n'y a plus rien à accepter, la commande payée se prépare.
+ *
+ * Le remboursement n'y figure pas non plus : ce n'est pas un geste, c'est une
+ * CONSÉQUENCE. Refuser une commande payée déclenche le remboursement ; après une
+ * remise, c'est un litige qui le décide. Un bouton « Remboursement en cours »
+ * posé au comptoir laisserait croire qu'on peut rembourser sans motif.
  */
 export function merchantActions(status: OrderStatus, fulfilment: Fulfilment): OrderStatus[] {
-  return nextStatuses(status, fulfilment).filter((s) => s !== 'acceptee');
+  return nextStatuses(status, fulfilment).filter(
+    (s) => s !== 'acceptee' && s !== 'remboursement_en_cours',
+  );
 }
 
 export function canTransition(from: OrderStatus, to: OrderStatus, fulfilment: Fulfilment): boolean {

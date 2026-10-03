@@ -653,3 +653,8 @@ export const FEATURED_DEAL_ID = 'd_cote';
  * porteront sa vraie fiche — seule cette constante disparaît.
  */
 export const LOCAL_MERCHANT_ID = 'm_petit';
+
+/** Les offres du catalogue qui appartiennent à la boutique locale. */
+export const LOCAL_MERCHANT_DEAL_IDS: string[] = DEALS.filter(
+  (d) => d.merchantId === LOCAL_MERCHANT_ID,
+).map((d) => d.id);

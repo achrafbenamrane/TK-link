@@ -65,6 +65,9 @@ describe('machine à états', () => {
     expect(canTransition('payee', 'preparation', 'livraison')).toBe(true);
     expect(merchantActions('payee', 'livraison')).not.toContain('acceptee');
     expect(merchantActions('payee', 'livraison')).toContain('preparation');
+    // Le remboursement est une conséquence (refus, litige), jamais un bouton.
+    expect(merchantActions('payee', 'livraison')).not.toContain('remboursement_en_cours');
+    expect(merchantActions('preparation', 'livraison')).not.toContain('remboursement_en_cours');
     // La machine, elle, garde « acceptée » : c'est une étape du parcours client.
     expect(canTransition('payee', 'acceptee', 'livraison')).toBe(true);
   });

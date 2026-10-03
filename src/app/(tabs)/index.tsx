@@ -2,12 +2,14 @@ import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { useMerchantLoyaltyStore } from '@/features/loyalty';
 import {
   liveOffers,
+  MerchantDashboardScreen,
   secondsLeft,
   selectOffers,
   useMerchantStore,
-  WholesaleScreen,
+  type DashboardTarget,
 } from '@/features/merchant';
 import {
   AvatarView,
@@ -15,12 +17,18 @@ import {
   selectFirstName,
   selectInterests,
   selectRole,
-  selectSiret,
   useOnboardingStore,
 } from '@/features/onboarding';
-import { HomeScreen, LOCAL_MERCHANT_ID, type Deal } from '@/features/shop';
+import {
+  HomeScreen,
+  isMerchantOrder,
+  LOCAL_MERCHANT_ID,
+  selectOrders,
+  summarizeOrder,
+  useShopStore,
+  type Deal,
+} from '@/features/shop';
 import { CATEGORY_INFO } from '@/shared/lib/categories';
-import { WHOLESALE_BLOCK_MESSAGE, wholesaleOrderBlock } from '@/shared/lib/roles';
 import { AppText } from '@/shared/ui';
 
 /**
@@ -47,13 +55,11 @@ const TINTS: Record<string, string> = {
   services: '#E9EDDF',
 };
 
-export default function AccueilRoute() {
+function ConsumerHome() {
   const router = useRouter();
   const avatar = useOnboardingStore(selectAvatar);
   const firstName = useOnboardingStore(selectFirstName);
   const interests = useOnboardingStore(selectInterests);
-  const role = useOnboardingStore(selectRole);
-  const siret = useOnboardingStore(selectSiret);
   // Tranche brute puis conversion en mémo : un sélecteur qui renverrait la
   // liste filtrée créerait un tableau neuf à chaque rendu (boucle Zustand 5).
   const published = useMerchantStore(selectOffers);
@@ -108,19 +114,63 @@ export default function AccueilRoute() {
     [avatar, firstName, router],
   );
 
-  // Un commerçant vient s'approvisionner : son accueil, ce sont les lots des
-  // grossistes — CDC §3.2. Il vend depuis l'espace pro sur le web.
-  if (role === 'commercant') {
-    const block = wholesaleOrderBlock(role, siret);
-    return (
-      <WholesaleScreen
-        blockedReason={block ? WHOLESALE_BLOCK_MESSAGE[block] : null}
-        onFixProfile={block === 'siret' ? () => router.push('/sign-up') : undefined}
-      />
-    );
-  }
-
   return (
     <HomeScreen interests={interests} extraDeals={extraDeals} renderIdentity={renderIdentity} />
   );
+}
+
+/**
+ * L'accueil du commerçant : son tableau de bord.
+ *
+ * Il n'est PAS l'écran d'ouverture : V1.1 (Commerçant > Règle, VALIDÉ) veut que
+ * l'appareil s'ouvre sur la liste des commandes en cours — voir `_layout.tsx`,
+ * qui y bascule au lancement. Le tableau de bord reste à un geste, ici.
+ */
+function MerchantHome() {
+  const router = useRouter();
+  const avatar = useOnboardingStore(selectAvatar);
+  const firstName = useOnboardingStore(selectFirstName);
+  const published = useMerchantStore(selectOffers);
+  const orders = useShopStore(selectOrders);
+  const application = useShopStore((s) => s.merchantApplication);
+
+  const summaries = useMemo(() => {
+    const own = new Set(published.map((o) => `pub_${o.id}`));
+    return orders.filter((o) => isMerchantOrder(o, own)).map(summarizeOrder);
+  }, [orders, published]);
+
+  const tiersCount = useMerchantLoyaltyStore((s) => s.tiers.length);
+
+  const open = useCallback(
+    (target: DashboardTarget) => {
+      const href = {
+        flash: '/flash',
+        orders: '/commandes',
+        loyalty: '/fidelite',
+        offers: '/flash',
+        wholesale: '/lots',
+        payouts: '/versements',
+        documents: '/factures',
+        account: '/profil',
+      } as const;
+      router.push(href[target]);
+    },
+    [router],
+  );
+
+  return (
+    <MerchantDashboardScreen
+      shopName={application?.shopName ?? (firstName || 'Mon commerce')}
+      {...(application?.area ? { area: application.area } : {})}
+      renderAvatar={() => <AvatarView avatar={avatar} size={52} />}
+      orders={summaries}
+      tiersCount={tiersCount}
+      onOpen={open}
+    />
+  );
+}
+
+export default function AccueilRoute() {
+  const role = useOnboardingStore(selectRole);
+  return role === 'commercant' ? <MerchantHome /> : <ConsumerHome />;
 }

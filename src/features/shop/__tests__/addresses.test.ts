@@ -96,8 +96,15 @@ describe('MerchantApplicationSchema', () => {
     expect(MerchantApplicationSchema.safeParse({ ...APP, email: 'farid@' }).success).toBe(false);
   });
 
+  it('keeps the shop address and delivery modes, with safe defaults for older saves', () => {
+    const parsed = MerchantApplicationSchema.parse(APP);
+    // Une demande enregistrée AVANT l'adresse et les modes se relit : Touch & Collect par défaut.
+    expect(parsed.address).toBe('');
+    expect(parsed.modes).toEqual(['touch-collect']);
+  });
+
   it('stores the application once submitted', () => {
-    useShopStore.getState().submitMerchantApplication(APP);
+    useShopStore.getState().submitMerchantApplication(MerchantApplicationSchema.parse(APP));
     expect(useShopStore.getState().merchantApplication?.shopName).toBe('Maison Hammamet');
   });
 });

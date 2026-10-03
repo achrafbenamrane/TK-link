@@ -271,6 +271,14 @@ export const MerchantApplicationSchema = z.object({
     ),
   email: z.email('Adresse e-mail invalide'),
   area: z.string().min(2, 'Indiquez votre quartier'),
+  /**
+   * Adresse du commerce et modes de remise proposés (maquette d'inscription
+   * commerçant, V1.1). `.default()` : les demandes déjà enregistrées sur les
+   * téléphones n'ont pas ces champs, et un champ requis ferait échouer toute la
+   * réhydratation de la boutique — panier et commandes effacés.
+   */
+  address: z.string().default(''),
+  modes: z.array(z.enum(['touch-collect', 'livraison'])).default(['touch-collect']),
 });
 export type MerchantApplication = z.infer<typeof MerchantApplicationSchema>;
 

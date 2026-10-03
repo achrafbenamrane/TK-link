@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { isCategory } from '@/shared/lib/categories';
 import { isValidSiret, normalizeSiret, type Role } from '@/shared/lib/roles';
 
 /**
@@ -44,6 +45,9 @@ export const RegistrationSchema = z
      * renseigné = doit être un vrai SIRET, sinon autant ne rien saisir.
      */
     siret: z.string().default(''),
+    shopName: z.string().default(''),
+    category: z.string().default(''),
+    address: z.string().default(''),
   })
   .refine((v) => v.password === v.confirm, {
     error: 'Les deux mots de passe ne correspondent pas.',
@@ -66,6 +70,10 @@ export const EMPTY_REGISTRATION = {
   confirm: '',
   location: '',
   siret: '',
+  /** Professionnels seulement — voir `validateRegistration`. */
+  shopName: '',
+  category: '',
+  address: '',
 };
 export type RegistrationDraft = typeof EMPTY_REGISTRATION;
 
@@ -79,16 +87,38 @@ export function needsSiret(role: Role): boolean {
   return role !== 'consommateur';
 }
 
-/** Erreurs par champ, prêtes à afficher. Vide = le formulaire est valide. */
-export function validateRegistration(draft: RegistrationDraft): Record<string, string> {
-  const result = RegistrationSchema.safeParse(draft);
-  if (result.success) return {};
+/**
+ * Ce qu'un PROFESSIONNEL doit de plus à l'inscription — maquette « Créer mon
+ * compte commerçant » et V1.1 (Commerçant > Process) : le nom du commerce, sa
+ * catégorie et son adresse. Le SIRET, lui, reste facultatif ici (voir l'en-tête).
+ */
+function proErrors(draft: RegistrationDraft): Record<string, string> {
   const errors: Record<string, string> = {};
-  for (const issue of result.error.issues) {
-    const key = issue.path[0];
-    // Premier message par champ : empiler trois erreurs sur un même champ ne
-    // rend pas le formulaire plus clair, seulement plus décourageant.
-    if (typeof key === 'string' && !errors[key]) errors[key] = issue.message;
+  if (draft.shopName.trim().length < 2) errors.shopName = 'Indiquez le nom de votre commerce.';
+  if (!isCategory(draft.category)) errors.category = 'Choisissez une catégorie.';
+  if (draft.address.trim().length < 3) errors.address = 'Indiquez l’adresse de votre commerce.';
+  return errors;
+}
+
+/** Erreurs par champ, prêtes à afficher. Vide = le formulaire est valide. */
+export function validateRegistration(
+  draft: RegistrationDraft,
+  role: Role = 'consommateur',
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const result = RegistrationSchema.safeParse(draft);
+  if (!result.success) {
+    for (const issue of result.error.issues) {
+      const key = issue.path[0];
+      // Premier message par champ : empiler trois erreurs sur un même champ ne
+      // rend pas le formulaire plus clair, seulement plus décourageant.
+      if (typeof key === 'string' && !errors[key]) errors[key] = issue.message;
+    }
+  }
+  if (needsSiret(role)) {
+    for (const [key, message] of Object.entries(proErrors(draft))) {
+      if (!errors[key]) errors[key] = message;
+    }
   }
   return errors;
 }
@@ -109,5 +139,8 @@ export function toProfile(draft: RegistrationDraft) {
     phone: draft.phone.trim(),
     location: draft.location.trim(),
     siret: draft.siret.trim() === '' ? null : normalizeSiret(draft.siret),
+    shopName: draft.shopName.trim(),
+    category: draft.category,
+    address: draft.address.trim(),
   };
 }

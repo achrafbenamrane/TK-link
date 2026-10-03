@@ -46,6 +46,7 @@ const ACTION_LABEL: Partial<Record<OrderStatus, string>> = {
   en_livraison: 'Remise au livreur',
   livree: 'Livrée',
   refusee: 'Refuser',
+  annulee: 'Annuler',
   litige: 'Ouvrir un litige',
 };
 

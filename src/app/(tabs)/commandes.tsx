@@ -1,16 +1,26 @@
-import { MerchantPurchasesScreen } from '@/features/merchant';
+import { useMemo } from 'react';
+
+import { selectOffers, useMerchantStore } from '@/features/merchant';
 import { selectRole, useOnboardingStore } from '@/features/onboarding';
-import { OrdersScreen } from '@/features/shop';
+import { LOCAL_MERCHANT_DEAL_IDS, MerchantOrdersScreen, OrdersScreen } from '@/features/shop';
 
 /**
  * L'onglet « Commandes » ne veut pas dire la même chose selon qui regarde.
  *
- * Un client suit ce qu'il a acheté chez les commerçants. Un commerçant, lui,
- * vient s'approvisionner (décision client du 2026-08-10 : ses ventes se
- * pilotent sur le web) — il doit donc voir ce qu'il a COMMANDÉ aux grossistes,
- * et pas les commandes d'un client qu'il n'est pas.
+ * Un client suit ce qu'il a acheté. Un commerçant, lui, reçoit et prépare les
+ * commandes de SES ventes : c'est son écran de service, et l'écran par défaut de
+ * son appareil — V1.1, Commerçant > Règle : « la liste des commandes en cours,
+ * pas les réglages ni les chiffres ». Ce qu'il commande lui-même aux grossistes
+ * se trouve dans « Grossistes », depuis le tableau de bord.
  */
 export default function CommandesRoute() {
   const role = useOnboardingStore(selectRole);
-  return role === 'commercant' ? <MerchantPurchasesScreen /> : <OrdersScreen />;
+  const published = useMerchantStore(selectOffers);
+
+  const dealIds = useMemo(
+    () => [...published.map((o) => `pub_${o.id}`), ...LOCAL_MERCHANT_DEAL_IDS],
+    [published],
+  );
+
+  return role === 'commercant' ? <MerchantOrdersScreen dealIds={dealIds} /> : <OrdersScreen />;
 }

@@ -10,6 +10,12 @@ export { MerchantOffersScreen } from './ui/offers-screen';
 export { WholesaleScreen } from './ui/wholesale-screen';
 export { MerchantPurchasesScreen } from './ui/purchases-screen';
 export {
+  MerchantDashboardScreen,
+  type DashboardOrder,
+  type DashboardTarget,
+} from './ui/dashboard-screen';
+export { PayoutsScreen, type PayoutLine } from './ui/payouts-screen';
+export {
   useMerchantStore,
   selectOffers,
   selectLots,

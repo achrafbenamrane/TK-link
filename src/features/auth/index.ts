@@ -2,7 +2,7 @@
  * PUBLIC API of the auth feature. Everything else is internal (boundaries lint).
  */
 export { SignInScreen } from './ui/sign-in-screen';
-export { SignUpScreen } from './ui/sign-up-screen';
+export { SignUpScreen, type ShopMode, type SignUpProfile } from './ui/sign-up-screen';
 export {
   RegistrationSchema,
   validateRegistration,
