@@ -24,13 +24,11 @@ describe('<LiquidationRail />', () => {
     expect(screen.getAllByTestId(/^liquidation-d_/)).toHaveLength(3);
   });
 
-  it('« Attraper » met au panier et signale la prise à la route', () => {
-    const onCatch = jest.fn();
-    render(<LiquidationRail limit={2} onCatch={onCatch} />);
+  it('« Attraper » met l’offre au panier', () => {
+    render(<LiquidationRail limit={2} />);
 
     fireEvent.press(screen.getByTestId(`liquidation-catch-${mostUrgent.id}`));
 
     expect(useShopStore.getState().cart).toEqual([{ dealId: mostUrgent.id, qty: 1 }]);
-    expect(onCatch).toHaveBeenCalledWith(mostUrgent.id);
   });
 });

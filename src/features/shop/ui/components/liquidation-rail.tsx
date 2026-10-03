@@ -18,12 +18,6 @@ import { ProductImage } from './product-image';
 type Props = {
   /** Combien d'invendus montrer. Au-delà, le rail devient une liste. */
   limit?: number;
-  /**
-   * Appelé quand l'utilisateur attrape un invendu. La route s'en sert pour
-   * créditer la chasse (XP, mission « attrapez une vente flash ») — le rail
-   * ignore tout de la progression.
-   */
-  onCatch?: (dealId: string) => void;
 };
 
 /**
@@ -50,10 +44,10 @@ function badgeColor(deal: Deal): string {
  * LE DÉSTOCKAGE, en rail — les invendus les plus près de disparaître.
  *
  * L'accueil déroule tout le catalogue ; ici on ne garde que la pointe : ce qui
- * meurt dans les minutes qui viennent. C'est ce qui fait de l'onglet une
- * chasse — sans l'urgence en tête, ce ne serait qu'un carrousel de promotions.
+ * meurt dans les minutes qui viennent. Sans l'urgence en tête, ce ne serait
+ * qu'un carrousel de promotions.
  */
-export function LiquidationRail({ limit = 8, onCatch }: Props) {
+export function LiquidationRail({ limit = 8 }: Props) {
   const router = useRouter();
   const addToCart = useShopStore((s) => s.addToCart);
   const deals = useMemo(() => sortByUrgency(DEALS).slice(0, limit), [limit]);
@@ -172,7 +166,6 @@ export function LiquidationRail({ limit = 8, onCatch }: Props) {
                   disabled={deal.stockLeft <= 0}
                   onPress={() => {
                     addToCart(deal.id);
-                    onCatch?.(deal.id);
                   }}
                   style={{ flexShrink: 0 }}
                   className={cn(

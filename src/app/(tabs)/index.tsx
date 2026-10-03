@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { useGameStore } from '@/features/gamification';
 import {
   liveOffers,
   secondsLeft,
@@ -34,10 +33,6 @@ import { AppText } from '@/shared/ui';
  *
  * C'est la ROUTE qui tranche, parce qu'elle seule connaît à la fois le profil
  * (`onboarding`) et les deux écrans possibles (`shop`, `merchant`).
- *
- * La progression (rang, missions, série) n'est PAS ici : elle vit dans l'onglet
- * « La Chasse ». La visite du jour, elle, continue d'être comptée — c'est bien
- * l'ouverture de l'app qu'elle mesure.
  */
 
 /** Teinte de vignette par catégorie, faute de photo pour une offre fraîche. */
@@ -54,7 +49,6 @@ const TINTS: Record<string, string> = {
 
 export default function AccueilRoute() {
   const router = useRouter();
-  const markVisit = useGameStore((s) => s.markVisit);
   const avatar = useOnboardingStore(selectAvatar);
   const firstName = useOnboardingStore(selectFirstName);
   const interests = useOnboardingStore(selectInterests);
@@ -87,8 +81,6 @@ export default function AccueilRoute() {
       description: o.description || 'Vente flash publiée par le commerçant.',
     }));
   }, [published, now]);
-
-  const onVisit = useCallback(() => markVisit(), [markVisit]);
 
   const renderIdentity = useCallback(
     () => (
@@ -129,11 +121,6 @@ export default function AccueilRoute() {
   }
 
   return (
-    <HomeScreen
-      onVisit={onVisit}
-      interests={interests}
-      extraDeals={extraDeals}
-      renderIdentity={renderIdentity}
-    />
+    <HomeScreen interests={interests} extraDeals={extraDeals} renderIdentity={renderIdentity} />
   );
 }

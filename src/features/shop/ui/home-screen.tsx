@@ -139,8 +139,6 @@ type HomeScreenProps = {
    * l'espace commerçant : c'est la ROUTE qui les lui apporte, déjà converties.
    */
   extraDeals?: Deal[];
-  /** Signalé une fois au montage — sert la série et les missions du jour. */
-  onVisit?: () => void;
 };
 
 export function HomeScreen({
@@ -148,7 +146,6 @@ export function HomeScreen({
   renderIdentity,
   interests,
   extraDeals,
-  onVisit,
 }: HomeScreenProps = {}) {
   const [category, setCategory] = useState<Category | null>(null);
   const [query, setQuery] = useState('');
@@ -203,11 +200,6 @@ export function HomeScreen({
   }, [category, query, preferences, userCoord, interests, extraDeals]);
 
   const featured = getDeal(FEATURED_DEAL_ID);
-
-  // Une visite par jour compte pour la série et les missions.
-  useEffect(() => {
-    onVisit?.();
-  }, [onVisit]);
 
   return (
     <Screen padded={false} testID="home-screen">

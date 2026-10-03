@@ -1,5 +1,3 @@
-import { countCritical } from '../lib/urgency';
-import { PRODUCT_IMAGES } from './product-images';
 import type { Category, Deal, Merchant } from './schema';
 
 /**
@@ -642,17 +640,6 @@ export function dealsByCategory(category: Category | null): Deal[] {
   return DEALS.filter((d) => d.category === category);
 }
 
-/**
- * Combien d'invendus sont en dernière chance, tout le catalogue confondu.
- *
- * Les écrans qui affichent ce compteur (le bandeau du hub) n'ont pas la liste
- * des offres sous la main : leur passer `DEALS` entier pour qu'ils le comptent
- * eux-mêmes exposerait le catalogue sans raison.
- */
-export function criticalDealCount(): number {
-  return countCritical(DEALS);
-}
-
 /** The hero flash sale surfaced at the top of the feed. */
 export const FEATURED_DEAL_ID = 'd_cote';
 
@@ -666,58 +653,3 @@ export const FEATURED_DEAL_ID = 'd_cote';
  * porteront sa vraie fiche — seule cette constante disparaît.
  */
 export const LOCAL_MERCHANT_ID = 'm_petit';
-
-/**
- * Source d'image d'une pièce de jeu. `number` = asset embarqué ; `{ uri }` =
- * URL distante. expo-image accepte les deux, donc une photo uploadée par le
- * commerçant s'affiche sans rien changer aux jeux.
- */
-export type GameImageSource = number | { uri: string };
-
-/**
- * Le visuel d'une offre pour les jeux : la PHOTO RÉELLE uploadée par le
- * commerçant si elle existe, sinon le visuel embarqué de secours. `null` si
- * l'offre n'a aucun visuel (elle n'apparaît alors pas dans les jeux).
- */
-function dealImageSource(deal: Deal): GameImageSource | null {
-  if (deal.imageUrl) return { uri: deal.imageUrl };
-  const bundled = PRODUCT_IMAGES[deal.id];
-  return bundled != null ? bundled : null;
-}
-
-/**
- * Réservoir d'images des jeux : chaque offre AVEC visuel devient une pièce. On
- * dérive de la liste vivante des offres, donc toute offre ajoutée ou dont la
- * photo change se répercute automatiquement — priorité à la photo uploadée.
- */
-export function dealImagePool(): { id: string; source: GameImageSource }[] {
-  const pool: { id: string; source: GameImageSource }[] = [];
-  for (const deal of DEALS) {
-    const source = dealImageSource(deal);
-    if (source !== null) pool.push({ id: deal.id, source });
-  }
-  return pool;
-}
-
-/**
- * Réservoir pour le quiz « Le juste prix » : titre + vrai prix + la photo de
- * l'offre (uploadée si dispo). Se remplit tout seul avec les offres.
- */
-export function dealQuizPool(): {
-  id: string;
-  title: string;
-  price: number;
-  emoji: string;
-  image?: GameImageSource;
-}[] {
-  return DEALS.map((d) => {
-    const source = dealImageSource(d);
-    return {
-      id: d.id,
-      title: d.title,
-      price: d.price,
-      emoji: d.emoji,
-      ...(source !== null ? { image: source } : {}),
-    };
-  });
-}

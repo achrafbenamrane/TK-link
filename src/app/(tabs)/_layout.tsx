@@ -1,51 +1,26 @@
 import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { selectRole, useOnboardingStore } from '@/features/onboarding';
 import { selectTotalUnread, useShopStore } from '@/features/shop';
-import { cn } from '@/shared/lib/cn';
 import { colors } from '@/shared/theme/colors';
 
 /**
- * La barre du bas, à cinq onglets :
+ * La barre du bas, à quatre onglets :
  *
- *   Accueil · Favoris · [ LA CHASSE ] · Commandes · Compte
+ *   Accueil · Favoris · Commandes · Compte
  *
- * L'accueil, ce sont les ventes flash. Au CENTRE, « La Chasse » réunit ce qui
- * rapporte — déstockage, offres membres, mini-jeux et toute la progression :
- * séparer les offres des jeux cassait la boucle (on jouait sans voir ce qu'on
- * pouvait attraper). Sa pastille est surélevée : c'est l'onglet qu'on veut
- * atteindre sans regarder.
+ * L'accueil, ce sont les ventes Flash (CDC §3.1). « La Chasse », qui occupait
+ * le centre, a disparu le 03/10/2026 : ni la V1.0 ni la V1.1 du cahier des
+ * charges ne décrivent sa gamification, et les mini-jeux sont un lot séparé,
+ * hors du pilote (V1.1, Utilisateur). Arbitrage du même jour : les écrans de
+ * la maquette B, sans onglet central — docs/design/maquettes/README.md.
  *
  * « Parcourir » reste une ROUTE (la recherche par commerce) mais quitte la
  * barre. Même chose pour les écrans TK LINK — tickets, carte de fidélité,
- * cadeaux, menu complet des jeux — qu'on rejoint depuis le compte, le hub et
- * les fiches commerçant.
+ * cadeaux — qu'on rejoint depuis le compte et les fiches commerçant.
  */
-
-/** La pastille du milieu — surélevée, pour qu'on la vise au pouce. */
-function HubTabIcon({ focused }: { focused: boolean }) {
-  return (
-    <View
-      className={cn(
-        'h-11 w-11 items-center justify-center rounded-pill',
-        focused ? 'bg-brand-500' : 'bg-surface-inverse',
-      )}
-      style={{
-        marginTop: -14,
-        shadowColor: colors.forestDeep,
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 6,
-      }}
-    >
-      <Feather name="target" size={22} color={focused ? colors.inkInverse : colors.lime} />
-    </View>
-  );
-}
 
 export default function TabsLayout() {
   const unread = useShopStore(selectTotalUnread);
@@ -56,9 +31,8 @@ export default function TabsLayout() {
    * La barre change avec le rôle — décision client du 2026-08-10.
    *
    * Un commerçant vient s'approvisionner : ses lots, ses achats, son compte.
-   * Lui proposer « La Chasse » (jeux, XP, coffre) et des favoris de
-   * consommateur serait lui donner l'app de quelqu'un d'autre. Ses ventes se
-   * pilotent sur l'espace pro web, pas ici.
+   * Lui proposer des favoris de consommateur serait lui donner l'app de
+   * quelqu'un d'autre. Ses ventes se pilotent sur l'espace pro web, pas ici.
    */
   const pro = role === 'commercant';
 
@@ -72,8 +46,7 @@ export default function TabsLayout() {
           backgroundColor: colors.surface,
           borderTopColor: colors.line,
           borderTopWidth: 1,
-          // Hauteur explicite : la pastille centrale déborde vers le haut, il
-          // lui faut la place. En la fixant, on reprend aussi la marge basse
+          // Hauteur explicite : en la fixant, on reprend aussi la marge basse
           // que la barre ajoutait seule — d'où le `paddingBottom` ci-dessous.
           height: 62 + insets.bottom,
           paddingBottom: insets.bottom,
@@ -100,14 +73,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="chasse"
-        options={{
-          href: pro ? null : undefined,
-          title: 'La Chasse',
-          tabBarIcon: ({ focused }) => <HubTabIcon focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
         name="commandes"
         options={{
           title: pro ? 'Mes achats' : 'Commandes',
@@ -129,7 +94,7 @@ export default function TabsLayout() {
       />
 
       {/* Routes conservées, hors barre d'onglets — on y accède depuis le compte,
-          le hub, les fiches commerçant ou l'accueil. */}
+          les fiches commerçant ou l'accueil. */}
       <Tabs.Screen
         name="chat"
         options={{
@@ -141,7 +106,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="parcourir" options={{ href: null }} />
       <Tabs.Screen name="carte" options={{ href: null }} />
       <Tabs.Screen name="offres" options={{ href: null }} />
-      <Tabs.Screen name="jeux" options={{ href: null }} />
     </Tabs>
   );
 }

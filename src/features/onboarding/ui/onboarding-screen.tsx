@@ -208,7 +208,7 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
           <View className="gap-5">
             <Header
               title="Votre avatar"
-              subtitle="Il vous suivra dans La Chasse, dans les jeux et sur vos tickets."
+              subtitle="Il vous accompagne dans l’app et sur vos tickets."
             />
             <View className="items-center gap-4">
               <AvatarView avatar={avatar} size={128} />

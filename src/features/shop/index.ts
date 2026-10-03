@@ -13,7 +13,6 @@ export { ProfileScreen } from './ui/profile-screen';
 export { PreferencesScreen } from './ui/preferences-screen';
 export { BrowseScreen } from './ui/browse-screen';
 export { LiquidationRail } from './ui/components/liquidation-rail';
-export { criticalDealCount } from './model/catalog';
 export { orderToTransaction, producesReceipt, type Transaction } from './lib/transactions';
 export { selectOrders } from './model/store';
 export {
@@ -53,8 +52,7 @@ export {
   selectCartSubtotal,
   selectTotalUnread,
 } from './model/store';
-export { dealImagePool, dealQuizPool, getMerchant, MERCHANTS } from './model/catalog';
-export type { GameImageSource } from './model/catalog';
+export { getMerchant, MERCHANTS } from './model/catalog';
 /** Le contrat d'une offre affichable — sert aux routes qui en fabriquent une
  *  à partir d'une autre feature (les ventes flash du commerçant, CDC §9). */
 export type { Deal } from './model/schema';

@@ -26,23 +26,16 @@ enforces).
 > depuis. Son flow (`tasks-cuj.yaml`) visait `com.yourcompany.skeleton.dev` et
 > ne pouvait plus passer : il a été retiré plutôt que laissé rouge.
 
-## CUJ-002 — La boucle de la chasse
+## CUJ-002 — (retirée)
 
-- **Owner:** squad produit TK LINK
-- **Flow:** `.maestro/flows/chasse-cuj.yaml`
-- **Journey:** ouvrir l’app → onglet du milieu « La Chasse » → ouvrir le
-  coffre du jour (points + XP + coupon crédités, une seule fois par jour
-  civil) → attraper un invendu du rail « Dernière chance » (panier +
-  mission `catch`) → lancer un mini-jeu depuis le rail et en ressortir sur le
-  hub → trophées et classement visibles en bas d’écran.
-- **Edge cases agents must try:** rouvrir le coffre après un aller-retour
-  d’onglet (doit rester fermé), tuer l’app juste après l’ouverture du coffre
-  puis relancer (récompense persistée, pas de second tirage), attraper un
-  invendu à stock 0 (bouton inerte), lancer un jeu quand le catalogue est
-  filtré au point de vider les réservoirs (tuiles verrouillées, pas de
-  plantage), passer minuit avec l’app ouverte.
-- **Performance budget:** le hub s’affiche en < 500 ms après le tap sur
-  l’onglet, sur un Android milieu de gamme ; les rails défilent à 60 fps.
+> ⚠️ L’ancienne CUJ-002 décrivait « La Chasse » : coffre du jour, missions,
+> mini-jeux, trophées, classement. Ni le CDC V1.0 ni la V1.1 ne décrivent cette
+> gamification, et les mini-jeux sont un lot séparé, hors du pilote (V1.1). Le
+> parcours et son flow (`chasse-cuj.yaml`) ont été retirés le 03/10/2026 plutôt
+> que laissés rouges. Le code reste sous l’étiquette git
+> `archive/mini-jeux-pre-v1.1`. Le parcours de découverte des offres Flash
+> (accueil, tri par urgence, ajout au panier) aura sa propre CUJ avec les
+> nouvelles maquettes.
 
 ## CUJ-003 — La boucle du commerçant
 
@@ -71,7 +64,7 @@ enforces).
 - **Journey :** s’inscrire comme commerçant → l’accueil montre les LOTS des
   grossistes (et non les invendus des confrères) → commander un lot → le
   retrouver dans « Mes achats » → le compte renvoie vers l’espace pro web pour
-  vendre. La barre du bas n’a que trois onglets : ni favoris, ni Chasse.
+  vendre. La barre du bas n’a que trois onglets, sans favoris.
 - **Edge cases agents must try :** commander SANS SIRET (bloqué, §5, avec le
   chemin pour le renseigner), commander plus que le stock, ouvrir l’écran avec
   un compte consommateur (les lots ne doivent pas être accessibles).

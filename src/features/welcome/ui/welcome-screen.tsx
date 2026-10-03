@@ -20,7 +20,6 @@ import { colors } from '@/shared/theme/colors';
 import { useWelcomeStore } from '../model/store';
 import { FlashScene } from './scenes/flash-scene';
 import { NearbyScene } from './scenes/nearby-scene';
-import { PacmanScene } from './scenes/pacman-scene';
 import { TkMark } from './tk-mark';
 
 /** Temps d'affichage d'un panneau — calé sur la durée d'un cycle de scène. */
@@ -55,22 +54,15 @@ const PANELS: Panel[] = [
     accent: 'tout près de chez vous',
     line: 'Choisissez vos catégories préférées et découvrez les offres flash qui correspondent à côté de chez vous.',
   },
-  {
-    key: 'jeux',
-    title: 'Jouez,',
-    accent: 'gagnez pour de vrai',
-    line: 'Des mini-jeux qui donnent de vrais coupons — à présenter en caisse, pas des points en l’air.',
-  },
 ];
 
 /**
- * PREMIER ÉCRAN — trois plans qui MONTRENT le produit plutôt que de le décrire.
+ * PREMIER ÉCRAN — des plans qui MONTRENT le produit plutôt que de le décrire.
  *
  * Un écran d'accueil qui aligne trois lignes de texte et un bouton ne prouve
- * rien : on y promet une app « ludique » sans jamais la faire bouger. Ici la
- * carte touche vraiment le lecteur, PacTK croque vraiment la marque, la barre
- * d'XP se remplit vraiment — chaque panneau tient trois secondes et démontre
- * une promesse.
+ * rien : on y promet une app sans jamais la faire bouger. Ici le prix tombe
+ * vraiment et le stock se vide vraiment — chaque panneau tient quelques
+ * secondes et démontre une promesse.
  *
  * Les panneaux défilent seuls (barres de progression en tête, comme une story)
  * mais restent balayables : personne n'est obligé d'attendre, personne n'est
@@ -169,7 +161,6 @@ export function WelcomeScreen() {
             className="items-center justify-center py-2"
           >
             {p.key === 'flash' ? <FlashScene size={stage} still={reduced} /> : null}
-            {p.key === 'jeux' ? <PacmanScene size={stage} still={reduced} /> : null}
             {p.key === 'proximite' ? <NearbyScene size={stage} still={reduced} /> : null}
           </View>
         ))}

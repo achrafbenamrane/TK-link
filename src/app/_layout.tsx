@@ -34,7 +34,7 @@ const FIRST_RUN_ROUTES = new Set(['welcome', 'onboarding', 'sign-in', 'sign-up']
 /**
  * LA PORTE DU PREMIER LANCEMENT : bienvenue → onboarding → app.
  *
- * L'écran de bienvenue montre le produit (la carte, les jeux, la chasse) ;
+ * L'écran de bienvenue montre le produit (la vente flash, les offres proches) ;
  * l'onboarding personnalise et propose le compte. L'ordre compte : demander un
  * avatar et un mot de passe à quelqu'un qui n'a pas encore vu ce que fait
  * l'app, c'est le perdre.
