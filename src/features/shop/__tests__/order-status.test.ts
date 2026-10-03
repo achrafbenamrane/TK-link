@@ -1,5 +1,6 @@
 import {
   canTransition,
+  merchantActions,
   FULFILMENT_LABEL,
   isActive,
   isFinal,
@@ -60,6 +61,14 @@ describe('statuts — CDC §11', () => {
 });
 
 describe('machine à états', () => {
+  it('le paiement vaut acceptation : le commerçant prépare sans accepter (CDC V1.1)', () => {
+    expect(canTransition('payee', 'preparation', 'livraison')).toBe(true);
+    expect(merchantActions('payee', 'livraison')).not.toContain('acceptee');
+    expect(merchantActions('payee', 'livraison')).toContain('preparation');
+    // La machine, elle, garde « acceptée » : c'est une étape du parcours client.
+    expect(canTransition('payee', 'acceptee', 'livraison')).toBe(true);
+  });
+
   it('suit le parcours nominal jusqu’au bout', () => {
     const path: OrderStatus[] = [
       'panier',

@@ -1,6 +1,6 @@
 import { isSettled, PLATFORM_SETTINGS } from '../platform-settings';
 
-describe('paramètres de plateforme — CDC V1.0 §12.3', () => {
+describe('paramètres de plateforme — CDC V1.0 §12.3 et V1.1', () => {
   it('porte les valeurs que le CDC tranche', () => {
     expect(PLATFORM_SETTINGS.freeOperations).toBe(5);
     expect(PLATFORM_SETTINGS.commissionB2cPct).toBe(5);
@@ -8,21 +8,21 @@ describe('paramètres de plateforme — CDC V1.0 §12.3', () => {
     expect(PLATFORM_SETTINGS.retentionYears).toBe(10);
   });
 
-  it('NE tranche PAS la commission B2B', () => {
-    // §10.2 et Remarque 1 : « le taux de 5 % B2C ne doit pas être copié
-    // automatiquement sur le B2B […] aucun taux B2B ne doit être codé en dur ».
-    // Recopier les 5 % serait la faute la plus facile à commettre ici — et
-    // l'une des rares que le cahier des charges interdit noir sur blanc.
-    expect(PLATFORM_SETTINGS.commissionB2bPct).toBeNull();
-    expect(isSettled('commissionB2bPct')).toBe(false);
+  it('porte la commission B2B tranchée le 31/08/2026 : 5 %, comme le B2C', () => {
+    // CDC V1.1, Grossiste > Règle (VALIDÉ) : « la commission B2B est alignée sur
+    // le taux B2C (5 %) — décision du 31/08/2026 qui remplace la règle antérieure
+    // excluant tout calque automatique entre B2B et B2C ». Elle reste un
+    // paramètre administrable, pas une constante du code.
+    expect(PLATFORM_SETTINGS.commissionB2bPct).toBe(5);
+    expect(isSettled('commissionB2bPct')).toBe(true);
   });
 
   it('NE tranche PAS ce que le client a laissé ouvert', () => {
-    // §4.4 et §8.4, tous deux « ANALYSE EN COURS ». Le §14 pose la règle :
-    // « un paramètre non finalisé doit être prévu dans l'architecture, mais
-    // pas inventé ».
+    // V1.1, « Points encore ouverts » : la durée de réservation du panier — la
+    // réponse reçue (« 2 jours hors alimentaires ») répond à une autre question.
+    // Règle de développement (V1.0 §14) : « un paramètre non finalisé doit être
+    // prévu dans l'architecture, mais pas inventé ».
     expect(PLATFORM_SETTINGS.cartHoldSeconds).toBeNull();
-    expect(PLATFORM_SETTINGS.pointsTransferCap).toBeNull();
   });
 
   it('distingue un paramètre arbitré d’un paramètre ouvert', () => {

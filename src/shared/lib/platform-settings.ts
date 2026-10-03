@@ -1,5 +1,5 @@
 /**
- * LES PARAMÈTRES DE LA PLATEFORME — CDC V1.0 §12.3.
+ * LES PARAMÈTRES DE LA PLATEFORME — CDC V1.0 §12.3, mis à jour par la V1.1.
  *
  * Le cahier des charges liste ce qui doit être **administrable** et pose une
  * règle de développement sans ambiguïté (§14) :
@@ -14,7 +14,8 @@
  * dans le code ».
  *
  * ⚠️ Ce qui est `null` ci-dessous n'est PAS un oubli : c'est un paramètre que
- * le client a explicitement laissé ouvert. Le lire renvoie `null`, et
+ * le client a explicitement laissé ouvert (aujourd'hui : la durée de
+ * réservation du panier). Le lire renvoie `null`, et
  * l'appelant doit s'en accommoder plutôt que de deviner. Écrire une valeur
  * plausible à la place serait exactement ce que le §14 interdit.
  */
@@ -25,15 +26,12 @@ export type PlatformSettings = {
   /** Commission TK LINK sur les transactions B2C, en pourcent — CDC §5.4. */
   commissionB2cPct: number;
   /**
-   * Commission B2B — **délibérément absente**.
-   *
-   * CDC §10.2 et Remarque 1 : « le taux de 5 % B2C ne doit pas être copié
-   * automatiquement sur le B2B […] Aucun taux B2B ne doit être codé en dur. »
-   * Les paniers, volumes et marges y sont sans commune mesure. Tant que Farid
-   * n'a pas tranché, `null` — et tout écran qui affiche un montant B2B doit
-   * dire qu'il ne le connaît pas, pas inventer 5 %.
+   * Commission B2B, en pourcent — CDC V1.1, Grossiste > Règle (VALIDÉ) : « la
+   * commission B2B est alignée sur le taux B2C (5 %) — décision du 31/08/2026
+   * qui remplace la règle antérieure excluant tout calque automatique ». Elle
+   * reste un paramètre administrable, jamais une constante du code.
    */
-  commissionB2bPct: number | null;
+  commissionB2bPct: number;
   /**
    * Durée de réservation du stock au panier, en secondes — **absente**.
    *
@@ -42,13 +40,6 @@ export type PlatformSettings = {
    * toute façon un back-end (§12.2 : le serveur est autoritaire sur le stock).
    */
   cartHoldSeconds: number | null;
-  /**
-   * Plafond de transfert de points entre utilisateurs — **absent**.
-   *
-   * CDC §8.4 exige des « plafonds configurables » ; la Remarque 2 les classe à
-   * finaliser. Aucune valeur ne doit être supposée.
-   */
-  pointsTransferCap: number | null;
   /** Points crédités par euro dépensé en produits — CDC §8.1. */
   pointsPerEuro: number;
   /** Conservation des pièces comptables, en années — CDC §9.6. */
@@ -65,9 +56,8 @@ export type PlatformSettings = {
 export const PLATFORM_SETTINGS: PlatformSettings = {
   freeOperations: 5,
   commissionB2cPct: 5,
-  commissionB2bPct: null,
+  commissionB2bPct: 5,
   cartHoldSeconds: null,
-  pointsTransferCap: null,
   pointsPerEuro: 1,
   retentionYears: 10,
 };

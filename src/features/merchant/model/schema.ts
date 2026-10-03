@@ -11,8 +11,16 @@ import { CATEGORIES } from '@/shared/lib/categories';
  * offre sans prix barré n'est pas une offre flash).
  */
 
+/**
+ * Durée d'un Flash — CDC V1.1 (Commerçant > Règle, VALIDÉ) : « durée maximale
+ * d'un Flash : 2 heures. Durée minimale : 15 minutes. » Les durées proposées
+ * restent dans ces bornes ; le schéma les refuse au-delà.
+ */
+export const FLASH_MIN_MINUTES = 15;
+export const FLASH_MAX_MINUTES = 120;
+
 /** Durées proposées, en minutes. Une vente flash se compte en minutes. */
-export const DURATIONS = [15, 30, 60, 120, 240] as const;
+export const DURATIONS = [15, 30, 60, 120] as const;
 export type Duration = (typeof DURATIONS)[number];
 
 /**
@@ -56,6 +64,17 @@ export const OfferDraftSchema = z
     /** Enregistrer sans publier — le premier état du §4.1. */
     state: z.enum(['brouillon', 'publiee']).default('publiee'),
   })
+  .refine(
+    // La borne de 2 h est celle du Flash du COMMERÇANT. Le CDC n'en fixe aucune
+    // pour une offre B2B : on n'en invente pas.
+    (o) =>
+      o.audience !== 'clients' ||
+      (o.durationMinutes >= FLASH_MIN_MINUTES && o.durationMinutes <= FLASH_MAX_MINUTES),
+    {
+      path: ['durationMinutes'],
+      error: 'Un Flash dure entre 15 minutes et 2 heures',
+    },
+  )
   .refine((o) => o.oldPriceCents > o.priceCents, {
     // Sans cette règle on publierait des « promotions » plus chères que le prix
     // barré. C'est le genre d'erreur qui ne se voit qu'une fois en ligne.

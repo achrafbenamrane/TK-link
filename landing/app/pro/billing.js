@@ -78,7 +78,11 @@ export const CATEGORIES = [
 ];
 
 /** Durées d'une vente flash, en minutes. */
-export const DURATIONS = [15, 30, 60, 120, 240];
+// CDC V1.1 (Commerçant > Règle) : un Flash dure 15 minutes au minimum, 2 heures
+// au maximum.
+export const FLASH_MIN_MINUTES = 15;
+export const FLASH_MAX_MINUTES = 120;
+export const DURATIONS = [15, 30, 60, 120];
 
 export function durationLabel(minutes) {
   return minutes < 60 ? `${minutes} min` : `${minutes / 60} h`;
@@ -104,6 +108,12 @@ export function validateDraft(draft) {
 
   const stock = Number.parseInt(draft.stock, 10);
   if (!Number.isFinite(stock) || stock <= 0) errors.stock = 'Indiquez la quantité';
+
+  // CDC V1.1 : un Flash dure entre 15 minutes et 2 heures.
+  const duration = Number(draft.duration);
+  if (!(duration >= FLASH_MIN_MINUTES && duration <= FLASH_MAX_MINUTES)) {
+    errors.duration = 'Un Flash dure entre 15 minutes et 2 heures';
+  }
 
   return {
     errors,

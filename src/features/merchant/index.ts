@@ -18,7 +18,7 @@ export {
   selectWholesaleOrders,
 } from './model/store';
 export type { Audience, OfferDraft, PublishedOffer, WholesaleOrder } from './model/schema';
-export { AUDIENCES, DURATIONS } from './model/schema';
+export { AUDIENCES, DURATIONS, FLASH_MIN_MINUTES, FLASH_MAX_MINUTES } from './model/schema';
 export {
   FREE_OPERATIONS,
   COMMISSION_PCT,

@@ -23,9 +23,11 @@ export const ORDER_STATUSES = [
   'creee',
   'paiement_attente',
   'payee',
-  // Le commerçant a vu la commande et s'engage à la préparer. Le schéma du
-  // client en fait une étape à part, et il a raison : entre « payée » et « en
-  // préparation », le client attend sans savoir si quelqu'un l'a lue.
+  // « Acceptée » reste une étape du parcours client (CDC V1.0 §5.2, schémas du
+  // 16/08) — mais depuis la V1.1 elle n'est PAS un geste du commerçant : « le
+  // paiement vaut acceptation, sans étape intermédiaire ». Le commerçant ne
+  // l'actionne jamais (voir `merchantActions`) ; elle se lit comme « payée et
+  // prise en compte ».
   'acceptee',
   'preparation',
   'prete',
@@ -94,7 +96,9 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   paiement_attente: ['payee', 'annulee'],
   // Une commande payée que le commerçant REFUSE doit partir au remboursement :
   // l'argent est déjà pris. C'est le seul chemin honnête.
-  payee: ['acceptee', 'refusee', 'annulee', 'remboursement_en_cours'],
+  // `preparation` directement : le commerçant commence à préparer, sans accepter
+  // d'abord (CDC V1.1 : le paiement vaut acceptation).
+  payee: ['acceptee', 'preparation', 'refusee', 'annulee', 'remboursement_en_cours'],
   acceptee: ['preparation', 'annulee', 'remboursement_en_cours'],
   preparation: ['prete', 'annulee', 'remboursement_en_cours'],
   prete: ['recuperee', 'en_livraison', 'annulee'],
@@ -127,6 +131,15 @@ export function nextStatuses(status: OrderStatus, fulfilment: Fulfilment): Order
   // En livraison, « prête » mène au livreur — pas directement chez le client.
   const end: OrderStatus = fulfilment === 'touch-collect' ? 'recuperee' : 'en_livraison';
   return all.filter((s) => s === end || s === 'annulee');
+}
+
+/**
+ * Les gestes que le commerçant se voit proposer — CDC V1.1 : « le paiement vaut
+ * acceptation, sans étape intermédiaire ». Même machine à états, sans le geste
+ * « Accepter » : il n'y a plus rien à accepter, la commande payée se prépare.
+ */
+export function merchantActions(status: OrderStatus, fulfilment: Fulfilment): OrderStatus[] {
+  return nextStatuses(status, fulfilment).filter((s) => s !== 'acceptee');
 }
 
 export function canTransition(from: OrderStatus, to: OrderStatus, fulfilment: Fulfilment): boolean {

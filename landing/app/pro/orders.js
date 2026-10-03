@@ -37,7 +37,7 @@ const TRANSITIONS = {
   panier: ['creee', 'annulee'],
   creee: ['paiement_attente', 'annulee'],
   paiement_attente: ['payee', 'annulee'],
-  payee: ['acceptee', 'refusee', 'annulee', 'remboursement_en_cours'],
+  payee: ['acceptee', 'preparation', 'refusee', 'annulee', 'remboursement_en_cours'],
   acceptee: ['preparation', 'annulee', 'remboursement_en_cours'],
   preparation: ['prete', 'annulee', 'remboursement_en_cours'],
   prete: ['recuperee', 'en_livraison', 'annulee'],

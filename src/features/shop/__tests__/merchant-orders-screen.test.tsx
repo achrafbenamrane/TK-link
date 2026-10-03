@@ -60,19 +60,19 @@ describe('<MerchantOrdersScreen /> — CDC §11 et §18', () => {
     useShopStore.setState({ orders: [order()] });
     render(<MerchantOrdersScreen dealIds={[MINE]} />);
 
-    // Depuis « payée », le commerçant ACCEPTE d'abord — le schéma du client en
-    // fait une étape à part, et il a raison : entre le paiement et la mise en
-    // préparation, le client attend sans savoir si quelqu'un l'a lue.
-    fireEvent.press(screen.getByTestId('merchant-order-o_1-acceptee'));
+    // CDC V1.1 : « le paiement vaut acceptation, sans étape intermédiaire ».
+    // Depuis « payée », le commerçant PRÉPARE — il n'accepte pas.
+    expect(screen.queryByTestId('merchant-order-o_1-acceptee')).toBeNull();
+    fireEvent.press(screen.getByTestId('merchant-order-o_1-preparation'));
 
     const updated = useShopStore.getState().orders[0]!;
-    expect(updated.status).toBe('acceptee');
+    expect(updated.status).toBe('preparation');
     // `managed` est ce qui empêche la simulation d'écraser la décision du
     // commerçant à la seconde suivante.
     expect(updated.managed).toBe(true);
 
     useShopStore.getState().syncOrderStatuses();
-    expect(useShopStore.getState().orders[0]!.status).toBe('acceptee');
+    expect(useShopStore.getState().orders[0]!.status).toBe('preparation');
   });
 
   it('ne propose jamais un chemin interdit par la machine à états', () => {

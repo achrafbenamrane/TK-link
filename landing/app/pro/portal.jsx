@@ -114,15 +114,12 @@ const ROLES = {
      */
     actions: { en_livraison: 'Expédier', recuperee: 'Remise au transporteur' },
     /**
-     * Commission B2B — VOLONTAIREMENT ABSENTE.
-     *
-     * Le §10.2 du CDC est explicite : « le taux de 5 % B2C ne doit pas être
-     * copié automatiquement sur le B2B […] aucun taux B2B ne doit être codé en
-     * dur ». Les paniers et les marges n'ont aucune commune mesure. Afficher
-     * 5 % ici serait inventer le modèle économique du client sur son propre
-     * espace — l'écran dit donc qu'il ne le connaît pas.
+     * Commission B2B — 5 %, alignée sur le B2C : décision du 31/08/2026 (CDC
+     * V1.1, Grossiste > Règle, VALIDÉ), qui remplace la règle de la V1.0
+     * interdisant ce calque. Le grossiste reste le vendeur légal ; TK LINK
+     * facture sa commission au professionnel.
      */
-    commissionPct: null,
+    commissionPct: COMMISSION_PCT,
   },
 };
 
@@ -770,9 +767,7 @@ export default function ProPortal({ role = 'commercant' }) {
 
             <p className="tkpro-note">
               {voc.offersHint} La remise s’applique à chaque vente conclue.{' '}
-              {voc.commissionPct !== null
-                ? `TK LINK prélève ${voc.commissionPct} % sur chaque vente (CDC §5.4).`
-                : 'La commission applicable aux ventes B2B n’est pas encore arrêtée : elle vous sera communiquée avant toute facturation (CDC §10.2).'}
+              {`TK LINK prélève ${voc.commissionPct} % sur chaque vente (CDC V1.1).`}
             </p>
           </>
         ) : null}

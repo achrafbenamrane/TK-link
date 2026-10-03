@@ -9,7 +9,7 @@ import { colors } from '@/shared/theme/colors';
 import {
   FULFILMENT_LABEL,
   isActive,
-  nextStatuses,
+  merchantActions,
   ORDER_STATUS_LABEL,
   type OrderStatus,
 } from '../lib/order-status';
@@ -40,7 +40,6 @@ type Props = {
  * à son ordinateur doit retrouver les mêmes mots.
  */
 const ACTION_LABEL: Partial<Record<OrderStatus, string>> = {
-  acceptee: 'Accepter',
   preparation: 'En préparation',
   prete: 'C’est prêt',
   recuperee: 'Remise au client',
@@ -211,7 +210,7 @@ function OrderCard({
   order: Order;
   onAdvance: (status: OrderStatus) => void;
 }) {
-  const options = nextStatuses(order.status, order.fulfilment);
+  const options = merchantActions(order.status, order.fulfilment);
   const tone = toneOf(order.status);
 
   return (

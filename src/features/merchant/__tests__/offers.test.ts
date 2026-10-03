@@ -9,7 +9,13 @@ import {
   STATE_LABEL,
   stateOf,
 } from '../lib/offers';
-import { OfferDraftSchema, type PublishedOffer } from '../model/schema';
+import {
+  DURATIONS,
+  FLASH_MAX_MINUTES,
+  FLASH_MIN_MINUTES,
+  OfferDraftSchema,
+  type PublishedOffer,
+} from '../model/schema';
 import { useMerchantStore } from '../model/store';
 
 const NOW = new Date(2026, 7, 10, 12).getTime();
@@ -268,5 +274,38 @@ describe('publier ou programmer — le quota', () => {
     const r = useMerchantStore.getState().publish({ ...brouillon, startInMinutes: 60 });
     expect(r.ok).toBe(true);
     expect(useMerchantStore.getState().used).toBe(avant + 1);
+  });
+});
+
+describe('durée d’un Flash — CDC V1.1 (15 min à 2 h)', () => {
+  const draft = (durationMinutes: number, audience: 'clients' | 'commercants' = 'clients') => ({
+    title: 'Pain du soir',
+    category: 'restauration' as const,
+    priceCents: 300,
+    oldPriceCents: 600,
+    stock: 10,
+    durationMinutes,
+    audience,
+  });
+
+  it('accepte les bornes et ce qui est entre elles', () => {
+    for (const m of [15, 30, 60, 120]) {
+      expect(OfferDraftSchema.safeParse(draft(m)).success).toBe(true);
+    }
+  });
+
+  it('refuse moins de 15 minutes et plus de 2 heures pour un Flash commerçant', () => {
+    expect(OfferDraftSchema.safeParse(draft(10)).success).toBe(false);
+    expect(OfferDraftSchema.safeParse(draft(121)).success).toBe(false);
+    expect(OfferDraftSchema.safeParse(draft(240)).success).toBe(false);
+  });
+
+  it('n’invente aucune borne pour une offre B2B (le CDC n’en fixe pas)', () => {
+    expect(OfferDraftSchema.safeParse(draft(240, 'commercants')).success).toBe(true);
+  });
+
+  it('ne propose que des durées dans les bornes', () => {
+    expect(Math.max(...DURATIONS)).toBe(FLASH_MAX_MINUTES);
+    expect(Math.min(...DURATIONS)).toBe(FLASH_MIN_MINUTES);
   });
 });
