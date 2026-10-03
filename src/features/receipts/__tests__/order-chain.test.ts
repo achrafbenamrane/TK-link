@@ -51,7 +51,7 @@ describe('commande → ticket', () => {
 
   it('un ticket de caisse (sans commande) ne se confond avec aucune commande', () => {
     useReceiptsStore.getState().addReceipt({
-      merchant: 'Carrefour City',
+      merchant: 'Épicerie du Marché',
       lines: [{ label: 'Courses', qty: 1, unitCents: 1200 }],
     });
     const receipts = useReceiptsStore.getState().receipts;

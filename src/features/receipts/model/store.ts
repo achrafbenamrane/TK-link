@@ -64,7 +64,8 @@ type ReceiptsState = {
 export const useReceiptsStore = create<ReceiptsState>()(
   persist(
     (set, get) => ({
-      receipts: seedReceipts(),
+      // Vide au premier lancement : un ticket naît d'une commande réglée.
+      receipts: [],
 
       addReceipt: (incoming) => {
         const totalCents = incoming.lines.reduce((s, l) => s + l.unitCents * l.qty, 0);

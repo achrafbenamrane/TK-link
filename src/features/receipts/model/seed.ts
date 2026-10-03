@@ -2,7 +2,11 @@ import { certificateFor, splitVat } from '../lib/receipts';
 import type { Receipt, ReceiptCategory, ReceiptChannel, ReceiptKind, ReceiptLine } from './schema';
 
 /**
- * Tickets de démonstration.
+ * Tickets de démonstration — enseignes FICTIVES, jamais de marques réelles.
+ *
+ * Ce jeu n'alimente PLUS le portefeuille d'un nouvel utilisateur : il démarre
+ * vide, et ses tickets naissent des commandes réglées. Le jeu sert aux tests et
+ * au bouton « remettre la démo ».
  *
  * En production, un ticket arrive quand la commande est réglée — le CDC V1.0 a
  * retiré tout le matériel du périmètre (« on reste uniquement sur du soft »),
@@ -38,7 +42,7 @@ type Spec = {
 
 const SPECS: Spec[] = [
   {
-    merchant: 'Carrefour City',
+    merchant: 'Épicerie du Marché',
     category: 'alimentation',
     daysAgo: 0,
     lines: [
@@ -49,7 +53,7 @@ const SPECS: Spec[] = [
     ],
   },
   {
-    merchant: 'Boulangerie Marchand',
+    merchant: 'Boulangerie des Halles',
     category: 'alimentation',
     daysAgo: 1,
     lines: [
@@ -58,7 +62,7 @@ const SPECS: Spec[] = [
     ],
   },
   {
-    merchant: 'TotalEnergies — Station Lyon Est',
+    merchant: 'Station du Rond-Point',
     category: 'carburant',
     daysAgo: 3,
     lines: [{ label: 'SP95-E10 — 38,42 L', qty: 1, unitCents: 6837 }],
@@ -73,7 +77,7 @@ const SPECS: Spec[] = [
     ],
   },
   {
-    merchant: 'Bureau Vallée',
+    merchant: 'Papeterie du Centre',
     category: 'fournitures',
     daysAgo: 8,
     lines: [
@@ -83,7 +87,7 @@ const SPECS: Spec[] = [
     invoice: true,
   },
   {
-    merchant: 'Amazon.fr',
+    merchant: 'Boutique en ligne Exemple',
     category: 'fournitures',
     daysAgo: 11,
     channel: 'online',
@@ -100,14 +104,14 @@ const SPECS: Spec[] = [
     ],
   },
   {
-    merchant: 'SNCF Connect',
+    merchant: 'Billetterie en ligne Exemple',
     category: 'transport',
     daysAgo: 23,
     channel: 'online',
     lines: [{ label: 'Billet Lyon → Paris', qty: 1, unitCents: 5400 }],
   },
   {
-    merchant: 'Monoprix',
+    merchant: 'Supermarché Exemple',
     category: 'alimentation',
     daysAgo: 34,
     lines: [
@@ -116,7 +120,7 @@ const SPECS: Spec[] = [
     ],
   },
   {
-    merchant: 'Cinéma Pathé',
+    merchant: 'Cinéma Exemple',
     category: 'loisirs',
     daysAgo: 41,
     lines: [{ label: 'Place — séance 20 h 30', qty: 2, unitCents: 1120 }],
@@ -125,7 +129,7 @@ const SPECS: Spec[] = [
   // le cas typique : c'est la preuve qu'on cherche deux ans plus tard, quand
   // l'appareil tombe en panne et que le ticket a disparu depuis longtemps.
   {
-    merchant: 'Atelier Son — Capitole',
+    merchant: 'Atelier Son',
     category: 'autre',
     daysAgo: 96,
     kind: 'garantie',

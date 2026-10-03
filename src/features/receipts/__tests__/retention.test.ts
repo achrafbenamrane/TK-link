@@ -14,7 +14,7 @@ const NOW = new Date(2026, 7, 10, 12).getTime();
 
 const receipt = (over: Partial<Receipt> = {}): Receipt => ({
   id: 'r1',
-  merchant: 'Carrefour City',
+  merchant: 'Épicerie du Marché',
   reference: 'TK-2024-0001',
   issuedAt: new Date(2024, 7, 10, 12).getTime(),
   currency: 'EUR',

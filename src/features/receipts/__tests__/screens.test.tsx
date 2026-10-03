@@ -21,14 +21,14 @@ describe('<ReceiptsScreen />', () => {
     render(<ReceiptsScreen onOpenReceipt={jest.fn()} />);
     expect(screen.getByTestId('receipts-screen')).toBeTruthy();
     // Le portefeuille de démo contient bien des enseignes.
-    expect(screen.getByText('Carrefour City')).toBeTruthy();
+    expect(screen.getByText('Épicerie du Marché')).toBeTruthy();
   });
 
   it('filtre à la recherche et propose un vide explicite', () => {
     render(<ReceiptsScreen onOpenReceipt={jest.fn()} />);
-    fireEvent.changeText(screen.getByTestId('receipts-search'), 'carrefour');
-    expect(screen.getByText('Carrefour City')).toBeTruthy();
-    expect(screen.queryByText('Monoprix')).toBeNull();
+    fireEvent.changeText(screen.getByTestId('receipts-search'), 'épicerie');
+    expect(screen.getByText('Épicerie du Marché')).toBeTruthy();
+    expect(screen.queryByText('Supermarché Exemple')).toBeNull();
 
     fireEvent.changeText(screen.getByTestId('receipts-search'), 'zzzzz');
     expect(screen.getByTestId('receipts-empty')).toBeTruthy();
@@ -70,7 +70,7 @@ describe('<ReceiptDetailScreen />', () => {
   });
 
   it('montre déjà le certificat pour une facture semée', () => {
-    // seed_4 (Bureau Vallée) arrive en facture.
+    // seed_4 (Papeterie du Centre) arrive en facture.
     render(<ReceiptDetailScreen id="seed_4" onBack={jest.fn()} />);
     expect(screen.getByTestId('receipt-certificate')).toBeTruthy();
     expect(screen.queryByTestId('receipt-convert')).toBeNull();

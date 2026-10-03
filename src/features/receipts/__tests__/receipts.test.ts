@@ -22,7 +22,7 @@ import type { Receipt } from '../model/schema';
 function mk(over: Partial<Receipt> = {}): Receipt {
   return {
     id: 'r1',
-    merchant: 'Carrefour City',
+    merchant: 'Épicerie du Marché',
     reference: 'FC-2026-0001',
     issuedAt: Date.UTC(2026, 2, 12, 10, 0),
     currency: 'EUR',
@@ -149,7 +149,7 @@ describe('searchReceipts', () => {
     mk({ id: 'b', merchant: 'Total Énergies', reference: 'Y2' }),
     mk({
       id: 'c',
-      merchant: 'Monoprix',
+      merchant: 'Supermarché Exemple',
       reference: 'Z3',
       lines: [{ label: 'Baguette', qty: 1, unitCents: 110 }],
     }),
@@ -198,8 +198,8 @@ describe('searchReceipts', () => {
 
 describe('filterReceipts — §9.1', () => {
   const list = [
-    mk({ id: 't', kind: 'ticket', merchant: 'Monoprix' }),
-    mk({ id: 'f', kind: 'facture', merchant: 'Bureau Vallée' }),
+    mk({ id: 't', kind: 'ticket', merchant: 'Supermarché Exemple' }),
+    mk({ id: 'f', kind: 'facture', merchant: 'Papeterie du Centre' }),
     mk({ id: 'g', kind: 'garantie', merchant: 'Atelier Son' }),
   ];
 
@@ -213,11 +213,11 @@ describe('filterReceipts — §9.1', () => {
   });
 
   it('combine le type et la recherche', () => {
-    expect(filterReceipts(list, { kind: 'facture', query: 'bureau' }).map((r) => r.id)).toEqual([
+    expect(filterReceipts(list, { kind: 'facture', query: 'papeterie' }).map((r) => r.id)).toEqual([
       'f',
     ]);
-    // Le type gagne : « Monoprix » existe, mais pas en facture.
-    expect(filterReceipts(list, { kind: 'facture', query: 'monoprix' })).toHaveLength(0);
+    // Le type gagne : « Supermarché Exemple » existe, mais pas en facture.
+    expect(filterReceipts(list, { kind: 'facture', query: 'supermarché' })).toHaveLength(0);
   });
 });
 
