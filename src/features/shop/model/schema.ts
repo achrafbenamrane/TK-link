@@ -205,16 +205,16 @@ export const OrderSchema = z.object({
    */
   addressId: z.string().nullable().default(null),
   items: z.array(OrderLineSchema),
-  /** Ce qui est facturé pour les articles : sous-total MOINS la remise coupon. */
+  /** Ce qui est facturé pour les articles : sous-total MOINS la réduction. */
   total: z.number(),
   /**
-   * Remise appliquée par un coupon (euros). `.default(0)` : les commandes déjà
-   * stockées n'ont pas ce champ, et un champ requis les effacerait à la
+   * Réduction appliquée à la commande (euros), calculée par le serveur : le CDC
+   * V1.1 prévoit un crédit de parrainage et un Flash boosté, financés par TK
+   * Link. Rien ne la produit encore dans l'app. `.default(0)` : les commandes
+   * déjà stockées n'ont pas ce champ, et un champ requis les effacerait à la
    * réhydratation — même piège que `addressId`.
    */
   discount: z.number().nonnegative().default(0),
-  /** Code du coupon utilisé, pour le reçu ; `null` si aucun. */
-  couponCode: z.string().nullable().default(null),
   deliveryFee: z.number(),
   /**
    * Le commerçant a-t-il pris la main sur cette commande — CDC §11 ?

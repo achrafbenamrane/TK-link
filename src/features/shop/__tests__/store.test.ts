@@ -58,32 +58,18 @@ describe('shop store', () => {
     expect(useShopStore.getState().orders).toHaveLength(0);
   });
 
-  it('applique la remise d’un coupon au total et aux points', () => {
+  it('ne produit aucune réduction : le total est le sous-total, les points suivent', () => {
     const { addToCart, checkout } = useShopStore.getState();
     addToCart('d_cote');
     const price = getDeal('d_cote')!.price;
 
-    const res = checkout(null, { discountEur: 5, couponCode: 'TEST5' });
-    expect(res.ok).toBe(true);
+    expect(checkout().ok).toBe(true);
 
     const order = useShopStore.getState().orders[0]!;
-    expect(order.discount).toBeCloseTo(5);
-    expect(order.couponCode).toBe('TEST5');
-    expect(order.total).toBeCloseTo(price - 5);
-    // Points sur le montant réellement payé, pas sur le sous-total.
-    expect(order.pointsEarned).toBe(Math.round(price - 5));
-  });
-
-  it('plafonne la remise au sous-total (jamais de total négatif)', () => {
-    const { addToCart, checkout } = useShopStore.getState();
-    addToCart('d_cote');
-    const price = getDeal('d_cote')!.price;
-
-    checkout(null, { discountEur: price + 100, couponCode: 'HUGE' });
-    const order = useShopStore.getState().orders[0]!;
-    expect(order.discount).toBeCloseTo(price);
-    expect(order.total).toBe(0);
-    expect(order.pointsEarned).toBe(0);
+    expect(order.discount).toBe(0);
+    expect(order.total).toBeCloseTo(price);
+    // 1 € TTC dépensé = 1 point (CDC §8.1, V1.1 Utilisateur).
+    expect(order.pointsEarned).toBe(Math.round(price));
   });
 });
 
@@ -124,7 +110,6 @@ describe('progression de commande (démo)', () => {
     items: [{ dealId: 'd_cote', title: 'Côte', emoji: '🥩', qty: 1, price: 24.9 }],
     total: 24.9,
     discount: 0,
-    couponCode: null,
     deliveryFee: 0,
     fulfilment: 'livraison' as const,
     status: 'creee' as const,
@@ -187,7 +172,6 @@ describe('migration des commandes stockées — CDC §11', () => {
       items: [{ dealId: 'd_cote', title: 'Côte', emoji: '🥩', qty: 1, price: 24.9 }],
       total: 24.9,
       discount: 0,
-      couponCode: null,
       deliveryFee: 3,
       status: 'en_preparation',
       pointsEarned: 24,

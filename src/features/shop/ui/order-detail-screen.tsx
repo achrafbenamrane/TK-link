@@ -235,7 +235,7 @@ export function OrderDetailScreen() {
             {order.discount > 0 ? (
               <View className="flex-row justify-between" testID="order-discount">
                 <AppText variant="caption" className="text-ink-muted">
-                  Réduction {order.couponCode ? `(${order.couponCode})` : ''}
+                  Réduction
                 </AppText>
                 <AppText className="font-sans-bold text-sm text-brand-600">
                   −{order.discount.toFixed(2)}€

@@ -11,7 +11,6 @@ const order = (over: Partial<Order> = {}): Order => ({
   items: [{ dealId: deal.id, title: deal.title, emoji: deal.emoji, qty: 2, price: 9.5 }],
   total: 19,
   discount: 0,
-  couponCode: null,
   deliveryFee: 0,
   fulfilment: 'touch-collect',
   status: 'recuperee',
@@ -62,8 +61,8 @@ describe('commande → transaction', () => {
   });
 
   it('la remise s’inscrit en négatif, sous son code', () => {
-    const t = orderToTransaction(order({ discount: 3, couponCode: 'BIENVENUE' }));
-    expect(t.lines).toContainEqual({ label: 'Remise BIENVENUE', qty: 1, unitCents: -300 });
+    const t = orderToTransaction(order({ discount: 3 }));
+    expect(t.lines).toContainEqual({ label: 'Réduction', qty: 1, unitCents: -300 });
   });
 
   it('le total du ticket retombe TOUJOURS sur ce qui a été payé', () => {
@@ -72,7 +71,7 @@ describe('commande → transaction', () => {
     //
     // La commande respecte ici la règle de la caisse — `total` vaut le
     // sous-total MOINS la remise (19 € d'articles, 3 € de remise, donc 16 €).
-    const o = order({ total: 16, discount: 3, couponCode: 'BIENVENUE', deliveryFee: 2.9 });
+    const o = order({ total: 16, discount: 3, deliveryFee: 2.9 });
     const t = orderToTransaction(o);
 
     const sum = t.lines.reduce((s, l) => s + l.unitCents * l.qty, 0);

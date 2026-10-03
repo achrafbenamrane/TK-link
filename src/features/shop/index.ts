@@ -5,7 +5,6 @@
 export { HomeScreen } from './ui/home-screen';
 export { ProductScreen } from './ui/product-screen';
 export { CartScreen } from './ui/cart-screen';
-export type { CartCoupons, CartCouponOption } from './ui/cart-screen';
 export { OrdersScreen } from './ui/orders-screen';
 export { OrderDetailScreen } from './ui/order-detail-screen';
 export { FavoritesScreen } from './ui/favorites-screen';

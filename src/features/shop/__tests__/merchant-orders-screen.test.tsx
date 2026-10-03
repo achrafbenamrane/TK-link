@@ -19,7 +19,6 @@ const order = (over: Partial<Order> = {}): Order => ({
   items: [{ dealId: MINE, title: 'Plateau de viennoiseries', emoji: '🥐', qty: 2, price: 9 }],
   total: 18,
   discount: 0,
-  couponCode: null,
   deliveryFee: 0,
   fulfilment: 'touch-collect',
   status: 'payee',

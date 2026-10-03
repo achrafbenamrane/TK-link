@@ -13,37 +13,9 @@ import { FULFILMENTS, FULFILMENT_LABEL, type Fulfilment } from '../lib/order-sta
 import { cartLines, DELIVERY_FEE_EUR, selectCart, useShopStore } from '../model/store';
 import { QtyStepper } from './components/qty-stepper';
 
-/** Un coupon applicable, sa remise déjà résolue pour le panier courant. */
-export type CartCouponOption = {
-  id: string;
-  code: string;
-  label: string;
-  /** Libellé de la remise, ex. « -20 % » ou « 5,00 € ». */
-  discountLabel: string;
-  /** Remise en euros pour le sous-total courant. */
-  discountEur: number;
-};
-
-/**
- * Contrat coupon injecté par la route. Le shop ne connaît PAS la feature
- * `coupons` (règle des frontières) : il reçoit des options prêtes à afficher et
- * signale la sélection / la consommation par callbacks. La composition (lecture
- * du portefeuille, calcul des remises, marquage « utilisé ») vit dans /panier.
- */
-export type CartCoupons = {
-  options: CartCouponOption[];
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
-  /** Appelé après une commande réussie pour marquer le coupon consommé. */
-  onApplied: (couponId: string) => void;
-};
-
-type Props = { coupons?: CartCoupons };
-
-export function CartScreen({ coupons }: Props) {
+export function CartScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [pickerOpen, setPickerOpen] = useState(false);
   // CDC §12 — le Touch & Collect fait partie du MVP. Livraison par défaut :
   // c'est le mode que l'app proposait déjà, on ne change pas l'habitude sans
   // que l'utilisateur le demande.
@@ -59,21 +31,13 @@ export function CartScreen({ coupons }: Props) {
   const addresses = useShopStore((s) => s.addresses);
   const biometricEnabled = useShopStore((s) => s.biometricEnabled);
 
-  const options = coupons?.options ?? [];
-  const selectedCoupon = options.find((o) => o.id === coupons?.selectedId) ?? null;
-  const discount = selectedCoupon?.discountEur ?? 0;
-  const total = Math.max(0, subtotal - discount);
+  const total = subtotal;
 
   // Les points suivent ce qui est réellement payé (voir checkout).
   const points = Math.round(total);
   // L'adresse par défaut est la cible de livraison ; sans adresse, on ne peut
   // pas commander — une app de livraison doit savoir où aller.
   const address = addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
-
-  const selectCoupon = (id: string | null) => {
-    coupons?.onSelect(id);
-    setPickerOpen(false);
-  };
 
   const handleCheckout = async () => {
     // L'adresse n'est indispensable qu'en livraison : exiger une adresse pour
@@ -90,12 +54,8 @@ export function CartScreen({ coupons }: Props) {
       if (!auth.ok && auth.reason !== 'indisponible') return;
     }
 
-    const applied = selectedCoupon
-      ? { discountEur: selectedCoupon.discountEur, couponCode: selectedCoupon.code }
-      : null;
-    const res = checkout(address?.id ?? null, applied, fulfilment);
+    const res = checkout(address?.id ?? null, fulfilment);
     if (res.ok) {
-      if (selectedCoupon) coupons?.onApplied(selectedCoupon.id);
       router.replace('/commandes');
     }
   };
@@ -232,84 +192,6 @@ export function CartScreen({ coupons }: Props) {
           })}
         </View>
 
-        {/* Coupon — applique une réduction gagnée en jouant ou reçue par code. */}
-        {selectedCoupon ? (
-          <View
-            testID="cart-coupon-applied"
-            className="flex-row items-center gap-3 rounded-control border border-brand-500/40 bg-brand-50 px-3 py-2.5"
-          >
-            <Feather name="tag" size={15} color={colors.brand600} />
-            <View className="flex-1">
-              <AppText className="font-sans-bold text-xs text-ink">
-                {selectedCoupon.code} · {selectedCoupon.discountLabel}
-              </AppText>
-              <AppText variant="caption" className="text-xs text-ink-faint" numberOfLines={1}>
-                {selectedCoupon.label || 'Coupon appliqué'}
-              </AppText>
-            </View>
-            <Pressable
-              testID="cart-coupon-remove"
-              accessibilityRole="button"
-              accessibilityLabel="Retirer le coupon"
-              hitSlop={8}
-              onPress={() => selectCoupon(null)}
-            >
-              <AppText variant="caption" className="font-sans-semibold text-xs text-brand-600">
-                Retirer
-              </AppText>
-            </Pressable>
-          </View>
-        ) : options.length > 0 ? (
-          <View className="gap-2">
-            <Pressable
-              testID="cart-coupon-open"
-              accessibilityRole="button"
-              onPress={() => setPickerOpen((v) => !v)}
-              className="flex-row items-center gap-3 rounded-control border border-dashed border-line bg-surface-muted px-3 py-2.5"
-            >
-              <Feather name="tag" size={15} color={colors.brand500} />
-              <AppText className="flex-1 font-sans-bold text-xs text-ink">
-                Utiliser un coupon
-              </AppText>
-              <AppText variant="caption" className="text-xs text-ink-faint">
-                {options.length} disponible{options.length > 1 ? 's' : ''}
-              </AppText>
-              <Feather
-                name={pickerOpen ? 'chevron-up' : 'chevron-down'}
-                size={16}
-                color={colors.inkFaint}
-              />
-            </Pressable>
-            {pickerOpen ? (
-              <View className="gap-1.5 rounded-control border border-line bg-surface p-1.5">
-                {options.map((o) => (
-                  <Pressable
-                    key={o.id}
-                    testID={`cart-coupon-option-${o.id}`}
-                    accessibilityRole="button"
-                    onPress={() => selectCoupon(o.id)}
-                    className="flex-row items-center gap-3 rounded-control px-2.5 py-2 active:bg-surface-muted"
-                  >
-                    <View className="flex-1">
-                      <AppText className="font-sans-bold text-xs text-ink">{o.code}</AppText>
-                      <AppText
-                        variant="caption"
-                        className="text-xs text-ink-faint"
-                        numberOfLines={1}
-                      >
-                        {o.label || o.discountLabel}
-                      </AppText>
-                    </View>
-                    <AppText className="font-sans-bold text-xs text-brand-600">
-                      −{o.discountEur.toFixed(2)}€
-                    </AppText>
-                  </Pressable>
-                ))}
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-
         {/* En Touch & Collect, l'adresse n'a rien à faire là : c'est le client
             qui se déplace. */}
         {fulfilment === 'touch-collect' ? (
@@ -370,16 +252,6 @@ export function CartScreen({ coupons }: Props) {
             </AppText>
             <AppText variant="label">{subtotal.toFixed(2)}€</AppText>
           </View>
-          {discount > 0 ? (
-            <View className="flex-row items-center justify-between" testID="cart-discount-line">
-              <AppText variant="caption" className="text-ink-muted">
-                Réduction {selectedCoupon ? `(${selectedCoupon.code})` : ''}
-              </AppText>
-              <AppText className="font-sans-bold text-sm text-brand-600">
-                −{discount.toFixed(2)}€
-              </AppText>
-            </View>
-          ) : null}
           <View className="flex-row items-center justify-between">
             <AppText variant="caption" className="text-ink-muted">
               {FULFILMENT_LABEL[fulfilment]}

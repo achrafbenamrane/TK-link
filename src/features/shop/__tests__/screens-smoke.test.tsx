@@ -30,7 +30,6 @@ beforeEach(() => {
         items: [{ dealId: 'd_cote', title: 'Côte', emoji: '🥩', qty: 1, price: 24.9 }],
         total: 24.9,
         discount: 0,
-        couponCode: null,
         deliveryFee: 0,
         fulfilment: 'livraison' as const,
         status: 'preparation',

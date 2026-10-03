@@ -20,7 +20,7 @@ export type BackButtonProps = {
  * LE RETOUR, PARTOUT — demande de la conduite de projet du 18/08/2026 :
  * « ajoute toujours un bouton retour en arrière ».
  *
- * Neuf écrans empilés n'en avaient aucun : Adresses, Aide, Coupons, Factures,
+ * Neuf écrans empilés n'en avaient aucun : Adresses, Aide, Factures,
  * Tickets, Préférences, Compte, Empreinte, Espace commerçant. On y entrait sans
  * pouvoir en sortir autrement que par le geste système — que tout le monde ne
  * connaît pas, et qui n'existe pas de la même façon sur chaque téléphone.

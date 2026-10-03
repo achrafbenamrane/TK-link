@@ -76,7 +76,7 @@ export function orderToTransaction(order: Order): Transaction {
   // client doit retrouver le prix qu'il a vu, et la remise qu'il a obtenue.
   if (order.discount > 0) {
     lines.push({
-      label: order.couponCode ? `Remise ${order.couponCode}` : 'Remise',
+      label: 'Réduction',
       qty: 1,
       unitCents: -Math.round(order.discount * 100),
     });

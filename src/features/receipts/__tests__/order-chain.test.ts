@@ -16,7 +16,7 @@ const transaction = (orderId: string) => ({
   channel: 'online' as const,
   lines: [
     { label: 'Plateau de viennoiseries', qty: 2, unitCents: 950 },
-    { label: 'Remise BIENVENUE', qty: 1, unitCents: -300 },
+    { label: 'Réduction', qty: 1, unitCents: -300 },
   ],
 });
 

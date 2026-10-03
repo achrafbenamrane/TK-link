@@ -318,12 +318,6 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
         {/* Menu */}
         <View className="rounded-card border border-line bg-surface px-4">
           <Row
-            testID="profile-coupons"
-            icon={<Feather name="tag" size={17} color={colors.ink} />}
-            label="Mes coupons"
-            onPress={() => router.push('/coupons')}
-          />
-          <Row
             testID="profile-empreinte"
             icon={<Ionicons name="finger-print" size={18} color={colors.ink} />}
             label="Empreinte digitale"

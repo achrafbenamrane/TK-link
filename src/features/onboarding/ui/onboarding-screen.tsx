@@ -368,7 +368,7 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
           <View className="gap-5">
             <Header
               title={firstName ? `Enchanté, ${firstName}` : 'Votre compte'}
-              subtitle="Créez votre compte pour garder vos points et vos coupons — même en changeant de téléphone."
+              subtitle="Créez votre compte pour garder vos points — même en changeant de téléphone."
             />
 
             {/* Ce que le compte apporte, en trois lignes.
@@ -384,7 +384,7 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
               {[
                 {
                   icon: 'award',
-                  text: 'Vos points et vos coupons vous suivent, même en changeant de téléphone.',
+                  text: 'Vos points vous suivent, même en changeant de téléphone.',
                 },
                 { icon: 'award', text: 'Vos points de fidélité, commerce par commerce.' },
                 {
@@ -435,8 +435,8 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
             <View className="flex-row items-start gap-2.5 rounded-card bg-surface-muted p-3.5">
               <Feather name="shield" size={15} color={colors.inkFaint} />
               <AppText variant="caption" className="flex-1 text-ink-muted" style={{ fontSize: 12 }}>
-                Sans compte, vos points et vos coupons ne vivent que sur ce téléphone : les
-                désinstaller les efface.
+                Sans compte, vos points ne vivent que sur ce téléphone : désinstaller l’app les
+                efface.
               </AppText>
             </View>
           </View>
