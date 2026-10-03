@@ -24,7 +24,7 @@ const FAQ = [
   },
   {
     q: 'Comment fonctionnent les points de fidélité ?',
-    a: 'Chaque euro dépensé vous rapporte un point. À 200 points, vous recevez un bon d’achat de 2 €. Vos points sont partageables avec vos proches.',
+    a: 'Chez un commerçant qui a un programme de fidélité, chaque euro dépensé en produits vous rapporte un point. Les points restent liés à ce commerçant, qui fixe ses propres paliers et récompenses : ils ne se convertissent pas en euros et ne se transfèrent pas.',
   },
   {
     q: 'Qui me livre ?',

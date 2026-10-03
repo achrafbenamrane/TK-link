@@ -2,7 +2,6 @@ import { Text } from 'react-native';
 
 import { render, screen, within } from '@/shared/testing/render';
 
-import { useShopStore } from '../model/store';
 import { ProfileScreen } from '../ui/profile-screen';
 
 jest.mock('expo-router', () => ({
@@ -15,19 +14,16 @@ jest.mock('expo-router', () => ({
 }));
 
 describe('<ProfileScreen />', () => {
-  it('rend sans planter, solde vide', () => {
-    useShopStore.setState({ points: 0, vouchers: [] });
+  it('rend sans planter', () => {
     render(<ProfileScreen />);
     expect(screen.getByTestId('profile-screen')).toBeOnTheScreen();
   });
 
-  it('rend avec des points et des bons (palier atteint)', () => {
-    useShopStore.setState({
-      points: 250,
-      vouchers: [{ id: 'v1', code: 'ABCD-1234', value: 2, createdAt: 1, usedAt: null }],
-    });
+  it('ne propose ni solde global, ni bon d’achat, ni partage de points (CDC V1.1)', () => {
     render(<ProfileScreen />);
-    expect(screen.getByTestId('claim-reward')).toBeOnTheScreen();
+    expect(screen.queryByTestId('claim-reward')).toBeNull();
+    expect(screen.queryByTestId('share-points')).toBeNull();
+    expect(screen.queryByText(/Fidélité TK LINK/)).toBeNull();
   });
 });
 

@@ -271,7 +271,7 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
                 testID="holder-particulier"
                 icon="user"
                 title="Un particulier"
-                detail="Vos tickets, vos points, vos cadeaux."
+                detail="Vos tickets et vos points."
                 selected={holderType === 'particulier'}
                 onPress={() => setHolderType('particulier')}
               />

@@ -2,7 +2,7 @@ import { getDeal } from '../model/catalog';
 import { OrderSchema } from '../model/schema';
 import { selectCartCount, selectCartSubtotal, useShopStore } from '../model/store';
 
-const reset = () => useShopStore.setState({ cart: [], favorites: [], orders: [], points: 120 });
+const reset = () => useShopStore.setState({ cart: [], favorites: [], orders: [] });
 
 describe('shop store', () => {
   beforeEach(reset);
@@ -38,10 +38,9 @@ describe('shop store', () => {
     expect(useShopStore.getState().favorites).not.toContain('d_pizza');
   });
 
-  it('checkout creates an order, awards points and empties the cart', () => {
+  it('checkout creates an order, records the points earned and empties the cart', () => {
     const { addToCart, checkout } = useShopStore.getState();
     addToCart('d_cote', 2);
-    const pointsBefore = useShopStore.getState().points;
 
     const result = checkout();
 
@@ -50,7 +49,7 @@ describe('shop store', () => {
     expect(state.cart).toHaveLength(0);
     expect(state.orders).toHaveLength(1);
     expect(state.orders[0]?.items[0]?.dealId).toBe('d_cote');
-    expect(state.points).toBeGreaterThan(pointsBefore);
+    expect(state.orders[0]?.pointsEarned).toBeGreaterThan(0);
   });
 
   it('checkout on an empty cart is a no-op', () => {
@@ -77,7 +76,7 @@ describe('checkout et adresse de livraison', () => {
   const DRAFT = { label: 'Maison', street: '12 rue des Filatiers', zip: '31000', city: 'Toulouse' };
 
   beforeEach(() => {
-    useShopStore.setState({ cart: [], orders: [], addresses: [], points: 0 });
+    useShopStore.setState({ cart: [], orders: [], addresses: [] });
   });
 
   it('retient l’adresse de livraison sur la commande', () => {

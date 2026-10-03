@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
-import { transferCode, withdraw, type Tier } from '../lib/tiers';
+import type { Tier } from '../lib/tiers';
 
 /**
  * Fidélité par enseigne — un solde et des paliers CHEZ CHAQUE commerçant.
@@ -99,15 +99,10 @@ type State = {
    * renumérote donc les rangs sans toucher aux cartes.
    */
   setTiers: (tiers: Tier[]) => void;
-  /** Crédite des points chez une enseigne (achat, jeu, bonus). */
+  /** Crédite des points chez une enseigne, pour un achat (CDC §8.1). */
   earn: (merchantId: string, points: number, label: string) => void;
   /** Réclame un palier atteint. Renvoie false si le palier n'est pas ouvert. */
   claim: (merchantId: string, rank: number) => boolean;
-  /**
-   * Transfère des points à un proche : on DÉBITE et on rend un code.
-   * Le crédit chez l'autre suppose un back-end — on ne prétend pas le faire.
-   */
-  transfer: (merchantId: string, amount: number) => string | null;
   resetDemo: () => void;
 };
 
@@ -150,28 +145,6 @@ export const useMerchantLoyaltyStore = create<State>()(
           },
         }));
         return true;
-      },
-
-      transfer: (merchantId, amount) => {
-        const card = get().cards[merchantId];
-        if (!card) return null;
-        const left = withdraw(card.points, amount);
-        if (left === null) return null;
-        const at = Date.now();
-        set((s) => ({
-          cards: {
-            ...s.cards,
-            [merchantId]: {
-              ...card,
-              points: left,
-              history: [
-                { id: `${at}`, label: 'Points partagés', points: -amount, at },
-                ...card.history,
-              ],
-            },
-          },
-        }));
-        return transferCode(merchantId, amount, at);
       },
 
       resetDemo: () => set({ cards: seedCards() }),

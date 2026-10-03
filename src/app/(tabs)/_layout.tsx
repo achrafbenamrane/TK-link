@@ -18,8 +18,8 @@ import { colors } from '@/shared/theme/colors';
  * la maquette B, sans onglet central — docs/design/maquettes/README.md.
  *
  * « Parcourir » reste une ROUTE (la recherche par commerce) mais quitte la
- * barre. Même chose pour les écrans TK LINK — tickets, carte de fidélité,
- * cadeaux — qu'on rejoint depuis le compte et les fiches commerçant.
+ * barre. Même chose pour les tickets et la fidélité de chaque commerçant, qu'on
+ * rejoint depuis le compte et les fiches commerçant.
  */
 
 export default function TabsLayout() {
@@ -85,10 +85,9 @@ export default function TabsLayout() {
         name="profil"
         options={{
           title: 'Compte',
-          // Un bonhomme, pas un engrenage. L'onglet mène au profil, à la carte
-          // de fidélité, aux points et aux adresses — pas à des réglages. Un
-          // engrenage promet la configuration de l'app : on le cherche pour
-          // couper les notifications, et on tombe sur sa carte de fidélité.
+          // Un bonhomme, pas un engrenage. L'onglet mène au profil, aux
+          // paliers et aux adresses — pas à des réglages. Un engrenage promet
+          // la configuration de l'app.
           tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} />,
         }}
       />
@@ -104,8 +103,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen name="parcourir" options={{ href: null }} />
-      <Tabs.Screen name="carte" options={{ href: null }} />
-      <Tabs.Screen name="offres" options={{ href: null }} />
     </Tabs>
   );
 }

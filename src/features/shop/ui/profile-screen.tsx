@@ -1,20 +1,11 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useMemo, useState, type ReactNode } from 'react';
-import { Alert, Pressable, ScrollView, Share, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { Pressable, ScrollView, Share, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
 import { colors } from '@/shared/theme/colors';
-
-import {
-  REWARD_POINTS,
-  REWARD_VALUE_EUR,
-  selectPoints,
-  selectVouchers,
-  useShopStore,
-} from '../model/store';
-import { SharePointsSheet } from './components/share-points-sheet';
 
 function Row({
   icon,
@@ -101,19 +92,6 @@ export function ProfileScreen({
   subtitle,
 }: ProfileScreenProps = {}) {
   const router = useRouter();
-  const points = useShopStore(selectPoints);
-  // On s'abonne à la référence STABLE (`s.vouchers`) puis on filtre en mémo :
-  // un sélecteur qui renvoie `.filter(...)` crée un nouveau tableau à chaque
-  // rendu, ce que Zustand 5 lit comme un changement → boucle infinie, crash.
-  const allVouchers = useShopStore(selectVouchers);
-  const vouchers = useMemo(() => allVouchers.filter((v) => v.usedAt === null), [allVouchers]);
-  const claim = useShopStore((s) => s.claimReward);
-  const [shareOpen, setShareOpen] = useState(false);
-
-  const remaining = Math.max(0, REWARD_POINTS - points);
-  const pct = Math.min(100, Math.round((points / REWARD_POINTS) * 100));
-  const canClaim = points >= REWARD_POINTS;
-
   const invite = async () => {
     try {
       await Share.share({
@@ -152,82 +130,6 @@ export function ProfileScreen({
               </AppText>
             ) : null}
           </View>
-        </View>
-
-        {/* Loyalty */}
-        <View className="mb-5 gap-3 rounded-card bg-ink p-5">
-          <View className="flex-row items-center gap-2">
-            <Feather name="gift" size={16} color={colors.brand500} />
-            <AppText className="font-sans-semibold text-ink-inverse">Fidélité TK LINK</AppText>
-          </View>
-          <View className="flex-row items-baseline gap-2">
-            {/* lineHeight obligatoire : sans lui AppText garde la hauteur de
-                ligne de sa variante par défaut (24 px), et un chiffre de 40 px
-                en police Unbounded — qui a de longues hampes — se fait rogner. */}
-            <AppText
-              className="font-display text-ink-inverse"
-              style={{ fontSize: 40, lineHeight: 50 }}
-            >
-              {points}
-            </AppText>
-            <AppText className="text-ink-inverse/70">points</AppText>
-          </View>
-          <View className="gap-1.5">
-            <View className="h-2 overflow-hidden rounded-pill bg-ink-inverse/20">
-              <View className="h-full rounded-pill bg-brand-500" style={{ width: `${pct}%` }} />
-            </View>
-            <AppText className="text-xs text-ink-inverse/70">
-              {remaining > 0
-                ? `Encore ${remaining} points pour un bon d’achat de ${REWARD_VALUE_EUR}€`
-                : `Un bon d’achat de ${REWARD_VALUE_EUR}€ vous attend 🎉`}
-            </AppText>
-          </View>
-          {/* À 200 points la carte félicitait sans rien proposer : le palier
-              s'échange maintenant vraiment contre un bon d'achat. */}
-          {canClaim ? (
-            <Pressable
-              testID="claim-reward"
-              accessibilityRole="button"
-              accessibilityLabel={`Échanger ${REWARD_POINTS} points contre un bon d’achat`}
-              onPress={() => {
-                const r = claim();
-                if (r.ok) {
-                  Alert.alert(
-                    'Bon d’achat obtenu 🎉',
-                    `Votre code : ${r.voucher.code}
-Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
-                  );
-                }
-              }}
-              className="mt-1 flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-3 active:bg-brand-600"
-            >
-              <Feather name="gift" size={15} color={colors.inkInverse} />
-              <AppText className="font-sans-bold text-ink-inverse">
-                Échanger contre un bon de {REWARD_VALUE_EUR}€
-              </AppText>
-            </Pressable>
-          ) : null}
-
-          <Pressable
-            testID="share-points"
-            accessibilityRole="button"
-            accessibilityLabel="Offrir des points à un proche"
-            onPress={() => setShareOpen(true)}
-            className="mt-1 flex-row items-center justify-center gap-2 rounded-control bg-surface py-3 active:opacity-90"
-          >
-            <Feather name="share-2" size={15} color={colors.ink} />
-            <AppText className="font-sans-bold text-ink">Partager mes points</AppText>
-          </Pressable>
-
-          {vouchers.length > 0 ? (
-            <View className="mt-1 flex-row items-center gap-2 rounded-control bg-ink-inverse/10 px-3 py-2.5">
-              <Feather name="tag" size={14} color={colors.brand500} />
-              <AppText className="flex-1 text-xs text-ink-inverse">
-                {vouchers.length} bon{vouchers.length > 1 ? 's' : ''} d’achat disponible
-                {vouchers.length > 1 ? 's' : ''} · {vouchers[0]?.code}
-              </AppText>
-            </View>
-          ) : null}
         </View>
 
         {/* Invite — bouton simple ; le bouton signature vit désormais sur les fiches produit. */}
@@ -360,8 +262,6 @@ Présentez-le au commerçant pour ${r.voucher.value} € de réduction.`,
           TK LINK v0.1
         </AppText>
       </ScrollView>
-
-      <SharePointsSheet visible={shareOpen} onClose={() => setShareOpen(false)} />
     </Screen>
   );
 }

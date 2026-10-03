@@ -52,21 +52,3 @@ export function tierProgress(tier: Tier, points: number): number {
 export function reachedCount(tiers: Tier[], points: number): number {
   return tiers.filter((t) => points >= t.cost).length;
 }
-
-/**
- * Retire des points pour un transfert vers un proche. Fonction pure : renvoie
- * le nouveau solde, ou `null` si le solde est insuffisant (on ne laisse jamais
- * un compte partir en négatif).
- */
-export function withdraw(points: number, amount: number): number | null {
-  if (amount <= 0 || amount > points) return null;
-  return points - amount;
-}
-
-/** Code de transfert lisible, à donner au proche. */
-export function transferCode(merchantId: string, amount: number, at: number): string {
-  const raw = `${merchantId}|${amount}|${at}`;
-  let h = 0;
-  for (let i = 0; i < raw.length; i++) h = (h * 31 + raw.charCodeAt(i)) >>> 0;
-  return `TK${h.toString(36).toUpperCase().slice(0, 6)}`;
-}

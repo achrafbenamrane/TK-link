@@ -1,5 +1,3 @@
-import { Share } from 'react-native';
-
 import { fireEvent, render, screen } from '@/shared/testing/render';
 
 import { useMerchantLoyaltyStore } from '../model/merchant-store';
@@ -9,8 +7,6 @@ const MID = 'm_napoli';
 
 beforeEach(() => {
   useMerchantLoyaltyStore.getState().resetDemo();
-  // La feuille de partage est native : on l'espionne plutôt que de l'ouvrir.
-  jest.spyOn(Share, 'share').mockResolvedValue({ action: 'dismissedAction' });
 });
 
 afterEach(() => {
@@ -49,14 +45,10 @@ describe('<MerchantLoyaltyScreen />', () => {
     expect(screen.getAllByText('Commande').length).toBeGreaterThan(0);
   });
 
-  it('partage des points : le solde est débité et un code apparaît', () => {
+  it('ne propose aucun transfert de points bruts (CDC V1.1)', () => {
     mount();
-    fireEvent.press(screen.getByTestId('share-open'));
-    fireEvent.press(screen.getByTestId('share-amount-20'));
-    fireEvent.press(screen.getByTestId('share-confirm'));
-
-    expect(useMerchantLoyaltyStore.getState().cards[MID]?.points).toBe(93);
-    expect(screen.getByTestId('share-code')).toBeTruthy();
+    expect(screen.queryByTestId('share-open')).toBeNull();
+    expect(screen.queryByText(/Partager mes points/)).toBeNull();
   });
 
   it('tient pour une enseigne sans carte', () => {

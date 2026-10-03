@@ -13,7 +13,16 @@ import { FULFILMENTS, FULFILMENT_LABEL, type Fulfilment } from '../lib/order-sta
 import { cartLines, DELIVERY_FEE_EUR, selectCart, useShopStore } from '../model/store';
 import { QtyStepper } from './components/qty-stepper';
 
-export function CartScreen() {
+type Props = {
+  /**
+   * Signalé après une commande réussie. La route s'en sert pour créditer le
+   * programme de fidélité de chaque commerçant (CDC §8.2) : le panier ignore
+   * tout de la fidélité.
+   */
+  onOrdered?: (orderId: string) => void;
+};
+
+export function CartScreen({ onOrdered }: Props = {}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   // CDC §12 — le Touch & Collect fait partie du MVP. Livraison par défaut :
@@ -56,6 +65,7 @@ export function CartScreen() {
 
     const res = checkout(address?.id ?? null, fulfilment);
     if (res.ok) {
+      onOrdered?.(res.orderId);
       router.replace('/commandes');
     }
   };

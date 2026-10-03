@@ -4,8 +4,6 @@ import {
   reachedCount,
   tierProgress,
   tierState,
-  transferCode,
-  withdraw,
   type Tier,
 } from '../lib/tiers';
 
@@ -74,28 +72,5 @@ describe('reachedCount', () => {
     expect(reachedCount(TIERS, 113)).toBe(2);
     expect(reachedCount(TIERS, 0)).toBe(0);
     expect(reachedCount(TIERS, 200)).toBe(4);
-  });
-});
-
-describe('withdraw', () => {
-  it('débite quand le solde suffit', () => {
-    expect(withdraw(113, 20)).toBe(93);
-    expect(withdraw(20, 20)).toBe(0);
-  });
-
-  it('refuse plutôt que de passer en négatif', () => {
-    expect(withdraw(10, 20)).toBeNull();
-    expect(withdraw(113, 0)).toBeNull();
-    expect(withdraw(113, -5)).toBeNull();
-  });
-});
-
-describe('transferCode', () => {
-  it('est stable pour un même transfert et distinct sinon', () => {
-    const a = transferCode('m_napoli', 20, 1000);
-    expect(transferCode('m_napoli', 20, 1000)).toBe(a);
-    expect(transferCode('m_napoli', 25, 1000)).not.toBe(a);
-    expect(transferCode('m_xavier', 20, 1000)).not.toBe(a);
-    expect(a).toMatch(/^TK[0-9A-Z]{1,6}$/);
   });
 });

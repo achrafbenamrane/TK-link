@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Share, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
@@ -17,24 +17,18 @@ type Props = {
   onBack: () => void;
 };
 
-const PRESETS = [20, 50, 100];
-
 /**
  * La carte de fidélité d'UNE enseigne — reprise de la maquette du client :
  * le solde en tête, les quatre paliers (atteints, à réclamer, verrouillés),
- * l'historique, et le partage de points à un proche.
+ * et l'historique. Les points bruts ne se transfèrent pas (CDC V1.1).
  */
 export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, onBack }: Props) {
   const cards = useMerchantLoyaltyStore(selectCards);
   // Les paliers viennent du commerçant depuis le §8.3, ils ne sont plus figés.
   const tiers = useMerchantLoyaltyStore(selectTiers);
   const claim = useMerchantLoyaltyStore((s) => s.claim);
-  const transfer = useMerchantLoyaltyStore((s) => s.transfer);
 
   const [tab, setTab] = useState<'avantages' | 'historique'>('avantages');
-  const [sharing, setSharing] = useState(false);
-  const [amount, setAmount] = useState(PRESETS[0]!);
-  const [code, setCode] = useState<string | null>(null);
 
   const card = useMemo(
     () => cards[merchantId] ?? { points: 0, claimed: [], history: [] },
@@ -42,15 +36,6 @@ export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, 
   );
   const reached = reachedCount(tiers, card.points);
   const goal = nextTier(tiers, card.points);
-
-  const onShare = async () => {
-    const c = transfer(merchantId, amount);
-    if (!c) return;
-    setCode(c);
-    await Share.share({
-      message: `Je t’offre ${amount} points chez ${merchantName} — code ${c} (TK LINK).`,
-    }).catch(() => undefined);
-  };
 
   return (
     <Screen testID="merchant-loyalty-screen" padded={false}>
@@ -271,97 +256,6 @@ export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, 
             )}
           </View>
         )}
-
-        {/* Partage de points */}
-        <View className="mt-6 gap-3 rounded-card bg-surface-muted p-4">
-          <View className="flex-row items-center gap-2">
-            <Feather name="share-2" size={17} color={colors.brand600} />
-            <AppText className="flex-1 font-sans-semibold text-ink">Partager mes points ?</AppText>
-          </View>
-          <AppText variant="caption">
-            Transférez vos points à la famille ou à un ami. Il pourra les utiliser chez ce
-            commerçant.
-          </AppText>
-
-          {sharing ? (
-            <>
-              <View className="flex-row gap-2">
-                {PRESETS.map((p) => (
-                  <Pressable
-                    key={p}
-                    testID={`share-amount-${p}`}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${p} points`}
-                    onPress={() => setAmount(p)}
-                    disabled={p > card.points}
-                    className={cn(
-                      'flex-1 items-center rounded-control py-2.5',
-                      amount === p ? 'bg-brand-500' : 'bg-surface',
-                      p > card.points && 'opacity-40',
-                    )}
-                  >
-                    <AppText
-                      className={cn(
-                        'font-sans-bold',
-                        amount === p ? 'text-ink-inverse' : 'text-ink',
-                      )}
-                    >
-                      {p}
-                    </AppText>
-                  </Pressable>
-                ))}
-              </View>
-              <Pressable
-                testID="share-confirm"
-                accessibilityRole="button"
-                accessibilityLabel="Confirmer le partage"
-                disabled={amount > card.points}
-                onPress={onShare}
-                className={cn(
-                  'items-center rounded-control py-3',
-                  amount > card.points ? 'bg-surface-sunken' : 'bg-ink active:opacity-80',
-                )}
-              >
-                <AppText
-                  className={cn(
-                    'font-sans-bold',
-                    amount > card.points ? 'text-ink-faint' : 'text-ink-inverse',
-                  )}
-                >
-                  Envoyer {amount} points
-                </AppText>
-              </Pressable>
-            </>
-          ) : (
-            <Pressable
-              testID="share-open"
-              accessibilityRole="button"
-              accessibilityLabel="Partager mes points"
-              onPress={() => setSharing(true)}
-              className="items-center rounded-control bg-surface py-3"
-              style={{ borderWidth: 1, borderColor: colors.line }}
-            >
-              <AppText className="font-sans-bold text-ink">Partager</AppText>
-            </Pressable>
-          )}
-
-          {code ? (
-            <View
-              testID="share-code"
-              className="items-center gap-1 rounded-control bg-brand-50 p-3"
-            >
-              <AppText variant="caption" className="text-brand-700">
-                Code à transmettre
-              </AppText>
-              <AppText
-                className="font-display text-brand-700"
-                style={{ fontSize: 20, letterSpacing: 2 }}
-              >
-                {code}
-              </AppText>
-            </View>
-          ) : null}
-        </View>
       </ScrollView>
     </Screen>
   );
