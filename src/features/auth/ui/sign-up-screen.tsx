@@ -5,7 +5,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'rea
 import { cn } from '@/shared/lib/cn';
 import { formatSiret, ROLE_LABEL, type Role } from '@/shared/lib/roles';
 import { AppText, Button, Screen, TextField } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { friendlyAuthError } from '../model/auth-errors';
 import {
@@ -39,6 +39,7 @@ type Props = {
  * pas faire sur un formulaire long.
  */
 export function SignUpScreen({ role, onSiretChange, onSignedUp }: Props) {
+  const colors = useColors();
   const [draft, setDraft] = useState<RegistrationDraft>(EMPTY_REGISTRATION);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);

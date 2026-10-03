@@ -14,7 +14,7 @@ import Animated, {
 
 import { CATEGORY_INFO } from '@/shared/lib/categories';
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 /** Un tour : le radar balaie une fois. */
 const CYCLE = 5200;
@@ -67,6 +67,7 @@ type Props = { size?: number; still?: boolean };
  * faute corrigée la veille sur la scène des prix, on ne la refait pas.
  */
 export function NearbyScene({ size = 300, still = false }: Props) {
+  const colors = useColors();
   const progress = useSharedValue(still ? 0.45 : 0);
 
   useEffect(() => {
@@ -95,7 +96,7 @@ export function NearbyScene({ size = 300, still = false }: Props) {
           borderRadius: size * 0.075,
           borderWidth: 1,
           borderColor: LIME_EDGE,
-          backgroundColor: colors.forest,
+          backgroundColor: colors.surfaceInverse,
           paddingHorizontal: size * 0.055,
           paddingVertical: size * 0.05,
           gap: size * 0.045,
@@ -120,10 +121,10 @@ export function NearbyScene({ size = 300, still = false }: Props) {
               width: radar * 0.2,
               height: radar * 0.2,
               borderRadius: radar * 0.1,
-              backgroundColor: colors.lime,
+              backgroundColor: colors.accent,
             }}
           >
-            <Feather name="user" size={radar * 0.11} color={colors.forestDeep} />
+            <Feather name="user" size={radar * 0.11} color={colors.surfaceInverse} />
           </View>
 
           {PINS.map((p) => (
@@ -139,7 +140,7 @@ export function NearbyScene({ size = 300, still = false }: Props) {
                 borderRadius: radar * 0.11,
                 borderWidth: 1,
                 borderColor: LIME_EDGE,
-                backgroundColor: colors.forestDeep,
+                backgroundColor: colors.surfaceInverse,
               }}
             >
               <AppText style={{ fontSize: radar * 0.11 }}>{p.emoji}</AppText>
@@ -166,11 +167,11 @@ export function NearbyScene({ size = 300, still = false }: Props) {
               <AppText style={{ fontSize: size * 0.03 }}>{CATEGORY_INFO[c.key].emoji}</AppText>
               <AppText
                 className="font-sans-bold"
-                style={{ fontSize: size * 0.03, color: c.picked ? colors.lime : INK_SOFT }}
+                style={{ fontSize: size * 0.03, color: c.picked ? colors.accent : INK_SOFT }}
               >
                 {CATEGORY_INFO[c.key].short}
               </AppText>
-              {c.picked ? <Feather name="check" size={size * 0.03} color={colors.lime} /> : null}
+              {c.picked ? <Feather name="check" size={size * 0.03} color={colors.accent} /> : null}
             </View>
           ))}
         </View>

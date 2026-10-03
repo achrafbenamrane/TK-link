@@ -4,7 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'rea
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Button, Screen, TextField } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { friendlyAuthError } from '../model/auth-errors';
 import { CredentialsSchema } from '../model/schema';
@@ -44,6 +44,7 @@ type Props = {
 };
 
 export function SignInScreen({ onCreateAccount, onSignedIn, onMerchantSignUp }: Props = {}) {
+  const colors = useColors();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);

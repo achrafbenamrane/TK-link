@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { selectRole, useOnboardingStore } from '@/features/onboarding';
 import { selectTotalUnread, useShopStore } from '@/features/shop';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 /**
  * La barre du bas, à quatre onglets :
@@ -23,6 +23,7 @@ import { colors } from '@/shared/theme/colors';
  */
 
 export default function TabsLayout() {
+  const colors = useColors();
   const unread = useShopStore(selectTotalUnread);
   const insets = useSafeAreaInsets();
   const role = useOnboardingStore(selectRole);

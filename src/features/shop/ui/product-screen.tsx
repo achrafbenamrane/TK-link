@@ -5,7 +5,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { getDeal, getMerchant } from '../model/catalog';
 import { useShopStore } from '../model/store';
@@ -23,6 +23,7 @@ const TRUST = [
 ] as const;
 
 export function ProductScreen({ dealId }: Props) {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [qty, setQty] = useState(1);
@@ -39,7 +40,10 @@ export function ProductScreen({ dealId }: Props) {
     return (
       <View className="flex-1 items-center justify-center gap-3 bg-surface px-8">
         <AppText variant="title">Offre introuvable</AppText>
-        <Pressable onPress={() => router.push('/')} className="rounded-control bg-ink px-5 py-3">
+        <Pressable
+          onPress={() => router.push('/')}
+          className="rounded-control bg-surface-inverse px-5 py-3"
+        >
           <AppText className="font-sans-bold text-ink-inverse">Retour à l’accueil</AppText>
         </Pressable>
       </View>
@@ -67,7 +71,7 @@ export function ProductScreen({ dealId }: Props) {
           <ProductImage deal={deal} emojiSize={128} />
 
           <View
-            className="absolute left-4 flex-row items-center gap-1.5 rounded-control bg-ink px-3 py-2"
+            className="absolute left-4 flex-row items-center gap-1.5 rounded-control bg-surface-inverse px-3 py-2"
             style={{ bottom: 16 }}
           >
             <Feather name="clock" size={13} color={colors.inkInverse} />
@@ -213,7 +217,11 @@ export function ProductScreen({ dealId }: Props) {
             </View>
             <View className="h-2 overflow-hidden rounded-pill bg-surface-sunken">
               <View
-                className={low ? 'h-full rounded-pill bg-brand-500' : 'h-full rounded-pill bg-ink'}
+                className={
+                  low
+                    ? 'h-full rounded-pill bg-brand-500'
+                    : 'h-full rounded-pill bg-surface-inverse'
+                }
                 style={{ width: `${Math.max(6, stockPct)}%` }}
               />
             </View>

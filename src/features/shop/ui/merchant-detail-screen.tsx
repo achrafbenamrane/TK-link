@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { AppText, PushButton, Screen } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { DEALS, getMerchant } from '../model/catalog';
 import { useShopStore } from '../model/store';
@@ -35,6 +35,7 @@ export function MerchantDetailScreen({
   onOpenDeal,
   onBack,
 }: Props) {
+  const colors = useColors();
   const merchant = getMerchant(merchantId);
   const addToCart = useShopStore((s) => s.addToCart);
   const favorites = useShopStore((s) => s.favorites);
@@ -113,7 +114,7 @@ export function MerchantDetailScreen({
 
         {/* La vente flash en cours */}
         {hero ? (
-          <View className="mx-5 overflow-hidden rounded-card bg-ink">
+          <View className="mx-5 overflow-hidden rounded-card bg-surface-inverse">
             <View className="flex-row items-center justify-between px-4 pt-3">
               <View className="flex-row items-center gap-1.5 rounded-pill bg-ink-inverse/15 px-3 py-1">
                 <Feather name="clock" size={12} color={colors.inkInverse} />

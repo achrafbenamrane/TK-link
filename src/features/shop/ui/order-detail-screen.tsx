@@ -6,7 +6,7 @@ import QRCode from 'react-native-qrcode-svg';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import {
   ORDER_STATUS_LABEL,
@@ -76,6 +76,7 @@ function formatDateTime(ms: number): string {
  * hasard, ce qui laisserait croire que la commande avance encore.
  */
 function Timeline({ status, fulfilment }: { status: OrderStatus; fulfilment: Fulfilment }) {
+  const colors = useColors();
   const steps = timelineFor(fulfilment);
   const current = timelineIndex(status, fulfilment);
   return (
@@ -127,6 +128,7 @@ function invoicePayload(order: Order): string {
 }
 
 export function OrderDetailScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
 

@@ -5,7 +5,7 @@ import QRCode from 'react-native-qrcode-svg';
 
 import { AppText, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import type { Order } from '../model/schema';
 import { useShopStore } from '../model/store';
@@ -28,6 +28,7 @@ function formatDate(ms: number): string {
 }
 
 function InvoiceCard({ order }: { order: Order }) {
+  const colors = useColors();
   const [open, setOpen] = useState(false);
 
   return (
@@ -98,6 +99,7 @@ function InvoiceCard({ order }: { order: Order }) {
 }
 
 export function InvoicesScreen() {
+  const colors = useColors();
   const orders = useShopStore((s) => s.orders);
 
   return (

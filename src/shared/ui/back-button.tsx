@@ -1,8 +1,8 @@
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 export type BackButtonProps = {
   /**
@@ -12,7 +12,7 @@ export type BackButtonProps = {
    * lui : `router.back()` n'y ferait rien du tout. Le bouton serait alors une
    * promesse morte — pire qu'un bouton absent, parce qu'on le presse.
    */
-  fallbackHref?: string;
+  fallbackHref?: Href;
   testID?: string;
 };
 
@@ -29,6 +29,7 @@ export type BackButtonProps = {
  * dixième écran l'hérite sans qu'on ait à y penser.
  */
 export function BackButton({ fallbackHref = '/', testID = 'back' }: BackButtonProps) {
+  const colors = useColors();
   const router = useRouter();
 
   return (

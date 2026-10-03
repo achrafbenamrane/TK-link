@@ -1,7 +1,7 @@
 import { ActivityIndicator, Pressable, type PressableProps } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { AppText } from './text';
 
@@ -9,7 +9,7 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'destructive';
 type Size = 'md' | 'sm';
 
 const containerClasses: Record<Variant, string> = {
-  primary: 'bg-brand-600 active:bg-brand-700',
+  primary: 'bg-brand-500 active:bg-brand-600',
   secondary: 'bg-brand-50 active:bg-brand-100',
   ghost: 'bg-transparent active:bg-surface-muted',
   destructive: 'bg-danger active:opacity-90',
@@ -43,6 +43,7 @@ export function Button({
   className,
   ...rest
 }: ButtonProps) {
+  const colors = useColors();
   const isDisabled = disabled || loading;
   return (
     <Pressable

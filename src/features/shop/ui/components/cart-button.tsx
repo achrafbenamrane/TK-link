@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { selectCartCount, useShopStore } from '../../model/store';
 
@@ -15,6 +15,7 @@ import { selectCartCount, useShopStore } from '../../model/store';
  * jamais voir où ça atterrit.
  */
 export function CartButton({ testID = 'cart-button' }: { testID?: string }) {
+  const colors = useColors();
   const router = useRouter();
   const count = useShopStore(selectCartCount);
 

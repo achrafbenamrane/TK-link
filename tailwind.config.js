@@ -1,19 +1,20 @@
 /**
- * Design tokens live HERE — this file is the single source of truth for
- * colors, spacing and typography used via className.
+ * Design tokens — la charte du client (03/10/2026) : rose #FF1478 pour l'énergie
+ * (Flash, prix, appels à l'action), bleu #00B2FF pour l'appui (localisation,
+ * infos), vert #22C55E pour ce qui est validé. Deux modes, Nuit et Jour.
  *
- * TK LINK brand: le ticket papier disparaît — d'où le vert. Vert forêt du logo
- * pour les fonds sombres, vert vif pour l'action, citron pour l'accent (repris
- * de la vidéo de marque), surfaces papier très légèrement teintées de vert.
- * Display type is Unbounded; body/UI type is Manrope.
+ * Les VALEURS vivent dans `src/shared/theme/palette.json` ; ici on ne déclare
+ * que des RÔLES, adossés à des variables CSS que le `ThemeProvider` redéfinit
+ * selon le mode. `rgb(var(--c-x) / <alpha-value>)` garde les opacités (`bg-ink/10`).
  *
- * If you need a token imperatively (rare), import it from
- * `src/shared/theme/colors.ts`, which mirrors this palette.
- * The "design-tokens" doc explains the sync rule:
- * docs/conventions/design-system.md
+ * Display type et body type : Manrope.
+ *
+ * La règle et son contexte : docs/conventions/design-system.md
  *
  * @type {import('tailwindcss').Config}
  */
+const v = (token) => `rgb(var(--c-${token}) / <alpha-value>)`;
+
 module.exports = {
   content: ['./src/**/*.{ts,tsx}'],
   // Mode Nuit / Jour choisi par l'utilisateur (maquettes du client, 03/10/2026) :
@@ -24,47 +25,45 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          50: '#E8F7EC',
-          100: '#C7EBD2',
-          200: '#8FD5A8',
-          500: '#0F8A4C',
-          600: '#0B6C3B',
-          700: '#08512C',
+          50: v('brand50'),
+          100: v('brand100'),
+          200: v('brand200'),
+          500: v('brand500'),
+          600: v('brand600'),
+          700: v('brand700'),
+          // Le socle du bouton 3D : plus profond que la calotte, dans les deux modes.
+          deep: v('brandDeep'),
         },
-        // Vert forêt du logo — fonds sombres, cartes « affiche », en-têtes.
-        forest: {
-          DEFAULT: '#123A22',
-          deep: '#0B2415',
-        },
-        // Citron TK — accent vif (jamais en texte sur fond clair : contraste trop faible).
-        lime: {
-          DEFAULT: '#C3F53C',
-          soft: '#E6FBAE',
-          deep: '#7F9E14',
+        // Bleu électrique — appui : localisation, boutique, infos, navigation.
+        accent: {
+          DEFAULT: v('accent'),
+          soft: v('accentSoft'),
+          deep: v('accentDeep'),
         },
         surface: {
-          DEFAULT: '#FFFFFF',
-          muted: '#F2F7F0',
-          sunken: '#E6EFE3',
-          inverse: '#123A22',
+          DEFAULT: v('surface'),
+          muted: v('surfaceMuted'),
+          sunken: v('surfaceSunken'),
+          inverse: v('surfaceInverse'),
         },
         ink: {
-          DEFAULT: '#0F1A12',
-          muted: '#4D5B50',
-          faint: '#84927F',
-          inverse: '#F2F7F0',
+          DEFAULT: v('ink'),
+          muted: v('inkMuted'),
+          faint: v('inkFaint'),
+          // Blanc dans les deux modes : le texte posé sur le rose ou sur un bloc sombre.
+          inverse: v('inkInverse'),
         },
-        line: '#DCE6D7',
-        danger: '#DC2626',
-        success: '#16A34A',
+        line: v('line'),
+        danger: v('danger'),
+        success: v('success'),
       },
       fontFamily: {
         sans: ['Manrope_400Regular'],
         'sans-medium': ['Manrope_500Medium'],
         'sans-semibold': ['Manrope_600SemiBold'],
         'sans-bold': ['Manrope_700Bold'],
-        display: ['Unbounded_700Bold'],
-        'display-x': ['Unbounded_800ExtraBold'],
+        display: ['Manrope_800ExtraBold'],
+        'display-x': ['Manrope_800ExtraBold'],
       },
       borderRadius: {
         card: '18px',

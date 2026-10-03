@@ -15,7 +15,7 @@ import Animated, {
 
 import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { useWelcomeStore } from '../model/store';
 import { FlashScene } from './scenes/flash-scene';
@@ -69,6 +69,7 @@ const PANELS: Panel[] = [
  * obligé d'agir.
  */
 export function WelcomeScreen() {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
@@ -112,7 +113,7 @@ export function WelcomeScreen() {
   return (
     <View
       testID="welcome-screen"
-      className="flex-1 bg-forest-deep"
+      className="flex-1 bg-surface-inverse"
       style={{ paddingTop: insets.top }}
     >
       {/* Fond très sombre → icônes de statut claires, sinon elles disparaissent. */}
@@ -173,7 +174,7 @@ export function WelcomeScreen() {
             className="font-display text-ink-inverse"
             style={{ fontSize: 30, lineHeight: 40 }}
           >
-            {panel.title} <AppText style={{ color: colors.lime }}>{panel.accent}</AppText>
+            {panel.title} <AppText style={{ color: colors.accent }}>{panel.accent}</AppText>
           </AppText>
           <AppText className="mt-2 text-ink-inverse/70" style={{ fontSize: 15, lineHeight: 22 }}>
             {panel.line}
@@ -188,12 +189,12 @@ export function WelcomeScreen() {
           accessibilityRole="button"
           accessibilityLabel="Commencer"
           onPress={enter}
-          className="flex-row items-center justify-center gap-2 rounded-control bg-lime py-4 active:opacity-85"
+          className="flex-row items-center justify-center gap-2 rounded-control bg-accent py-4 active:opacity-85"
         >
-          <AppText className="font-sans-bold text-forest-deep" style={{ fontSize: 16 }}>
+          <AppText className="font-sans-bold text-surface-inverse" style={{ fontSize: 16 }}>
             Commencer
           </AppText>
-          <Feather name="arrow-right" size={18} color={colors.forestDeep} />
+          <Feather name="arrow-right" size={18} color={colors.surfaceInverse} />
         </Pressable>
         <Pressable
           testID="welcome-signin"
@@ -218,6 +219,7 @@ export function WelcomeScreen() {
  * on sait qu'attendre est un choix.
  */
 function Segment({ active, done, still }: { active: boolean; done: boolean; still: boolean }) {
+  const colors = useColors();
   const fill = useSharedValue(done ? 1 : 0);
 
   useEffect(() => {
@@ -237,7 +239,7 @@ function Segment({ active, done, still }: { active: boolean; done: boolean; stil
 
   return (
     <View className={cn('h-1 flex-1 overflow-hidden rounded-pill bg-ink-inverse/15')}>
-      <Animated.View style={[style, { height: '100%', backgroundColor: colors.lime }]} />
+      <Animated.View style={[style, { height: '100%', backgroundColor: colors.accent }]} />
     </View>
   );
 }

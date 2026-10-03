@@ -5,7 +5,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { CATEGORIES, CATEGORY_INFO, type Category } from '@/shared/lib/categories';
 import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { commissionCents, formatCents, netCents, parseEurosToCents } from '../lib/billing';
 import { DURATIONS, OfferDraftSchema, type OfferDraft } from '../model/schema';
@@ -79,6 +79,7 @@ const STARTS = [
 ] as const;
 
 export function PublishForm({ onPublish, onCancel }: Props) {
+  const colors = useColors();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<Category>('restauration');
   const [oldPrice, setOldPrice] = useState('');
@@ -231,7 +232,10 @@ export function PublishForm({ onPublish, onCancel }: Props) {
                 accessibilityState={{ selected: on }}
                 accessibilityLabel={m < 60 ? `${m} minutes` : `${m / 60} heures`}
                 onPress={() => setDuration(m)}
-                className={cn('rounded-pill px-4 py-2', on ? 'bg-ink' : 'bg-surface-muted')}
+                className={cn(
+                  'rounded-pill px-4 py-2',
+                  on ? 'bg-surface-inverse' : 'bg-surface-muted',
+                )}
               >
                 <AppText
                   className={cn('font-sans-semibold', on ? 'text-ink-inverse' : 'text-ink-muted')}
@@ -263,7 +267,7 @@ export function PublishForm({ onPublish, onCancel }: Props) {
       {/* Ce que ça rapporte VRAIMENT — CDC §21 */}
       <View className="gap-2 rounded-card bg-surface-inverse p-4">
         <View className="flex-row items-center gap-2">
-          <Feather name="trending-up" size={15} color={colors.lime} />
+          <Feather name="trending-up" size={15} color={colors.accent} />
           <AppText className="font-sans-semibold text-ink-inverse" style={{ fontSize: 13 }}>
             Si tout part
           </AppText>
@@ -285,10 +289,14 @@ export function PublishForm({ onPublish, onCancel }: Props) {
           </AppText>
         </View>
         <View className="mt-1 flex-row items-center justify-between border-t border-ink-inverse/15 pt-2">
-          <AppText className="font-sans-bold text-lime" style={{ fontSize: 13 }}>
+          <AppText className="font-sans-bold text-accent" style={{ fontSize: 13 }}>
             Vous touchez
           </AppText>
-          <AppText testID="publish-net" className="font-display text-lime" style={{ fontSize: 17 }}>
+          <AppText
+            testID="publish-net"
+            className="font-display text-accent"
+            style={{ fontSize: 17 }}
+          >
             {formatCents(netCents(potential))}
           </AppText>
         </View>

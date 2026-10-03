@@ -5,7 +5,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { getMerchant } from '../model/catalog';
 import { ME, SUPPORT, type Conversation } from '../model/schema';
@@ -28,7 +28,7 @@ function Avatar({ partnerId }: { partnerId: string }) {
   const merchant = getMerchant(partnerId);
   if (partnerId === SUPPORT) {
     return (
-      <View className="h-12 w-12 items-center justify-center rounded-pill bg-ink">
+      <View className="h-12 w-12 items-center justify-center rounded-pill bg-surface-inverse">
         <AppText className="font-display text-ink-inverse" style={{ fontSize: 15, lineHeight: 19 }}>
           F
         </AppText>
@@ -111,6 +111,7 @@ function Row({ conversation }: { conversation: Conversation }) {
 }
 
 export function ChatListScreen() {
+  const colors = useColors();
   const conversations = useShopStore((s) => s.conversations);
   // On s'abonne aussi aux messages : sans ça la liste ne se réordonnerait pas
   // quand une réponse arrive (getState() lit une fois, il ne réagit pas).

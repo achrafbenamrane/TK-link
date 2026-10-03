@@ -6,7 +6,7 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { getMerchant } from '../model/catalog';
 import { useShopStore } from '../model/store';
@@ -58,6 +58,7 @@ function PriceBubble({ deal, active }: { deal: Deal; active: boolean }) {
 }
 
 export function DealsMap({ deals, category }: Props) {
+  const colors = useColors();
   const router = useRouter();
   const cameraRef = useRef<Mapbox.Camera>(null);
 

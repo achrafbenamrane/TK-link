@@ -1,11 +1,12 @@
 import { TextInput, type TextInputProps } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 export type TextFieldProps = TextInputProps;
 
 export function TextField({ className, ...rest }: TextFieldProps) {
+  const colors = useColors();
   return (
     <TextInput
       placeholderTextColor={colors.inkFaint}

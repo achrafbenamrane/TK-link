@@ -5,7 +5,8 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import type { Palette } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { discountPct, liquidationLabel, sortByUrgency, urgencyOf } from '../../lib/urgency';
 import { DEALS, getMerchant } from '../../model/catalog';
@@ -36,8 +37,8 @@ const CARD_WIDTH = 232;
 const IMAGE_HEIGHT = 132;
 
 /** Le fond du badge d'urgence : rouge pour la dernière chance, ink sinon. */
-function badgeColor(deal: Deal): string {
-  return urgencyOf(deal) === 'critique' ? colors.danger : colors.ink;
+function badgeColor(deal: Deal, palette: Palette): string {
+  return urgencyOf(deal) === 'critique' ? palette.danger : palette.ink;
 }
 
 /**
@@ -48,6 +49,7 @@ function badgeColor(deal: Deal): string {
  * qu'un carrousel de promotions.
  */
 export function LiquidationRail({ limit = 8 }: Props) {
+  const colors = useColors();
   const router = useRouter();
   const addToCart = useShopStore((s) => s.addToCart);
   const deals = useMemo(() => sortByUrgency(DEALS).slice(0, limit), [limit]);
@@ -89,7 +91,7 @@ export function LiquidationRail({ limit = 8 }: Props) {
               <View className="absolute left-2 right-2 top-2 flex-row items-start justify-between gap-1.5">
                 <View
                   className="rounded-pill px-2 py-0.5"
-                  style={{ backgroundColor: badgeColor(deal), flexShrink: 1 }}
+                  style={{ backgroundColor: badgeColor(deal, colors), flexShrink: 1 }}
                 >
                   <AppText
                     className="font-sans-bold text-ink-inverse"
@@ -133,7 +135,7 @@ export function LiquidationRail({ limit = 8 }: Props) {
               <View className="mt-0.5 gap-1">
                 <View className="h-1 overflow-hidden rounded-pill bg-surface-sunken">
                   <View
-                    className={cn('h-full rounded-pill', low ? 'bg-danger' : 'bg-ink')}
+                    className={cn('h-full rounded-pill', low ? 'bg-danger' : 'bg-surface-inverse')}
                     style={{ width: `${Math.max(6, Math.round(stockPct))}%` }}
                   />
                 </View>

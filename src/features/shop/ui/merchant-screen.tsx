@@ -5,7 +5,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'rea
 import { cn } from '@/shared/lib/cn';
 import { AppText, Button, Screen, TextField } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import {
   CATEGORIES,
@@ -58,6 +58,7 @@ type Props = {
 };
 
 export function MerchantScreen({ onOpenMerchantSpace }: Props = {}) {
+  const colors = useColors();
   const submitted = useShopStore((s) => s.merchantApplication);
   const submit = useShopStore((s) => s.submitMerchantApplication);
 
@@ -149,7 +150,7 @@ export function MerchantScreen({ onOpenMerchantSpace }: Props = {}) {
             </AppText>
           </View>
 
-          <View className="mb-5 gap-2.5 rounded-card bg-ink p-4">
+          <View className="mb-5 gap-2.5 rounded-card bg-surface-inverse p-4">
             {SELLING_POINTS.map((point) => (
               <View key={point.text} className="flex-row items-center gap-2.5">
                 <Feather name={point.icon} size={14} color={colors.brand500} />

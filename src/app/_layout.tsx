@@ -5,8 +5,8 @@ import {
   Manrope_500Medium,
   Manrope_600SemiBold,
   Manrope_700Bold,
+  Manrope_800ExtraBold,
 } from '@expo-google-fonts/manrope';
-import { Unbounded_700Bold, Unbounded_800ExtraBold } from '@expo-google-fonts/unbounded';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -20,7 +20,7 @@ import { receiptForOrder, useReceiptsStore } from '@/features/receipts';
 import { orderToTransaction, producesReceipt, selectOrders, useShopStore } from '@/features/shop';
 import { useWelcomeStore } from '@/features/welcome';
 import '@/shared/lib/env'; // fail fast on invalid environment (has safe defaults)
-import { colors } from '@/shared/theme/colors';
+import { ThemeProvider, useColors, useScheme } from '@/shared/theme/theme-provider';
 
 /**
  * Écrans qu'un nouvel arrivant a le droit de voir avant d'avoir fini l'accueil.
@@ -107,14 +107,33 @@ function ReceiptBridge() {
 
 SplashScreen.preventAutoHideAsync();
 
+/**
+ * La pile de navigation et la barre d'état — dans le thème, donc sous le
+ * `ThemeProvider` : leurs couleurs suivent le mode Nuit / Jour.
+ */
+function AppStack() {
+  const colors = useColors();
+  const scheme = useScheme();
+  return (
+    <>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.surface },
+        }}
+      />
+      <StatusBar style={scheme === 'night' ? 'light' : 'dark'} />
+    </>
+  );
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Manrope_400Regular,
     Manrope_500Medium,
     Manrope_600SemiBold,
     Manrope_700Bold,
-    Unbounded_700Bold,
-    Unbounded_800ExtraBold,
+    Manrope_800ExtraBold,
   });
 
   // NOTE (demo): the auth route-guard + Supabase session are intentionally
@@ -142,17 +161,13 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView className="flex-1">
-      <SafeAreaProvider>
-        <FirstRunGate />
-        <ReceiptBridge />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.surface },
-          }}
-        />
-        <StatusBar style="dark" />
-      </SafeAreaProvider>
+      <ThemeProvider>
+        <SafeAreaProvider>
+          <FirstRunGate />
+          <ReceiptBridge />
+          <AppStack />
+        </SafeAreaProvider>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }

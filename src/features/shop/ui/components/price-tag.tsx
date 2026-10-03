@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 type Props = {
   price: number;
@@ -31,6 +31,7 @@ type Props = {
  * deux qui porte la remise, pas le prix seul.
  */
 export function PriceTag({ price, oldPrice, size = 30 }: Props) {
+  const colors = useColors();
   const showOld = typeof oldPrice === 'number' && oldPrice > price;
 
   return (

@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import Svg, { Ellipse, G, Path } from 'react-native-svg';
 
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 /**
  * La marque TK LINK — le sigle, les ondes du sans-contact, l'arbre.
@@ -24,10 +24,12 @@ type Props = {
 };
 
 /** Les trois ondes du sans-contact, après le K. */
-export function TkWaves({ size = 22, color = colors.lime }: { size?: number; color?: string }) {
+export function TkWaves({ size = 22, color }: { size?: number; color?: string }) {
+  const colors = useColors();
+  const stroke = color ?? colors.accent;
   return (
     <Svg width={size * 0.75} height={size} viewBox="0 0 36 72" fill="none">
-      <G stroke={color} strokeWidth={7} strokeLinecap="round" fill="none">
+      <G stroke={stroke} strokeWidth={7} strokeLinecap="round" fill="none">
         <Path d="M4 22a24 24 0 0 1 0 28" />
         <Path d="M16 12a40 40 0 0 1 0 48" opacity={0.75} />
         <Path d="M28 3a56 56 0 0 1 0 66" opacity={0.45} />
@@ -41,16 +43,18 @@ export function TkWaves({ size = 22, color = colors.lime }: { size?: number; col
  * touches de feuillage plutôt qu'une masse pleine : à 40 px, une masse pleine
  * devient une tache.
  */
-export function TkTree({ size = 96, color = colors.lime }: { size?: number; color?: string }) {
+export function TkTree({ size = 96, color }: { size?: number; color?: string }) {
+  const colors = useColors();
+  const fill = color ?? colors.accent;
   return (
     <Svg width={size} height={size} viewBox="0 0 120 120" fill="none">
       <Path
         d="M66 100V52M66 66l-13-13M66 74l13-13M66 58l-8-9M66 62l9-10"
-        stroke={color}
+        stroke={fill}
         strokeWidth={3}
         strokeLinecap="round"
       />
-      <G fill={color}>
+      <G fill={fill}>
         <Ellipse cx={66} cy={30} rx={15} ry={12} opacity={0.9} />
         <Ellipse cx={48} cy={44} rx={12} ry={9} opacity={0.75} />
         <Ellipse cx={85} cy={44} rx={12} ry={9} opacity={0.75} />
@@ -64,14 +68,17 @@ export function TkTree({ size = 96, color = colors.lime }: { size?: number; colo
 }
 
 /** Le sigle complet : TK + ondes, LINK dessous. */
-export function TkMark({ size = 28, tone = colors.inkInverse, wave = colors.lime }: Props) {
+export function TkMark({ size = 28, tone, wave }: Props) {
+  const colors = useColors();
+  const ink = tone ?? colors.inkInverse;
+  const waves = wave ?? colors.accent;
   return (
     <View accessible accessibilityRole="image" accessibilityLabel="TK LINK">
       <View className="flex-row items-center" style={{ gap: size * 0.14 }}>
         <AppText
           className="font-display-x"
           style={{
-            color: tone,
+            color: ink,
             fontSize: size,
             lineHeight: size * 1.25,
             letterSpacing: -size * 0.04,
@@ -79,12 +86,12 @@ export function TkMark({ size = 28, tone = colors.inkInverse, wave = colors.lime
         >
           TK
         </AppText>
-        <TkWaves size={size * 0.82} color={wave} />
+        <TkWaves size={size * 0.82} color={waves} />
       </View>
       <AppText
         className="font-sans-medium"
         style={{
-          color: tone,
+          color: ink,
           fontSize: size * 0.36,
           letterSpacing: size * 0.3,
           marginTop: -size * 0.12,

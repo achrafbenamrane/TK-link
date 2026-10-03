@@ -5,7 +5,7 @@ import { Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import type { Tier } from '../lib/tiers';
 import { selectTiers, useMerchantLoyaltyStore } from '../model/merchant-store';
@@ -33,6 +33,7 @@ type Draft = { cost: string; reward: string };
  * boisson ne la rend pas parce que le barème a changé.
  */
 export function TiersSettingsScreen() {
+  const colors = useColors();
   const tiers = useMerchantLoyaltyStore(selectTiers);
   const setTiers = useMerchantLoyaltyStore((s) => s.setTiers);
 

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { AppText, Screen } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { formatCents } from '../lib/billing';
 import { selectWholesaleOrders, useMerchantStore } from '../model/store';
@@ -31,6 +31,7 @@ function dayLabel(at: number, nowMs: number): string {
  * devant son historique d'achats : combien j'ai mis ce mois-ci.
  */
 export function MerchantPurchasesScreen() {
+  const colors = useColors();
   const orders = useMerchantStore(selectWholesaleOrders);
   // Instant figé au montage : « aujourd'hui » ne doit pas changer en cours de
   // lecture, et `Date.now()` pendant le rendu rendrait l'écran non idempotent.
@@ -54,7 +55,7 @@ export function MerchantPurchasesScreen() {
         {orders.length > 0 ? (
           <View className="mx-5 flex-row gap-3">
             <View className="flex-1 rounded-card bg-surface-inverse p-4">
-              <AppText className="font-display text-lime" style={{ fontSize: 22 }}>
+              <AppText className="font-display text-accent" style={{ fontSize: 22 }}>
                 {formatCents(spent)}
               </AppText>
               <AppText variant="caption" className="text-ink-inverse/60">

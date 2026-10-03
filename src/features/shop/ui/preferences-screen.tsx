@@ -5,7 +5,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import {
   COLLECT_LABEL,
@@ -146,6 +146,7 @@ function Section({
   icon: 'package' | 'map-pin' | 'heart';
   children: React.ReactNode;
 }) {
+  const colors = useColors();
   return (
     <View className="mt-5 gap-2.5">
       <View className="flex-row items-center gap-2">

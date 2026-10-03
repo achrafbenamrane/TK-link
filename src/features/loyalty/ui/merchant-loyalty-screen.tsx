@@ -4,7 +4,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { nextTier, pointsToGo, reachedCount, tierProgress, tierState } from '../lib/tiers';
 import { selectCards, selectTiers, useMerchantLoyaltyStore } from '../model/merchant-store';
@@ -23,6 +23,7 @@ type Props = {
  * et l'historique. Les points bruts ne se transfèrent pas (CDC V1.1).
  */
 export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, onBack }: Props) {
+  const colors = useColors();
   const cards = useMerchantLoyaltyStore(selectCards);
   // Les paliers viennent du commerçant depuis le §8.3, ils ne sont plus figés.
   const tiers = useMerchantLoyaltyStore(selectTiers);
@@ -117,7 +118,7 @@ export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, 
               onPress={() => setTab(t.key)}
               className={cn(
                 'rounded-pill px-4 py-2',
-                tab === t.key ? 'bg-ink' : 'bg-surface-muted',
+                tab === t.key ? 'bg-surface-inverse' : 'bg-surface-muted',
               )}
             >
               <AppText

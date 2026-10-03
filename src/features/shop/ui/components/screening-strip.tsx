@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { View } from 'react-native';
 
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { endsAt, screeningDetails } from '../../lib/screening';
 import type { Screening } from '../../model/schema';
@@ -31,6 +31,7 @@ type Props = {
  * qu'il projette.
  */
 export function ScreeningStrip({ screening, testID, expanded = false }: Props) {
+  const colors = useColors();
   const end = expanded ? endsAt(screening) : null;
 
   return (

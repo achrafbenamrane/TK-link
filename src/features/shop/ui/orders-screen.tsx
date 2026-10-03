@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { AppText, Button, EmptyState, Screen } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import {
   FULFILMENT_LABEL,
@@ -56,6 +56,7 @@ function formatDate(ts: number): string {
 }
 
 export function OrdersScreen() {
+  const colors = useColors();
   const router = useRouter();
   const sync = useShopStore((st) => st.syncOrderStatuses);
 

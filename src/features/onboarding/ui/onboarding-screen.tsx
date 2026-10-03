@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cn } from '@/shared/lib/cn';
 import { APP_ROLES, ROLE_ICON, ROLE_LABEL, ROLE_TAGLINE, type Role } from '@/shared/lib/roles';
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { canFinish, INTERESTS, randomAvatar } from '../lib/avatar';
 import { AVATARS } from '../model/avatars';
@@ -99,6 +99,7 @@ const INTEREST_COPY: Record<
 };
 
 export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
 
   const firstName = useOnboardingStore(selectFirstName);
@@ -526,6 +527,7 @@ function Choice({
   selected: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       testID={testID}

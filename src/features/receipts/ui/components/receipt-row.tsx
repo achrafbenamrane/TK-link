@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Pressable, View } from 'react-native';
 
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { CATEGORY_LABEL, formatMoney } from '../../lib/receipts';
 import type { Receipt } from '../../model/schema';
@@ -30,6 +30,7 @@ function shortDate(ms: number): string {
 
 /** Une ligne du portefeuille — l'unité de lecture de l'historique. */
 export function ReceiptRow({ receipt, onPress }: { receipt: Receipt; onPress: () => void }) {
+  const colors = useColors();
   const isInvoice = receipt.kind === 'facture';
 
   return (

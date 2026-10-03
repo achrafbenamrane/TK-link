@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 
 import { AppText, Screen, TextField } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { activeFilterCount, filterDeals } from '../lib/preferences';
 import { splitByInterests } from '../lib/urgency';
@@ -22,6 +22,7 @@ import { DealsMap } from './map-view';
 
 /** Accès à « Ma Fan Zone » — la pastille compte les filtres actifs. */
 function PreferencesButton() {
+  const colors = useColors();
   const router = useRouter();
   const preferences = useShopStore((s) => s.preferences);
   const count = activeFilterCount(preferences);
@@ -52,6 +53,7 @@ function PreferencesButton() {
  * afficherait des offres à 400 km en laissant croire qu'elles sont à côté.
  */
 function RadiusNotice({ km }: { km: number }) {
+  const colors = useColors();
   const router = useRouter();
   return (
     <Pressable
@@ -71,12 +73,13 @@ function RadiusNotice({ km }: { km: number }) {
 }
 
 function FeaturedBanner({ deal }: { deal: Deal }) {
+  const colors = useColors();
   const router = useRouter();
   return (
     <Pressable
       testID="featured-deal"
       onPress={() => router.push({ pathname: '/produit/[id]', params: { id: deal.id } })}
-      className="mx-5 mb-5 overflow-hidden rounded-card bg-ink"
+      className="mx-5 mb-5 overflow-hidden rounded-card bg-surface-inverse"
     >
       <View className="flex-row items-center gap-3 p-3.5">
         <View
@@ -147,6 +150,7 @@ export function HomeScreen({
   interests,
   extraDeals,
 }: HomeScreenProps = {}) {
+  const colors = useColors();
   const [category, setCategory] = useState<Category | null>(null);
   const [query, setQuery] = useState('');
   const [view, setView] = useState<HomeView>(initialView);

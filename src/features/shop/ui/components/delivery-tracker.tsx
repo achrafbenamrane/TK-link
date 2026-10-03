@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { fetchRoute, routeToGeoJSON, type Route } from '../../lib/directions';
 import { geocodeAddress } from '../../lib/geocode';
@@ -27,6 +27,7 @@ type Props = {
  * seule la source du point change.
  */
 export function DeliveryTracker({ order, address }: Props) {
+  const colors = useColors();
   const cameraRef = useRef<Mapbox.Camera>(null);
   const [destination, setDestination] = useState<Coord | null>(null);
   const [route, setRoute] = useState<Route | null>(null);
@@ -150,7 +151,7 @@ export function DeliveryTracker({ order, address }: Props) {
 
           {destination ? (
             <Mapbox.MarkerView id="destination" coordinate={[destination.lng, destination.lat]}>
-              <View className="h-7 w-7 items-center justify-center rounded-pill border-2 border-surface bg-ink">
+              <View className="h-7 w-7 items-center justify-center rounded-pill border-2 border-surface bg-surface-inverse">
                 <Feather name="home" size={12} color={colors.inkInverse} />
               </View>
             </Mapbox.MarkerView>

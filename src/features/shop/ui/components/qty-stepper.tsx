@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Pressable, View } from 'react-native';
 
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 type Props = {
   qty: number;
@@ -12,6 +12,7 @@ type Props = {
 };
 
 export function QtyStepper({ qty, onInc, onDec, testID }: Props) {
+  const colors = useColors();
   return (
     <View
       testID={testID}
@@ -30,7 +31,7 @@ export function QtyStepper({ qty, onInc, onDec, testID }: Props) {
         onPress={onInc}
         hitSlop={6}
         accessibilityLabel="Augmenter la quantité"
-        className="h-7 w-7 items-center justify-center rounded-pill bg-ink active:bg-ink-muted"
+        className="h-7 w-7 items-center justify-center rounded-pill bg-surface-inverse active:bg-ink-muted"
       >
         <Feather name="plus" size={15} color={colors.inkInverse} />
       </Pressable>

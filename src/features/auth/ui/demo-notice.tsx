@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { View } from 'react-native';
 
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { useAuthStore, selectDemoMode } from '../model/store';
 
@@ -18,6 +18,7 @@ import { useAuthStore, selectDemoMode } from '../model/store';
  * sont renseignées : c'est le même drapeau qui pilote le comportement du store.
  */
 export function DemoNotice() {
+  const colors = useColors();
   const demoMode = useAuthStore(selectDemoMode);
   if (!demoMode) return null;
 

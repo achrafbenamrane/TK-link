@@ -4,7 +4,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import {
   FULFILMENT_LABEL,
@@ -55,7 +55,7 @@ function toneOf(status: OrderStatus): string {
   if (eteints.includes(status)) return 'bg-surface-sunken text-ink-faint';
   if (status === 'litige') return 'bg-danger/10 text-danger';
   if (status === 'recuperee' || status === 'livree') return 'bg-brand-50 text-brand-700';
-  return 'bg-ink text-ink-inverse';
+  return 'bg-surface-inverse text-ink-inverse';
 }
 
 function money(value: number): string {
@@ -75,6 +75,7 @@ function money(value: number): string {
  * remboursée. C'est la même règle que côté client, testée une seule fois.
  */
 export function MerchantOrdersScreen({ dealIds, onBack }: Props) {
+  const colors = useColors();
   const allOrders = useShopStore(selectOrders);
   const setOrderStatus = useShopStore((s) => s.setOrderStatus);
   const [done, setDone] = useState(false);
@@ -126,7 +127,7 @@ export function MerchantOrdersScreen({ dealIds, onBack }: Props) {
         {/* Les deux seuls chiffres qui comptent derrière un comptoir. */}
         <View className="mx-5 flex-row gap-3">
           <View className="flex-1 rounded-card bg-surface-inverse p-4">
-            <AppText className="font-display text-lime" style={{ fontSize: 22 }}>
+            <AppText className="font-display text-accent" style={{ fontSize: 22 }}>
               {waiting}
             </AppText>
             <AppText variant="caption" className="text-ink-inverse/60">

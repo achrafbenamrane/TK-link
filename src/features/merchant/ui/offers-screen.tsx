@@ -5,7 +5,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { CATEGORY_INFO } from '@/shared/lib/categories';
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import {
   canPublish,
@@ -77,6 +77,7 @@ function timeLabel(seconds: number): string {
  * §9 et la commission du §21 s'affichent AVANT d'être subis, jamais après.
  */
 export function MerchantOffersScreen({ audience = 'clients', seller = '', onBack }: Props) {
+  const colors = useColors();
   const copy = COPY[audience];
   const [mode, setMode] = useState<'list' | 'publish'>('list');
   const [now] = useState(() => Date.now());
@@ -202,10 +203,10 @@ export function MerchantOffersScreen({ audience = 'clients', seller = '', onBack
                   : 'Vos opérations gratuites sont consommées.'}
               </AppText>
             </View>
-            <View className="h-12 w-12 items-center justify-center rounded-pill bg-lime">
+            <View className="h-12 w-12 items-center justify-center rounded-pill bg-accent">
               <AppText
                 testID="merchant-quota"
-                className="font-display text-forest"
+                className="font-display text-surface-inverse"
                 style={{ fontSize: 17 }}
               >
                 {left}
@@ -218,7 +219,7 @@ export function MerchantOffersScreen({ audience = 'clients', seller = '', onBack
               <AppText className="text-ink-inverse/70" style={{ fontSize: 12.5 }}>
                 Vendu · commission déduite
               </AppText>
-              <AppText className="font-sans-bold text-lime" style={{ fontSize: 13 }}>
+              <AppText className="font-sans-bold text-accent" style={{ fontSize: 13 }}>
                 {formatCents(netCents(revenue))}
                 <AppText className="text-ink-inverse/50" style={{ fontSize: 11 }}>
                   {'  '}sur {formatCents(revenue)}

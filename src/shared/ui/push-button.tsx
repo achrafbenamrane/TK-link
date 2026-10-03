@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { colors } from '../theme/colors';
+import { useColors } from '../theme/theme-provider';
 import { AppText } from './text';
 
 type FeatherName = ComponentProps<typeof Feather>['name'];
@@ -25,9 +25,6 @@ export type PushButtonProps = {
   testID?: string;
   accessibilityLabel?: string;
 };
-
-const CAP = colors.brand500;
-const BASE = colors.brand700;
 
 /** Ratios taken from the 178px landing-page button, so any size keeps its look. */
 const WALL_RATIO = 0.084; // 3D thickness — how far the cap sinks
@@ -52,6 +49,10 @@ export function PushButton({
   testID,
   accessibilityLabel,
 }: PushButtonProps) {
+  const colors = useColors();
+  // La calotte est rose, son socle un rose plus profond — dans les deux modes.
+  const CAP = colors.brand500;
+  const BASE = colors.brandDeep;
   const pressed = useSharedValue(0);
   const reduced = useReducedMotion();
 

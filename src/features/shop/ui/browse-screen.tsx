@@ -4,7 +4,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import {
   flashLabel,
@@ -39,6 +39,7 @@ const SORTS: SortKey[] = ['derniere-chance', 'proximite', 'note'];
  * deux écrans.
  */
 export function BrowseScreen({ loyaltyByMerchant, onOpenMerchant }: Props) {
+  const colors = useColors();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<Category | null>(null);
   const [sort, setSort] = useState<SortKey>('derniere-chance');
@@ -124,7 +125,10 @@ export function BrowseScreen({ loyaltyByMerchant, onOpenMerchant }: Props) {
               accessibilityLabel={SORT_LABEL[s]}
               accessibilityState={{ selected: sort === s }}
               onPress={() => setSort(s)}
-              className={cn('rounded-pill px-3.5 py-2', sort === s ? 'bg-ink' : 'bg-surface-muted')}
+              className={cn(
+                'rounded-pill px-3.5 py-2',
+                sort === s ? 'bg-surface-inverse' : 'bg-surface-muted',
+              )}
             >
               <AppText
                 className={cn(
@@ -192,7 +196,7 @@ export function BrowseScreen({ loyaltyByMerchant, onOpenMerchant }: Props) {
                       </AppText>
 
                       {/* « en ce moment 3 FLASHS » */}
-                      <View className="flex-row items-center gap-1.5 self-start rounded-pill bg-ink px-2 py-1">
+                      <View className="flex-row items-center gap-1.5 self-start rounded-pill bg-surface-inverse px-2 py-1">
                         <Feather name="zap" size={10} color={colors.inkInverse} />
                         <AppText
                           className="font-sans-bold text-ink-inverse"

@@ -5,7 +5,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import {
   ecoImpact,
@@ -54,6 +54,7 @@ function currentMonthRange(now = Date.now()): [number, number] {
  * cherche.
  */
 export function ReceiptsScreen({ onOpenReceipt }: Props) {
+  const colors = useColors();
   // Tranche brute + dérivation en useMemo : un sélecteur filtrant ferait boucler
   // Zustand v5 (voir docs/quality/quality-score.md).
   const receipts = useReceiptsStore(selectReceipts);
@@ -261,7 +262,7 @@ function EcoStat({ label, value }: { label: string; value: string }) {
   return (
     <View className="flex-1 gap-0.5">
       <AppText
-        className="font-sans-bold text-lime"
+        className="font-sans-bold text-accent"
         style={{ fontSize: 15, fontVariant: ['tabular-nums'] }}
       >
         {value}

@@ -14,7 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 /** Un tour : l'ancien prix tombe, le nouveau se pose, le stock fond. */
 const CYCLE = 5200;
@@ -61,6 +61,7 @@ type Props = { size?: number; still?: boolean };
  * « il y a des promotions » ; ce mouvement dit « ça part MAINTENANT ».
  */
 export function FlashScene({ size = 300, still = false }: Props) {
+  const colors = useColors();
   // À l'arrêt, on fige le cycle APRÈS la bascule : le nouveau prix est posé, la
   // remise est lisible, le stock a déjà entamé sa descente. Figer à zéro
   // montrerait une carte vide — le pire des états pour qui coupe les animations.
@@ -90,7 +91,7 @@ export function FlashScene({ size = 300, still = false }: Props) {
           borderRadius: size * 0.075,
           borderWidth: 1,
           borderColor: LIME_EDGE,
-          backgroundColor: colors.forest,
+          backgroundColor: colors.surfaceInverse,
           paddingHorizontal: size * 0.055,
           paddingVertical: size * 0.05,
           gap: size * 0.038,
@@ -165,6 +166,7 @@ function Identity({ size }: { size: number }) {
  * qu'une pulsation d'échelle, qui anime sans jamais rien cacher.
  */
 function PriceDrop({ progress, size }: { progress: SharedValue<number>; size: number }) {
+  const colors = useColors();
   const priceStyle = useAnimatedStyle(() => ({
     transform: [
       {
@@ -186,7 +188,7 @@ function PriceDrop({ progress, size }: { progress: SharedValue<number>; size: nu
       <Animated.View
         style={[priceStyle, { flexDirection: 'row', alignItems: 'baseline', gap: size * 0.028 }]}
       >
-        <AppText className="font-display" style={{ fontSize: size * 0.095, color: colors.lime }}>
+        <AppText className="font-display" style={{ fontSize: size * 0.095, color: colors.accent }}>
           {OFFER.price}
         </AppText>
         <AppText
@@ -201,7 +203,7 @@ function PriceDrop({ progress, size }: { progress: SharedValue<number>; size: nu
         style={[
           badgeStyle,
           {
-            backgroundColor: colors.lime,
+            backgroundColor: colors.accent,
             borderRadius: size * 0.028,
             paddingHorizontal: size * 0.038,
             paddingVertical: size * 0.015,
@@ -210,7 +212,7 @@ function PriceDrop({ progress, size }: { progress: SharedValue<number>; size: nu
       >
         <AppText
           className="font-display"
-          style={{ fontSize: size * 0.05, color: colors.forestDeep }}
+          style={{ fontSize: size * 0.05, color: colors.surfaceInverse }}
         >
           {OFFER.discount}
         </AppText>
@@ -229,12 +231,13 @@ function PriceDrop({ progress, size }: { progress: SharedValue<number>; size: nu
  * déjà. Le mouvement est porté par la barre, qui coûte zéro rendu.
  */
 function Stock({ progress, size }: { progress: SharedValue<number>; size: number }) {
+  const colors = useColors();
   const fillStyle = useAnimatedStyle(() => ({
     width: `${interpolate(progress.value, [0.34, 0.92], [100, 18], Extrapolation.CLAMP)}%`,
     backgroundColor: interpolateColor(
       progress.value,
       [0.34, 0.72, 0.92],
-      [colors.lime, colors.lime, colors.danger],
+      [colors.accent, colors.accent, colors.danger],
     ),
   }));
 
@@ -256,7 +259,10 @@ function Stock({ progress, size }: { progress: SharedValue<number>; size: number
       </View>
 
       <View className="flex-row items-center justify-between">
-        <AppText className="font-sans-bold" style={{ fontSize: size * 0.036, color: colors.lime }}>
+        <AppText
+          className="font-sans-bold"
+          style={{ fontSize: size * 0.036, color: colors.accent }}
+        >
           Plus que {OFFER.stockLeft}{' '}
           <AppText className="font-sans-medium" style={{ color: INK_SOFT }}>
             sur {OFFER.stockTotal}

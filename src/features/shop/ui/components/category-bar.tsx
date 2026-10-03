@@ -4,7 +4,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { CATEGORY_INFO } from '@/shared/lib/categories';
 
@@ -37,6 +37,7 @@ type Props = {
  * solid red so the current filter reads at a glance while scrolling.
  */
 export function CategoryBar({ value, onChange }: Props) {
+  const colors = useColors();
   return (
     <ScrollView
       horizontal

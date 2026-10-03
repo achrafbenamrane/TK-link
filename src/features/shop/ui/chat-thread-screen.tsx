@@ -13,7 +13,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { getMerchant } from '../model/catalog';
 import { demoReplyFor } from '../model/chat-seed';
@@ -81,6 +81,7 @@ function Typing() {
 }
 
 export function ChatThreadScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const scrollRef = useRef<ScrollView>(null);

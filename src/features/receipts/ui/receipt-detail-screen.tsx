@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { AppText, Button, Screen } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { CATEGORY_LABEL, formatMoney } from '../lib/receipts';
 import { formatKeptUntil } from '../lib/retention';
@@ -43,6 +43,7 @@ function longDate(ms: number): string {
  * échéance. C'est ce qui rend le document utilisable, pas seulement lisible.
  */
 export function ReceiptDetailScreen({ id, onBack }: Props) {
+  const colors = useColors();
   const receipts = useReceiptsStore(selectReceipts);
   const convertToInvoice = useReceiptsStore((s) => s.convertToInvoice);
   const togglePinned = useReceiptsStore((s) => s.togglePinned);
@@ -110,7 +111,7 @@ export function ReceiptDetailScreen({ id, onBack }: Props) {
               {receipt.merchant}
             </AppText>
             <AppText
-              className="mt-1 font-display text-lime"
+              className="mt-1 font-display text-accent"
               style={{ fontSize: 30, fontVariant: ['tabular-nums'] }}
             >
               {formatMoney(receipt.totalCents, receipt.currency)}

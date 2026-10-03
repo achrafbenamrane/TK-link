@@ -1,32 +1,40 @@
+import palette from './palette.json';
+
 /**
- * Programmatic mirror of the Tailwind palette for the rare cases where a
- * color is needed outside className (e.g. native navigation options,
- * ActivityIndicator tint, tab bar).
+ * Les couleurs de TK LINK, en Jour et en Nuit.
  *
- * SOURCE OF TRUTH: tailwind.config.js — keep both in sync.
- * docs/conventions/design-system.md documents the sync rule.
+ * SOURCE UNIQUE : `palette.json`. Tailwind en tire ses classes (`bg-brand-500`,
+ * `text-ink`…) sous forme de variables CSS ; ce module sert aux rares endroits
+ * où une couleur est exigée HORS className — icône, indicateur d'activité,
+ * barre d'onglets. Ceux-là passent par `useColors()` (theme-provider.tsx), qui
+ * suit le mode choisi.
  */
-export const colors = {
-  brand50: '#E8F7EC',
-  brand100: '#C7EBD2',
-  brand200: '#8FD5A8',
-  brand500: '#0F8A4C',
-  brand600: '#0B6C3B',
-  brand700: '#08512C',
-  forest: '#123A22',
-  forestDeep: '#0B2415',
-  lime: '#C3F53C',
-  limeSoft: '#E6FBAE',
-  limeDeep: '#7F9E14',
-  surface: '#FFFFFF',
-  surfaceMuted: '#F2F7F0',
-  surfaceSunken: '#E6EFE3',
-  surfaceInverse: '#123A22',
-  ink: '#0F1A12',
-  inkMuted: '#4D5B50',
-  inkFaint: '#84927F',
-  inkInverse: '#F2F7F0',
-  line: '#DCE6D7',
-  danger: '#DC2626',
-  success: '#16A34A',
-} as const;
+
+export type ThemeScheme = 'day' | 'night';
+
+type RawPalette = typeof palette.day;
+export type Palette = { [K in keyof RawPalette]: string };
+
+export const PALETTES: Record<ThemeScheme, Palette> = {
+  day: palette.day,
+  night: palette.night,
+};
+
+/** `#FF1478` → `255 20 120` : le format que Tailwind compose avec l'opacité. */
+export function hexToRgbTriplet(hex: string): string {
+  const h = hex.replace('#', '');
+  const n = Number.parseInt(h, 16);
+  return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`;
+}
+
+/** Le nom de la variable CSS portant un jeton (`brand500` → `--c-brand500`). */
+export const cssVarName = (token: keyof Palette) => `--c-${token}` as const;
+
+/** Toutes les variables d'un mode, prêtes pour `vars()` de NativeWind. */
+export function cssVarsFor(scheme: ThemeScheme): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [token, hex] of Object.entries(PALETTES[scheme])) {
+    out[cssVarName(token as keyof Palette)] = hexToRgbTriplet(hex);
+  }
+  return out;
+}

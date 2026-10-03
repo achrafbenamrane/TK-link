@@ -5,7 +5,7 @@ import { Linking, Pressable, ScrollView, View } from 'react-native';
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 // ⚠️ Adresse PROVISOIRE : aucun domaine TK LINK n'est enregistré à ce jour.
 // À remplacer par la vraie boîte du support avant publication — un lien
@@ -53,6 +53,7 @@ function ContactRow({
   onPress: () => void;
   testID: string;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       testID={testID}
@@ -73,6 +74,7 @@ function ContactRow({
 }
 
 function FaqItem({ q, a }: { q: string; a: string }) {
+  const colors = useColors();
   const [open, setOpen] = useState(false);
   return (
     <Pressable

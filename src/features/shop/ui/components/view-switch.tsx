@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 export type HomeView = 'liste' | 'carte';
 
@@ -23,6 +23,7 @@ const OPTIONS: { key: HomeView; label: string; icon: 'list' | 'map' }[] = [
  * et ce qui se passera au tap — un bouton unique oblige à deviner.
  */
 export function ViewSwitch({ value, onChange }: Props) {
+  const colors = useColors();
   return (
     <View
       accessibilityRole="tablist"
@@ -44,7 +45,7 @@ export function ViewSwitch({ value, onChange }: Props) {
             onPress={() => onChange(option.key)}
             className={cn(
               'flex-1 flex-row items-center justify-center gap-1.5 rounded-pill px-3.5 py-2',
-              active && 'bg-ink',
+              active && 'bg-surface-inverse',
             )}
           >
             <Feather

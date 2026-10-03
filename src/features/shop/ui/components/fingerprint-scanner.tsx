@@ -15,7 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 export type ScanState = 'repos' | 'scan' | 'ok' | 'echec';
 
@@ -43,6 +43,7 @@ function Ripple({
   active: boolean;
   size: number;
 }) {
+  const colors = useColors();
   const style = useAnimatedStyle(() => {
     const p = (pulse.value + index / RIPPLES.length) % 1;
     return {
@@ -78,6 +79,7 @@ function Ripple({
  * on ne mime jamais une « capture » : on accompagne l'invite système.
  */
 export function FingerprintScanner({ state, onPress, size = 132, testID }: Props) {
+  const colors = useColors();
   const fill = useSharedValue(0); // 0 → 1 : hauteur révélée du glyphe rouge
   const pulse = useSharedValue(0); // ondes concentriques
   const shake = useSharedValue(0);

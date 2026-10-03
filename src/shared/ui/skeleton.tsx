@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { cn } from '@/shared/lib/cn';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 export type SkeletonProps = ViewProps & {
   /** Rounded corners (default true). Set false for square avatars/blocks. */
@@ -26,6 +26,7 @@ export type SkeletonProps = ViewProps & {
  * pulsing fill is a styled Animated.View — mirrors src/features/tasks/ui/task-row.
  */
 export function Skeleton({ className, rounded = true, ...rest }: SkeletonProps) {
+  const colors = useColors();
   const opacity = useSharedValue(0.5);
   const reduced = useReducedMotion();
 

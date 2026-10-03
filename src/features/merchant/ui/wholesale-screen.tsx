@@ -5,7 +5,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { CATEGORY_INFO } from '@/shared/lib/categories';
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { formatCents } from '../lib/billing';
 import { discountPct, liveOffers, secondsLeft } from '../lib/offers';
@@ -43,6 +43,7 @@ function timeLabel(seconds: number): string {
  * son lot et sa quantité est la pire façon de l'apprendre.
  */
 export function WholesaleScreen({ blockedReason = null, onFixProfile, onBack }: Props) {
+  const colors = useColors();
   const [now] = useState(() => Date.now());
   const lots = useMerchantStore(selectLots);
   const mine = useMerchantStore(selectOffers);
@@ -141,7 +142,7 @@ export function WholesaleScreen({ blockedReason = null, onFixProfile, onBack }: 
                 Dernière : {orders[0]!.title}
               </AppText>
             </View>
-            <AppText className="font-display text-lime" style={{ fontSize: 17 }}>
+            <AppText className="font-display text-accent" style={{ fontSize: 17 }}>
               {formatCents(spent)}
             </AppText>
           </View>
@@ -178,7 +179,7 @@ export function WholesaleScreen({ blockedReason = null, onFixProfile, onBack }: 
                       </AppText>
                     </View>
                     {pct ? (
-                      <View className="rounded-control bg-ink px-2 py-1">
+                      <View className="rounded-control bg-surface-inverse px-2 py-1">
                         <AppText
                           className="font-sans-bold text-ink-inverse"
                           style={{ fontSize: 10.5 }}

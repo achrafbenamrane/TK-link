@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 
 import { AppText, Button, EmptyState, Screen } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { getDeal } from '../model/catalog';
 import type { Deal } from '../model/schema';
@@ -22,6 +22,7 @@ import { ProductImage } from './components/product-image';
  * et le prix + l'ajout au panier accessibles sans ouvrir la fiche.
  */
 function FavoriteCard({ deal }: { deal: Deal }) {
+  const colors = useColors();
   const router = useRouter();
   const addToCart = useShopStore((s) => s.addToCart);
   const toggleFavorite = useShopStore((s) => s.toggleFavorite);
@@ -43,7 +44,7 @@ function FavoriteCard({ deal }: { deal: Deal }) {
       >
         <ProductImage deal={deal} emojiSize={54} />
 
-        <View className="absolute left-1.5 top-1.5 flex-row items-center gap-1 rounded-pill bg-ink px-2 py-1">
+        <View className="absolute left-1.5 top-1.5 flex-row items-center gap-1 rounded-pill bg-surface-inverse px-2 py-1">
           <Feather name="clock" size={9} color={colors.inkInverse} />
           <Countdown seconds={deal.endsInSeconds} className="text-ink-inverse" />
         </View>
@@ -96,6 +97,7 @@ function FavoriteCard({ deal }: { deal: Deal }) {
 }
 
 export function FavoritesScreen() {
+  const colors = useColors();
   const router = useRouter();
   const favIds = useShopStore(selectFavorites);
   const deals = useMemo(() => favIds.map(getDeal).filter((d): d is Deal => Boolean(d)), [favIds]);

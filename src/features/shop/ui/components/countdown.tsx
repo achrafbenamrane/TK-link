@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 /**
  * Toujours HH:MM:SS, même sous l'heure.
@@ -97,6 +97,7 @@ export function CountdownBlocks({
   size?: number;
   testID?: string;
 }) {
+  const colors = useColors();
   const left = useCountdown(seconds);
   const parts = countdownParts(left);
 

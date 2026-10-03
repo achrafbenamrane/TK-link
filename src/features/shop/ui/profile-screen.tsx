@@ -5,7 +5,7 @@ import { Pressable, ScrollView, Share, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 function Row({
   icon,
@@ -22,6 +22,7 @@ function Row({
   last?: boolean;
   testID?: string;
 }) {
+  const colors = useColors();
   return (
     <Pressable
       testID={testID}
@@ -91,6 +92,7 @@ export function ProfileScreen({
   name,
   subtitle,
 }: ProfileScreenProps = {}) {
+  const colors = useColors();
   const router = useRouter();
   const invite = async () => {
     try {
@@ -201,7 +203,7 @@ export function ProfileScreen({
         {canPublishOffers ? (
           <View className="mb-4 gap-2 rounded-card bg-surface-inverse p-4">
             <View className="flex-row items-center gap-2">
-              <Feather name="monitor" size={16} color={colors.lime} />
+              <Feather name="monitor" size={16} color={colors.accent} />
               <AppText className="font-sans-bold text-ink-inverse">Espace professionnel</AppText>
             </View>
             <AppText variant="caption" className="text-ink-inverse/70">

@@ -4,13 +4,14 @@ import { Switch, View } from 'react-native';
 
 import { AppText, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { authenticate, getBiometricSupport, type BiometricSupport } from '../lib/biometrics';
 import { useShopStore } from '../model/store';
 import { FingerprintScanner, type ScanState } from './components/fingerprint-scanner';
 
 export function BiometricsScreen() {
+  const colors = useColors();
   const enabled = useShopStore((s) => s.biometricEnabled);
   const setEnabled = useShopStore((s) => s.setBiometricEnabled);
 

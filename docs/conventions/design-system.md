@@ -1,36 +1,62 @@
 # Design System
 
-Single source of truth: **`tailwind.config.js`** — the **token contract**. Designers own this
-file's token values; engineers own its structure. The imperative mirror
-(`src/shared/theme/colors.ts`) must stay in sync — PRs touching one must
-touch both (reviewer + persona checklist item). The quality the design + build passes must clear
-is [`docs/design/quality-bar.md`](../design/quality-bar.md).
+La charte vient du **client** (maquettes du 03/10/2026, voir
+[les maquettes](../design/maquettes/README.md)) : rose `#FF1478` pour l’énergie (Flash, prix,
+appels à l’action), bleu `#00B2FF` pour l’appui (localisation, infos), vert `#22C55E` pour ce qui
+est validé, blanc et gris foncé `#1B1B1F`. Elle existe en **mode Nuit et mode Jour**, avec une
+bascule visible.
 
-> **The default `brand-*` ramp is placeholder indigo (`#6366F1`) and the default font is Inter —
-> the two most recognizable "vibe-coded" AI tells. Rebrand both per app** (keep the role structure;
-> see the quality-bar "Rebrand checklist"). Tokens are roles (semantic) backed by hex (primitive);
-> components reference roles, never raw hex — that semantic layer is what makes rebrand + dark-mode
-> possible.
+## Une seule source
 
-## Dark mode
+**`src/shared/theme/palette.json`** porte les valeurs, en Jour et en Nuit. Personne ne les recopie :
 
-Design light and dark **together**, not one inferred from the other: a dark-grey base (≈`#121212`
-class), **desaturated** accents (saturated colors vibrate and fail contrast on dark), and elevation
-expressed as tonal surface lightening — never inverted light-mode hex.
+- `tailwind.config.js` n’y déclare que des **rôles** (`bg-brand-500`, `text-ink`, `bg-surface-muted`…),
+  adossés à des variables CSS : `rgb(var(--c-brand500) / <alpha-value>)`. Les opacités (`bg-ink/10`)
+  continuent donc de fonctionner.
+- Le `ThemeProvider` (`src/shared/theme/theme-provider.tsx`) redéfinit ces variables à la racine
+  selon le mode : **un écran n’a jamais à connaître le mode**, il utilise des classes de rôle.
+- Une couleur exigée **hors className** (icône, indicateur d’activité, barre d’onglets) passe par
+  `useColors()`. Jamais par une constante de module : elle ne suivrait pas le mode.
+- `src/shared/theme/__tests__/theme.test.ts` vérifie que Tailwind ne référence que des jetons qui
+  existent, que Jour et Nuit définissent les mêmes, et que le texte reste lisible (WCAG AA) dans
+  les deux modes.
 
-## Tokens
+Le mode (`night`, `day`, `system`) se choisit dans `useThemeStore`. Par défaut : **Nuit**, qui est
+l’identité de la marque.
 
-- **Color roles, not hues:** `brand-*` (action), `surface[-muted|-inverse]`
-  (backgrounds), `ink[-muted|-faint|-inverse]` (text), `danger`, `success`.
-  Components never reference hexes.
-- **Type scale via `AppText` variants:** `display` (32/bold) · `title`
-  (20/semibold) · `body` (16/regular) · `label` (14/medium) · `caption`
-  (14/regular muted). Need a new size? Propose a variant, don't inline it.
-- **Font:** Inter (400/500/600/700) loaded in the root layout; classes
-  `font-sans[-medium|-semibold|-bold]`.
-- **Radii:** `rounded-card` (16) for containers, `rounded-control` (12) for
-  inputs/buttons. **Spacing:** Tailwind scale, screen gutter `px-5` via
-  `<Screen>`.
+## Les rôles
+
+| Rôle                           | Sert à                                                                      |
+| ------------------------------ | --------------------------------------------------------------------------- |
+| `brand-500`                    | L’action : bouton principal, Flash, prix. Rose dans les deux modes.         |
+| `brand-50/100/200`             | Les pastilles et fonds teintés de rose                                      |
+| `brand-600/700`                | Le **texte** rose posé sur le fond (plus foncé en Jour, plus clair en Nuit) |
+| `brand-deep`                   | Le socle du bouton 3D                                                       |
+| `accent`, `accent-soft/deep`   | Le bleu d’appui : localisation, boutique, infos                             |
+| `surface`, `-muted`, `-sunken` | Le fond de page, les cartes, les creux                                      |
+| `surface-inverse`              | Un bloc d’emphase sombre (texte `ink-inverse` dessus)                       |
+| `ink`, `-muted`, `-faint`      | Le texte, du plus fort au plus discret                                      |
+| `ink-inverse`                  | **Blanc dans les deux modes** : le texte sur le rose ou sur un bloc sombre  |
+| `line`                         | Les filets                                                                  |
+| `danger`, `success`            | Erreur, validé                                                              |
+
+Piège : `bg-ink` n’existe plus comme fond. Un bloc sombre est `bg-surface-inverse` ; `ink` est un
+**texte**, et il devient blanc en Nuit.
+
+## Typographie
+
+**Manrope** (400 / 500 / 600 / 700) pour le texte, **Manrope ExtraBold** pour les titres
+(`font-display`). Variantes d’`AppText` : `display` · `title` · `body` · `label` · `caption`.
+Un nouveau gabarit se propose comme variante, il ne s’écrit pas en ligne.
+
+- **Radii :** `rounded-card` (18) pour les conteneurs, `rounded-control` (12) pour les champs et
+  boutons. **Espacement :** l’échelle Tailwind, gouttière d’écran `px-5` via `<Screen>`.
+
+## Aperçu navigateur
+
+`npm run web` ouvre l’app dans un navigateur (carte remplacée par un bouchon, rendu serveur coupé) :
+c’est le moyen de **regarder** un écran à la taille d’un téléphone sans simulateur. Il ne remplace
+pas un test sur appareil pour tout ce qui est natif.
 
 ## Typography copy rules
 

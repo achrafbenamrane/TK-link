@@ -5,7 +5,7 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } fr
 import { cn } from '@/shared/lib/cn';
 import { AppText, Button, EmptyState, Screen, TextField } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { AddressDraftSchema, type Address, type AddressDraft } from '../model/schema';
 import { useShopStore } from '../model/store';
@@ -157,6 +157,7 @@ function AddressCard({
   onDelete: () => void;
   onDefault: () => void;
 }) {
+  const colors = useColors();
   return (
     <View
       testID={`address-${address.id}`}
@@ -221,6 +222,7 @@ function AddressCard({
 }
 
 export function AddressesScreen() {
+  const colors = useColors();
   const addresses = useShopStore((s) => s.addresses);
   const addAddress = useShopStore((s) => s.addAddress);
   const updateAddress = useShopStore((s) => s.updateAddress);

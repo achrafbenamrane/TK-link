@@ -4,7 +4,7 @@ import { Pressable, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, PushButton } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { getMerchant } from '../../model/catalog';
 import { distanceKm, formatDistance } from '../../lib/geo';
@@ -50,6 +50,7 @@ const IMAGE_HEIGHT = 230;
  * l'image — pas une ligne de légende qu'on lit en dernier.
  */
 export function FlashCard({ deal }: Props) {
+  const colors = useColors();
   const router = useRouter();
   const merchant = getMerchant(deal.merchantId);
   const addToCart = useShopStore((s) => s.addToCart);

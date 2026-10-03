@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Button } from '@/shared/ui';
-import { colors } from '@/shared/theme/colors';
+import { useColors } from '@/shared/theme/theme-provider';
 
 import { authenticate } from '../lib/biometrics';
 import { FULFILMENTS, FULFILMENT_LABEL, type Fulfilment } from '../lib/order-status';
@@ -23,6 +23,7 @@ type Props = {
 };
 
 export function CartScreen({ onOrdered }: Props = {}) {
+  const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   // CDC §12 — le Touch & Collect fait partie du MVP. Livraison par défaut :
@@ -180,7 +181,7 @@ export function CartScreen({ onOrdered }: Props = {}) {
                 onPress={() => setFulfilment(f)}
                 className={cn(
                   'flex-1 flex-row items-center justify-center gap-2 rounded-control py-2.5',
-                  active ? 'bg-ink' : 'bg-surface-muted',
+                  active ? 'bg-surface-inverse' : 'bg-surface-muted',
                 )}
               >
                 <Feather
