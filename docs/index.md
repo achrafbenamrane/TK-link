@@ -25,6 +25,7 @@ docs-lint keeps every page linked and every link alive.
 
 ## Design
 
+- [Maquettes du client](design/maquettes/README.md) — **la cible visuelle depuis le 03/10/2026** : écrans des quatre rôles, charte graphique, arbitrages face au CDC
 - [Quality bar](design/quality-bar.md) — premium vs "vibe-coded"; the checklist every screen must clear
 - [Claude Design prompt template](templates/claude-design-prompt.md) — the professional brief (`/design-prompt` fills it)
 
@@ -32,7 +33,7 @@ docs-lint keeps every page linked and every link alive.
 
 - [Vision](product/vision.md)
 - [PRDs](product/prds/README.md) — feature specs that agents implement
-- [Gamification](product/gamification.md) — les règles de « La Chasse », leur origine, et ce qui reste simulé
+- [Cahier des charges V1.1](product/cdc-v1.1.md) — **le contrat client en vigueur** (31/08/2026) : contenu, ce qui change depuis la V1.0, ce que cela impose au code
 - [Parcours clients](product/parcours-clients.md) — les quatre parcours en 12 étapes remis par le client, et leurs statuts
 - [Photos produit](product/photos-produit.md) — les visuels manquants, quoi chercher, comment les intégrer
 
