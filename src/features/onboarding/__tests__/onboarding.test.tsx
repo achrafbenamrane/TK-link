@@ -1,9 +1,10 @@
-import { fireEvent, render, screen } from '@/shared/testing/render';
+import { fireEvent, render, screen, waitFor } from '@/shared/testing/render';
 
-import { AVATAR_COUNT, canFinish, randomAvatar, toggleInterest } from '../lib/avatar';
+import { AVATAR_COUNT, INTERESTS, randomAvatar, toggleInterest } from '../lib/avatar';
 import { AVATARS, avatarAt } from '../model/avatars';
 import { OnboardingSchema } from '../model/schema';
 import { useOnboardingStore } from '../model/store';
+import { AvatarPicker } from '../ui/avatar-picker';
 import { OnboardingScreen } from '../ui/onboarding-screen';
 
 beforeEach(() => {
@@ -55,24 +56,14 @@ describe('toggleInterest', () => {
   });
 });
 
-describe('canFinish', () => {
-  it('exige un prénom non vide et un intérêt', () => {
-    expect(canFinish('', [])).toBe(false);
-    expect(canFinish('  ', ['beaute'])).toBe(false);
-    expect(canFinish('Sofiane', [])).toBe(false);
-    expect(canFinish('Sofiane', ['beaute'])).toBe(true);
-  });
-});
-
 describe('OnboardingSchema', () => {
   it('fournit des valeurs par défaut sûres', () => {
     const s = OnboardingSchema.parse({});
     expect(s.completed).toBe(false);
     expect(s.interests).toEqual([]);
-    expect(s.holderType).toBe('particulier');
   });
 
-  it('démarre au rôle consommateur — CDC §4', () => {
+  it('démarre au rôle consommateur — CDC §2.1', () => {
     expect(OnboardingSchema.parse({}).role).toBe('consommateur');
   });
 
@@ -91,9 +82,6 @@ describe('OnboardingSchema', () => {
   });
 
   it('relit un avatar DESSINÉ (hue/face/accessory) sans casser le profil', () => {
-    // L'ancien avatar composable n'a pas d'équivalent dans la galerie : il
-    // retombe sur la première illustration. Ce qui compte, c'est que la
-    // réhydratation n'échoue PAS — sinon tout le profil serait perdu avec lui.
     const s = OnboardingSchema.parse({
       completed: true,
       firstName: 'Sofiane',
@@ -104,182 +92,148 @@ describe('OnboardingSchema', () => {
     expect(s.firstName).toBe('Sofiane');
     expect(s.completed).toBe(true);
   });
+
+  it('relit un profil qui contient les champs RETIRÉS le 03/10/2026, sans rien perdre', () => {
+    // `holderType` (particulier / pro), `medium` (carte / pastille) et
+    // `showEcoImpact` ne sont plus déclarés : ni la V1.0 ni la V1.1 ne les
+    // décrivent. Zod ignore les clés inconnues — un profil enregistré avant le
+    // retrait se relit donc intact, au lieu de renvoyer l'utilisateur à
+    // l'onboarding.
+    const s = OnboardingSchema.parse({
+      completed: true,
+      firstName: 'Sofiane',
+      role: 'commercant',
+      siret: '44306184100047',
+      interests: ['mode'],
+      holderType: 'pro',
+      medium: 'pastille',
+      showEcoImpact: false,
+    });
+    expect(s.completed).toBe(true);
+    expect(s.firstName).toBe('Sofiane');
+    expect(s.role).toBe('commercant');
+    expect(s.siret).toBe('44306184100047');
+    expect(s).not.toHaveProperty('holderType');
+    expect(s).not.toHaveProperty('medium');
+    expect(s).not.toHaveProperty('showEcoImpact');
+  });
 });
 
-describe('rôle — CDC §4', () => {
-  it('un commerçant est forcément un professionnel', () => {
-    const store = useOnboardingStore.getState();
-    store.setRole('commercant');
-    expect(useOnboardingStore.getState().role).toBe('commercant');
-    // Sans cette règle, on obtiendrait un « commerçant particulier » et
-    // l'audience des cadeaux fidélité deviendrait fausse.
-    expect(useOnboardingStore.getState().holderType).toBe('pro');
-  });
-
-  it('un grossiste aussi', () => {
-    useOnboardingStore.getState().setRole('grossiste');
-    expect(useOnboardingStore.getState().holderType).toBe('pro');
-  });
-
-  it('le consommateur garde son choix particulier / pro', () => {
-    useOnboardingStore.getState().setHolderType('particulier');
-    useOnboardingStore.getState().setRole('consommateur');
-    expect(useOnboardingStore.getState().holderType).toBe('particulier');
-  });
-});
-
-describe('<OnboardingScreen />', () => {
-  it('propose le compte AVANT la personnalisation, et ne termine qu’une fois rempli', () => {
+describe('<OnboardingScreen /> — étapes 3 à 6 du parcours du client', () => {
+  it('traverse les centres d’intérêt, la localisation, la sécurisation, puis entre dans l’app', async () => {
     const onDone = jest.fn();
-    render(<OnboardingScreen onDone={onDone} />);
+    const onRequestLocation = jest.fn().mockResolvedValue(undefined);
+    const onEnableBiometrics = jest.fn().mockResolvedValue(undefined);
+    render(
+      <OnboardingScreen
+        onDone={onDone}
+        onRequestLocation={onRequestLocation}
+        onEnableBiometrics={onEnableBiometrics}
+      />,
+    );
 
-    // L'écran sur le ticket papier ouvrait le parcours ; il a été retiré le
-    // 18/08. La création du compte est donc la PREMIÈRE étape, sans détour.
-    expect(screen.getByTestId('onboarding-screen')).toBeTruthy();
-
-    // 2 — le compte, tout de suite après l’accroche. Rien n’a encore été
-    // demandé : on ne récapitule donc pas, on donne des raisons.
-    expect(screen.getByTestId('onboarding-signup')).toBeTruthy();
-    expect(screen.getByTestId('onboarding-account-perks')).toBeTruthy();
-    expect(useOnboardingStore.getState().completed).toBe(false);
-    fireEvent.press(screen.getByTestId('onboarding-next')); // « Continuer sans compte »
-
-    // 3 — rôle (CDC §4)
-    expect(screen.getByTestId('role-consommateur')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('role-consommateur'));
-    fireEvent.press(screen.getByTestId('onboarding-next'));
-
-    // 4 — avatar
-    expect(screen.getByTestId('avatar-random')).toBeTruthy();
-    fireEvent.press(screen.getByTestId(`avatar-${AVATARS[2]!.id}`));
-    expect(useOnboardingStore.getState().avatar).toEqual({ preset: 2 });
-    fireEvent.press(screen.getByTestId('onboarding-next'));
-
-    // 5 — profil
-    fireEvent.press(screen.getByTestId('holder-pro'));
-    fireEvent.press(screen.getByTestId('onboarding-next'));
-
-    // 6 — intérêts : incomplet, donc on n’avance pas
-    fireEvent.press(screen.getByTestId('onboarding-next'));
-    expect(screen.getByTestId('onboarding-firstname')).toBeTruthy();
-    expect(useOnboardingStore.getState().completed).toBe(false);
-
-    fireEvent.changeText(screen.getByTestId('onboarding-firstname'), 'Sofiane');
+    // 3 — centres d’intérêt : le CDC laisse choisir une, plusieurs ou toutes
     fireEvent.press(screen.getByTestId('interest-restauration'));
+    expect(useOnboardingStore.getState().interests).toEqual(['restauration']);
+    fireEvent.press(screen.getByTestId('onboarding-next'));
+
+    // 4 — localisation
+    fireEvent.press(screen.getByTestId('onboarding-location'));
+    await waitFor(() => expect(onRequestLocation).toHaveBeenCalledTimes(1));
+
+    // 5 — sécurisation
+    await waitFor(() => expect(screen.getByTestId('onboarding-secure')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('onboarding-secure'));
+    await waitFor(() => expect(onEnableBiometrics).toHaveBeenCalledTimes(1));
+
+    // 6 — compte validé
+    await waitFor(() => expect(screen.getByTestId('onboarding-next')).toBeTruthy());
+    expect(useOnboardingStore.getState().completed).toBe(false);
     fireEvent.press(screen.getByTestId('onboarding-next'));
 
     expect(onDone).toHaveBeenCalledWith('app');
     expect(useOnboardingStore.getState().completed).toBe(true);
-    expect(useOnboardingStore.getState().firstName).toBe('Sofiane');
-    expect(useOnboardingStore.getState().interests).toEqual(['restauration']);
   });
 
-  it('l’étape compte mène à l’inscription ou à la connexion', () => {
-    const onDone = jest.fn();
-    render(<OnboardingScreen onDone={onDone} />);
-
-    fireEvent.press(screen.getByTestId('onboarding-signup'));
-    expect(onDone).toHaveBeenCalledWith('sign-up');
-    // L’onboarding est clos AVANT de partir : sinon la porte du layout
-    // renverrait sur l’onboarding au lieu de laisser voir l’inscription.
-    expect(useOnboardingStore.getState().completed).toBe(true);
-  });
-
-  it('ne redemande PAS le prénom quand l’inscription l’a déjà donné', () => {
-    // Le vrai motif du changement : l’inscription du CDC §5 collecte déjà le
-    // prénom. Le redemander deux écrans plus loin donne l’impression que rien
-    // n’a été retenu.
-    useOnboardingStore.setState({ firstName: 'Sofiane' });
-    render(<OnboardingScreen onDone={jest.fn()} hasAccount />);
-
-    // rôle → avatar → profil → intérêts : un pas de moins depuis que
-    // l'écran sur le ticket papier a été retiré.
-    for (let i = 0; i < 3; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
-
-    expect(screen.getByTestId('interest-restauration')).toBeTruthy();
-    expect(screen.queryByTestId('onboarding-firstname')).toBeNull();
-  });
-
-  it('demande le prénom à qui a refusé le compte', () => {
+  it('ne bloque jamais : on peut passer les intérêts sans rien choisir', () => {
+    // CDC §2.3 : les catégories « servent à prioriser le feed, mais ne bloquent
+    // jamais la découverte des autres ». Exiger un choix serait un faux obstacle.
     render(<OnboardingScreen onDone={jest.fn()} />);
-    for (let i = 0; i < 4; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
-
-    expect(screen.getByTestId('onboarding-firstname')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('onboarding-next'));
+    expect(screen.getByTestId('onboarding-location')).toBeTruthy();
   });
 
-  it('ne propose pas de compte à qui vient de se connecter', () => {
-    const onDone = jest.fn();
-    useOnboardingStore.setState({ firstName: 'Sofiane', interests: ['restauration'] });
-    render(<OnboardingScreen onDone={onDone} hasAccount />);
-
-    expect(screen.queryByTestId('onboarding-signup')).toBeNull();
-    for (let i = 0; i < 4; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
-
-    expect(onDone).toHaveBeenCalledWith('app');
-  });
-
-  it('saute l’étape particulier / pro pour un commerçant — CDC §4', () => {
+  it('propose les huit catégories du CDC, et « tout choisir »', () => {
     render(<OnboardingScreen onDone={jest.fn()} />);
-    fireEvent.press(screen.getByTestId('onboarding-next')); // compte → rôle
-    fireEvent.press(screen.getByTestId('role-commercant'));
-    fireEvent.press(screen.getByTestId('onboarding-next')); // rôle → avatar
-    fireEvent.press(screen.getByTestId('onboarding-next')); // avatar → …
-
-    expect(screen.queryByTestId('holder-particulier')).toBeNull();
-    expect(screen.getByTestId('onboarding-firstname')).toBeTruthy();
-  });
-
-  it('propose les huit catégories du CDC', () => {
-    render(<OnboardingScreen onDone={jest.fn()} />);
-    for (let i = 0; i < 4; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
-
-    for (const key of ['restauration', 'high-tech', 'maison', 'mode', 'auto', 'services']) {
+    for (const key of [
+      'restauration',
+      'high-tech',
+      'maison',
+      'mode',
+      'beaute',
+      'sport',
+      'auto',
+      'services',
+    ]) {
       expect(screen.getByTestId(`interest-${key}`)).toBeTruthy();
     }
+
+    fireEvent.press(screen.getByTestId('interest-all'));
+    expect(useOnboardingStore.getState().interests).toHaveLength(INTERESTS.length);
+    fireEvent.press(screen.getByTestId('interest-all'));
+    expect(useOnboardingStore.getState().interests).toEqual([]);
+  });
+
+  it('la localisation et la sécurisation se passent d’un geste', () => {
+    const onRequestLocation = jest.fn();
+    render(<OnboardingScreen onDone={jest.fn()} onRequestLocation={onRequestLocation} />);
+    fireEvent.press(screen.getByTestId('onboarding-next')); // intérêts
+    fireEvent.press(screen.getByTestId('onboarding-skip')); // « Plus tard »
+    expect(screen.getByTestId('onboarding-secure')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('onboarding-skip'));
+
+    expect(onRequestLocation).not.toHaveBeenCalled();
+    expect(screen.getByTestId('onboarding-next')).toBeTruthy();
+  });
+
+  it('ne demande ni rôle, ni avatar, ni nom d’utilisateur, ni « particulier ou professionnel »', () => {
+    // Le CDC V1.0 §2 ne décrit aucune de ces questions : l’inscription donne le
+    // prénom, l’avatar se choisit sur le formulaire, et l’espace commerçant a sa
+    // propre porte.
+    render(<OnboardingScreen onDone={jest.fn()} />);
+    expect(screen.queryByTestId('role-consommateur')).toBeNull();
+    expect(screen.queryByTestId('onboarding-firstname')).toBeNull();
+    expect(screen.queryByTestId('holder-pro')).toBeNull();
+    expect(screen.queryByTestId('avatar-random')).toBeNull();
   });
 
   it('permet de revenir en arrière', () => {
     render(<OnboardingScreen onDone={jest.fn()} />);
-    // Le parcours ouvre sur la création du compte depuis le 18/08.
-    expect(screen.getByTestId('onboarding-signup')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('onboarding-next')); // compte → rôle
-    expect(screen.queryByTestId('onboarding-signup')).toBeNull();
-    // Et l'on doit pouvoir y revenir : le retour est le seul moyen de créer un
-    // compte après avoir passé l'étape sans le vouloir.
+    fireEvent.press(screen.getByTestId('onboarding-next'));
+    expect(screen.queryByTestId('interest-restauration')).toBeNull();
     fireEvent.press(screen.getByTestId('onboarding-back'));
-    expect(screen.getByTestId('onboarding-signup')).toBeTruthy();
+    expect(screen.getByTestId('interest-restauration')).toBeTruthy();
+  });
+
+  it('salue la personne par son prénom une fois le compte validé', () => {
+    useOnboardingStore.setState({ firstName: 'Sofiane' });
+    render(<OnboardingScreen onDone={jest.fn()} />);
+    fireEvent.press(screen.getByTestId('onboarding-next'));
+    fireEvent.press(screen.getByTestId('onboarding-skip'));
+    fireEvent.press(screen.getByTestId('onboarding-skip'));
+
+    expect(screen.getByText('C’est prêt, Sofiane')).toBeTruthy();
   });
 });
 
-describe('rôles proposés dans l’app — décision client du 2026-08-10', () => {
-  it('ne propose PAS le grossiste : il passe par l’espace pro web', () => {
-    render(<OnboardingScreen onDone={jest.fn()} />);
-    fireEvent.press(screen.getByTestId('onboarding-next')); // compte → rôle
+describe('<AvatarPicker /> — le « + » de la maquette d’inscription', () => {
+  it('ouvre la galerie et enregistre le choix', () => {
+    render(<AvatarPicker />);
+    expect(screen.queryByTestId('avatar-sheet')).toBeNull();
 
-    expect(screen.getByTestId('role-consommateur')).toBeTruthy();
-    expect(screen.getByTestId('role-commercant')).toBeTruthy();
-    expect(screen.queryByTestId('role-grossiste')).toBeNull();
-  });
-});
+    fireEvent.press(screen.getByTestId('avatar-picker'));
+    fireEvent.press(screen.getByTestId(`avatar-${AVATARS[2]!.id}`));
 
-describe('plus de support physique — décision client du 16/08/2026', () => {
-  it('ne demande plus de choisir entre la carte et la pastille', () => {
-    // « On reste uniquement sur du soft. » Le CDC V1.0 ne mentionne plus aucun
-    // matériel : demander à quelqu'un de choisir un support qui n'existera pas
-    // est une promesse qu'on ne tiendra pas.
-    render(<OnboardingScreen onDone={jest.fn()} />);
-    for (let i = 0; i < 3; i++) fireEvent.press(screen.getByTestId('onboarding-next'));
-
-    expect(screen.getByTestId('holder-particulier')).toBeTruthy();
-    expect(screen.queryByTestId('medium-carte')).toBeNull();
-    expect(screen.queryByTestId('medium-pastille')).toBeNull();
-  });
-
-  it('garde le champ dans le profil enregistré, avec son défaut', () => {
-    // Le retirer du schéma PERSISTÉ ferait échouer `safeParse` sur les profils
-    // déjà en place, et effacerait prénom, avatar, rôle et centres d'intérêt —
-    // pour supprimer une valeur que plus personne ne lit.
-    const profil = OnboardingSchema.parse({});
-    expect(profil.medium).toBe('carte');
+    expect(useOnboardingStore.getState().avatar).toEqual({ preset: 2 });
   });
 });

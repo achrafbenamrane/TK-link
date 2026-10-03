@@ -1,5 +1,6 @@
 export { AppText, type AppTextProps } from './text';
 export { Button, type ButtonProps } from './button';
+export { Checkbox, type CheckboxProps } from './checkbox';
 export { Card, type CardProps } from './card';
 export { EmptyState, type EmptyStateProps } from './empty-state';
 export { PushButton, type PushButtonProps } from './push-button';

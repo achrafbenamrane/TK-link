@@ -2,26 +2,44 @@ import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
 import { SignUpScreen } from '@/features/auth';
-import { selectRole, useOnboardingStore } from '@/features/onboarding';
+import { AvatarPicker, selectRole, useOnboardingStore } from '@/features/onboarding';
 
 /**
- * INSCRIPTION — CDC §5.
+ * INSCRIPTION — CDC V1.0 §2.2.
  *
- * La route compose : le rôle vient de l'onboarding, le formulaire vit dans
- * `auth`. Les deux features s'ignorent ; c'est ici qu'elles se rencontrent.
+ * La route compose : le rôle et l'avatar viennent de l'onboarding, le
+ * formulaire vit dans `auth`. Les deux features s'ignorent ; c'est ici
+ * qu'elles se rencontrent.
  *
- * Une fois inscrit, on REVIENT à l'onboarding au lieu d'entrer dans l'app :
- * le compte précède désormais le rôle, l'avatar et les centres d'intérêt, et
- * filer droit dans la boutique sauterait toute la personnalisation. La porte
- * du layout laisse passer tant que l'onboarding n'est pas terminé.
+ * Le compte ouvre le parcours (étape 2 du parcours du client) ; une fois
+ * inscrit — ou en continuant sans compte — on enchaîne sur les centres
+ * d'intérêt, la localisation et la sécurisation. La porte du layout laisse
+ * passer tant que l'onboarding n'est pas terminé.
  */
 export default function SignUpRoute() {
   const router = useRouter();
   const role = useOnboardingStore(selectRole);
+  const setFirstName = useOnboardingStore((s) => s.setFirstName);
   const setSiret = useOnboardingStore((s) => s.setSiret);
 
-  const onSiretChange = useCallback((siret: string) => setSiret(siret), [setSiret]);
-  const onSignedUp = useCallback(() => router.replace('/onboarding'), [router]);
+  const onProfile = useCallback(
+    ({ firstName, siret }: { firstName: string; siret: string }) => {
+      setFirstName(firstName);
+      setSiret(siret);
+    },
+    [setFirstName, setSiret],
+  );
+  const toOnboarding = useCallback(() => router.replace('/onboarding'), [router]);
+  const toSignIn = useCallback(() => router.replace('/sign-in'), [router]);
 
-  return <SignUpScreen role={role} onSiretChange={onSiretChange} onSignedUp={onSignedUp} />;
+  return (
+    <SignUpScreen
+      role={role}
+      renderAvatar={() => <AvatarPicker />}
+      onProfile={onProfile}
+      onSignedUp={toOnboarding}
+      onSignIn={toSignIn}
+      onSkip={toOnboarding}
+    />
+  );
 }

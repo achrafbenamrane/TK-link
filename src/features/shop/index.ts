@@ -14,6 +14,8 @@ export { LiquidationRail } from './ui/components/liquidation-rail';
 export { orderToTransaction, producesReceipt, type Transaction } from './lib/transactions';
 export { selectOrders } from './model/store';
 export { pointsByMerchant } from './lib/points';
+export { getUserCoord } from './lib/location';
+export { authenticate as authenticateBiometric } from './lib/biometrics';
 export {
   applyPreferences,
   filterDeals,

@@ -37,22 +37,23 @@ describe('<WelcomeScreen />', () => {
     expect(screen.getByTestId('welcome-nearby')).toBeTruthy();
   });
 
-  it('« Commencer » marque l’accueil vu et enchaîne sur l’onboarding', () => {
+  it('« Commencer » marque l’accueil vu et enchaîne sur la création du compte', () => {
     render(<WelcomeScreen />);
     fireEvent.press(screen.getByTestId('welcome-start'));
 
     expect(useWelcomeStore.getState().seen).toBe(true);
     // Pas `/` : passer par la boutique ferait clignoter l’accueil avant que la
-    // porte du layout ne renvoie sur l’onboarding.
-    expect(mockReplace).toHaveBeenCalledWith('/onboarding');
+    // porte du layout ne renvoie sur l’inscription. Le compte est l’étape 2 du
+    // parcours dessiné par le client.
+    expect(mockReplace).toHaveBeenCalledWith('/sign-up');
   });
 
-  it('« Passer » saute l’intro mais pas la personnalisation', () => {
+  it('« Passer » saute l’intro mais pas la création du compte', () => {
     render(<WelcomeScreen />);
     fireEvent.press(screen.getByTestId('welcome-skip'));
 
     expect(useWelcomeStore.getState().seen).toBe(true);
-    expect(mockReplace).toHaveBeenCalledWith('/onboarding');
+    expect(mockReplace).toHaveBeenCalledWith('/sign-up');
   });
 
   it('« Se connecter » mène à la connexion, sans revoir l’intro ensuite', () => {

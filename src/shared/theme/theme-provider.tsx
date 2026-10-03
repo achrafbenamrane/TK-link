@@ -55,3 +55,20 @@ export function useColors(): Palette {
 export function useScheme(): ThemeScheme {
   return useContext(ThemeContext).scheme;
 }
+
+/**
+ * Fige un sous-arbre dans un mode, quel que soit le choix de l'utilisateur.
+ *
+ * Pour les écrans conçus pour un seul éclairage — l'introduction, cinématique,
+ * reste sombre en Jour comme en Nuit. Les classes ET `useColors()` y voient le
+ * mode imposé.
+ */
+export function ThemeScope({ scheme, children }: { scheme: ThemeScheme; children: ReactNode }) {
+  const value = useMemo<ThemeValue>(() => ({ scheme, colors: PALETTES[scheme] }), [scheme]);
+  const themeVars = useMemo(() => vars(cssVarsFor(scheme)), [scheme]);
+  return (
+    <ThemeContext.Provider value={value}>
+      <View style={[{ flex: 1 }, themeVars]}>{children}</View>
+    </ThemeContext.Provider>
+  );
+}

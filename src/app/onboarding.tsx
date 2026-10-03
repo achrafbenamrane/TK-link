@@ -1,31 +1,47 @@
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
-import { selectIsAuthenticated, useAuthStore } from '@/features/auth';
 import { OnboardingScreen, type OnboardingExit } from '@/features/onboarding';
+import { authenticateBiometric, getUserCoord, useShopStore } from '@/features/shop';
 
 /**
- * L'accueil des nouveaux : impact, rôle, avatar, profil, intérêts, compte.
+ * L'accueil des nouveaux, après la création du compte : centres d'intérêt,
+ * localisation, sécurisation, compte validé — les étapes 3 à 6 du parcours que
+ * le client a dessiné.
  *
- * La route compose. `onboarding` décide de la SUITE (« créer un compte », « me
- * connecter », « plus tard ») et elle la traduit en URL ; `auth` dit s'il y a
- * déjà une session, ce qui retire l'étape du compte. Les deux features
- * s'ignorent, comme partout ailleurs.
+ * La route compose. `onboarding` ne sait ni demander la position ni lire
+ * l'empreinte : la boutique le sait, et la route lui prête ces deux gestes.
+ * Les deux features s'ignorent, comme partout ailleurs.
  */
 export default function OnboardingRoute() {
   const router = useRouter();
-  const hasAccount = useAuthStore(selectIsAuthenticated);
+  const setUserCoord = useShopStore((s) => s.setUserCoord);
+  const setBiometricEnabled = useShopStore((s) => s.setBiometricEnabled);
 
   const onDone = useCallback(
-    (next: OnboardingExit) => {
-      // `replace` partout : revenir en arrière sur un onboarding terminé n'a
-      // aucun sens, et la porte du layout renverrait aussitôt dans l'app.
-      if (next === 'sign-up') router.replace('/sign-up');
-      else if (next === 'sign-in') router.replace('/sign-in');
-      else router.replace('/');
+    (_next: OnboardingExit) => {
+      // `replace` : revenir sur un onboarding terminé n'a aucun sens, et la
+      // porte du layout renverrait aussitôt dans l'app.
+      router.replace('/');
     },
     [router],
   );
 
-  return <OnboardingScreen onDone={onDone} hasAccount={hasAccount} />;
+  const onRequestLocation = useCallback(async () => {
+    const coord = await getUserCoord();
+    if (coord) setUserCoord(coord);
+  }, [setUserCoord]);
+
+  const onEnableBiometrics = useCallback(async () => {
+    const result = await authenticateBiometric('Sécuriser votre compte');
+    if (result.ok) setBiometricEnabled(true);
+  }, [setBiometricEnabled]);
+
+  return (
+    <OnboardingScreen
+      onDone={onDone}
+      onRequestLocation={onRequestLocation}
+      onEnableBiometrics={onEnableBiometrics}
+    />
+  );
 }

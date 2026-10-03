@@ -32,8 +32,13 @@ export const RegistrationSchema = z
       .string()
       .min(MIN_PASSWORD, `Le mot de passe doit faire au moins ${MIN_PASSWORD} caractères.`),
     confirm: z.string(),
-    /** CDC §5 : « Localisation ». Une ville suffit à orienter les offres. */
-    location: z.string().trim().min(2, 'Indiquez votre ville.'),
+    /**
+     * CDC V1.0 §2.2 : « localisation selon consentement ». Elle est donc
+     * FACULTATIVE — la maquette du client le dit aussi : « Ville / localisation
+     * (optionnel) ». Une ville suffit à orienter les offres ; sans elle, c'est la
+     * position du téléphone, si on l'autorise.
+     */
+    location: z.string().trim().default(''),
     /**
      * Facultatif à l'inscription (voir l'en-tête). Vide = non renseigné ;
      * renseigné = doit être un vrai SIRET, sinon autant ne rien saisir.

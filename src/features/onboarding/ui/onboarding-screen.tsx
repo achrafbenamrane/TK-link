@@ -1,26 +1,18 @@
 import { Feather } from '@expo/vector-icons';
-import { useMemo, useState, type ComponentProps } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { useState, type ComponentProps } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cn } from '@/shared/lib/cn';
-import { APP_ROLES, ROLE_ICON, ROLE_LABEL, ROLE_TAGLINE, type Role } from '@/shared/lib/roles';
-import { AppText } from '@/shared/ui';
+import { type Role } from '@/shared/lib/roles';
+import { AppText, Button } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
-import { canFinish, INTERESTS, randomAvatar } from '../lib/avatar';
-import { AVATARS } from '../model/avatars';
-import {
-  selectAvatar,
-  selectFirstName,
-  selectInterests,
-  selectRole,
-  useOnboardingStore,
-} from '../model/store';
-import { AvatarView } from './avatar-view';
+import { INTERESTS } from '../lib/avatar';
+import { selectFirstName, selectInterests, selectRole, useOnboardingStore } from '../model/store';
 
-/** Où l'on va une fois l'accueil des nouveaux terminé. */
-export type OnboardingExit = 'app' | 'sign-up' | 'sign-in';
+/** Où l'on va une fois l'accueil des nouveaux terminé : dans l'app. */
+export type OnboardingExit = 'app';
 
 type Props = {
   /**
@@ -29,128 +21,85 @@ type Props = {
    */
   onDone: (next: OnboardingExit) => void;
   /**
-   * Une session existe déjà (fourni par la route — `auth` n'est pas importée
-   * ici). L'étape « compte » disparaît alors : proposer de créer un compte à
-   * quelqu'un qui vient de se connecter est au mieux inutile, au pire
-   * inquiétant.
+   * Demande l'autorisation de localisation. Fournie par la route : la boutique
+   * sait la demander, `onboarding` n'importe pas `shop`.
    */
-  hasAccount?: boolean;
+  onRequestLocation?: () => Promise<unknown> | void;
+  /** Active la biométrie de l'appareil — fournie par la route, pour la même raison. */
+  onEnableBiometrics?: () => Promise<unknown> | void;
 };
 
-type Step = 'role' | 'avatar' | 'profil' | 'interets' | 'compte';
+type Step = 'interets' | 'localisation' | 'securite' | 'valide';
 
 /**
- * Les étapes, adaptées au rôle — CDC §4 : « L'onboarding devra être adapté au
- * rôle sélectionné. »
+ * Le parcours d'après le compte — étapes 3 à 6 du parcours que le client a
+ * dessiné pour chaque rôle :
  *
- * **Le compte vient AVANT la personnalisation.** Rôle, avatar et centres
- * d'intérêt décrivent quelqu'un ; tant que ce quelqu'un n'a pas de compte, ils
- * ne décrivent qu'un téléphone. Les recueillir d'abord, c'était demander un
- * quart d'heure de réglages puis, à la fin, un mot de passe — et perdre le
- * tout si la personne fermait l'app.
+ *   3. Choix des centres d'intérêt   4. Activation de la localisation
+ *   5. Sécurisation du compte        6. Compte validé
  *
- * Le SIRET ne s'y oppose pas, contrairement à ce qu'on avait supposé. Le CDC
- * §5 est explicite : « l'accès et la consultation des offres se font avec les
- * mêmes informations, mais pour passer commande, le SIRET doit être
- * renseigné ». Il n'est donc PAS exigé à l'inscription — c'est la commande qui
- * le réclame, et cette garde existe déjà (`merchant/model/store.ts`).
- *
- * L'écran sur le ticket papier qui ouvrait le parcours a été RETIRÉ le
- * 18/08/2026, sur décision de la conduite de projet. Il vendait la
- * dématérialisation du ticket ; l'app vend des promotions sur un temps court.
- * La création du compte ouvre donc directement — les trois panneaux d'accueil
- * ont déjà donné la raison d'y aller, la répéter ici retardait tout le monde.
- *
- * L'étape « profil » demande particulier ou professionnel : la question n'a de
- * sens que pour un consommateur. Un commerçant ou un grossiste est un
- * professionnel par définition, lui poser la question serait un faux choix.
+ * La création du compte vient AVANT (écran d'inscription, étape 2). Ici on ne
+ * demande plus ni rôle, ni avatar, ni nom d'utilisateur, ni « particulier ou
+ * professionnel » : le CDC ne les décrit pas, et l'inscription a déjà donné le
+ * prénom. Chaque écran se passe d'un geste — rien ne bloque l'entrée dans l'app.
  */
-function stepsFor(role: Role, hasAccount: boolean): Step[] {
-  const after: Step[] =
-    role === 'consommateur'
-      ? ['role', 'avatar', 'profil', 'interets']
-      : ['role', 'avatar', 'interets'];
-  return hasAccount ? after : ['compte', ...after];
-}
+const STEPS: Step[] = ['interets', 'localisation', 'securite', 'valide'];
 
 /** Ce que l'étape « intérêts » veut dire selon le rôle. */
-const INTEREST_COPY: Record<
-  Role,
-  { title: string; subtitle: string; subtitleNamed: string; label: string }
-> = {
+const INTEREST_COPY: Record<Role, { title: string; subtitle: string; label: string }> = {
   consommateur: {
-    title: 'Presque fini',
-    subtitle: 'Votre nom d’utilisateur, et ce qui vous intéresse — pour trier vos offres.',
-    subtitleNamed: 'Ce qui vous intéresse — pour trier vos offres.',
-    label: 'Ce que vous achetez le plus',
+    title: 'Vos centres d’intérêt',
+    subtitle:
+      'Les offres de ces catégories passent devant. Les autres restent visibles : rien n’est jamais caché.',
+    label: 'Choisissez une, plusieurs ou toutes les catégories',
   },
   commercant: {
-    title: 'Votre commerce',
-    subtitle: 'Votre nom d’utilisateur, et vos rayons — pour vous montrer les bons lots.',
-    subtitleNamed: 'Vos rayons — pour vous montrer les bons lots.',
+    title: 'Votre activité',
+    subtitle: 'Vos rayons — pour vous montrer les bons lots.',
     label: 'Ce que vous vendez',
   },
   grossiste: {
     title: 'Votre activité',
-    subtitle: 'Votre nom d’utilisateur, et vos rayons — pour cibler les bons commerçants.',
-    subtitleNamed: 'Vos rayons — pour cibler les bons commerçants.',
+    subtitle: 'Vos rayons — pour cibler les bons commerçants.',
     label: 'Ce que vous distribuez',
   },
 };
 
-export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
+export function OnboardingScreen({ onDone, onRequestLocation, onEnableBiometrics }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
 
   const firstName = useOnboardingStore(selectFirstName);
-  const avatar = useOnboardingStore(selectAvatar);
   const interests = useOnboardingStore(selectInterests);
   const role = useOnboardingStore(selectRole);
-  const holderType = useOnboardingStore((s) => s.holderType);
-
-  const setFirstName = useOnboardingStore((s) => s.setFirstName);
-  const setAvatar = useOnboardingStore((s) => s.setAvatar);
-  const setRole = useOnboardingStore((s) => s.setRole);
-  const setHolderType = useOnboardingStore((s) => s.setHolderType);
   const toggle = useOnboardingStore((s) => s.toggleInterest);
+  const setInterests = useOnboardingStore((s) => s.setInterests);
   const complete = useOnboardingStore((s) => s.complete);
 
-  const steps = useMemo(() => stepsFor(role, hasAccount), [role, hasAccount]);
-  // La premiere etape se DEDUIT de la sequence, elle ne se recopie pas : c'est
-  // `stepsFor` qui decide, et un point de depart ecrit en dur finirait un jour
-  // par designer une etape absente de la liste — donc un ecran vide.
-  const [step, setStep] = useState<Step>(() => stepsFor(role, hasAccount)[0]!);
-  // `indexOf` peut renvoyer -1 si le rôle vient de retirer l'étape courante :
-  // on retombe alors sur le début plutôt que de calculer sur un index négatif.
-  const index = Math.max(0, steps.indexOf(step));
-  const isLast = index === steps.length - 1;
-  // Le nom et les intérêts sont exigés à l'étape qui les demande, pas à la
-  // fin : sinon le bouton se bloque sur l'écran du compte, loin des champs à
-  // remplir, et plus rien n'indique quoi corriger.
-  const canContinue = step === 'interets' ? canFinish(firstName, interests) : true;
+  const [step, setStep] = useState<Step>('interets');
+  const [busy, setBusy] = useState(false);
+  const index = STEPS.indexOf(step);
   const copy = INTEREST_COPY[role];
-  const onAccountStep = step === 'compte';
-  /**
-   * L'inscription a-t-elle déjà donné un nom ?
-   *
-   * Gelé au montage : sans cela, le champ disparaîtrait sous les doigts de
-   * quelqu'un qui n'a pas de compte, à la première lettre tapée.
-   */
-  const [knowsName] = useState(() => firstName.trim().length > 0);
-  const label = onAccountStep ? 'Continuer sans compte' : isLast ? 'Commencer' : 'Continuer';
-
-  /** Clôt l'accueil des nouveaux et dit à la route où aller ensuite. */
-  const finish = (exit: OnboardingExit) => {
-    complete();
-    onDone(exit);
-  };
+  const allSelected = interests.length === INTERESTS.length;
 
   const next = () => {
-    if (isLast) {
-      finish('app');
+    if (step === 'valide') {
+      complete();
+      onDone('app');
       return;
     }
-    setStep(steps[index + 1]!);
+    setStep(STEPS[index + 1]!);
+  };
+
+  /** Lance une demande d'autorisation, puis avance — qu'elle soit accordée ou non. */
+  const askThenNext = async (ask?: Props['onRequestLocation']) => {
+    setBusy(true);
+    try {
+      await ask?.();
+    } finally {
+      setBusy(false);
+      next();
+    }
   };
 
   return (
@@ -161,7 +110,7 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
     >
       {/* Progression */}
       <View className="flex-row gap-1.5 px-5 pb-1 pt-3">
-        {steps.map((s, i) => (
+        {STEPS.map((s, i) => (
           <View
             key={s}
             className={cn('h-1 flex-1 rounded-pill', i <= index ? 'bg-brand-500' : 'bg-line')}
@@ -171,162 +120,32 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerClassName="px-5 pb-6 pt-4"
+        contentContainerClassName="flex-grow px-5 pb-6 pt-6"
         keyboardShouldPersistTaps="handled"
       >
-        {/* CDC §4 — le choix du rôle, avant tout le reste. */}
-        {step === 'role' ? (
-          <View className="gap-5">
-            <Header
-              title="Vous venez pour…"
-              subtitle="Ce choix décide des offres que vous verrez."
-            />
-            <View className="gap-2">
-              {APP_ROLES.map((r) => (
-                <Choice
-                  key={r}
-                  testID={`role-${r}`}
-                  icon={ROLE_ICON[r] as 'user'}
-                  title={ROLE_LABEL[r]}
-                  detail={ROLE_TAGLINE[r]}
-                  selected={role === r}
-                  onPress={() => setRole(r)}
-                />
-              ))}
-            </View>
-            <View className="flex-row items-start gap-2.5 rounded-card bg-surface-muted p-3.5">
-              <Feather name="info" size={15} color={colors.inkFaint} />
-              <AppText variant="caption" className="flex-1 text-ink-muted" style={{ fontSize: 12 }}>
-                {role === 'consommateur'
-                  ? 'Vous verrez les offres des commerçants près de chez vous.'
-                  : 'Vous verrez les lots des grossistes. Votre SIRET est exigé pour commander, et vos ventes se pilotent depuis l’espace pro sur le web.'}
-              </AppText>
-            </View>
-          </View>
-        ) : null}
-
-        {step === 'avatar' ? (
-          <View className="gap-5">
-            <Header
-              title="Votre avatar"
-              subtitle="Il vous accompagne dans l’app et sur vos tickets."
-            />
-            <View className="items-center gap-4">
-              <AvatarView avatar={avatar} size={128} />
-              <Pressable
-                testID="avatar-random"
-                accessibilityRole="button"
-                accessibilityLabel="Avatar au hasard"
-                onPress={() => setAvatar(randomAvatar())}
-                className="flex-row items-center gap-2 rounded-pill bg-surface-muted px-4 py-2"
-              >
-                <Feather name="shuffle" size={15} color={colors.ink} />
-                <AppText className="font-sans-semibold text-ink" style={{ fontSize: 13 }}>
-                  Surprenez-moi
-                </AppText>
-              </Pressable>
-            </View>
-
-            {/* La galerie entière, visible d'un coup : dix illustrations se
-                parcourent à l'œil bien plus vite qu'avec des flèches. */}
-            <View className="flex-row flex-wrap justify-between gap-y-3">
-              {AVATARS.map((a, i) => {
-                const selected = avatar.preset === i;
-                return (
-                  <Pressable
-                    key={a.id}
-                    testID={`avatar-${a.id}`}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                    accessibilityLabel={a.label}
-                    onPress={() => setAvatar({ preset: i })}
-                    className={cn(
-                      'w-[22%] items-center gap-1 rounded-card border p-1.5',
-                      selected ? 'border-brand-500 bg-brand-50' : 'border-transparent',
-                    )}
-                  >
-                    <AvatarView avatar={{ preset: i }} size={56} />
-                    <AppText
-                      className={cn(
-                        'text-center',
-                        selected ? 'font-sans-semibold text-brand-700' : 'text-ink-faint',
-                      )}
-                      style={{ fontSize: 9.5, lineHeight: 12 }}
-                      numberOfLines={2}
-                    >
-                      {a.label}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        ) : null}
-
-        {step === 'profil' ? (
-          <View className="gap-5">
-            <Header title="Vous êtes…" subtitle="Cela change ce que TK LINK vous propose." />
-
-            <View className="gap-2">
-              <Choice
-                testID="holder-particulier"
-                icon="user"
-                title="Un particulier"
-                detail="Vos tickets et vos points."
-                selected={holderType === 'particulier'}
-                onPress={() => setHolderType('particulier')}
-              />
-              <Choice
-                testID="holder-pro"
-                icon="briefcase"
-                title="Un professionnel"
-                detail="Vos tickets deviennent des factures, prêtes pour votre comptable."
-                selected={holderType === 'pro'}
-                onPress={() => setHolderType('pro')}
-              />
-            </View>
-          </View>
-        ) : null}
-
+        {/* 3 — CDC §2.3 : les huit catégories, à choisir librement. */}
         {step === 'interets' ? (
           <View className="gap-5">
-            <Header
-              title={knowsName && firstName ? `Presque fini, ${firstName}` : copy.title}
-              subtitle={knowsName ? copy.subtitleNamed : copy.subtitle}
-            />
+            <Header title={copy.title} subtitle={copy.subtitle} />
 
-            {/* Le nom n'est demandé que si l'inscription ne l'a pas déjà
-                donné. Poser deux fois la même question à deux écrans d'écart
-                donne l'impression que rien n'a été retenu — et sur un
-                formulaire, c'est la première raison d'abandonner. */}
-            {knowsName ? null : (
-              <View className="gap-2">
-                <AppText variant="caption" className="text-ink-muted">
-                  Votre nom d’utilisateur
+            <View className="gap-3">
+              <View className="flex-row items-center justify-between">
+                <AppText variant="caption" className="flex-1 text-ink-muted">
+                  {copy.label}
                 </AppText>
-                <TextInput
-                  testID="onboarding-firstname"
-                  value={firstName}
-                  onChangeText={setFirstName}
-                  placeholder="Ex. sofiane31"
-                  placeholderTextColor={colors.inkFaint}
-                  className="rounded-control bg-surface-muted px-4 font-sans text-ink"
-                  style={{ height: 50, fontSize: 16 }}
-                  // Un nom d'utilisateur n'est pas un prénom : la majuscule
-                  // automatique transformerait « sofiane31 » en « Sofiane31 »
-                  // à l'insu de la personne qui l'a tapé.
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  accessibilityLabel="Votre nom d’utilisateur"
-                />
+                <Pressable
+                  testID="interest-all"
+                  accessibilityRole="button"
+                  accessibilityLabel={allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
+                  onPress={() => setInterests(allSelected ? [] : INTERESTS.map((i) => i.key))}
+                  hitSlop={8}
+                >
+                  <AppText className="font-sans-bold text-brand-600" style={{ fontSize: 13 }}>
+                    {allSelected ? 'Tout retirer' : 'Tout choisir'}
+                  </AppText>
+                </Pressable>
               </View>
-            )}
 
-            <View className="gap-2">
-              <AppText variant="caption" className="text-ink-muted">
-                {copy.label}
-              </AppText>
               <View className="flex-row flex-wrap gap-2">
                 {INTERESTS.map((it) => {
                   const on = interests.includes(it.key);
@@ -335,17 +154,18 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
                       key={it.key}
                       testID={`interest-${it.key}`}
                       accessibilityRole="button"
+                      accessibilityState={{ selected: on }}
                       accessibilityLabel={it.label}
                       onPress={() => toggle(it.key)}
                       className={cn(
-                        'flex-row items-center gap-2 rounded-pill px-4 py-2.5',
-                        on ? 'bg-brand-500' : 'bg-surface-muted',
+                        'flex-row items-center gap-2 rounded-pill border px-4 py-2.5',
+                        on ? 'border-brand-500 bg-brand-500' : 'border-line bg-surface-muted',
                       )}
                     >
                       <Feather
                         name={it.icon as 'heart'}
                         size={15}
-                        color={on ? colors.inkInverse : colors.inkMuted}
+                        color={on ? colors.inkInverse : colors.brand500}
                       />
                       <AppText
                         className={cn(
@@ -360,139 +180,81 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
                   );
                 })}
               </View>
-            </View>
-          </View>
-        ) : null}
 
-        {/* CDC §5 — le compte, une fois qu'on sait à qui l'on parle. */}
-        {step === 'compte' ? (
-          <View className="gap-5">
-            <Header
-              title={firstName ? `Enchanté, ${firstName}` : 'Votre compte'}
-              subtitle="Créez votre compte pour garder vos points — même en changeant de téléphone."
-            />
-
-            {/* Ce que le compte apporte, en trois lignes.
-                Cet emplacement montrait auparavant l'avatar et les centres
-                d'intérêt déjà choisis — un récapitulatif. Le compte passant
-                désormais AVANT la personnalisation, il n'y a plus rien à
-                récapituler : on donne donc une raison de le créer plutôt qu'un
-                miroir de ce qui n'existe pas encore. */}
-            <View
-              testID="onboarding-account-perks"
-              className="gap-2.5 rounded-card bg-surface-muted p-4"
-            >
-              {[
-                {
-                  icon: 'award',
-                  text: 'Vos points vous suivent, même en changeant de téléphone.',
-                },
-                { icon: 'award', text: 'Vos points de fidélité, commerce par commerce.' },
-                {
-                  icon: 'zap',
-                  text: 'Les ventes flash près de chez vous, triées selon ce qui vous intéresse.',
-                },
-              ].map((perk) => (
-                <View key={perk.icon} className="flex-row items-start gap-3">
-                  <Feather name={perk.icon as 'award'} size={15} color={colors.brand600} />
-                  <AppText
-                    variant="caption"
-                    className="flex-1 text-ink-muted"
-                    style={{ fontSize: 12.5 }}
-                  >
-                    {perk.text}
-                  </AppText>
-                </View>
-              ))}
-            </View>
-
-            <View className="gap-2">
-              <Pressable
-                testID="onboarding-signup"
-                accessibilityRole="button"
-                accessibilityLabel="Créer mon compte"
-                onPress={() => finish('sign-up')}
-                className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-4 active:bg-brand-600"
-              >
-                <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 15 }}>
-                  Créer mon compte
-                </AppText>
-                <Feather name="arrow-right" size={17} color={colors.inkInverse} />
-              </Pressable>
-
-              <Pressable
-                testID="onboarding-signin"
-                accessibilityRole="button"
-                accessibilityLabel="J’ai déjà un compte"
-                onPress={() => finish('sign-in')}
-                className="items-center rounded-control border border-line py-4 active:bg-surface-muted"
-              >
-                <AppText className="font-sans-bold text-ink" style={{ fontSize: 15 }}>
-                  J’ai déjà un compte
-                </AppText>
-              </Pressable>
-            </View>
-
-            <View className="flex-row items-start gap-2.5 rounded-card bg-surface-muted p-3.5">
-              <Feather name="shield" size={15} color={colors.inkFaint} />
-              <AppText variant="caption" className="flex-1 text-ink-muted" style={{ fontSize: 12 }}>
-                Sans compte, vos points ne vivent que sur ce téléphone : désinstaller l’app les
-                efface.
+              <AppText variant="caption" className="text-ink-faint" style={{ fontSize: 12 }}>
+                Modifiable à tout moment.
               </AppText>
             </View>
           </View>
         ) : null}
+
+        {/* 4 — la localisation, au service des offres proches. */}
+        {step === 'localisation' ? (
+          <Illustrated
+            icon="map-pin"
+            title="Activez la localisation"
+            text="Une bonne affaire n’a de valeur que si vous pouvez l’atteindre à temps. Votre position sert à vous montrer les offres proches et pertinentes — rien d’autre."
+            note="Vous pouvez refuser : vous choisirez alors une ville."
+          />
+        ) : null}
+
+        {/* 5 — la sécurisation : appareil enregistré + authentification locale. */}
+        {step === 'securite' ? (
+          <Illustrated
+            icon="shield"
+            title="Sécurisez votre compte"
+            text="Votre appareil est enregistré. Vous pouvez y ajouter l’empreinte ou le visage : elle protège aussi les paiements et les données sensibles."
+            note="L’empreinte reste sur votre téléphone : TK LINK ne la stocke jamais."
+          />
+        ) : null}
+
+        {/* 6 — compte validé. */}
+        {step === 'valide' ? (
+          <Illustrated
+            icon="check-circle"
+            tone="success"
+            title={firstName ? `C’est prêt, ${firstName}` : 'C’est prêt'}
+            text="Votre compte est validé. Les meilleures affaires autour de vous vous attendent."
+          />
+        ) : null}
       </ScrollView>
 
       {/* Barre d'action */}
-      <View className="gap-2 px-5 pt-2" style={{ paddingBottom: insets.bottom + 12 }}>
-        {/* Sur l'étape du compte, les actions principales sont au-dessus : ce
-            bouton y devient la sortie discrète, pas l'appel à l'action. */}
-        <Pressable
-          testID="onboarding-next"
-          accessibilityRole="button"
-          accessibilityLabel={label}
-          disabled={!canContinue}
-          onPress={next}
-          className={cn(
-            'items-center rounded-control',
-            onAccountStep
-              ? 'py-2'
-              : cn('py-4', canContinue ? 'bg-brand-500 active:bg-brand-600' : 'bg-surface-sunken'),
-          )}
-        >
-          <AppText
-            className={cn(
-              onAccountStep
-                ? 'text-ink-muted'
-                : cn('font-sans-bold', canContinue ? 'text-ink-inverse' : 'text-ink-faint'),
-            )}
-            style={onAccountStep ? { fontSize: 13.5 } : undefined}
-          >
-            {label}
-          </AppText>
-        </Pressable>
+      <View className="gap-1 px-5 pt-2" style={{ paddingBottom: insets.bottom + 12 }}>
+        {step === 'localisation' ? (
+          <>
+            <Button
+              testID="onboarding-location"
+              label="Activer la localisation"
+              loading={busy}
+              onPress={() => askThenNext(onRequestLocation)}
+            />
+            <SoftLink testID="onboarding-skip" label="Plus tard" onPress={next} />
+          </>
+        ) : step === 'securite' ? (
+          <>
+            <Button
+              testID="onboarding-secure"
+              label="Activer l’empreinte ou le visage"
+              loading={busy}
+              onPress={() => askThenNext(onEnableBiometrics)}
+            />
+            <SoftLink testID="onboarding-skip" label="Plus tard" onPress={next} />
+          </>
+        ) : (
+          <Button
+            testID="onboarding-next"
+            label={step === 'valide' ? 'Découvrir les offres' : 'Continuer'}
+            onPress={next}
+          />
+        )}
 
-        {step === 'interets' && !canContinue ? (
-          <AppText variant="caption" className="text-center text-ink-faint">
-            {knowsName
-              ? 'Choisissez au moins un centre d’intérêt.'
-              : 'Indiquez votre nom d’utilisateur et au moins un centre d’intérêt.'}
-          </AppText>
-        ) : null}
-
-        {index > 0 ? (
-          <Pressable
+        {index > 0 && step !== 'valide' ? (
+          <SoftLink
             testID="onboarding-back"
-            accessibilityRole="button"
-            accessibilityLabel="Étape précédente"
-            onPress={() => setStep(steps[index - 1]!)}
-            className="items-center py-2"
-          >
-            <AppText variant="caption" className="text-ink-muted">
-              Retour
-            </AppText>
-          </Pressable>
+            label="Retour"
+            onPress={() => setStep(STEPS[index - 1]!)}
+          />
         ) : null}
       </View>
     </View>
@@ -504,7 +266,7 @@ export function OnboardingScreen({ onDone, hasAccount = false }: Props) {
 function Header({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <View className="gap-1.5">
-      <AppText variant="display" className="text-3xl">
+      <AppText variant="display" style={{ fontSize: 28 }}>
         {title}
       </AppText>
       <AppText variant="caption">{subtitle}</AppText>
@@ -512,47 +274,69 @@ function Header({ title, subtitle }: { title: string; subtitle: string }) {
   );
 }
 
-function Choice({
-  testID,
+function Illustrated({
   icon,
   title,
-  detail,
-  selected,
+  text,
+  note,
+  tone = 'brand',
+}: {
+  icon: ComponentProps<typeof Feather>['name'];
+  title: string;
+  text: string;
+  note?: string;
+  tone?: 'brand' | 'success';
+}) {
+  const colors = useColors();
+  const color = tone === 'success' ? colors.success : colors.brand500;
+  return (
+    <View className="flex-1 items-center justify-center gap-5 px-2">
+      <View
+        className="h-32 w-32 items-center justify-center rounded-pill border-2"
+        style={{ borderColor: color }}
+      >
+        <Feather name={icon} size={52} color={color} />
+      </View>
+      <View className="items-center gap-2">
+        <AppText variant="display" className="text-center" style={{ fontSize: 26 }}>
+          {title}
+        </AppText>
+        <AppText variant="caption" className="text-center" style={{ fontSize: 14 }}>
+          {text}
+        </AppText>
+      </View>
+      {note ? (
+        <View className="flex-row items-start gap-2 rounded-card bg-surface-muted p-3.5">
+          <Feather name="info" size={14} color={colors.inkFaint} />
+          <AppText variant="caption" className="flex-1 text-ink-muted" style={{ fontSize: 12 }}>
+            {note}
+          </AppText>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function SoftLink({
+  testID,
+  label,
   onPress,
 }: {
   testID: string;
-  icon: ComponentProps<typeof Feather>['name'];
-  title: string;
-  detail: string;
-  selected: boolean;
+  label: string;
   onPress: () => void;
 }) {
-  const colors = useColors();
   return (
     <Pressable
       testID={testID}
       accessibilityRole="button"
-      accessibilityLabel={title}
+      accessibilityLabel={label}
       onPress={onPress}
-      className={cn(
-        'flex-row items-center gap-3 rounded-card p-4',
-        selected ? 'bg-brand-50' : 'bg-surface-muted',
-      )}
-      style={{ borderWidth: 1, borderColor: selected ? colors.brand500 : 'transparent' }}
+      className="items-center py-2.5"
     >
-      <View
-        className="h-10 w-10 items-center justify-center rounded-control"
-        style={{ backgroundColor: selected ? colors.brand500 : colors.surface }}
-      >
-        <Feather name={icon} size={18} color={selected ? colors.inkInverse : colors.inkMuted} />
-      </View>
-      <View className="flex-1">
-        <AppText className="font-sans-semibold text-ink">{title}</AppText>
-        <AppText variant="caption" style={{ fontSize: 12 }}>
-          {detail}
-        </AppText>
-      </View>
-      {selected ? <Feather name="check" size={18} color={colors.brand600} /> : null}
+      <AppText variant="caption" className="text-ink-muted">
+        {label}
+      </AppText>
     </Pressable>
   );
 }

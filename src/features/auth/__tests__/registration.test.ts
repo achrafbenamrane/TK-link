@@ -25,11 +25,15 @@ describe('validateRegistration — CDC §5', () => {
     expect(validateRegistration(draft())).toEqual({});
   });
 
-  it('exige les sept champs du CDC', () => {
+  it('exige prénom, nom, e-mail, téléphone et mot de passe', () => {
     const errors = validateRegistration(EMPTY_REGISTRATION);
-    for (const field of ['firstName', 'lastName', 'email', 'phone', 'password', 'location']) {
+    for (const field of ['firstName', 'lastName', 'email', 'phone', 'password']) {
       expect(errors[field]).toBeDefined();
     }
+  });
+
+  it('laisse la localisation facultative — « selon consentement » (CDC §2.2)', () => {
+    expect(validateRegistration(draft({ location: '' }))).toEqual({});
   });
 
   it('refuse deux mots de passe différents, et le dit sur le bon champ', () => {

@@ -14,13 +14,12 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { cn } from '@/shared/lib/cn';
-import { AppText } from '@/shared/ui';
-import { useColors } from '@/shared/theme/theme-provider';
+import { AppText, Wordmark } from '@/shared/ui';
+import { ThemeScope, useColors } from '@/shared/theme/theme-provider';
 
 import { useWelcomeStore } from '../model/store';
 import { FlashScene } from './scenes/flash-scene';
 import { NearbyScene } from './scenes/nearby-scene';
-import { TkMark } from './tk-mark';
 
 /** Temps d'affichage d'un panneau — calé sur la durée d'un cycle de scène. */
 const DWELL = 5200;
@@ -95,121 +94,120 @@ export function WelcomeScreen() {
   }, [index, width, reduced]);
 
   /**
-   * On enchaîne sur l'accueil des nouveaux — rôle, avatar, intérêts, compte.
-   * Passer par `/` d'abord ferait clignoter la boutique avant que la porte du
-   * layout ne renvoie sur l'onboarding.
+   * On enchaîne sur la création du compte : c'est l'étape 2 du parcours du
+   * client. Passer par `/` d'abord ferait clignoter la boutique avant que la
+   * porte du layout ne renvoie sur l'inscription.
    */
   const enter = () => {
     markSeen();
-    router.replace('/onboarding');
+    router.replace('/sign-up');
   };
 
-  /** Un compte existe déjà : rien à personnaliser, on va droit à la connexion. */
+  /** Un compte existe déjà : on va droit à la connexion. */
   const signIn = () => {
     markSeen();
     router.replace('/sign-in');
   };
 
   return (
-    <View
-      testID="welcome-screen"
-      className="flex-1 bg-surface-inverse"
-      style={{ paddingTop: insets.top }}
-    >
-      {/* Fond très sombre → icônes de statut claires, sinon elles disparaissent. */}
-      <StatusBar style="light" />
-
-      {/* En-tête : la marque, et de quoi couper court. */}
-      <View className="flex-row items-start justify-between px-6 pb-3 pt-2">
-        <TkMark size={22} />
-        <Pressable
-          testID="welcome-skip"
-          accessibilityRole="button"
-          accessibilityLabel="Passer l’introduction"
-          onPress={enter}
-          hitSlop={10}
-          className="rounded-pill bg-ink-inverse/10 px-3 py-1.5"
-        >
-          <AppText className="font-sans-semibold text-ink-inverse/70" style={{ fontSize: 12.5 }}>
-            Passer
-          </AppText>
-        </Pressable>
-      </View>
-
-      {/* Progression, façon story : où l'on en est, combien il reste. */}
-      <View className="flex-row gap-1.5 px-6">
-        {PANELS.map((p, i) => (
-          <Segment key={p.key} active={i === index} done={i < index} still={reduced} />
-        ))}
-      </View>
-
-      {/* Les plans. Balayables — l'automatique ne doit jamais bloquer la main. */}
-      <ScrollView
-        ref={scroller}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={(e) =>
-          setIndex(Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)))
-        }
-        style={{ flexGrow: 0 }}
+    <ThemeScope scheme="night">
+      <View
+        testID="welcome-screen"
+        className="flex-1 bg-surface"
+        style={{ paddingTop: insets.top }}
       >
-        {PANELS.map((p) => (
-          <View
-            key={p.key}
-            testID={`welcome-panel-${p.key}`}
-            style={{ width }}
-            className="items-center justify-center py-2"
-          >
-            {p.key === 'flash' ? <FlashScene size={stage} still={reduced} /> : null}
-            {p.key === 'proximite' ? <NearbyScene size={stage} still={reduced} /> : null}
-          </View>
-        ))}
-      </ScrollView>
+        {/* Fond très sombre → icônes de statut claires, sinon elles disparaissent. */}
+        <StatusBar style="light" />
 
-      {/* Le discours suit le plan affiché. */}
-      <View className="flex-1 justify-start px-6 pt-2">
-        <Animated.View key={panel.key} entering={reduced ? undefined : FadeIn.duration(320)}>
-          <AppText
-            className="font-display text-ink-inverse"
-            style={{ fontSize: 30, lineHeight: 40 }}
+        {/* En-tête : la marque, et de quoi couper court. */}
+        <View className="flex-row items-start justify-between px-6 pb-3 pt-2">
+          <Wordmark size={26} />
+          <Pressable
+            testID="welcome-skip"
+            accessibilityRole="button"
+            accessibilityLabel="Passer l’introduction"
+            onPress={enter}
+            hitSlop={10}
+            className="rounded-pill bg-ink/10 px-3 py-1.5"
           >
-            {panel.title} <AppText style={{ color: colors.accent }}>{panel.accent}</AppText>
-          </AppText>
-          <AppText className="mt-2 text-ink-inverse/70" style={{ fontSize: 15, lineHeight: 22 }}>
-            {panel.line}
-          </AppText>
-        </Animated.View>
-      </View>
+            <AppText className="font-sans-semibold text-ink/70" style={{ fontSize: 12.5 }}>
+              Passer
+            </AppText>
+          </Pressable>
+        </View>
 
-      {/* L'action, toujours au même endroit : elle ne se cherche pas. */}
-      <View className="gap-1 px-6" style={{ paddingBottom: insets.bottom + 18 }}>
-        <Pressable
-          testID="welcome-start"
-          accessibilityRole="button"
-          accessibilityLabel="Commencer"
-          onPress={enter}
-          className="flex-row items-center justify-center gap-2 rounded-control bg-accent py-4 active:opacity-85"
+        {/* Progression, façon story : où l'on en est, combien il reste. */}
+        <View className="flex-row gap-1.5 px-6">
+          {PANELS.map((p, i) => (
+            <Segment key={p.key} active={i === index} done={i < index} still={reduced} />
+          ))}
+        </View>
+
+        {/* Les plans. Balayables — l'automatique ne doit jamais bloquer la main. */}
+        <ScrollView
+          ref={scroller}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={(e) =>
+            setIndex(Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)))
+          }
+          style={{ flexGrow: 0 }}
         >
-          <AppText className="font-sans-bold text-surface-inverse" style={{ fontSize: 16 }}>
-            Commencer
-          </AppText>
-          <Feather name="arrow-right" size={18} color={colors.surfaceInverse} />
-        </Pressable>
-        <Pressable
-          testID="welcome-signin"
-          accessibilityRole="button"
-          accessibilityLabel="Se connecter"
-          onPress={signIn}
-          className="py-3"
-        >
-          <AppText className="text-center text-ink-inverse/60" style={{ fontSize: 14 }}>
-            J’ai déjà un compte{' '}
-            <AppText className="font-sans-bold text-ink-inverse">Se connecter</AppText>
-          </AppText>
-        </Pressable>
+          {PANELS.map((p) => (
+            <View
+              key={p.key}
+              testID={`welcome-panel-${p.key}`}
+              style={{ width }}
+              className="items-center justify-center py-2"
+            >
+              {p.key === 'flash' ? <FlashScene size={stage} still={reduced} /> : null}
+              {p.key === 'proximite' ? <NearbyScene size={stage} still={reduced} /> : null}
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Le discours suit le plan affiché. */}
+        <View className="flex-1 justify-start px-6 pt-2">
+          <Animated.View key={panel.key} entering={reduced ? undefined : FadeIn.duration(320)}>
+            <AppText className="font-display text-ink" style={{ fontSize: 30, lineHeight: 40 }}>
+              {panel.title} <AppText style={{ color: colors.brand500 }}>{panel.accent}</AppText>
+            </AppText>
+            <AppText className="mt-2 text-ink/70" style={{ fontSize: 15, lineHeight: 22 }}>
+              {panel.line}
+            </AppText>
+          </Animated.View>
+        </View>
+
+        {/* L'action, toujours au même endroit : elle ne se cherche pas. */}
+        <View className="gap-1 px-6" style={{ paddingBottom: insets.bottom + 18 }}>
+          <Pressable
+            testID="welcome-start"
+            accessibilityRole="button"
+            accessibilityLabel="Commencer"
+            onPress={enter}
+            className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-4 active:opacity-85"
+          >
+            <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 16 }}>
+              Commencer
+            </AppText>
+            <Feather name="arrow-right" size={18} color={colors.inkInverse} />
+          </Pressable>
+          <Pressable
+            testID="welcome-signin"
+            accessibilityRole="button"
+            accessibilityLabel="Se connecter"
+            onPress={signIn}
+            className="py-3"
+          >
+            <AppText className="text-center text-ink/60" style={{ fontSize: 14 }}>
+              J’ai déjà un compte{' '}
+              <AppText className="font-sans-bold text-ink">Se connecter</AppText>
+            </AppText>
+          </Pressable>
+        </View>
       </View>
-    </View>
+    </ThemeScope>
   );
 }
 
@@ -238,8 +236,8 @@ function Segment({ active, done, still }: { active: boolean; done: boolean; stil
   const style = useAnimatedStyle(() => ({ width: `${fill.value * 100}%` }));
 
   return (
-    <View className={cn('h-1 flex-1 overflow-hidden rounded-pill bg-ink-inverse/15')}>
-      <Animated.View style={[style, { height: '100%', backgroundColor: colors.accent }]} />
+    <View className={cn('h-1 flex-1 overflow-hidden rounded-pill bg-ink/15')}>
+      <Animated.View style={[style, { height: '100%', backgroundColor: colors.brand500 }]} />
     </View>
   );
 }

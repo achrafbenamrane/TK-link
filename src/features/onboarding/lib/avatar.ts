@@ -39,12 +39,3 @@ export const INTERESTS: { key: Interest; label: string; icon: string; emoji: str
 export function toggleInterest(list: Interest[], key: Interest): Interest[] {
   return list.includes(key) ? list.filter((i) => i !== key) : [...list, key];
 }
-
-/**
- * L'onboarding est-il complet ? On n'exige que le strict nécessaire : un nom
- * et au moins un centre d'intérêt. Bloquer sur davantage ferait fuir avant
- * même d'avoir vu l'app.
- */
-export function canFinish(firstName: string, interests: Interest[]): boolean {
-  return firstName.trim().length > 0 && interests.length > 0;
-}

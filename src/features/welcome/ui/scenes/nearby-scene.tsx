@@ -19,9 +19,9 @@ import { useColors } from '@/shared/theme/theme-provider';
 /** Un tour : le radar balaie une fois. */
 const CYCLE = 5200;
 
-const LIME_VEIL = 'rgba(195, 245, 60, 0.16)';
-const LIME_EDGE = 'rgba(195, 245, 60, 0.28)';
-const LIME_RING = 'rgba(195, 245, 60, 0.55)';
+const LIME_VEIL = 'rgba(255, 20, 120, 0.16)';
+const LIME_EDGE = 'rgba(255, 20, 120, 0.28)';
+const LIME_RING = 'rgba(255, 20, 120, 0.55)';
 const INK_VEIL = 'rgba(242, 247, 240, 0.12)';
 const INK_SOFT = 'rgba(242, 247, 240, 0.62)';
 
@@ -121,7 +121,7 @@ export function NearbyScene({ size = 300, still = false }: Props) {
               width: radar * 0.2,
               height: radar * 0.2,
               borderRadius: radar * 0.1,
-              backgroundColor: colors.accent,
+              backgroundColor: colors.brand500,
             }}
           >
             <Feather name="user" size={radar * 0.11} color={colors.surfaceInverse} />
@@ -167,11 +167,13 @@ export function NearbyScene({ size = 300, still = false }: Props) {
               <AppText style={{ fontSize: size * 0.03 }}>{CATEGORY_INFO[c.key].emoji}</AppText>
               <AppText
                 className="font-sans-bold"
-                style={{ fontSize: size * 0.03, color: c.picked ? colors.accent : INK_SOFT }}
+                style={{ fontSize: size * 0.03, color: c.picked ? colors.brand500 : INK_SOFT }}
               >
                 {CATEGORY_INFO[c.key].short}
               </AppText>
-              {c.picked ? <Feather name="check" size={size * 0.03} color={colors.accent} /> : null}
+              {c.picked ? (
+                <Feather name="check" size={size * 0.03} color={colors.brand500} />
+              ) : null}
             </View>
           ))}
         </View>

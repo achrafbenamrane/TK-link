@@ -25,10 +25,9 @@ type Store = OnboardingState & {
   setAvatar: (a: Avatar) => void;
   setRole: (r: Role) => void;
   setSiret: (v: string) => void;
-  setHolderType: (t: OnboardingState['holderType']) => void;
-  setMedium: (m: OnboardingState['medium']) => void;
   toggleInterest: (i: Interest) => void;
-  setShowEcoImpact: (v: boolean) => void;
+  /** Remplace tous les centres d'intérêt d'un coup (« tout choisir »). */
+  setInterests: (list: Interest[]) => void;
   complete: () => void;
   /** Rejouer l'accueil (bouton de démonstration dans le profil). */
   reset: () => void;
@@ -44,43 +43,25 @@ export const useOnboardingStore = create<Store>()(
 
       setFirstName: (firstName) => set({ firstName: firstName.slice(0, 24) }),
       setAvatar: (avatar) => set({ avatar }),
-      // Un commerçant ou un grossiste EST un professionnel : laisser ces deux
-      // champs se contredire produirait un « commerçant particulier », et
-      // l'audience des cadeaux fidélité (`holderType`) deviendrait fausse.
-      setRole: (role) => set(role === 'consommateur' ? { role } : { role, holderType: 'pro' }),
+      setRole: (role) => set({ role }),
       // Normalisé à l'entrée : on ne veut pas stocker « 443 061 841 00047 » un
       // jour et « 44306184100047 » le lendemain selon la façon dont il a été collé.
       setSiret: (v) => set({ siret: normalizeSiret(v) }),
-      setHolderType: (holderType) => set({ holderType }),
-      setMedium: (medium) => set({ medium }),
       toggleInterest: (i) => set((s) => ({ interests: toggleInterest(s.interests, i) })),
-      setShowEcoImpact: (showEcoImpact) => set({ showEcoImpact }),
+      setInterests: (interests) => set({ interests }),
       complete: () => set({ completed: true }),
       reset: () => set({ ...initial }),
     }),
     {
       name: 'tklink-onboarding-v1',
       storage: createJSONStorage(() => asyncStorageBackend),
-      partialize: ({
+      partialize: ({ completed, firstName, avatar, role, siret, interests }) => ({
         completed,
         firstName,
         avatar,
         role,
         siret,
-        holderType,
-        medium,
         interests,
-        showEcoImpact,
-      }) => ({
-        completed,
-        firstName,
-        avatar,
-        role,
-        siret,
-        holderType,
-        medium,
-        interests,
-        showEcoImpact,
       }),
       merge: (persisted, current) => {
         const parsed = OnboardingSchema.safeParse(persisted);
@@ -104,4 +85,3 @@ export const selectAvatar = (s: Store) => s.avatar;
 export const selectInterests = (s: Store) => s.interests;
 export const selectRole = (s: Store) => s.role;
 export const selectSiret = (s: Store) => s.siret;
-export const selectHolderType = (s: Store) => s.holderType;

@@ -40,16 +40,13 @@ export type Interest = Category;
 
 export const OnboardingSchema = z.object({
   completed: z.boolean().default(false),
+  /** Le prénom donné à l'inscription (CDC V1.0 §2.2) — pas un nom d'utilisateur à part. */
   firstName: z.string().max(24).default(''),
   avatar: AvatarSchema.default({ preset: 0 }),
-  /**
-   * Rôle choisi à l'onboarding — CDC §4. Distinct de `holderType`, qui ne sert
-   * qu'à l'audience des cadeaux fidélité : un consommateur peut être un
-   * professionnel sans être commerçant sur la plateforme.
-   */
+  /** Rôle — CDC §2.1. Un consommateur par défaut ; l'espace commerçant se choisit à la porte dédiée. */
   role: z.enum(ROLES).default('consommateur'),
   /**
-   * SIRET du professionnel — CDC §5. Vide tant qu'il n'est pas renseigné : le
+   * SIRET du professionnel — CDC §2.2. Vide tant qu'il n'est pas renseigné : le
    * CDC ne l'exige qu'au moment de commander chez un grossiste, pas à
    * l'inscription.
    *
@@ -58,29 +55,19 @@ export const OnboardingSchema = z.object({
    * personne (nom, e-mail, téléphone), elle, appartient au back-end.
    */
   siret: z.string().default(''),
-  holderType: z.enum(['particulier', 'pro']).default('particulier'),
-  /**
-   * Support physique — CONSERVÉ mais plus demandé.
-   *
-   * Le client a écarté le matériel (« on reste uniquement sur du soft ») et le
-   * CDC V1.0 n'en parle plus : l'onboarding ne pose donc plus la question.
-   * Le champ, lui, reste dans le schéma PERSISTÉ. Le retirer ferait échouer
-   * `safeParse` sur les profils déjà enregistrés, et effacerait prénom, avatar,
-   * rôle et centres d'intérêt — pour supprimer une valeur que plus personne ne
-   * lit. On le laisse mourir de sa belle mort, avec son défaut.
-   */
-  medium: z.enum(['carte', 'pastille']).default('carte'),
   /**
    * Tolérant par construction : les installations d'avant le CDC contiennent
    * des identifiants disparus (`alimentation`, `carburant`…). Un `z.enum` strict
    * ferait échouer `safeParse`, et le store repartirait de zéro — l'utilisateur
    * se retrouverait à refaire l'onboarding. On filtre plutôt que d'échouer.
+   *
+   * Les anciens champs `holderType`, `medium` et `showEcoImpact` ne sont plus
+   * déclarés : Zod ignore les clés inconnues, un profil qui les contient se
+   * relit donc sans erreur (voir le test de rétrocompatibilité).
    */
   interests: z
     .array(z.string())
     .default([])
     .transform((list) => list.filter(isCategory)),
-  /** L'utilisateur veut-il voir son impact écologique en tête ? */
-  showEcoImpact: z.boolean().default(true),
 });
 export type OnboardingState = z.infer<typeof OnboardingSchema>;

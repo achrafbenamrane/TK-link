@@ -36,8 +36,8 @@ const OFFER = {
 };
 
 /** Vert clair de la marque, en voile — sert de bordure et de fonds discrets. */
-const LIME_VEIL = 'rgba(195, 245, 60, 0.16)';
-const LIME_EDGE = 'rgba(195, 245, 60, 0.28)';
+const LIME_VEIL = 'rgba(255, 20, 120, 0.16)';
+const LIME_EDGE = 'rgba(255, 20, 120, 0.28)';
 const INK_VEIL = 'rgba(242, 247, 240, 0.14)';
 const INK_SOFT = 'rgba(242, 247, 240, 0.62)';
 const INK_FADED = 'rgba(242, 247, 240, 0.45)';
@@ -188,7 +188,10 @@ function PriceDrop({ progress, size }: { progress: SharedValue<number>; size: nu
       <Animated.View
         style={[priceStyle, { flexDirection: 'row', alignItems: 'baseline', gap: size * 0.028 }]}
       >
-        <AppText className="font-display" style={{ fontSize: size * 0.095, color: colors.accent }}>
+        <AppText
+          className="font-display"
+          style={{ fontSize: size * 0.095, color: colors.brand500 }}
+        >
           {OFFER.price}
         </AppText>
         <AppText
@@ -203,7 +206,7 @@ function PriceDrop({ progress, size }: { progress: SharedValue<number>; size: nu
         style={[
           badgeStyle,
           {
-            backgroundColor: colors.accent,
+            backgroundColor: colors.brand500,
             borderRadius: size * 0.028,
             paddingHorizontal: size * 0.038,
             paddingVertical: size * 0.015,
@@ -212,7 +215,7 @@ function PriceDrop({ progress, size }: { progress: SharedValue<number>; size: nu
       >
         <AppText
           className="font-display"
-          style={{ fontSize: size * 0.05, color: colors.surfaceInverse }}
+          style={{ fontSize: size * 0.05, color: colors.inkInverse }}
         >
           {OFFER.discount}
         </AppText>
@@ -237,7 +240,7 @@ function Stock({ progress, size }: { progress: SharedValue<number>; size: number
     backgroundColor: interpolateColor(
       progress.value,
       [0.34, 0.72, 0.92],
-      [colors.accent, colors.accent, colors.danger],
+      [colors.brand500, colors.brand500, colors.danger],
     ),
   }));
 
@@ -261,7 +264,7 @@ function Stock({ progress, size }: { progress: SharedValue<number>; size: number
       <View className="flex-row items-center justify-between">
         <AppText
           className="font-sans-bold"
-          style={{ fontSize: size * 0.036, color: colors.accent }}
+          style={{ fontSize: size * 0.036, color: colors.brand500 }}
         >
           Plus que {OFFER.stockLeft}{' '}
           <AppText className="font-sans-medium" style={{ color: INK_SOFT }}>
