@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
@@ -8,14 +9,26 @@ import { AppText } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { commissionCents, formatCents, netCents, parseEurosToCents } from '../lib/billing';
-import { DURATIONS, OfferDraftSchema, type OfferDraft } from '../model/schema';
+import { pickFlashPhoto } from '../lib/photo';
+import {
+  DURATIONS,
+  OFFER_MODES,
+  OfferDraftSchema,
+  type OfferDraft,
+  type OfferMode,
+} from '../model/schema';
+
+const MODE_LABEL: Record<OfferMode, string> = {
+  'touch-collect': 'Touch & Collect',
+  livraison: 'Livraison',
+};
 
 type Props = {
   onPublish: (draft: OfferDraft) => void;
   onCancel: () => void;
 };
 
-type Errors = Partial<Record<'title' | 'priceCents' | 'oldPriceCents' | 'stock', string>>;
+type Errors = Partial<Record<'title' | 'priceCents' | 'oldPriceCents' | 'stock' | 'modes', string>>;
 
 /** Champ de saisie court, avec son erreur sous lui. */
 function Field({
@@ -86,6 +99,8 @@ export function PublishForm({ onPublish, onCancel }: Props) {
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('');
   const [duration, setDuration] = useState<number>(60);
+  const [photoUri, setPhotoUri] = useState('');
+  const [modes, setModes] = useState<OfferMode[]>([...OFFER_MODES]);
   const [startIn, setStartIn] = useState<number>(0);
   const [description, setDescription] = useState('');
   const [errors, setErrors] = useState<Errors>({});
@@ -104,6 +119,8 @@ export function PublishForm({ onPublish, onCancel }: Props) {
       stock: qty,
       durationMinutes: duration,
       description,
+      photoUri,
+      modes,
       // Une intention, pas une date : c'est le store qui horodate.
       startInMinutes: startIn,
       state,
@@ -129,6 +146,61 @@ export function PublishForm({ onPublish, onCancel }: Props) {
       contentContainerClassName="gap-4 px-5 pb-10"
       keyboardShouldPersistTaps="handled"
     >
+      {/* Étape 1 — la photo. Facultative : sans elle, la carte montre l'emoji de
+          la catégorie. */}
+      <Field label="Photo" hint="facultatif">
+        {photoUri ? (
+          <View testID="publish-photo-preview" className="overflow-hidden rounded-card">
+            <Image
+              source={{ uri: photoUri }}
+              style={{ width: '100%', height: 190 }}
+              contentFit="cover"
+              accessibilityLabel="Photo de l’offre"
+            />
+            <Pressable
+              testID="publish-photo-remove"
+              accessibilityRole="button"
+              accessibilityLabel="Retirer la photo"
+              hitSlop={8}
+              onPress={() => setPhotoUri('')}
+              className="absolute right-2 top-2 h-9 w-9 items-center justify-center rounded-pill bg-black/60"
+            >
+              <Feather name="x" size={18} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        ) : (
+          <View className="flex-row gap-2">
+            {(
+              [
+                ['camera', 'camera', 'Prendre une photo'],
+                ['galerie', 'image', 'Choisir dans la galerie'],
+              ] as const
+            ).map(([source, icon, label]) => (
+              <Pressable
+                key={source}
+                testID={`publish-photo-${source}`}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+                onPress={async () => {
+                  const uri = await pickFlashPhoto(source);
+                  if (uri) setPhotoUri(uri);
+                }}
+                className="flex-1 items-center gap-1.5 rounded-control border border-dashed border-brand-500 bg-brand-50 py-4"
+              >
+                <Feather name={icon} size={20} color={colors.brand500} />
+                <AppText
+                  className="font-sans-semibold text-brand-600"
+                  style={{ fontSize: 12 }}
+                  numberOfLines={1}
+                >
+                  {label}
+                </AppText>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </Field>
+
       <Field label="Ce que vous vendez" error={errors.title}>
         <TextInput
           testID="publish-title"
@@ -242,6 +314,45 @@ export function PublishForm({ onPublish, onCancel }: Props) {
                   style={{ fontSize: 12.5 }}
                 >
                   {m < 60 ? `${m} min` : `${m / 60} h`}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+      </Field>
+
+      {/* Étape 7 — le mode de remise : Touch & Collect, livraison, ou les deux. */}
+      <Field label="Mode de remise" error={errors.modes}>
+        <View className="flex-row gap-2">
+          {OFFER_MODES.map((m) => {
+            const on = modes.includes(m);
+            return (
+              <Pressable
+                key={m}
+                testID={`publish-mode-${m}`}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: on }}
+                accessibilityLabel={MODE_LABEL[m]}
+                onPress={() =>
+                  setModes((current) =>
+                    current.includes(m) ? current.filter((x) => x !== m) : [...current, m],
+                  )
+                }
+                className={cn(
+                  'flex-1 flex-row items-center justify-center gap-2 rounded-control border py-3',
+                  on ? 'border-brand-500 bg-brand-50' : 'border-line bg-surface-muted',
+                )}
+              >
+                <Feather
+                  name={on ? 'check-circle' : m === 'livraison' ? 'truck' : 'shopping-bag'}
+                  size={15}
+                  color={on ? colors.brand600 : colors.inkMuted}
+                />
+                <AppText
+                  className={cn('font-sans-semibold', on ? 'text-brand-600' : 'text-ink-muted')}
+                  style={{ fontSize: 13 }}
+                >
+                  {MODE_LABEL[m]}
                 </AppText>
               </Pressable>
             );

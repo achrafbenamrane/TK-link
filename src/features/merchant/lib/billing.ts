@@ -18,7 +18,7 @@ import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
  */
 
 /**
- * Opérations offertes avant le premier pack — CDC V1.0 §6.2.
+ * Opérations offertes avant toute monétisation complémentaire — CDC V1.0 §6.2.
  *
  * Le cahier des charges en fait une EXIGENCE : « le nombre 5 doit être un
  * paramètre Super Admin, et non une constante inscrite dans le code ». La
@@ -30,37 +30,11 @@ export const FREE_OPERATIONS = PLATFORM_SETTINGS.freeOperations;
 /**
  * Commission TK LINK sur les transactions B2C, en pourcent — CDC §5.4.
  *
- * ⚠️ B2C UNIQUEMENT. Le §10.2 et la Remarque 1 interdisent explicitement de
- * reporter ce taux sur le B2B : « le taux de 5 % B2C ne doit pas être copié
- * automatiquement […] aucun taux B2B ne doit être codé en dur ». Le taux B2B
- * vaut `null` dans les réglages tant que Farid n'a pas tranché.
+ * Le CDC V1.1 aligne la commission B2B sur ce taux (5 %, décision du
+ * 31/08/2026) ; l'un et l'autre restent des paramètres administrables
+ * (`PLATFORM_SETTINGS`), jamais des constantes du code.
  */
 export const COMMISSION_PCT = PLATFORM_SETTINGS.commissionB2cPct;
-
-export type Pack = {
-  id: string;
-  label: string;
-  /** Opérations créditées par le pack. */
-  operations: number;
-  /** Prix du pack, en centimes — jamais en euros flottants. */
-  priceCents: number;
-};
-
-/**
- * Les packs, du plus petit au plus grand. Le prix à l'opération baisse avec le
- * volume : un pack qui ne récompenserait pas l'engagement n'a aucune raison
- * d'exister à côté du plus petit.
- */
-export const PACKS: Pack[] = [
-  { id: 'pack_10', label: 'Pack Découverte', operations: 10, priceCents: 990 },
-  { id: 'pack_30', label: 'Pack Quartier', operations: 30, priceCents: 2490 },
-  { id: 'pack_100', label: 'Pack Enseigne', operations: 100, priceCents: 6900 },
-];
-
-/** Prix moyen d'une opération dans un pack, en centimes — sert à comparer. */
-export function unitPriceCents(pack: Pack): number {
-  return Math.round(pack.priceCents / pack.operations);
-}
 
 /**
  * Combien d'opérations gratuites il reste. Ne descend jamais sous zéro : un
@@ -70,7 +44,7 @@ export function freeLeft(used: number): number {
   return Math.max(0, FREE_OPERATIONS - used);
 }
 
-/** Opérations encore publiables : le reliquat gratuit plus les packs achetés. */
+/** Opérations encore publiables : le reliquat gratuit plus les opérations créditées. */
 export function operationsLeft(used: number, purchased: number): number {
   return Math.max(0, FREE_OPERATIONS + purchased - used);
 }

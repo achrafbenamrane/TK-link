@@ -62,7 +62,7 @@ describe('<MerchantOffersScreen />', () => {
     expect(screen.getByTestId('publish-submit')).toBeTruthy(); // on reste sur le formulaire
   });
 
-  it('verrouille la publication quand le quota est épuisé, et propose les packs', () => {
+  it('verrouille la publication quand le quota est épuisé, sans afficher le moindre prix de pack', () => {
     for (let i = 0; i < FREE_OPERATIONS; i++) useMerchantStore.getState().publish(draft, '');
     render(<MerchantOffersScreen />);
 
@@ -70,7 +70,10 @@ describe('<MerchantOffersScreen />', () => {
 
     // Le bouton est désactivé : on ne doit pas atteindre le formulaire.
     expect(screen.queryByTestId('publish-submit')).toBeNull();
-    expect(screen.getByTestId('merchant-packs')).toBeTruthy();
+    // Pas de pack, pas de prix : leur tarification n'est pas arrêtée (CDC §14).
+    expect(screen.queryByTestId('merchant-packs')).toBeNull();
+    expect(screen.getByTestId('merchant-quota-empty')).toBeTruthy();
+    expect(screen.queryByText(/9,90|24,90|69,00/)).toBeNull();
   });
 
   it('retire une offre de l’app', () => {

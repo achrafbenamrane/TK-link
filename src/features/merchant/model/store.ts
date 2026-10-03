@@ -4,7 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { makeId } from '@/shared/lib/id';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
-import { canPublish, PACKS } from '../lib/billing';
+import { canPublish } from '../lib/billing';
 import { seedWholesaleLots } from './seed';
 import {
   PersistedMerchantSchema,
@@ -57,8 +57,6 @@ type MerchantState = {
   takeOffline: (id: string) => void;
   /** Simule une vente : décrémente le stock (le vrai flux viendra du serveur). */
   sellOne: (id: string) => void;
-  /** Achète un pack d'opérations — CDC §9. */
-  buyPack: (packId: string) => boolean;
   resetDemo: () => void;
 };
 
@@ -97,6 +95,8 @@ export const useMerchantStore = create<MerchantState>()(
           state: draft.state ?? 'publiee',
           offline: false,
           audience: draft.audience ?? 'clients',
+          photoUri: draft.photoUri ?? '',
+          modes: draft.modes ?? ['touch-collect', 'livraison'],
           seller,
         };
 
@@ -146,13 +146,6 @@ export const useMerchantStore = create<MerchantState>()(
           wholesaleOrders: [order, ...s.wholesaleOrders],
         });
         return { ok: true, order };
-      },
-
-      buyPack: (packId) => {
-        const pack = PACKS.find((p) => p.id === packId);
-        if (!pack) return false;
-        set((s) => ({ purchased: s.purchased + pack.operations }));
-        return true;
       },
 
       resetDemo: () =>

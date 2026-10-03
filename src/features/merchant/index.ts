@@ -28,7 +28,6 @@ export { AUDIENCES, DURATIONS, FLASH_MIN_MINUTES, FLASH_MAX_MINUTES } from './mo
 export {
   FREE_OPERATIONS,
   COMMISSION_PCT,
-  PACKS,
   canPublish,
   commissionCents,
   formatCents,
@@ -36,8 +35,6 @@ export {
   netCents,
   operationsLeft,
   parseEurosToCents,
-  unitPriceCents,
-  type Pack,
 } from './lib/billing';
 export {
   discountPct,

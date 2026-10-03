@@ -35,6 +35,8 @@ const offer = (over: Partial<PublishedOffer> = {}): PublishedOffer => ({
   publishedAt: NOW,
   offline: false,
   audience: 'clients',
+  photoUri: '',
+  modes: ['touch-collect', 'livraison'],
   seller: '',
   ...over,
 });
@@ -138,15 +140,8 @@ describe('store commerçant', () => {
     expect(useMerchantStore.getState().offers).toHaveLength(5);
   });
 
-  it('un pack débloque la suite', () => {
-    for (let i = 0; i < 5; i++) useMerchantStore.getState().publish(draft, '', NOW);
-    expect(useMerchantStore.getState().buyPack('pack_10')).toBe(true);
-    expect(useMerchantStore.getState().publish(draft, '', NOW).ok).toBe(true);
-  });
-
-  it('ignore un pack inconnu', () => {
-    expect(useMerchantStore.getState().buyPack('pack_fantome')).toBe(false);
-    expect(useMerchantStore.getState().purchased).toBe(0);
+  it('ne vend aucun pack : la tarification n’est pas arrêtée', () => {
+    expect(useMerchantStore.getState()).not.toHaveProperty('buyPack');
   });
 
   it('retire une offre et décrémente un stock', () => {

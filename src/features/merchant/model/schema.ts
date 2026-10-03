@@ -37,6 +37,15 @@ export type Duration = (typeof DURATIONS)[number];
 export const AUDIENCES = ['clients', 'commercants'] as const;
 export type Audience = (typeof AUDIENCES)[number];
 
+/**
+ * Comment le client récupère — CDC V1.1 (Commerçant > Process, étape 7 de la
+ * création d'un Flash : « mode de remise »). Deux valeurs seulement : Touch &
+ * Collect et livraison. Les valeurs sont celles de la boutique (`shop`), que
+ * `merchant` ne peut pas importer : le contrat est dupliqué ici, et testé.
+ */
+export const OFFER_MODES = ['touch-collect', 'livraison'] as const;
+export type OfferMode = (typeof OFFER_MODES)[number];
+
 export const OfferDraftSchema = z
   .object({
     title: z.string().trim().min(3, 'Titre trop court').max(60, 'Titre trop long'),
@@ -49,6 +58,13 @@ export const OfferDraftSchema = z
     durationMinutes: z.number().int().positive(),
     description: z.string().trim().max(240).default(''),
     audience: z.enum(AUDIENCES).default('clients'),
+    /** Étape 1 de la création : la photo du produit (adresse locale ou distante). Facultative. */
+    photoUri: z.string().default(''),
+    /** Étape 7 : Touch & Collect, livraison, ou les deux. Au moins un. */
+    modes: z
+      .array(z.enum(OFFER_MODES))
+      .min(1, 'Choisissez au moins un mode de remise')
+      .default(() => [...OFFER_MODES]),
     /**
      * PUBLIER OU PROGRAMMER — CDC §4.2, huitième étape.
      *
@@ -130,6 +146,13 @@ export const PublishedOfferSchema = z.object({
   offline: z.boolean().default(false),
   /** Public visé — CDC §20. Les offres d'avant le B2B sont pour les clients. */
   audience: z.enum(AUDIENCES).default('clients'),
+  /**
+   * Photo et modes de remise — V1.1. `.default()` : les offres déjà publiées sur
+   * les téléphones n'ont pas ces champs, et un champ requis ferait échouer
+   * toute la réhydratation (offres, quota, brouillons effacés).
+   */
+  photoUri: z.string().default(''),
+  modes: z.array(z.enum(OFFER_MODES)).default(() => [...OFFER_MODES]),
   /** Nom du vendeur, pour les lots B2B où l'on ne connaît pas l'enseigne. */
   seller: z.string().default(''),
 });

@@ -54,6 +54,8 @@ module.exports = {
           inverse: v('inkInverse'),
         },
         line: v('line'),
+        // Stock qui baisse, attention : l'orange des maquettes (« 5 restants »).
+        warning: v('warning'),
         danger: v('danger'),
         success: v('success'),
       },

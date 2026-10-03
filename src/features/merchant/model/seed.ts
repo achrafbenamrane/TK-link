@@ -27,6 +27,8 @@ export function seedWholesaleLots(nowMs: number = Date.now()): PublishedOffer[] 
       state: 'publiee' as const,
       offline: false,
       audience: 'commercants',
+      photoUri: '',
+      modes: ['livraison'],
       seller: 'Grossiste Occitan',
     },
     {
@@ -44,6 +46,8 @@ export function seedWholesaleLots(nowMs: number = Date.now()): PublishedOffer[] 
       state: 'publiee' as const,
       offline: false,
       audience: 'commercants',
+      photoUri: '',
+      modes: ['livraison'],
       seller: 'Sud Emballage',
     },
     {
@@ -61,6 +65,8 @@ export function seedWholesaleLots(nowMs: number = Date.now()): PublishedOffer[] 
       state: 'publiee' as const,
       offline: false,
       audience: 'commercants',
+      photoUri: '',
+      modes: ['livraison'],
       seller: 'Textile Garonne',
     },
   ];

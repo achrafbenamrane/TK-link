@@ -85,6 +85,9 @@ function ConsumerHome() {
       stockLeft: o.stockLeft,
       endsInSeconds: secondsLeft(o, now),
       description: o.description || 'Vente flash publiée par le commerçant.',
+      // La photo posée à la création, et les modes que le commerçant propose (V1.1).
+      ...(o.photoUri ? { imageUrl: o.photoUri } : {}),
+      fulfilments: o.modes,
     }));
   }, [published, now]);
 

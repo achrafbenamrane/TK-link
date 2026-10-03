@@ -141,6 +141,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     [
+      // Étape 1 de la création d'un Flash : « ajouter une photo » (CDC V1.1,
+      // Commerçant > Process). Chaque texte dit pourquoi, précisément — un texte
+      // générique est refusé par l'App Store.
+      'expo-image-picker',
+      {
+        photosPermission:
+          'TK LINK accède à vos photos pour illustrer vos ventes Flash avec le visuel du produit.',
+        cameraPermission:
+          'TK LINK utilise l’appareil photo pour photographier le produit de votre vente Flash.',
+      },
+    ],
+    [
       // Déverrouillage biométrique. L’empreinte elle-même ne quitte JAMAIS le
       // matériel sécurisé du téléphone : l’OS renvoie seulement « c’est bien le
       // propriétaire » — aucune app ne peut lire une empreinte.

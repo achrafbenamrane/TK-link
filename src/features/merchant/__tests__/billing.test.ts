@@ -7,10 +7,9 @@ import {
   FREE_OPERATIONS,
   netCents,
   operationsLeft,
-  PACKS,
   parseEurosToCents,
-  unitPriceCents,
 } from '../lib/billing';
+import * as billing from '../lib/billing';
 
 describe('quota d’opérations — CDC §9', () => {
   it('offre les cinq premières publications', () => {
@@ -29,25 +28,22 @@ describe('quota d’opérations — CDC §9', () => {
     expect(canPublish(5, 0)).toBe(false);
   });
 
-  it('un pack redonne le droit de publier', () => {
+  it('des opérations achetées redonnent le droit de publier', () => {
+    // Le champ `purchased` existe (il est persisté) : c'est le serveur qui le
+    // créditera quand les packs existeront.
     expect(canPublish(5, 10)).toBe(true);
     expect(operationsLeft(5, 10)).toBe(10);
   });
 });
 
-describe('packs', () => {
-  it('le prix à l’opération baisse avec le volume', () => {
-    const unit = PACKS.map(unitPriceCents);
-    for (let i = 1; i < unit.length; i++) {
-      expect(unit[i]!).toBeLessThan(unit[i - 1]!);
-    }
-  });
-
-  it('aucun pack gratuit ni vide', () => {
-    for (const p of PACKS) {
-      expect(p.operations).toBeGreaterThan(0);
-      expect(p.priceCents).toBeGreaterThan(0);
-    }
+describe('packs — la tarification n’est PAS arrêtée', () => {
+  it('le module ne chiffre aucun pack : le CDC laisse leur prix ouvert (V1.0 §14, V1.1)', () => {
+    // Les prix 9,90 / 24,90 / 69,00 € avaient été inventés par l'équipe. Le CDC
+    // classe « la tarification des packs après les cinq opérations gratuites »
+    // parmi les points volontairement ouverts : on n'en vend pas un seul tant que
+    // le client ne l'a pas arrêtée.
+    expect(billing).not.toHaveProperty('PACKS');
+    expect(billing).not.toHaveProperty('unitPriceCents');
   });
 });
 

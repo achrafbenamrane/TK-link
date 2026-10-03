@@ -14,8 +14,6 @@ import {
   freeLeft,
   netCents,
   operationsLeft,
-  PACKS,
-  unitPriceCents,
 } from '../lib/billing';
 import { discountPct, secondsLeft, soldCents, STATE_LABEL, stateOf } from '../lib/offers';
 import { selectOffers, selectPurchased, selectUsed, useMerchantStore } from '../model/store';
@@ -87,7 +85,6 @@ export function MerchantOffersScreen({ audience = 'clients', seller = '', onBack
   const purchased = useMerchantStore(selectPurchased);
   const publish = useMerchantStore((s) => s.publish);
   const takeOffline = useMerchantStore((s) => s.takeOffline);
-  const buyPack = useMerchantStore((s) => s.buyPack);
 
   const left = operationsLeft(used, purchased);
   const free = freeLeft(used);
@@ -100,7 +97,7 @@ export function MerchantOffersScreen({ audience = 'clients', seller = '', onBack
     if (!result.ok) {
       Alert.alert(
         'Quota épuisé',
-        'Vos opérations sont consommées. Prenez un pack pour continuer à publier.',
+        'Vos opérations gratuites sont utilisées. Les packs complémentaires seront proposés dès que leur tarification sera arrêtée.',
       );
       return;
     }
@@ -123,19 +120,6 @@ export function MerchantOffersScreen({ audience = 'clients', seller = '', onBack
     } else {
       Alert.alert('En ligne 🎉', `« ${result.offer.title} » est visible ${pour}.`);
     }
-  };
-
-  const onBuy = (packId: string) => {
-    const pack = PACKS.find((p) => p.id === packId);
-    if (!pack) return;
-    Alert.alert(
-      pack.label,
-      `${pack.operations} opérations pour ${formatCents(pack.priceCents)}.\n\nLe paiement arrivera avec le back-office ; le pack est crédité immédiatement pour la démonstration.`,
-      [
-        { text: 'Plus tard', style: 'cancel' },
-        { text: 'Créditer', onPress: () => buyPack(packId) },
-      ],
-    );
   };
 
   if (mode === 'publish') {
@@ -254,51 +238,19 @@ export function MerchantOffersScreen({ audience = 'clients', seller = '', onBack
           </AppText>
         </Pressable>
 
-        {/* Les packs — proposés quand il reste peu, pas en permanence */}
-        {left <= 2 ? (
-          <View testID="merchant-packs" className="mt-5">
-            <View className="mb-2 px-5">
-              <AppText variant="title" className="text-lg">
-                Continuer à publier
-              </AppText>
-              <AppText variant="caption" className="mt-0.5 text-ink-faint">
-                Les packs n’expirent pas. Le prix à l’opération baisse avec le volume.
-              </AppText>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerClassName="gap-3 px-5"
-            >
-              {PACKS.map((p) => (
-                <Pressable
-                  key={p.id}
-                  testID={`merchant-pack-${p.id}`}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${p.label}, ${p.operations} opérations`}
-                  onPress={() => onBuy(p.id)}
-                  className="w-40 gap-1 rounded-card border border-line bg-surface p-4 active:opacity-85"
-                >
-                  <AppText className="font-sans-bold text-ink" style={{ fontSize: 13.5 }}>
-                    {p.label}
-                  </AppText>
-                  <AppText className="font-display text-brand-600" style={{ fontSize: 20 }}>
-                    {p.operations}
-                  </AppText>
-                  <AppText variant="caption" className="text-ink-faint">
-                    opérations
-                  </AppText>
-                  <View className="mt-1 border-t border-line pt-1.5">
-                    <AppText className="font-sans-bold text-ink" style={{ fontSize: 14 }}>
-                      {formatCents(p.priceCents)}
-                    </AppText>
-                    <AppText variant="caption" className="text-ink-faint" style={{ fontSize: 11 }}>
-                      soit {formatCents(unitPriceCents(p))} l’unité
-                    </AppText>
-                  </View>
-                </Pressable>
-              ))}
-            </ScrollView>
+        {/* Quota épuisé : aucun prix ici. La tarification des packs n'est PAS
+            arrêtée (CDC V1.0 §14, V1.1 « points ouverts ») — on ne vend pas ce
+            qu'on n'a pas le droit de chiffrer. */}
+        {!allowed ? (
+          <View
+            testID="merchant-quota-empty"
+            className="mx-5 mt-3 flex-row items-start gap-2.5 rounded-card bg-surface-muted p-3.5"
+          >
+            <Feather name="info" size={15} color={colors.inkFaint} />
+            <AppText variant="caption" className="flex-1 text-ink-muted" style={{ fontSize: 12 }}>
+              Vos opérations gratuites sont utilisées. Les packs complémentaires seront proposés dès
+              que leur tarification sera arrêtée.
+            </AppText>
           </View>
         ) : null}
 

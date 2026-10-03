@@ -1,0 +1,124 @@
+import { fireEvent, render, screen, waitFor } from '@/shared/testing/render';
+
+import { pickFlashPhoto } from '../lib/photo';
+import { OfferDraftSchema, PublishedOfferSchema } from '../model/schema';
+import { PublishForm } from '../ui/publish-form';
+
+jest.mock('../lib/photo', () => ({
+  pickFlashPhoto: jest.fn(),
+}));
+
+const pick = pickFlashPhoto as jest.MockedFunction<typeof pickFlashPhoto>;
+
+beforeEach(() => {
+  pick.mockReset();
+});
+
+describe('création d’un Flash — étapes 1 et 7 du CDC V1.1', () => {
+  const fillRequired = () => {
+    fireEvent.changeText(screen.getByTestId('publish-title'), 'Plateau de viennoiseries');
+    fireEvent.changeText(screen.getByTestId('publish-old-price'), '18');
+    fireEvent.changeText(screen.getByTestId('publish-price'), '9');
+    fireEvent.changeText(screen.getByTestId('publish-stock'), '10');
+  };
+
+  it('propose la photo (étape 1) et les deux modes de remise (étape 7)', () => {
+    render(<PublishForm onPublish={jest.fn()} onCancel={jest.fn()} />);
+    expect(screen.getByTestId('publish-photo-camera')).toBeTruthy();
+    expect(screen.getByTestId('publish-photo-galerie')).toBeTruthy();
+    expect(screen.getByTestId('publish-mode-touch-collect')).toBeTruthy();
+    expect(screen.getByTestId('publish-mode-livraison')).toBeTruthy();
+    // « Sur place » n’existe pas dans le CDC.
+    expect(screen.queryByText('Sur place')).toBeNull();
+  });
+
+  it('affiche la photo choisie, et permet de la retirer', async () => {
+    pick.mockResolvedValue('file:///cache/produit.jpg');
+    render(<PublishForm onPublish={jest.fn()} onCancel={jest.fn()} />);
+
+    fireEvent.press(screen.getByTestId('publish-photo-galerie'));
+    await waitFor(() => expect(screen.getByTestId('publish-photo-preview')).toBeTruthy());
+
+    fireEvent.press(screen.getByTestId('publish-photo-remove'));
+    expect(screen.queryByTestId('publish-photo-preview')).toBeNull();
+    expect(screen.getByTestId('publish-photo-camera')).toBeTruthy();
+  });
+
+  it('une photo refusée ou annulée ne change rien : elle est facultative', async () => {
+    pick.mockResolvedValue(null);
+    render(<PublishForm onPublish={jest.fn()} onCancel={jest.fn()} />);
+    fireEvent.press(screen.getByTestId('publish-photo-camera'));
+    await waitFor(() => expect(pick).toHaveBeenCalledWith('camera'));
+    expect(screen.queryByTestId('publish-photo-preview')).toBeNull();
+  });
+
+  it('publie avec la photo et les modes choisis', async () => {
+    pick.mockResolvedValue('file:///cache/produit.jpg');
+    const onPublish = jest.fn();
+    render(<PublishForm onPublish={onPublish} onCancel={jest.fn()} />);
+
+    fillRequired();
+    fireEvent.press(screen.getByTestId('publish-photo-galerie'));
+    await waitFor(() => expect(screen.getByTestId('publish-photo-preview')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('publish-mode-livraison')); // retire la livraison
+    fireEvent.press(screen.getByTestId('publish-submit'));
+
+    expect(onPublish).toHaveBeenCalledTimes(1);
+    expect(onPublish.mock.calls[0]![0]).toMatchObject({
+      photoUri: 'file:///cache/produit.jpg',
+      modes: ['touch-collect'],
+    });
+  });
+
+  it('refuse de publier sans aucun mode de remise', () => {
+    const onPublish = jest.fn();
+    render(<PublishForm onPublish={onPublish} onCancel={jest.fn()} />);
+    fillRequired();
+    fireEvent.press(screen.getByTestId('publish-mode-touch-collect'));
+    fireEvent.press(screen.getByTestId('publish-mode-livraison'));
+    fireEvent.press(screen.getByTestId('publish-submit'));
+
+    expect(onPublish).not.toHaveBeenCalled();
+    expect(screen.getByText('Choisissez au moins un mode de remise')).toBeTruthy();
+  });
+});
+
+describe('schémas — photo et modes de remise', () => {
+  const draft = {
+    title: 'Plateau',
+    category: 'restauration' as const,
+    priceCents: 900,
+    oldPriceCents: 1800,
+    stock: 10,
+    durationMinutes: 60,
+  };
+
+  it('par défaut : sans photo, et les deux modes', () => {
+    const parsed = OfferDraftSchema.parse(draft);
+    expect(parsed.photoUri).toBe('');
+    expect(parsed.modes).toEqual(['touch-collect', 'livraison']);
+  });
+
+  it('refuse une liste de modes vide, et un mode qui n’existe pas', () => {
+    expect(OfferDraftSchema.safeParse({ ...draft, modes: [] }).success).toBe(false);
+    expect(OfferDraftSchema.safeParse({ ...draft, modes: ['sur-place'] }).success).toBe(false);
+  });
+
+  it('relit une offre enregistrée AVANT ces champs, sans la perdre', () => {
+    // Un champ requis ferait échouer toute la réhydratation : offres, quota et
+    // brouillons effacés. Les défauts rendent l'ancien format lisible.
+    const legacy = PublishedOfferSchema.parse({
+      id: 'o1',
+      title: 'Plateau',
+      category: 'restauration',
+      priceCents: 900,
+      oldPriceCents: 1800,
+      stock: 10,
+      stockLeft: 10,
+      durationMinutes: 60,
+      publishedAt: 1_700_000_000_000,
+    });
+    expect(legacy.photoUri).toBe('');
+    expect(legacy.modes).toEqual(['touch-collect', 'livraison']);
+  });
+});
