@@ -116,7 +116,7 @@ export function CountdownBlocks({
             <View
               className="items-center justify-center rounded-control"
               style={{
-                backgroundColor: colors.ink,
+                backgroundColor: colors.surfaceInverse,
                 minWidth: size * 1.55,
                 paddingHorizontal: size * 0.2,
                 paddingVertical: size * 0.18,

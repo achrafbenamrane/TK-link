@@ -45,18 +45,18 @@ export function ViewSwitch({ value, onChange }: Props) {
             onPress={() => onChange(option.key)}
             className={cn(
               'flex-1 flex-row items-center justify-center gap-1.5 rounded-pill px-3.5 py-2',
-              active && 'bg-surface-inverse',
+              active && 'border border-brand-500 bg-brand-50',
             )}
           >
             <Feather
               name={option.icon}
               size={15}
-              color={active ? colors.inkInverse : colors.inkMuted}
+              color={active ? colors.brand600 : colors.inkMuted}
             />
             <AppText
               className={cn(
                 'text-sm',
-                active ? 'font-sans-bold text-ink-inverse' : 'font-sans-medium text-ink-muted',
+                active ? 'font-sans-bold text-brand-600' : 'font-sans-medium text-ink-muted',
               )}
             >
               {option.label}

@@ -20,6 +20,7 @@
     "accent": "#00B2FF",
     "accentSoft": "#D9F3FF",
     "accentDeep": "#0077AD",
+    "warning": "#B45309",
     "danger": "#DC2626",
     "success": "#15803D"
   },
@@ -43,6 +44,7 @@
     "accent": "#00B2FF",
     "accentSoft": "#06283A",
     "accentDeep": "#5CCBFF",
+    "warning": "#FFA726",
     "danger": "#FF5C5C",
     "success": "#22C55E"
   }

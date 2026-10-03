@@ -6,3 +6,5 @@ export { PushButton, type PushButtonProps } from './push-button';
 export { Screen, type ScreenProps } from './screen';
 export { Skeleton, type SkeletonProps } from './skeleton';
 export { TextField, type TextFieldProps } from './text-field';
+export { ThemeToggle } from './theme-toggle';
+export { Wordmark } from './wordmark';

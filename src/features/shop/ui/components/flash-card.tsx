@@ -91,8 +91,11 @@ export function FlashCard({ deal }: Props) {
         {/* Le temps qui reste — rouge dès que l'offre agonise. */}
         <View
           testID={`deal-${deal.id}-countdown`}
-          className="absolute left-3 top-3 flex-row items-center gap-1.5 rounded-pill px-3 py-1.5"
-          style={{ backgroundColor: critical ? colors.danger : colors.ink }}
+          className={cn(
+            'absolute left-3 top-3 flex-row items-center gap-1.5 rounded-pill border px-3 py-1.5',
+            critical ? 'border-danger' : 'border-brand-500',
+          )}
+          style={{ backgroundColor: critical ? colors.danger : colors.surfaceInverse }}
         >
           <Feather name="clock" size={13} color={colors.inkInverse} />
           <Countdown seconds={deal.endsInSeconds} className="text-sm text-ink-inverse" />
@@ -125,10 +128,13 @@ export function FlashCard({ deal }: Props) {
         <View
           testID={`deal-${deal.id}-stock`}
           className="absolute bottom-3 right-3 flex-row items-center gap-1.5 rounded-pill px-3 py-1.5"
-          style={{ backgroundColor: low ? colors.danger : 'rgba(15,26,18,0.82)' }}
+          style={{ backgroundColor: low ? colors.warning : 'rgba(10,10,13,0.82)' }}
         >
-          <Feather name="package" size={12} color={colors.inkInverse} />
-          <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 12.5 }}>
+          <Feather name="package" size={12} color={low ? colors.surface : colors.inkInverse} />
+          <AppText
+            className={cn('font-sans-bold', low ? 'text-surface' : 'text-ink-inverse')}
+            style={{ fontSize: 12.5 }}
+          >
             {deal.stockLeft > 0 ? `${deal.stockLeft} / ${deal.stockTotal}` : 'Épuisé'}
           </AppText>
         </View>
@@ -229,7 +235,7 @@ export function FlashCard({ deal }: Props) {
               className="h-full rounded-pill"
               style={{
                 width: `${Math.max(6, Math.round(stockPct))}%`,
-                backgroundColor: low ? colors.danger : colors.ink,
+                backgroundColor: low ? colors.warning : colors.brand500,
               }}
             />
           </View>

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { AppText, Button, Screen, TextField } from '@/shared/ui';
+import { AppText, Button, Screen, TextField, Wordmark } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { friendlyAuthError } from '../model/auth-errors';
@@ -96,9 +96,7 @@ export function SignInScreen({ onCreateAccount, onSignedIn, onMerchantSignUp }: 
           keyboardShouldPersistTaps="handled"
         >
           <View className="mb-8">
-            <AppText className="font-display text-ink" style={{ fontSize: 34, lineHeight: 44 }}>
-              TK<AppText className="text-brand-500"> LINK</AppText>
-            </AppText>
+            <Wordmark size={34} />
             <AppText variant="caption" className="mt-1">
               Content de vous revoir.
             </AppText>

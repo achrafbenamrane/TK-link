@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 
-import { AppText, Screen, TextField } from '@/shared/ui';
+import { AppText, Screen, TextField, ThemeToggle, Wordmark } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { activeFilterCount, filterDeals } from '../lib/preferences';
@@ -213,16 +213,14 @@ export function HomeScreen({
         <View className="flex-1 flex-row items-center gap-2.5">
           {renderIdentity ? renderIdentity() : null}
           <View className="flex-1">
-            <AppText className="font-display text-ink" style={{ fontSize: 20 }}>
-              TK<AppText className="text-brand-500"> LINK</AppText>
-            </AppText>
+            <Wordmark size={22} />
             {/* Une seule ligne. « Toulouse · Centre » se cassait en deux parce
                 que l'en-tête portait cinq éléments de front ; le sélecteur de
                 vue étant descendu, la place existe — et `numberOfLines` la
                 garantit même sur un écran étroit. */}
             <View className="mt-0.5 flex-row items-center gap-1">
-              <Feather name="map-pin" size={12} color={colors.inkFaint} />
-              <AppText variant="caption" className="flex-1 text-ink-faint" numberOfLines={1}>
+              <Feather name="map-pin" size={12} color={colors.accent} />
+              <AppText variant="caption" className="flex-1 text-accent-deep" numberOfLines={1}>
                 Toulouse · Centre
               </AppText>
             </View>
@@ -290,8 +288,10 @@ export function HomeScreen({
                   value={query}
                   onChangeText={setQuery}
                   returnKeyType="search"
-                  className="border-0 bg-transparent px-0"
+                  className="min-w-0 border-0 bg-transparent px-0"
+                  style={{ minWidth: 0 }}
                 />
+                <ThemeToggle />
               </View>
 
               {/* Ad card sits above the filter and stays visible whatever the
