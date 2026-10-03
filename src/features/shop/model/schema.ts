@@ -274,45 +274,6 @@ export const MerchantApplicationSchema = z.object({
 });
 export type MerchantApplication = z.infer<typeof MerchantApplicationSchema>;
 
-/* ---- Messagerie ---- */
-
-/**
- * Forme alignée sur `packs/chat-realtime/src/model/chat.ts` (snake_case,
- * `created_at` en ISO) : quand le back-end arrivera, on remplace la source de
- * données, pas les écrans.
- */
-export const ChatMessageSchema = z.object({
-  id: z.string().min(1),
-  conversation_id: z.string().min(1),
-  /** 'moi' = l'utilisateur ; sinon l'id du commerçant ou 'support'. */
-  sender_id: z.string().min(1),
-  body: z.string().min(1).max(4000),
-  created_at: z.string(),
-});
-export type ChatMessage = z.infer<typeof ChatMessageSchema>;
-
-export const ConversationSchema = z.object({
-  id: z.string().min(1),
-  /** Id du commerçant, ou 'support' pour l'équipe TK LINK. */
-  partnerId: z.string().min(1),
-  /**
-   * Dernier message VU, par identité — pas par horloge.
-   *
-   * Une date de lecture se compare à `created_at` à la milliseconde près : un
-   * message arrivé dans la même milliseconde que l'ouverture du fil est à
-   * égalité, et selon le sens de la comparaison on l'avale (jamais notifié) ou
-   * on le re-notifie alors qu'il est à l'écran. L'ordre des messages, lui, n'a
-   * pas d'ambiguïté.
-   *
-   * `null` = rien de lu (tout le fil est non lu).
-   */
-  lastReadMessageId: z.string().nullable().default(null),
-});
-export type Conversation = z.infer<typeof ConversationSchema>;
-
-export const ME = 'moi';
-export const SUPPORT = 'support';
-
 /** Shape persisted to storage — the merge guard validates against this. */
 export const PersistedShopSchema = z.object({
   cart: z.array(CartItemSchema),
@@ -321,8 +282,6 @@ export const PersistedShopSchema = z.object({
   addresses: z.array(AddressSchema).default([]),
   /** Demande envoyée localement, en attendant un back-end pour la recevoir. */
   merchantApplication: MerchantApplicationSchema.nullable().default(null),
-  conversations: z.array(ConversationSchema).default([]),
-  messages: z.array(ChatMessageSchema).default([]),
   // `.default()` et non un champ requis : l'état déjà stocké sur les téléphones
   // n'a pas cette clé. Sans valeur par défaut, safeParse échouerait et le
   // `merge` du store repartirait de zéro — panier et commandes effacés.

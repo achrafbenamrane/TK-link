@@ -246,12 +246,6 @@ export function ProfileScreen({
             onPress={() => router.push('/commercant')}
           />
           <Row
-            testID="profile-aide"
-            icon={<Feather name="help-circle" size={17} color={colors.ink} />}
-            label="Aide & contact"
-            onPress={() => router.push('/aide')}
-          />
-          <Row
             icon={<Feather name="log-out" size={17} color={colors.brand600} />}
             label="Se déconnecter"
             danger

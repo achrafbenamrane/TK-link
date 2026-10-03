@@ -9,13 +9,9 @@ import { asyncStorageBackend } from '@/shared/lib/storage';
 
 import { getDeal } from './catalog';
 import { POINTS_PER_EURO } from './loyalty';
-import { CHAT_SEED } from './chat-seed';
 import {
-  ME,
   PersistedShopSchema,
   type Address,
-  type ChatMessage,
-  type Conversation,
   type Coord,
   type AddressDraft,
   type CartItem,
@@ -44,8 +40,6 @@ type ShopState = {
   merchantApplication: MerchantApplication | null;
   /** Position de l'utilisateur — éphémère, jamais persistée (elle change). */
   userCoord: Coord | null;
-  conversations: Conversation[];
-  messages: ChatMessage[];
   /** « Ma Fan Zone » : mode de retrait, rayon, régimes. Filtre les résultats. */
   preferences: Preferences;
 
@@ -78,10 +72,6 @@ type ShopState = {
   /** DÉMO : aligne les statuts sur le temps écoulé (voir demoStatusFor). */
   syncOrderStatuses: () => void;
 
-  sendMessage: (conversationId: string, body: string) => void;
-  receiveMessage: (conversationId: string, senderId: string, body: string) => void;
-  markConversationRead: (conversationId: string) => void;
-
   /**
    * Turn the cart into an order, award points, empty the cart.
    */
@@ -103,8 +93,6 @@ export const useShopStore = create<ShopState>()(
       merchantApplication: null,
       preferences: DEFAULT_PREFERENCES,
       userCoord: null,
-      conversations: CHAT_SEED.conversations,
-      messages: CHAT_SEED.messages,
 
       setPreferences: (next) => set({ preferences: next }),
 
@@ -206,54 +194,6 @@ export const useShopStore = create<ShopState>()(
           return next.some((o, i) => o !== state.orders[i]) ? { orders: next } : state;
         }),
 
-      sendMessage: (conversationId, body) => {
-        const text = body.trim();
-        if (!text) return; // pas de bulle vide
-        const id = makeId();
-        set((state) => ({
-          messages: [
-            ...state.messages,
-            {
-              id,
-              conversation_id: conversationId,
-              sender_id: ME,
-              body: text,
-              created_at: new Date().toISOString(),
-            },
-          ],
-          // Ce qu'on vient d'écrire est lu par définition.
-          conversations: state.conversations.map((c) =>
-            c.id === conversationId ? { ...c, lastReadMessageId: id } : c,
-          ),
-        }));
-      },
-
-      receiveMessage: (conversationId, senderId, body) =>
-        set((state) => ({
-          messages: [
-            ...state.messages,
-            {
-              id: makeId(),
-              conversation_id: conversationId,
-              sender_id: senderId,
-              body,
-              created_at: new Date().toISOString(),
-            },
-          ],
-        })),
-
-      markConversationRead: (conversationId) =>
-        set((state) => {
-          const thread = state.messages.filter((m) => m.conversation_id === conversationId);
-          const last = thread[thread.length - 1];
-          if (!last) return state;
-          return {
-            conversations: state.conversations.map((c) =>
-              c.id === conversationId ? { ...c, lastReadMessageId: last.id } : c,
-            ),
-          };
-        }),
-
       toggleFavorite: (dealId) =>
         set((state) => ({
           favorites: state.favorites.includes(dealId)
@@ -318,8 +258,6 @@ export const useShopStore = create<ShopState>()(
         biometricEnabled: s.biometricEnabled,
         addresses: s.addresses,
         merchantApplication: s.merchantApplication,
-        conversations: s.conversations,
-        messages: s.messages,
         preferences: s.preferences,
       }),
       // Corrupt storage must never crash the app — validate then fall back.
@@ -384,35 +322,3 @@ export const selectCartSubtotal = (s: ShopState) =>
   cartLines(s.cart).reduce((sum, l) => sum + l.lineTotal, 0);
 
 export const DELIVERY_FEE_EUR: number = DELIVERY_FEE;
-
-/* ---- messagerie ---- */
-
-export const selectConversations = (s: ShopState) => s.conversations;
-
-export function messagesOf(state: ShopState, conversationId: string): ChatMessage[] {
-  return state.messages.filter((m) => m.conversation_id === conversationId);
-}
-
-export function lastMessageOf(state: ShopState, conversationId: string): ChatMessage | undefined {
-  const list = messagesOf(state, conversationId);
-  return list[list.length - 1];
-}
-
-/**
- * Non lus = messages des autres situés APRÈS le dernier message vu.
- *
- * Compté par position, pas par date : deux messages peuvent partager la même
- * milliseconde, leur ordre non.
- */
-export function unreadCount(state: ShopState, conversationId: string): number {
-  const conv = state.conversations.find((c) => c.id === conversationId);
-  if (!conv) return 0;
-  const thread = messagesOf(state, conversationId);
-  const seen = conv.lastReadMessageId
-    ? thread.findIndex((m) => m.id === conv.lastReadMessageId)
-    : -1;
-  return thread.slice(seen + 1).filter((m) => m.sender_id !== ME).length;
-}
-
-export const selectTotalUnread = (s: ShopState) =>
-  s.conversations.reduce((n, c) => n + unreadCount(s, c.id), 0);

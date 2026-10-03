@@ -10,7 +10,8 @@ const deal = DEALS[0]!;
  * mécanique que « Click & Collect » et les rayons de recherche, le 16/08).
  *
  * Retirés le 03/10/2026 (CDC V1.1) : le solde global `points`, les bons
- * d'achat `vouchers` et le `couponCode` des commandes.
+ * d'achat `vouchers`, le `couponCode` des commandes, et la messagerie
+ * (`conversations`, `messages`) que ni la V1.0 ni la V1.1 ne décrivent.
  */
 describe('relecture d’un état enregistré AVANT le retrait des coupons et du solde global', () => {
   const legacy = {
@@ -18,6 +19,16 @@ describe('relecture d’un état enregistré AVANT le retrait des coupons et du 
     favorites: [deal.id],
     points: 120,
     vouchers: [{ id: 'v1', code: 'ABCD-1234', value: 2, createdAt: 1, usedAt: null }],
+    conversations: [{ id: 'c1', partnerId: 'support', lastReadMessageId: null }],
+    messages: [
+      {
+        id: 'm1',
+        conversation_id: 'c1',
+        sender_id: 'moi',
+        body: 'Bonjour',
+        created_at: '2026-08-01T10:00:00.000Z',
+      },
+    ],
     orders: [
       {
         id: 'o_1',
@@ -53,5 +64,7 @@ describe('relecture d’un état enregistré AVANT le retrait des coupons et du 
     expect(parsed.orders[0]).not.toHaveProperty('couponCode');
     expect(parsed).not.toHaveProperty('points');
     expect(parsed).not.toHaveProperty('vouchers');
+    expect(parsed).not.toHaveProperty('conversations');
+    expect(parsed).not.toHaveProperty('messages');
   });
 });

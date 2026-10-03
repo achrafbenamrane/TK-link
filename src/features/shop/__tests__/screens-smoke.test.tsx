@@ -4,7 +4,6 @@
 import { render, screen } from '@/shared/testing/render';
 
 import { useShopStore } from '../model/store';
-import { ChatListScreen } from '../ui/chat-list-screen';
 import { FavoritesScreen } from '../ui/favorites-screen';
 import { OrdersScreen } from '../ui/orders-screen';
 import { ProductScreen } from '../ui/product-screen';
@@ -49,11 +48,6 @@ describe('smoke — écrans shop montent sans planter', () => {
 
   it('FavoritesScreen', () => {
     render(<FavoritesScreen />);
-    expect(screen.toJSON()).toBeTruthy();
-  });
-
-  it('ChatListScreen', () => {
-    render(<ChatListScreen />);
     expect(screen.toJSON()).toBeTruthy();
   });
 

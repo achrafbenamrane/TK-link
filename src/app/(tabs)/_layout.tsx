@@ -3,7 +3,6 @@ import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { selectRole, useOnboardingStore } from '@/features/onboarding';
-import { selectTotalUnread, useShopStore } from '@/features/shop';
 import { useColors } from '@/shared/theme/theme-provider';
 
 /**
@@ -24,7 +23,6 @@ import { useColors } from '@/shared/theme/theme-provider';
 
 export default function TabsLayout() {
   const colors = useColors();
-  const unread = useShopStore(selectTotalUnread);
   const insets = useSafeAreaInsets();
   const role = useOnboardingStore(selectRole);
 
@@ -92,18 +90,6 @@ export default function TabsLayout() {
           tabBarIcon: ({ color }) => <Feather name="user" size={22} color={color} />,
         }}
       />
-
-      {/* Routes conservées, hors barre d'onglets — on y accède depuis le compte,
-          les fiches commerçant ou l'accueil. */}
-      <Tabs.Screen
-        name="chat"
-        options={{
-          href: null,
-          tabBarBadge: unread > 0 ? unread : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.brand500, fontSize: 10 },
-        }}
-      />
-      <Tabs.Screen name="parcourir" options={{ href: null }} />
     </Tabs>
   );
 }
