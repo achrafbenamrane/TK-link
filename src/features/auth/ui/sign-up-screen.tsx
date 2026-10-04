@@ -18,7 +18,6 @@ import {
   type RegistrationDraft,
 } from '../model/registration';
 import { useAuthStore } from '../model/store';
-import { DemoNotice } from './demo-notice';
 
 /** Les deux façons de livrer — « Sur place » n'existe pas dans le CDC. */
 export type ShopMode = 'touch-collect' | 'livraison';
@@ -121,6 +120,7 @@ export function SignUpScreen({
   const courier = role === 'livreur';
   const proCopy = PRO_TITLE[role === 'grossiste' ? 'grossiste' : 'commercant'];
   const dense = pro;
+  const [notice, setNotice] = useState<string | null>(null);
 
   const set = (key: keyof RegistrationDraft, value: string) => {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -315,24 +315,22 @@ export function SignUpScreen({
                 <Feather name="arrow-left" size={22} color={colors.ink} />
               </Pressable>
             ) : (
-              <Wordmark size={24} />
+              <View className="w-16" />
             )}
-            {pro && onBack ? <Wordmark size={22} /> : null}
-            <View className={cn(pro && onBack && 'w-16 items-end')}>
-              <ThemeToggle />
-            </View>
+            <Wordmark size={pro ? 22 : 26} />
+            <View className={cn('w-16 items-end')}>{pro ? <ThemeToggle /> : null}</View>
           </View>
 
           <View className="mb-1.5 items-center gap-0.5">
             <AppText variant="display" className="text-center" style={{ fontSize: 21 }}>
               {pro ? proCopy.title : courier ? 'Créer mon compte livreur' : 'Créer mon compte'}
             </AppText>
-            <AppText variant="caption" className="text-center" style={{ fontSize: 11 }}>
+            <AppText variant="caption" className="text-center" style={{ fontSize: 12 }}>
               {pro
                 ? proCopy.subtitle
                 : courier
                   ? 'Rejoignez TK Deliver pour livrer les commandes de votre quartier.'
-                  : 'Inscris-toi pour accéder aux offres Flash autour de toi.'}
+                  : 'Inscris-toi pour accéder aux meilleures offres Flash autour de toi.'}
             </AppText>
           </View>
 
@@ -382,8 +380,6 @@ export function SignUpScreen({
               })}
             </View>
           ) : null}
-
-          {!pro ? <DemoNotice compact /> : null}
 
           <View className={dense ? 'gap-1' : 'gap-1.5'}>
             {firstName}
@@ -558,37 +554,70 @@ export function SignUpScreen({
                   gratuites pour démarrer
                 </AppText>
               </View>
-            ) : onSkip ? (
-              <Pressable
-                testID="signup-skip"
-                accessibilityRole="button"
-                accessibilityLabel="Continuer sans compte"
-                onPress={onSkip}
-                className="items-center py-1"
-              >
-                <AppText variant="caption" className="text-ink-muted">
-                  Continuer sans compte
-                </AppText>
-              </Pressable>
-            ) : null}
+            ) : (
+              <View testID="signup-alternatives" className="gap-1.5">
+                <View className="flex-row items-center gap-3">
+                  <View className="h-px flex-1 bg-line" />
+                  <AppText variant="caption" className="text-ink-muted" style={{ fontSize: 12 }}>
+                    Continuer autrement
+                  </AppText>
+                  <View className="h-px flex-1 bg-line" />
+                </View>
+                <View className="flex-row gap-3">
+                  {(
+                    [
+                      ['mail', 'Continuer avec une adresse e-mail', () => onSignIn?.()],
+                      [
+                        'smartphone',
+                        'Continuer avec un numéro de téléphone',
+                        () => setNotice('La connexion par téléphone arrive bientôt.'),
+                      ],
+                      ['user', 'Continuer sans compte', () => onSkip?.()],
+                    ] as const
+                  ).map(([icon, label, onPress]) => (
+                    <Pressable
+                      key={icon}
+                      testID={icon === 'user' ? 'signup-skip' : `signup-alt-${icon}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={label}
+                      onPress={onPress}
+                      className="h-10 flex-1 items-center justify-center rounded-control border border-line bg-surface-muted active:opacity-70"
+                    >
+                      <Feather name={icon} size={19} color={colors.brand500} />
+                    </Pressable>
+                  ))}
+                </View>
+                {notice ? (
+                  <AppText
+                    testID="signup-notice"
+                    variant="caption"
+                    className="text-center text-ink-faint"
+                  >
+                    {notice}
+                  </AppText>
+                ) : null}
+              </View>
+            )}
 
             {/* La réassurance de la maquette : trois promesses que l'app tient. */}
-            <View className="flex-row justify-between pt-0.5">
+            <View className="flex-row justify-between pt-1">
               {(pro
                 ? ([
-                    ['zap', 'Publication rapide'],
-                    ['shield', 'Données sécurisées'],
-                    ['map-pin', 'Visibilité locale'],
+                    ['zap', 'Publication\nrapide'],
+                    ['shield', 'Données\nsécurisées'],
+                    ['map-pin', 'Visibilité\nlocale'],
                   ] as const)
                 : ([
-                    ['shield', 'Paiement sécurisé'],
-                    ['lock', 'Données protégées'],
-                    ['map-pin', 'Offres géolocalisées'],
+                    ['shield', 'Paiement\nsécurisé'],
+                    ['lock', 'Données\nprotégées'],
+                    ['map-pin', 'Offres\ngéolocalisées'],
                   ] as const)
               ).map(([icon, label]) => (
-                <View key={label} className="flex-1 flex-row items-center justify-center gap-1.5">
-                  <Feather name={icon} size={14} color={colors.brand500} />
-                  <AppText variant="caption" style={{ fontSize: 10 }}>
+                <View key={label} className="flex-1 flex-row items-center justify-center gap-2">
+                  <View className="h-8 w-8 items-center justify-center rounded-pill border border-brand-200 bg-brand-50">
+                    <Feather name={icon} size={15} color={colors.brand500} />
+                  </View>
+                  <AppText variant="caption" style={{ fontSize: 10.5, lineHeight: 13 }}>
                     {label}
                   </AppText>
                 </View>
