@@ -1,4 +1,5 @@
 import { TiersSettingsScreen } from '@/features/loyalty';
+import { LOCAL_MERCHANT_ID } from '@/features/shop';
 
 /**
  * Le barème de fidélité du commerçant — CDC §8.3.
@@ -7,4 +8,6 @@ import { TiersSettingsScreen } from '@/features/loyalty';
  * paliers appartiennent à la tranche `loyalty`, et une tranche n'importe pas sa
  * voisine. C'est la route qui les met à portée du commerçant.
  */
-export default TiersSettingsScreen;
+export default function TiersRoute() {
+  return <TiersSettingsScreen merchantId={LOCAL_MERCHANT_ID} />;
+}

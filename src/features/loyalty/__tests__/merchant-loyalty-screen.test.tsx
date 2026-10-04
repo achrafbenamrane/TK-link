@@ -51,6 +51,18 @@ describe('<MerchantLoyaltyScreen />', () => {
     expect(screen.queryByText(/Partager mes points/)).toBeNull();
   });
 
+  it('suit le programme de CE commerçant : ses paliers et son unité', () => {
+    useMerchantLoyaltyStore.getState().saveProgram(MID, {
+      unit: 'achats',
+      tiers: [{ rank: 1, cost: 5, reward: 'Un café offert' }],
+    });
+    mount();
+    expect(screen.getByText('Un café offert')).toBeTruthy();
+    expect(screen.getByTestId('loyalty-rule')).toHaveTextContent(/1 achat = 1 point/);
+    // Les paliers par défaut ne s'affichent plus chez lui.
+    expect(screen.queryByText('2 miso soupes')).toBeNull();
+  });
+
   it('tient pour une enseigne sans carte', () => {
     render(
       <MerchantLoyaltyScreen merchantId="inconnu" merchantName="Nouveau" onBack={jest.fn()} />,

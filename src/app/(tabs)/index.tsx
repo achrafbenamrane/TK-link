@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { useMerchantLoyaltyStore } from '@/features/loyalty';
+import { programOf, useMerchantLoyaltyStore } from '@/features/loyalty';
 import {
   liveOffers,
   MerchantDashboardScreen,
@@ -142,7 +142,9 @@ function MerchantHome() {
     return orders.filter((o) => isMerchantOrder(o, own)).map(summarizeOrder);
   }, [orders, published]);
 
-  const tiersCount = useMerchantLoyaltyStore((s) => s.tiers.length);
+  const tiersCount = useMerchantLoyaltyStore(
+    (s) => programOf(s.programs, LOCAL_MERCHANT_ID).tiers.length,
+  );
 
   const open = useCallback(
     (target: DashboardTarget) => {

@@ -6,8 +6,20 @@ import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
-import { nextTier, pointsToGo, reachedCount, tierProgress, tierState } from '../lib/tiers';
-import { selectCards, selectTiers, useMerchantLoyaltyStore } from '../model/merchant-store';
+import {
+  nextTier,
+  pointsToGo,
+  reachedCount,
+  tierProgress,
+  tierState,
+  UNIT_LABEL,
+} from '../lib/tiers';
+import {
+  programOf,
+  selectCards,
+  selectPrograms,
+  useMerchantLoyaltyStore,
+} from '../model/merchant-store';
 
 type Props = {
   merchantId: string;
@@ -25,8 +37,9 @@ type Props = {
 export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, onBack }: Props) {
   const colors = useColors();
   const cards = useMerchantLoyaltyStore(selectCards);
-  // Les paliers viennent du commerçant depuis le §8.3, ils ne sont plus figés.
-  const tiers = useMerchantLoyaltyStore(selectTiers);
+  // Le programme de CE commerçant : ses paliers et son unité de calcul.
+  const programs = useMerchantLoyaltyStore(selectPrograms);
+  const { tiers, unit } = programOf(programs, merchantId);
   const claim = useMerchantLoyaltyStore((s) => s.claim);
 
   const [tab, setTab] = useState<'avantages' | 'historique'>('avantages');
@@ -76,6 +89,11 @@ export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, 
             </AppText>
           </View>
         </View>
+
+        <AppText testID="loyalty-rule" variant="caption" className="mb-3 text-ink-faint">
+          {UNIT_LABEL[unit].rule} chez {merchantName}. Les points ne sont ni transférables ni
+          convertibles en euros.
+        </AppText>
 
         {/* Prochain palier */}
         {goal ? (

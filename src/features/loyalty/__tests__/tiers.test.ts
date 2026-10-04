@@ -1,4 +1,5 @@
 import {
+  earnedPoints,
   nextTier,
   pointsToGo,
   reachedCount,
@@ -72,5 +73,21 @@ describe('reachedCount', () => {
     expect(reachedCount(TIERS, 113)).toBe(2);
     expect(reachedCount(TIERS, 0)).toBe(0);
     expect(reachedCount(TIERS, 200)).toBe(4);
+  });
+});
+
+describe('earnedPoints — l’unité du programme', () => {
+  it('euros : 1 € = 1 point', () => {
+    expect(earnedPoints('euros', 18)).toBe(18);
+  });
+
+  it('achats : un point par commande, quel que soit le montant', () => {
+    expect(earnedPoints('achats', 18)).toBe(1);
+    expect(earnedPoints('achats', 240)).toBe(1);
+  });
+
+  it('une commande sans article ne rapporte rien', () => {
+    expect(earnedPoints('euros', 0)).toBe(0);
+    expect(earnedPoints('achats', 0)).toBe(0);
   });
 });

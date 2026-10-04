@@ -11,7 +11,11 @@ export { MerchantLoyaltyScreen } from './ui/merchant-loyalty-screen';
 export {
   useMerchantLoyaltyStore,
   selectCards,
+  selectPrograms,
+  programOf,
   DEFAULT_TIERS,
+  DEFAULT_PROGRAM,
+  type Program,
   type MerchantCard,
   type HistoryEntry,
 } from './model/merchant-store';
@@ -21,6 +25,11 @@ export {
   pointsToGo,
   tierProgress,
   reachedCount,
+  earnedPoints,
+  PROGRAM_UNITS,
+  UNIT_LABEL,
+  MAX_TIERS,
+  type ProgramUnit,
   type Tier,
   type TierState,
 } from './lib/tiers';

@@ -7,8 +7,13 @@ import { AppText, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
 import { useColors } from '@/shared/theme/theme-provider';
 
-import type { Tier } from '../lib/tiers';
-import { selectTiers, useMerchantLoyaltyStore } from '../model/merchant-store';
+import { PROGRAM_UNITS, UNIT_LABEL, type ProgramUnit, type Tier } from '../lib/tiers';
+import { programOf, selectPrograms, useMerchantLoyaltyStore } from '../model/merchant-store';
+
+type Props = {
+  /** Le commerçant dont on règle le programme — passé par la route (composition). */
+  merchantId: string;
+};
 
 /** Un palier en cours de saisie : les nombres y sont du texte, comme au clavier. */
 type Draft = { cost: string; reward: string };
@@ -32,10 +37,15 @@ type Draft = { cost: string; reward: string };
  * Les avantages DÉJÀ RÉCLAMÉS ne sont pas repris : un client qui a obtenu sa
  * boisson ne la rend pas parce que le barème a changé.
  */
-export function TiersSettingsScreen() {
+export function TiersSettingsScreen({ merchantId }: Props) {
   const colors = useColors();
-  const tiers = useMerchantLoyaltyStore(selectTiers);
-  const setTiers = useMerchantLoyaltyStore((s) => s.setTiers);
+  const programs = useMerchantLoyaltyStore(selectPrograms);
+  const saveProgram = useMerchantLoyaltyStore((s) => s.saveProgram);
+  const program = programOf(programs, merchantId);
+  const tiers = program.tiers;
+  // Un programme enregistré est en ligne : son unité ne bouge plus (CDC V1.1).
+  const locked = programs[merchantId] !== undefined;
+  const [unit, setUnit] = useState<ProgramUnit>(program.unit);
 
   const [drafts, setDrafts] = useState<Draft[]>(() =>
     tiers.map((t) => ({ cost: String(t.cost), reward: t.reward })),
@@ -72,7 +82,7 @@ export function TiersSettingsScreen() {
       reward: d.reward.trim(),
     }));
 
-    setTiers(next);
+    saveProgram(merchantId, { unit, tiers: next });
     setErrors([]);
     Alert.alert(
       'Paliers enregistrés',
@@ -96,6 +106,47 @@ export function TiersSettingsScreen() {
           <AppText variant="caption">
             Ce que vos clients obtiennent, et à combien de points. Le barème est propre à votre
             commerce.
+          </AppText>
+        </View>
+
+        {/* L'unité de calcul — choisie à la création, figée une fois en ligne. */}
+        <View className="gap-2 rounded-card border border-line bg-surface p-4">
+          <AppText variant="label">Unité de calcul</AppText>
+          <View className="flex-row gap-2">
+            {PROGRAM_UNITS.map((u) => {
+              const on = unit === u;
+              return (
+                <Pressable
+                  key={u}
+                  testID={`program-unit-${u}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on, disabled: locked }}
+                  accessibilityLabel={UNIT_LABEL[u].title}
+                  disabled={locked}
+                  onPress={() => setUnit(u)}
+                  className={cn(
+                    'flex-1 gap-0.5 rounded-control border p-3',
+                    on ? 'border-brand-500 bg-brand-50' : 'border-line bg-surface-muted',
+                    locked && !on && 'opacity-50',
+                  )}
+                >
+                  <AppText
+                    className={cn('font-sans-semibold', on ? 'text-brand-600' : 'text-ink-muted')}
+                    style={{ fontSize: 13 }}
+                  >
+                    {UNIT_LABEL[u].title}
+                  </AppText>
+                  <AppText variant="caption" style={{ fontSize: 11 }}>
+                    {UNIT_LABEL[u].rule}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+          <AppText testID="program-unit-note" variant="caption" className="text-ink-faint">
+            {locked
+              ? 'Votre programme est en ligne : l’unité de calcul ne peut plus être modifiée.'
+              : 'Ce choix sera définitif une fois le programme enregistré.'}
           </AppText>
         </View>
 

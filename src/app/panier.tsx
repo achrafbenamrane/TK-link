@@ -1,4 +1,4 @@
-import { useMerchantLoyaltyStore } from '@/features/loyalty';
+import { earnedPoints, programOf, useMerchantLoyaltyStore } from '@/features/loyalty';
 import { CartScreen, pointsByMerchant, selectOrders, useShopStore } from '@/features/shop';
 
 /**
@@ -16,8 +16,11 @@ export default function PanierRoute() {
       onOrdered={(orderId) => {
         const order = selectOrders(useShopStore.getState()).find((o) => o.id === orderId);
         if (!order) return;
-        for (const [merchantId, points] of Object.entries(pointsByMerchant(order))) {
-          earn(merchantId, points, 'Commande');
+        const { programs } = useMerchantLoyaltyStore.getState();
+        for (const [merchantId, eurosPoints] of Object.entries(pointsByMerchant(order))) {
+          // L'unité est celle du programme de CE commerçant : euros ou achats.
+          const { unit } = programOf(programs, merchantId);
+          earn(merchantId, earnedPoints(unit, eurosPoints), 'Commande');
         }
       }}
     />

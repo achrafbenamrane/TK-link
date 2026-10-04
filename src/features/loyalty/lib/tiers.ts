@@ -20,6 +20,33 @@ export type Tier = {
   reward: string;
 };
 
+/**
+ * L'unité de calcul du programme — CDC V1.1, Commerçant > Avantage par points :
+ * « le commerçant choisit l'unité de calcul (achats ou euros cumulés) à la
+ * création du programme ; ce choix n'est plus modifiable une fois en ligne ».
+ */
+export type ProgramUnit = 'euros' | 'achats';
+
+export const PROGRAM_UNITS: ProgramUnit[] = ['euros', 'achats'];
+
+export const UNIT_LABEL: Record<ProgramUnit, { title: string; rule: string }> = {
+  euros: { title: 'Euros dépensés', rule: '1 € dépensé = 1 point' },
+  achats: { title: 'Nombre d’achats', rule: '1 achat = 1 point' },
+};
+
+/** Jusqu'à quatre paliers — CDC V1.1 : « jusqu'à 4 paliers par défaut ». */
+export const MAX_TIERS = 4;
+
+/**
+ * Les points d'une commande chez UN commerçant, selon l'unité de son programme.
+ * `eurosPoints` est le montant des articles en euros (la livraison, le service
+ * et le pourboire sont déjà exclus en amont, CDC V1.1 §Utilisateur).
+ */
+export function earnedPoints(unit: ProgramUnit, eurosPoints: number): number {
+  if (eurosPoints <= 0) return 0;
+  return unit === 'achats' ? 1 : eurosPoints;
+}
+
 /** Où en est un palier pour un solde donné. */
 export type TierState = 'claimed' | 'available' | 'locked';
 
