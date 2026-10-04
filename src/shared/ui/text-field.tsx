@@ -14,6 +14,10 @@ export type TextFieldProps = TextInputProps & {
   invalid?: boolean;
   /** Hauteur réduite (40 px) pour les formulaires qui doivent tenir sur un seul écran. */
   compact?: boolean;
+  /** Encore plus bas (36 px) pour les formulaires de douze champs qui tiennent sur une page. */
+  dense?: boolean;
+  /** Élément après l'icône (indicatif de pays…). */
+  prefix?: ReactNode;
 };
 
 /**
@@ -28,6 +32,8 @@ export function TextField({
   accessory,
   invalid,
   compact,
+  dense,
+  prefix,
   style,
   ...rest
 }: TextFieldProps) {
@@ -38,8 +44,10 @@ export function TextField({
       placeholderTextColor={colors.inkFaint}
       className={cn(
         'font-sans text-ink',
-        compact ? 'text-sm' : 'text-base',
-        icon || accessory ? 'min-w-0 flex-1' : cn('flex-1 px-4', compact ? 'h-10' : 'h-12'),
+        dense ? 'text-[12.5px]' : compact ? 'text-sm' : 'text-base',
+        icon || accessory
+          ? 'min-w-0 flex-1'
+          : cn('flex-1 px-4', dense ? 'h-8' : compact ? 'h-10' : 'h-12'),
         !icon && !accessory && 'rounded-control border border-line bg-surface-muted',
         !icon && !accessory && invalid && 'border-brand-500',
         className,
@@ -55,11 +63,12 @@ export function TextField({
     <View
       className={cn(
         'flex-1 flex-row items-center gap-2.5 rounded-control border bg-surface-muted px-3.5',
-        compact ? 'h-10' : 'h-12',
+        dense ? 'h-8' : compact ? 'h-10' : 'h-12',
         invalid ? 'border-brand-500' : 'border-line',
       )}
     >
-      {icon ? <Feather name={icon} size={17} color={colors.brand500} /> : null}
+      {icon ? <Feather name={icon} size={dense ? 15 : 17} color={colors.brand500} /> : null}
+      {prefix}
       <View className="h-full flex-1 justify-center">{input}</View>
       {accessory}
     </View>

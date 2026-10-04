@@ -94,7 +94,7 @@ describe('<SignUpScreen /> — consommateur', () => {
   });
 });
 
-/** Un professionnel remplit d'abord ses coordonnées (étape 1), puis son commerce (étape 2). */
+/** Les coordonnées et le mot de passe d'un professionnel — tout est sur la même page. */
 function proStepOne() {
   fill('signup-firstname', 'Neo');
   fill('signup-lastname', 'Test');
@@ -102,7 +102,6 @@ function proStepOne() {
   fill('signup-phone', '06 12 34 56 78');
   fill('signup-password', 'motdepasse1');
   fill('signup-confirm', 'motdepasse1');
-  fireEvent.press(screen.getByTestId('signup-next'));
 }
 
 describe('<SignUpScreen /> — commerçant et grossiste', () => {
@@ -110,7 +109,7 @@ describe('<SignUpScreen /> — commerçant et grossiste', () => {
     const onRoleChange = jest.fn();
     render(<SignUpScreen role="commercant" onRoleChange={onRoleChange} />);
 
-    expect(screen.getByText('Créer mon compte commerçant')).toBeTruthy();
+    expect(screen.getAllByText('Créer mon compte commerçant').length).toBeGreaterThan(0);
     fireEvent.press(screen.getByTestId('signup-role-grossiste'));
     expect(onRoleChange).toHaveBeenCalledWith('grossiste');
     // « 5 » vient du paramètre administrable, pas d’une constante du code (CDC §6.2).
@@ -130,6 +129,7 @@ describe('<SignUpScreen /> — commerçant et grossiste', () => {
     render(<SignUpScreen role="commercant" onProfile={onProfile} onSignedUp={jest.fn()} />);
     proStepOne();
     fill('signup-shopname', 'O’Tokyo');
+    fireEvent.press(screen.getByTestId('signup-category-open'));
     fireEvent.press(screen.getByTestId('signup-category-restauration'));
     fill('signup-address', '12 rue des Arts, Toulouse');
     fireEvent.press(screen.getByTestId('signup-mode-livraison'));
@@ -157,13 +157,33 @@ describe('<SignUpScreen /> — commerçant et grossiste', () => {
 });
 
 describe('<SignUpScreen /> — une seule page', () => {
-  it('un professionnel ne voit pas les champs du commerce avant l’étape 2', () => {
+  it('un professionnel a TOUS ses champs sur la même page, sans étape', () => {
     render(<SignUpScreen role="commercant" />);
-    expect(screen.queryByTestId('signup-shopname')).toBeNull();
-    // Étape 1 incomplète : on reste dessus et l'erreur s'affiche.
-    fireEvent.press(screen.getByTestId('signup-next'));
-    expect(screen.getByTestId('signup-firstname-error')).toBeTruthy();
-    expect(screen.queryByTestId('signup-shopname')).toBeNull();
+    for (const id of [
+      'firstname',
+      'lastname',
+      'email',
+      'phone',
+      'shopname',
+      'siret',
+      'address',
+      'location',
+      'password',
+      'confirm',
+    ]) {
+      expect(screen.getByTestId(`signup-${id}`)).toBeTruthy();
+    }
+    expect(screen.getByTestId('signup-category-open')).toBeTruthy();
+    expect(screen.queryByTestId('signup-next')).toBeNull();
+  });
+
+  it('la catégorie est une liste déroulante', () => {
+    render(<SignUpScreen role="commercant" />);
+    expect(screen.queryByTestId('signup-category-list')).toBeNull();
+    fireEvent.press(screen.getByTestId('signup-category-open'));
+    expect(screen.getByTestId('signup-category-list')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('signup-category-mode'));
+    expect(screen.queryByTestId('signup-category-list')).toBeNull();
   });
 
   it('un consommateur a tous ses champs sur la même page, sans étape', () => {

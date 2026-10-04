@@ -55,6 +55,8 @@ type Props = {
   onSignIn?: () => void;
   /** « Continuer sans compte » — idem (consommateurs seulement). */
   onSkip?: () => void;
+  /** Flèche retour (maquette professionnelle) — vers le choix du profil. */
+  onBack?: () => void;
 };
 
 const MODE_LABEL: Record<ShopMode, string> = {
@@ -76,15 +78,17 @@ const PRO_TITLE: Record<'commercant' | 'grossiste', { title: string; subtitle: s
 /**
  * INSCRIPTION — le formulaire de la maquette du client, et celui du CDC §2.2.
  *
- * Prénom, nom, e-mail, téléphone, mot de passe + confirmation ; la
- * localisation est facultative (« selon consentement »). Un professionnel y
- * ajoute le nom de son commerce, sa catégorie, son adresse et ses modes de
- * remise ; son SIRET reste facultatif ici (le CDC ne l'exige que pour publier ou
- * commander en B2B). Les CGU et la politique de confidentialité doivent être
- * acceptées.
+ * Prénom, nom, e-mail, téléphone, mot de passe + confirmation ; la localisation est
+ * facultative (« selon consentement »). Un professionnel y ajoute le nom de son
+ * commerce, sa catégorie, son SIRET (facultatif ici : le CDC ne l'exige que pour
+ * publier ou commander en B2B), son adresse et ses modes de remise. Les CGU et la
+ * politique de confidentialité doivent être acceptées.
+ *
+ * TOUT TIENT SUR UNE PAGE, sans défilement, comme les maquettes : des champs de 36 px
+ * pour les professionnels (douze champs), la catégorie en liste déroulante.
  *
  * Chaque erreur s'affiche sous son champ : un bandeau global oblige à chercher
- * lequel des champs corriger — ce qu'il ne faut pas faire sur un formulaire long.
+ * lequel des champs corriger.
  */
 export function SignUpScreen({
   role,
@@ -94,6 +98,7 @@ export function SignUpScreen({
   onSignedUp,
   onSignIn,
   onSkip,
+  onBack,
 }: Props) {
   const colors = useColors();
   const [draft, setDraft] = useState<RegistrationDraft>(EMPTY_REGISTRATION);
@@ -103,9 +108,6 @@ export function SignUpScreen({
   const [submitting, setSubmitting] = useState(false);
   const [touched, setTouched] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  // Un professionnel a deux étapes sur la même page : lui, puis son commerce. Chaque
-  // écran tient sans défilement.
-  const [step, setStep] = useState<1 | 2>(1);
 
   const storeError = useAuthStore((s) => s.error);
   const signUp = useAuthStore((s) => s.signUp);
@@ -118,6 +120,7 @@ export function SignUpScreen({
   const pro = needsSiret(role);
   const courier = role === 'livreur';
   const proCopy = PRO_TITLE[role === 'grossiste' ? 'grossiste' : 'commercant'];
+  const dense = pro;
 
   const set = (key: keyof RegistrationDraft, value: string) => {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -130,14 +133,6 @@ export function SignUpScreen({
     setModes((current) =>
       current.includes(mode) ? current.filter((m) => m !== mode) : [...current, mode],
     );
-
-  const STEP1_KEYS = ['firstName', 'lastName', 'email', 'phone', 'password', 'confirm'];
-  const next = () => {
-    const found = validateRegistration(draft, role);
-    const mine = Object.fromEntries(Object.entries(found).filter(([k]) => STEP1_KEYS.includes(k)));
-    setErrors(mine);
-    if (Object.keys(mine).length === 0) setStep(2);
-  };
 
   const submit = async () => {
     const found = validateRegistration(draft, role);
@@ -178,9 +173,122 @@ export function SignUpScreen({
       hitSlop={10}
       onPress={() => setShowPassword((v) => !v)}
     >
-      <Feather name={showPassword ? 'eye-off' : 'eye'} size={17} color={colors.inkFaint} />
+      <Feather name={showPassword ? 'eye-off' : 'eye'} size={16} color={colors.inkFaint} />
     </Pressable>
   );
+
+  /** Les champs communs — l'ordre des maquettes change entre client et professionnel. */
+  const firstName = (
+    <Field
+      key="firstname"
+      dense={dense}
+      testID="signup-firstname"
+      icon="user"
+      value={draft.firstName}
+      onChangeText={(v) => set('firstName', v)}
+      error={errors.firstName}
+      placeholder="Prénom"
+      accessibilityLabel="Prénom"
+      autoCapitalize="words"
+      textContentType="givenName"
+    />
+  );
+  const lastName = (
+    <Field
+      key="lastname"
+      dense={dense}
+      testID="signup-lastname"
+      icon="user"
+      value={draft.lastName}
+      onChangeText={(v) => set('lastName', v)}
+      error={errors.lastName}
+      placeholder="Nom"
+      accessibilityLabel="Nom"
+      autoCapitalize="words"
+      textContentType="familyName"
+    />
+  );
+  const email = (
+    <Field
+      key="email"
+      dense={dense}
+      testID="signup-email"
+      icon="mail"
+      value={draft.email}
+      onChangeText={(v) => set('email', v)}
+      error={errors.email}
+      placeholder={pro ? 'E-mail professionnel' : 'E-mail'}
+      accessibilityLabel="Adresse e-mail"
+      autoCapitalize="none"
+      autoComplete="email"
+      keyboardType="email-address"
+      textContentType="emailAddress"
+    />
+  );
+  const phone = (
+    <Field
+      key="phone"
+      dense={dense}
+      testID="signup-phone"
+      icon="phone"
+      prefix={
+        <View className="flex-row items-center gap-1 border-x border-line px-2">
+          <AppText style={{ fontSize: 13 }}>🇫🇷</AppText>
+          <Feather name="chevron-down" size={11} color={colors.inkFaint} />
+        </View>
+      }
+      value={draft.phone}
+      onChangeText={(v) => set('phone', v)}
+      error={errors.phone}
+      placeholder="Téléphone"
+      accessibilityLabel="Numéro de téléphone"
+      keyboardType="phone-pad"
+      textContentType="telephoneNumber"
+    />
+  );
+  const location = (
+    <Field
+      key="location"
+      dense={dense}
+      testID="signup-location"
+      icon="map-pin"
+      value={draft.location}
+      onChangeText={(v) => set('location', v)}
+      error={errors.location}
+      placeholder={pro ? 'Ville / Localisation' : 'Ville / localisation (optionnel)'}
+      accessibilityLabel={pro ? 'Ville ou localisation' : 'Ville ou localisation, facultatif'}
+      autoCapitalize="words"
+    />
+  );
+  const passwords = [
+    <Field
+      key="password"
+      dense={dense}
+      testID="signup-password"
+      icon="lock"
+      value={draft.password}
+      onChangeText={(v) => set('password', v)}
+      error={errors.password}
+      placeholder="Mot de passe"
+      accessibilityLabel="Mot de passe"
+      secureTextEntry={!showPassword}
+      textContentType="newPassword"
+      accessory={eye}
+    />,
+    <Field
+      key="confirm"
+      dense={dense}
+      testID="signup-confirm"
+      icon="lock"
+      value={draft.confirm}
+      onChangeText={(v) => set('confirm', v)}
+      error={errors.confirm}
+      placeholder="Confirmer le mot de passe"
+      accessibilityLabel="Confirmation du mot de passe"
+      secureTextEntry={!showPassword}
+      textContentType="newPassword"
+    />,
+  ];
 
   return (
     <Screen testID="sign-up-screen">
@@ -189,20 +297,37 @@ export function SignUpScreen({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerClassName="flex-grow justify-between pb-3 pt-1"
+          contentContainerClassName="flex-grow justify-between pb-2 pt-1"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="mb-2 flex-row items-center justify-between">
-            <Wordmark size={24} />
-            <ThemeToggle />
+          {/* Retour · logo · Nuit/Jour — l'en-tête de la maquette professionnelle */}
+          <View className="mb-1.5 flex-row items-center justify-between">
+            {pro && onBack ? (
+              <Pressable
+                testID="signup-back"
+                accessibilityRole="button"
+                accessibilityLabel="Retour"
+                hitSlop={10}
+                onPress={onBack}
+                className="w-16"
+              >
+                <Feather name="arrow-left" size={22} color={colors.ink} />
+              </Pressable>
+            ) : (
+              <Wordmark size={24} />
+            )}
+            {pro && onBack ? <Wordmark size={22} /> : null}
+            <View className={cn(pro && onBack && 'w-16 items-end')}>
+              <ThemeToggle />
+            </View>
           </View>
 
-          <View className="mb-2 items-center gap-1">
-            <AppText variant="display" className="text-center" style={{ fontSize: 22 }}>
+          <View className="mb-1.5 items-center gap-0.5">
+            <AppText variant="display" className="text-center" style={{ fontSize: 21 }}>
               {pro ? proCopy.title : courier ? 'Créer mon compte livreur' : 'Créer mon compte'}
             </AppText>
-            <AppText variant="caption" className="text-center">
+            <AppText variant="caption" className="text-center" style={{ fontSize: 11 }}>
               {pro
                 ? proCopy.subtitle
                 : courier
@@ -212,19 +337,22 @@ export function SignUpScreen({
           </View>
 
           {pro ? (
-            <View className="mb-2 items-center">
-              <View className="h-14 w-14 items-center justify-center rounded-pill border-2 border-brand-500">
-                <Feather name="shopping-bag" size={24} color={colors.brand500} />
+            <View className="mb-1.5 items-center">
+              <View className="h-12 w-12 items-center justify-center rounded-pill border-2 border-brand-500">
+                <Feather name="shopping-bag" size={22} color={colors.brand500} />
+                <View className="absolute -bottom-0.5 -right-0.5 h-5 w-5 items-center justify-center rounded-pill bg-brand-500">
+                  <Feather name="plus" size={12} color="#FFFFFF" />
+                </View>
               </View>
             </View>
           ) : renderAvatar ? (
-            <View className="mb-2 items-center">{renderAvatar()}</View>
+            <View className="mb-1.5 items-center">{renderAvatar()}</View>
           ) : null}
 
           {pro && onRoleChange ? (
             <View
               accessibilityRole="tablist"
-              className="mb-2 flex-row rounded-control border border-line bg-surface-muted p-0.5"
+              className="mb-1.5 flex-row rounded-control border border-line bg-surface-muted p-0.5"
             >
               {(['commercant', 'grossiste'] as const).map((r) => {
                 const active = role === r;
@@ -236,7 +364,7 @@ export function SignUpScreen({
                     accessibilityState={{ selected: active }}
                     onPress={() => onRoleChange(r)}
                     className={cn(
-                      'flex-1 items-center rounded-lg py-2.5',
+                      'flex-1 items-center rounded-lg py-1',
                       active && 'border border-brand-500 bg-brand-50',
                     )}
                   >
@@ -245,7 +373,7 @@ export function SignUpScreen({
                         'font-sans-semibold',
                         active ? 'text-brand-600' : 'text-ink-muted',
                       )}
-                      style={{ fontSize: 13.5 }}
+                      style={{ fontSize: 12.5 }}
                     >
                       {r === 'commercant' ? 'Commerçant' : 'Grossiste'}
                     </AppText>
@@ -255,86 +383,18 @@ export function SignUpScreen({
             </View>
           ) : null}
 
-          <DemoNotice compact />
+          {!pro ? <DemoNotice compact /> : null}
 
-          <View className="gap-1.5">
-            {!pro || step === 1 ? (
+          <View className={dense ? 'gap-1' : 'gap-1.5'}>
+            {firstName}
+            {lastName}
+            {email}
+            {phone}
+
+            {pro ? (
               <>
                 <Field
-                  testID="signup-firstname"
-                  icon="user"
-                  value={draft.firstName}
-                  onChangeText={(v) => set('firstName', v)}
-                  error={errors.firstName}
-                  placeholder="Prénom"
-                  accessibilityLabel="Prénom"
-                  autoCapitalize="words"
-                  textContentType="givenName"
-                />
-                <Field
-                  testID="signup-lastname"
-                  icon="user"
-                  value={draft.lastName}
-                  onChangeText={(v) => set('lastName', v)}
-                  error={errors.lastName}
-                  placeholder="Nom"
-                  accessibilityLabel="Nom"
-                  autoCapitalize="words"
-                  textContentType="familyName"
-                />
-                <Field
-                  testID="signup-email"
-                  icon="mail"
-                  value={draft.email}
-                  onChangeText={(v) => set('email', v)}
-                  error={errors.email}
-                  placeholder={pro ? 'E-mail professionnel' : 'E-mail'}
-                  accessibilityLabel="Adresse e-mail"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  keyboardType="email-address"
-                  textContentType="emailAddress"
-                />
-                <Field
-                  testID="signup-phone"
-                  icon="phone"
-                  value={draft.phone}
-                  onChangeText={(v) => set('phone', v)}
-                  error={errors.phone}
-                  placeholder="Téléphone"
-                  accessibilityLabel="Numéro de téléphone"
-                  keyboardType="phone-pad"
-                  textContentType="telephoneNumber"
-                />
-                <Field
-                  testID="signup-password"
-                  icon="lock"
-                  value={draft.password}
-                  onChangeText={(v) => set('password', v)}
-                  error={errors.password}
-                  placeholder="Mot de passe"
-                  accessibilityLabel="Mot de passe"
-                  secureTextEntry={!showPassword}
-                  textContentType="newPassword"
-                  accessory={eye}
-                />
-                <Field
-                  testID="signup-confirm"
-                  icon="lock"
-                  value={draft.confirm}
-                  onChangeText={(v) => set('confirm', v)}
-                  error={errors.confirm}
-                  placeholder="Confirmer le mot de passe"
-                  accessibilityLabel="Confirmation du mot de passe"
-                  secureTextEntry={!showPassword}
-                  textContentType="newPassword"
-                />
-              </>
-            ) : null}
-
-            {pro && step === 2 ? (
-              <>
-                <Field
+                  dense
                   testID="signup-shopname"
                   icon="shopping-bag"
                   value={draft.shopName}
@@ -344,52 +404,13 @@ export function SignUpScreen({
                   accessibilityLabel="Nom du commerce"
                   autoCapitalize="words"
                 />
-
-                <View className="gap-1.5">
-                  <AppText variant="caption" className="font-sans-semibold text-ink-muted">
-                    Catégorie
-                  </AppText>
-                  <View className="flex-row flex-wrap gap-2">
-                    {CATEGORIES.map((key) => {
-                      const on = draft.category === key;
-                      return (
-                        <Pressable
-                          key={key}
-                          testID={`signup-category-${key}`}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: on }}
-                          accessibilityLabel={CATEGORY_INFO[key].label}
-                          onPress={() => set('category', key)}
-                          className={cn(
-                            'rounded-pill border px-3 py-2',
-                            on ? 'border-brand-500 bg-brand-500' : 'border-line bg-surface-muted',
-                          )}
-                        >
-                          <AppText
-                            className={cn(
-                              'font-sans-semibold',
-                              on ? 'text-ink-inverse' : 'text-ink-muted',
-                            )}
-                            style={{ fontSize: 12 }}
-                          >
-                            {CATEGORY_INFO[key].label}
-                          </AppText>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                  {errors.category ? (
-                    <AppText
-                      testID="signup-category-error"
-                      variant="caption"
-                      className="text-brand-600"
-                    >
-                      {errors.category}
-                    </AppText>
-                  ) : null}
-                </View>
-
+                <CategorySelect
+                  value={draft.category}
+                  error={errors.category}
+                  onChange={(key) => set('category', key)}
+                />
                 <Field
+                  dense
                   testID="signup-siret"
                   icon="file-text"
                   value={draft.siret}
@@ -398,13 +419,10 @@ export function SignUpScreen({
                   placeholder="SIRET"
                   accessibilityLabel="SIRET"
                   keyboardType="number-pad"
-                  hint={
-                    draft.siret.trim() === ''
-                      ? 'Vérifié avant toute publication ou commande B2B.'
-                      : formatSiret(draft.siret)
-                  }
+                  {...(draft.siret.trim() !== '' ? { hint: formatSiret(draft.siret) } : {})}
                 />
                 <Field
+                  dense
                   testID="signup-address"
                   icon="home"
                   value={draft.address}
@@ -415,26 +433,18 @@ export function SignUpScreen({
                   autoCapitalize="words"
                   textContentType="fullStreetAddress"
                 />
+                {location}
+                {passwords}
               </>
-            ) : null}
+            ) : (
+              <>
+                {passwords}
+                {location}
+              </>
+            )}
 
-            {!pro || step === 2 ? (
-              <Field
-                testID="signup-location"
-                icon="map-pin"
-                value={draft.location}
-                onChangeText={(v) => set('location', v)}
-                error={errors.location}
-                placeholder={pro ? 'Ville / localisation' : 'Ville / localisation (optionnel)'}
-                accessibilityLabel={
-                  pro ? 'Ville ou localisation' : 'Ville ou localisation, facultatif'
-                }
-                autoCapitalize="words"
-              />
-            ) : null}
-
-            {pro && step === 2 ? (
-              <View className="gap-1.5">
+            {pro ? (
+              <View className="gap-1">
                 <View className="flex-row gap-2">
                   {(['touch-collect', 'livraison'] as const).map((m) => {
                     const on = modes.includes(m);
@@ -447,13 +457,13 @@ export function SignUpScreen({
                         accessibilityLabel={MODE_LABEL[m]}
                         onPress={() => toggleMode(m)}
                         className={cn(
-                          'flex-1 flex-row items-center justify-center gap-2 rounded-control border py-3',
+                          'h-8 flex-1 flex-row items-center justify-center gap-1.5 rounded-control border',
                           on ? 'border-brand-500 bg-brand-50' : 'border-line bg-surface-muted',
                         )}
                       >
                         <Feather
                           name={on ? 'check-circle' : m === 'livraison' ? 'truck' : 'shopping-bag'}
-                          size={15}
+                          size={14}
                           color={on ? colors.brand600 : colors.inkMuted}
                         />
                         <AppText
@@ -461,7 +471,7 @@ export function SignUpScreen({
                             'font-sans-semibold',
                             on ? 'text-brand-600' : 'text-ink-muted',
                           )}
-                          style={{ fontSize: 13 }}
+                          style={{ fontSize: 12 }}
                         >
                           {MODE_LABEL[m]}
                         </AppText>
@@ -477,64 +487,60 @@ export function SignUpScreen({
               </View>
             ) : null}
 
-            {!pro || step === 2 ? (
-              <View className="mt-1 gap-1.5">
-                <Checkbox
-                  testID="signup-terms"
-                  checked={accepted}
-                  onChange={(v) => {
-                    setAccepted(v);
-                    if (v) setErrors((e) => ({ ...e, terms: '' }));
-                  }}
-                  invalid={!!errors.terms}
-                  accessibilityLabel="J’accepte les CGU et la politique de confidentialité"
-                >
-                  <AppText variant="caption" className="text-ink-muted" style={{ fontSize: 11.5 }}>
-                    J’accepte les{' '}
-                    <AppText className="text-accent-deep" style={{ fontSize: 11.5 }}>
-                      CGU
-                    </AppText>{' '}
-                    et la{' '}
-                    <AppText className="text-brand-600" style={{ fontSize: 11.5 }}>
-                      politique de confidentialité
-                    </AppText>
-                    .
+            <View className="gap-1">
+              <Checkbox
+                testID="signup-terms"
+                checked={accepted}
+                onChange={(v) => {
+                  setAccepted(v);
+                  if (v) setErrors((e) => ({ ...e, terms: '' }));
+                }}
+                invalid={!!errors.terms}
+                accessibilityLabel="J’accepte les CGU et la politique de confidentialité"
+              >
+                <AppText variant="caption" className="text-ink-muted" style={{ fontSize: 11.5 }}>
+                  J’accepte les{' '}
+                  <AppText className="text-accent-deep" style={{ fontSize: 11.5 }}>
+                    CGU
+                  </AppText>{' '}
+                  et la{' '}
+                  <AppText className="text-brand-600" style={{ fontSize: 11.5 }}>
+                    politique de confidentialité
                   </AppText>
-                </Checkbox>
-                {errors.terms ? (
-                  <AppText testID="signup-terms-error" variant="caption" className="text-brand-600">
-                    {errors.terms}
-                  </AppText>
-                ) : null}
-              </View>
-            ) : null}
+                  .
+                </AppText>
+              </Checkbox>
+              {errors.terms ? (
+                <AppText testID="signup-terms-error" variant="caption" className="text-brand-600">
+                  {errors.terms}
+                </AppText>
+              ) : null}
+            </View>
 
             {serverError ? (
-              <View className="flex-row items-start gap-2 rounded-control border border-brand-200 bg-brand-50 p-3">
-                <Feather name="alert-circle" size={15} color={colors.brand600} />
+              <View className="flex-row items-start gap-2 rounded-control border border-brand-200 bg-brand-50 p-2.5">
+                <Feather name="alert-circle" size={14} color={colors.brand600} />
                 <AppText testID="signup-error" variant="caption" className="flex-1 text-brand-600">
                   {serverError}
                 </AppText>
               </View>
             ) : null}
 
-            <View className="mt-1 gap-2.5">
-              {pro && step === 1 ? (
-                <Button testID="signup-next" label="Continuer" onPress={next} />
-              ) : (
-                <Button
-                  testID="signup-submit"
-                  label="Créer mon compte"
-                  loading={submitting}
-                  onPress={submit}
-                />
-              )}
+            <View className="gap-1.5">
+              <Button
+                testID="signup-submit"
+                label={pro ? 'Créer mon compte commerçant' : 'Créer mon compte'}
+                loading={submitting}
+                onPress={submit}
+                className={pro ? 'h-10' : undefined}
+              />
               {onSignIn ? (
                 <Button
                   testID="signup-to-signin"
                   label="J’ai déjà un compte"
                   variant="secondary"
                   onPress={onSignIn}
+                  className={pro ? 'h-10' : undefined}
                 />
               ) : null}
             </View>
@@ -542,11 +548,11 @@ export function SignUpScreen({
             {pro ? (
               <View
                 testID="signup-free-ops"
-                className="flex-row items-center justify-center gap-2 rounded-control border border-line bg-surface-muted py-3"
+                className="flex-row items-center justify-center gap-2 rounded-control border border-line bg-surface-muted py-1.5"
               >
-                <Feather name="gift" size={15} color={colors.brand500} />
-                <AppText variant="caption" className="text-ink-muted">
-                  <AppText className="font-sans-bold text-ink">
+                <Feather name="gift" size={14} color={colors.brand500} />
+                <AppText variant="caption" className="text-ink-muted" style={{ fontSize: 11.5 }}>
+                  <AppText className="font-sans-bold text-ink" style={{ fontSize: 11.5 }}>
                     {PLATFORM_SETTINGS.freeOperations} opérations Flash
                   </AppText>{' '}
                   gratuites pour démarrer
@@ -567,7 +573,7 @@ export function SignUpScreen({
             ) : null}
 
             {/* La réassurance de la maquette : trois promesses que l'app tient. */}
-            <View className="mt-1 flex-row justify-between">
+            <View className="flex-row justify-between pt-0.5">
               {(pro
                 ? ([
                     ['zap', 'Publication rapide'],
@@ -581,7 +587,7 @@ export function SignUpScreen({
                   ] as const)
               ).map(([icon, label]) => (
                 <View key={label} className="flex-1 flex-row items-center justify-center gap-1.5">
-                  <Feather name={icon} size={15} color={colors.brand500} />
+                  <Feather name={icon} size={14} color={colors.brand500} />
                   <AppText variant="caption" style={{ fontSize: 10 }}>
                     {label}
                   </AppText>
@@ -601,21 +607,104 @@ type FieldProps = {
   testID: string;
   error?: string | undefined;
   hint?: string;
+  /** Hauteur de 36 px, pour le formulaire professionnel qui tient sur une page. */
+  dense?: boolean;
 } & Omit<React.ComponentProps<typeof TextField>, 'testID' | 'className' | 'invalid'>;
 
-function Field({ testID, error, hint, ...rest }: FieldProps) {
+function Field({ testID, error, hint, dense, ...rest }: FieldProps) {
   return (
     <View className="gap-0.5">
       <View className="flex-row">
-        <TextField testID={testID} invalid={!!error} compact {...rest} />
+        <TextField testID={testID} invalid={!!error} compact dense={!!dense} {...rest} />
       </View>
       {error ? (
         <AppText testID={`${testID}-error`} variant="caption" className="text-brand-600">
           {error}
         </AppText>
       ) : hint ? (
-        <AppText variant="caption" className="text-ink-faint" style={{ fontSize: 11.5 }}>
+        <AppText variant="caption" className="text-ink-faint" style={{ fontSize: 11 }}>
           {hint}
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * La catégorie du commerce, en LISTE DÉROULANTE comme la maquette : un champ qui en
+ * montre la valeur, et dont les choix s'ouvrent dessous. Les puces occupaient trois
+ * lignes — impossible de tenir sur une page.
+ */
+function CategorySelect({
+  value,
+  error,
+  onChange,
+}: {
+  value: string;
+  error?: string | undefined;
+  onChange: (key: Category) => void;
+}) {
+  const colors = useColors();
+  const [open, setOpen] = useState(false);
+  const label = value && value in CATEGORY_INFO ? CATEGORY_INFO[value as Category].label : '';
+
+  return (
+    <View className="gap-0.5">
+      <Pressable
+        testID="signup-category-open"
+        accessibilityRole="button"
+        accessibilityLabel={label ? `Catégorie : ${label}` : 'Choisir une catégorie'}
+        accessibilityState={{ expanded: open }}
+        onPress={() => setOpen((v) => !v)}
+        className={cn(
+          'h-8 flex-row items-center gap-2.5 rounded-control border bg-surface-muted px-3.5',
+          error ? 'border-brand-500' : 'border-line',
+        )}
+      >
+        <Feather name="tag" size={15} color={colors.brand500} />
+        <AppText
+          className={cn('flex-1', label ? 'text-ink' : 'text-ink-faint')}
+          style={{ fontSize: 13 }}
+        >
+          {label || 'Catégorie'}
+        </AppText>
+        <Feather name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.inkMuted} />
+      </Pressable>
+      {open ? (
+        <View
+          testID="signup-category-list"
+          className="rounded-control border border-line bg-surface-muted"
+        >
+          {CATEGORIES.map((key) => {
+            const on = value === key;
+            return (
+              <Pressable
+                key={key}
+                testID={`signup-category-${key}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={CATEGORY_INFO[key].label}
+                onPress={() => {
+                  onChange(key);
+                  setOpen(false);
+                }}
+                className="flex-row items-center justify-between px-3.5 py-2.5"
+              >
+                <AppText
+                  className={on ? 'font-sans-bold text-brand-500' : 'text-ink'}
+                  style={{ fontSize: 13 }}
+                >
+                  {CATEGORY_INFO[key].label}
+                </AppText>
+                {on ? <Feather name="check" size={15} color={colors.brand500} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
+      {error ? (
+        <AppText testID="signup-category-error" variant="caption" className="text-brand-600">
+          {error}
         </AppText>
       ) : null}
     </View>

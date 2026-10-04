@@ -63,6 +63,7 @@ export default function SignUpRoute() {
       onProfile={onProfile}
       onSignedUp={toOnboarding}
       onSignIn={toSignIn}
+      onBack={() => router.replace('/role')}
       {...(role === 'consommateur' ? { onSkip: toOnboarding } : {})}
     />
   );
