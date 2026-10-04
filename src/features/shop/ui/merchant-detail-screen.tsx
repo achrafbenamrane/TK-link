@@ -347,8 +347,15 @@ export function MerchantDetailScreen({
             <AppText className="font-sans-bold text-ink">Vidéo du magasin</AppText>
             <View
               testID="merchant-video"
-              className="h-40 items-center justify-center rounded-card border border-brand-500 bg-surface-inverse"
+              className="h-40 items-center justify-center overflow-hidden rounded-card border border-brand-500 bg-surface-inverse"
             >
+              {profile?.photos[0] ? (
+                <Image
+                  source={{ uri: profile.photos[0] }}
+                  style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.55 }}
+                  contentFit="cover"
+                />
+              ) : null}
               <View className="h-14 w-14 items-center justify-center rounded-pill bg-brand-500">
                 <Feather name="play" size={24} color="#FFFFFF" />
               </View>

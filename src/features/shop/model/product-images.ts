@@ -1,3 +1,5 @@
+import { Asset } from 'expo-asset';
+
 /**
  * Visuels produits, embarqués dans l'app (donc affichés hors ligne, sans
  * dépendre d'un CDN pendant une démo client).
@@ -61,3 +63,12 @@ export const PRODUCT_IMAGES: Record<string, number | undefined> = {
   d_padel: require('../../../../assets/images/products/d_padel.jpg'),
   d_revision: require('../../../../assets/images/products/d_revision.jpg'),
 };
+
+/**
+ * L'adresse d'un visuel embarqué, en chaîne — pour les endroits qui stockent une URI
+ * (la photo d'une offre publiée, la vitrine d'un commerçant). Vide si l'offre n'en a pas.
+ */
+export function productImageUri(dealId: string): string {
+  const source = PRODUCT_IMAGES[dealId];
+  return source === undefined ? '' : Asset.fromModule(source).uri;
+}

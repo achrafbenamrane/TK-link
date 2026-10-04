@@ -48,3 +48,4 @@ export { getDeal, getMerchant, MERCHANTS } from './model/catalog';
  *  à partir d'une autre feature (les ventes flash du commerçant, CDC §9). */
 export type { Deal } from './model/schema';
 export { LOCAL_MERCHANT_ID, LOCAL_MERCHANT_DEAL_IDS } from './model/catalog';
+export { productImageUri } from './model/product-images';

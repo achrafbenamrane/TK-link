@@ -1,7 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Pressable, ScrollView, View } from 'react-native';
 
-import { cn } from '@/shared/lib/cn';
 import { ROLE_ICON, ROLE_LABEL, ROLES, type Role } from '@/shared/lib/roles';
 import { AppText, Screen, ThemeToggle, Wordmark } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
@@ -11,6 +10,11 @@ type Props = {
   onPick: (role: Role) => void;
   /** « J'ai déjà un compte » : la connexion se fait en connaissant déjà son rôle. */
   onSignIn: () => void;
+  /**
+   * Ouvre l'app de ce profil déjà remplie d'exemples (commandes, images, textes) — pour
+   * montrer au client ce que chacun voit. Absent : pas de bouton « Démo ».
+   */
+  onDemo?: (role: Role) => void;
 };
 
 const TITLE: Record<Role, string> = {
@@ -37,7 +41,7 @@ const HINT: Record<Role, string> = {
  * mauvais espace, puis de le lui faire changer. Le choix peut se refaire plus
  * tard depuis le compte.
  */
-export function RoleScreen({ onPick, onSignIn }: Props) {
+export function RoleScreen({ onPick, onSignIn, onDemo }: Props) {
   const colors = useColors();
 
   return (
@@ -59,30 +63,45 @@ export function RoleScreen({ onPick, onSignIn }: Props) {
 
         <View className="gap-3">
           {ROLES.map((role) => (
-            <Pressable
+            <View
               key={role}
-              testID={`role-${role}`}
-              accessibilityRole="button"
-              accessibilityLabel={`${ROLE_LABEL[role]} — ${HINT[role]}`}
-              onPress={() => onPick(role)}
-              className={cn(
-                'flex-row items-center gap-4 rounded-card border border-line bg-surface-muted p-4',
-                'active:border-brand-500 active:bg-brand-50',
-              )}
+              className="flex-row items-center rounded-card border border-line bg-surface-muted"
             >
-              <View className="h-14 w-14 items-center justify-center rounded-pill bg-brand-50">
-                <Feather name={ROLE_ICON[role] as 'user'} size={24} color={colors.brand500} />
-              </View>
-              <View className="flex-1 gap-0.5">
-                <AppText className="font-sans-bold text-ink" style={{ fontSize: 17 }}>
-                  {TITLE[role]}
-                </AppText>
-                <AppText variant="caption" className="text-ink-faint">
-                  {HINT[role]}
-                </AppText>
-              </View>
-              <Feather name="chevron-right" size={20} color={colors.inkFaint} />
-            </Pressable>
+              <Pressable
+                testID={`role-${role}`}
+                accessibilityRole="button"
+                accessibilityLabel={`${ROLE_LABEL[role]} — ${HINT[role]}`}
+                onPress={() => onPick(role)}
+                className="flex-1 flex-row items-center gap-4 p-4 active:opacity-70"
+              >
+                <View className="h-14 w-14 items-center justify-center rounded-pill bg-brand-50">
+                  <Feather name={ROLE_ICON[role] as 'user'} size={24} color={colors.brand500} />
+                </View>
+                <View className="flex-1 gap-0.5">
+                  <AppText className="font-sans-bold text-ink" style={{ fontSize: 17 }}>
+                    {TITLE[role]}
+                  </AppText>
+                  <AppText variant="caption" className="text-ink-faint">
+                    {HINT[role]}
+                  </AppText>
+                </View>
+              </Pressable>
+              {onDemo ? (
+                <Pressable
+                  testID={`role-demo-${role}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Voir la démo ${ROLE_LABEL[role]}`}
+                  onPress={() => onDemo(role)}
+                  className="mr-3 rounded-pill border border-brand-500 bg-brand-50 px-3 py-1.5 active:opacity-70"
+                >
+                  <AppText className="font-sans-bold text-brand-600" style={{ fontSize: 12 }}>
+                    Démo
+                  </AppText>
+                </Pressable>
+              ) : (
+                <Feather name="chevron-right" size={20} color={colors.inkFaint} />
+              )}
+            </View>
           ))}
         </View>
 
