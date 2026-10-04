@@ -7,9 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
+import { distanceKm } from '../lib/geo';
 import { getDeal, getMerchant } from '../model/catalog';
 import { useShopStore } from '../model/store';
-import { Countdown, CountdownBlocks } from './components/countdown';
+import { CountdownBlocks } from './components/countdown';
 import { ProductImage } from './components/product-image';
 import { QtyStepper } from './components/qty-stepper';
 import { ScreeningStrip } from './components/screening-strip';
@@ -33,6 +34,9 @@ export function ProductScreen({ dealId }: Props) {
   const addToCart = useShopStore((s) => s.addToCart);
   const toggleFavorite = useShopStore((s) => s.toggleFavorite);
   const isFav = useShopStore((s) => (deal ? s.favorites.includes(deal.id) : false));
+
+  const userCoord = useShopStore((s) => s.userCoord);
+  const distance = userCoord && merchant ? distanceKm(userCoord, merchant.coord) : null;
 
   const goBack = () => (router.canGoBack() ? router.back() : router.push('/'));
 
@@ -66,39 +70,26 @@ export function ProductScreen({ dealId }: Props) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 140 }}
       >
-        {/* Hero */}
-        <View className="h-80 items-center justify-center" style={{ backgroundColor: deal.tint }}>
-          <ProductImage deal={deal} emojiSize={128} />
-
-          <View
-            className="absolute left-4 flex-row items-center gap-1.5 rounded-control bg-surface-inverse px-3 py-2"
-            style={{ bottom: 16 }}
-          >
-            <Feather name="clock" size={13} color={colors.inkInverse} />
-            <Countdown seconds={deal.endsInSeconds} className="text-sm text-ink-inverse" />
-          </View>
-          {discount ? (
-            <View
-              className="absolute right-4 rounded-control bg-brand-500 px-3 py-1.5"
-              style={{ bottom: 16 }}
-            >
-              <AppText className="font-sans-bold text-sm text-ink-inverse">-{discount}%</AppText>
-            </View>
-          ) : null}
-
+        {/* Retour · favori */}
+        <View
+          className="flex-row items-center justify-between px-4 pb-2"
+          style={{ paddingTop: insets.top + 6 }}
+        >
           <Pressable
             testID="product-back"
+            accessibilityRole="button"
+            accessibilityLabel="Retour"
             onPress={goBack}
-            className="absolute left-4 h-10 w-10 items-center justify-center rounded-pill bg-surface/90"
-            style={{ top: insets.top + 6 }}
+            className="h-10 w-10 items-center justify-center rounded-pill bg-surface-muted"
           >
             <Feather name="chevron-left" size={22} color={colors.ink} />
           </Pressable>
           <Pressable
             testID="product-fav"
+            accessibilityRole="button"
+            accessibilityLabel={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
             onPress={() => toggleFavorite(deal.id)}
-            className="absolute right-4 h-10 w-10 items-center justify-center rounded-pill bg-surface/90"
-            style={{ top: insets.top + 6 }}
+            className="h-10 w-10 items-center justify-center rounded-pill bg-surface-muted"
           >
             <Ionicons
               name={isFav ? 'heart' : 'heart-outline'}
@@ -106,6 +97,106 @@ export function ProductScreen({ dealId }: Props) {
               color={isFav ? colors.brand500 : colors.ink}
             />
           </Pressable>
+        </View>
+
+        {/* LA CARTE « OFFRE FLASH » — direction A du client : bandeau rose, remise en
+            pastille ronde, prix barré et prix Flash, « FIN DANS » en trois blocs,
+            jauge « Stock restant », distance. */}
+        <View
+          testID="product-flash-card"
+          className="mx-4 overflow-hidden rounded-card border border-brand-500 bg-surface-muted"
+        >
+          <View className="flex-row items-center justify-center gap-2 bg-brand-500 py-3">
+            <Feather name="zap" size={20} color="#FFFFFF" />
+            <AppText className="font-display text-white" style={{ fontSize: 20 }}>
+              OFFRE FLASH
+            </AppText>
+          </View>
+
+          <View
+            className="h-56 items-center justify-center overflow-hidden"
+            style={{ backgroundColor: deal.tint }}
+          >
+            <ProductImage deal={deal} emojiSize={110} />
+            {discount ? (
+              <View className="absolute left-3 top-3 h-16 w-16 items-center justify-center rounded-pill bg-brand-500">
+                <AppText className="font-display text-white" style={{ fontSize: 19 }}>
+                  -{discount}%
+                </AppText>
+              </View>
+            ) : null}
+          </View>
+
+          <View className="flex-row items-end justify-between gap-3 px-4 pb-1 pt-3">
+            <View className="flex-1">
+              <AppText
+                className="font-sans-bold text-ink"
+                style={{ fontSize: 16 }}
+                numberOfLines={2}
+              >
+                {deal.title}
+              </AppText>
+              {deal.unit ? (
+                <AppText variant="caption" className="text-ink-muted">
+                  {deal.unit}
+                </AppText>
+              ) : null}
+              {deal.oldPrice ? (
+                <AppText className="mt-0.5 text-ink-faint line-through" style={{ fontSize: 15 }}>
+                  {deal.oldPrice.toFixed(2).replace('.', ',')}€
+                </AppText>
+              ) : null}
+            </View>
+            <AppText className="font-display text-brand-500" style={{ fontSize: 34 }}>
+              {deal.price.toFixed(2).split('.')[0]}
+              <AppText className="font-display text-brand-500" style={{ fontSize: 20 }}>
+                ,{deal.price.toFixed(2).split('.')[1]}€
+              </AppText>
+            </AppText>
+          </View>
+
+          <View className="items-center gap-1.5 px-4 pb-3 pt-3">
+            <View className="flex-row items-center gap-1.5">
+              <Feather name="clock" size={13} color={colors.brand500} />
+              <AppText className="text-ink-muted" style={{ fontSize: 12 }}>
+                FIN DANS
+              </AppText>
+            </View>
+            <CountdownBlocks testID="product-countdown" seconds={deal.endsInSeconds} size={30} />
+          </View>
+
+          <View className="gap-2 border-t border-line px-4 py-3">
+            <View className="flex-row items-center gap-3">
+              <AppText className="text-ink-muted" style={{ fontSize: 13 }}>
+                Stock restant
+              </AppText>
+              <View className="h-2 flex-1 overflow-hidden rounded-pill bg-surface-sunken">
+                <View
+                  className="h-full rounded-pill bg-brand-500"
+                  style={{ width: `${Math.max(6, stockPct)}%` }}
+                />
+              </View>
+              <AppText
+                testID="product-stock"
+                className={low ? 'font-sans-bold text-brand-500' : 'font-sans-bold text-ink'}
+                style={{ fontSize: 13 }}
+              >
+                {deal.stockLeft} / {deal.stockTotal}
+              </AppText>
+            </View>
+            {distance !== null ? (
+              <View className="flex-row items-center gap-1.5">
+                <Feather name="map-pin" size={13} color={colors.brand500} />
+                <AppText
+                  testID="product-distance"
+                  className="text-ink-muted"
+                  style={{ fontSize: 13 }}
+                >
+                  À {distance.toFixed(1).replace('.', ',')} km de toi
+                </AppText>
+              </View>
+            ) : null}
+          </View>
         </View>
 
         {/* Body */}
@@ -148,9 +239,6 @@ export function ProductScreen({ dealId }: Props) {
 
           {/* Title + tags */}
           <View className="gap-2">
-            <AppText variant="display" style={{ fontSize: 24 }}>
-              {deal.title}
-            </AppText>
             <View className="flex-row flex-wrap items-center gap-2">
               {merchant?.halal ? (
                 <View className="rounded-pill bg-success/10 px-2.5 py-1">
@@ -185,43 +273,6 @@ export function ProductScreen({ dealId }: Props) {
           <AppText variant="body" className="leading-relaxed text-ink-muted">
             {deal.description}
           </AppText>
-
-          {/* LE COMPTE À REBOURS DES AFFICHES — trois blocs, les unités écrites
-              dessous. C'est l'élément que les quatre affiches du client mettent
-              en avant, et il manquait : la fiche n'en montrait qu'une pastille
-              de la taille d'une étiquette, posée sur la photo. Ici il précède
-              immédiatement le stock, parce que le temps et la quantité sont les
-              deux faces de la même urgence — et qu'ils se lisent ensemble. */}
-          <View className="gap-2.5 rounded-card border border-line bg-surface-muted p-4">
-            <AppText variant="label">Fin de l’offre dans</AppText>
-            <CountdownBlocks testID="product-countdown" seconds={deal.endsInSeconds} size={30} />
-          </View>
-
-          {/* Stock */}
-          <View className="gap-1.5 rounded-card border border-line bg-surface-muted p-4">
-            <View className="flex-row items-center justify-between">
-              <AppText variant="label">Stock de la vente flash</AppText>
-              {/* Le ratio est TOUJOURS affiché — les affiches montrent
-                  « 27 / 100 », jamais un compte seul. « Plus que 4 ! » disait
-                  l'urgence en effaçant l'échelle : sans le total, on ne sait pas
-                  si l'offre part vite ou si elle était petite. L'urgence passe
-                  donc par la couleur, et le chiffre reste complet. */}
-              <AppText
-                testID="product-stock"
-                variant="caption"
-                className={low ? 'font-sans-bold text-brand-600' : 'text-ink-muted'}
-              >
-                {deal.stockLeft} / {deal.stockTotal}
-                {low ? ' · dernières pièces' : ''}
-              </AppText>
-            </View>
-            <View className="h-2 overflow-hidden rounded-pill bg-surface-sunken">
-              <View
-                className="h-full rounded-pill bg-brand-500"
-                style={{ width: `${Math.max(6, stockPct)}%` }}
-              />
-            </View>
-          </View>
 
           {/* Trust */}
           <View className="mt-1 flex-row justify-between rounded-card border border-line p-4">
