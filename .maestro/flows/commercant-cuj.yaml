@@ -1,48 +1,46 @@
 # CUJ-003 : la boucle du commerçant (docs/quality/critical-user-journeys.md)
 #
-# Le parcours qui fait vivre la plateforme : un commerçant publie un invendu,
-# un client l'achète, le commerçant le remet, et le ticket arrive dans le
-# portefeuille du client. Il traverse quatre features (merchant, shop,
-# receipts, onboarding) — c'est exactement le genre de chaîne qu'une refonte
-# casse sans que les tests unitaires ne rougissent.
+# Un commerçant s'inscrit, crée un Flash (photo facultative, modes de remise),
+# et retrouve ses commandes. L'appareil du commerçant s'ouvre sur la liste des
+# commandes en cours (CDC V1.1) ; le tableau de bord est dans « Accueil ».
 #
-# `clearState` est obligatoire : le quota du §9 n'offre que cinq publications,
-# et le rôle choisi à l'onboarding ne se change plus ensuite.
+# `clearState` est obligatoire : le quota n'offre que cinq opérations gratuites.
 appId: com.progix.tklink.dev
 ---
 - launchApp:
     clearState: true
 
-# ---------------------------------------------- s'inscrire comme commerçant
+# Porte des commerçants : même inscription, variante professionnelle.
+- openLink: 'tklink://commercant'
+- assertVisible:
+    id: 'sign-up-screen'
 - tapOn:
-    id: 'welcome-skip'
+    id: 'signup-firstname'
+- inputText: 'Karim'
 - tapOn:
-    id: 'onboarding-next' # accroche → compte
+    id: 'signup-lastname'
+- inputText: 'Hammamet'
 - tapOn:
-    id: 'onboarding-next' # « Continuer sans compte »
+    id: 'signup-email'
+- inputText: 'karim@maison-hammamet.fr'
 - tapOn:
-    id: 'role-commercant'
+    id: 'signup-phone'
+- inputText: '0612345678'
 - tapOn:
-    id: 'onboarding-next' # rôle → avatar
-- tapOn:
-    id: 'onboarding-next' # avatar : celui par défaut suffit
-- tapOn:
-    id: 'onboarding-firstname'
+    id: 'signup-shopname'
 - inputText: 'Maison Hammamet'
+- hideKeyboard
 - tapOn:
-    id: 'interest-restauration'
-- tapOn:
-    id: 'onboarding-next'
+    id: 'signup-category-restauration'
 
-# ------------------------------------------------------- publier un invendu
-- tapOn: 'Compte'
+# L'appareil s'ouvre sur les commandes en cours : écran de service.
 - assertVisible:
-    id: 'profile-mes-offres'
-- tapOn:
-    id: 'profile-mes-offres'
+    id: 'merchant-orders'
+- assertVisible:
+    id: 'merchant-orders-empty'
 
-- assertVisible:
-    id: 'merchant-quota'
+# Créer un Flash depuis l'onglet central.
+- tapOn: 'Flash'
 - tapOn:
     id: 'merchant-new-offer'
 - tapOn:
@@ -61,26 +59,4 @@ appId: com.progix.tklink.dev
 - tapOn:
     id: 'publish-submit'
 - tapOn: 'OK'
-
-# L'offre est en ligne : elle doit figurer dans MES offres.
 - assertVisible: 'Plateau de viennoiseries'
-
-# ------------------------------------- le client la voit et la commande
-- tapOn: 'Accueil'
-- assertVisible:
-    id: 'home-screen'
-- assertVisible: 'Plateau de viennoiseries'
-
-# ------------------------------------- le commerçant la retrouve et la traite
-- tapOn: 'Compte'
-- assertVisible:
-    id: 'profile-commandes-recues'
-- tapOn:
-    id: 'profile-commandes-recues'
-- assertVisible:
-    id: 'merchant-orders'
-
-# Sans commande passée, l'écran doit EXPLIQUER plutôt que rester muet : c'est
-# la moitié de la valeur d'un état vide.
-- assertVisible:
-    id: 'merchant-orders-empty'

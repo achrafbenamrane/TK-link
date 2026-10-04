@@ -48,7 +48,7 @@ enforces).
   facture certifiée (§14).
 - **Edge cases agents must try :** publier avec un prix flash supérieur au prix
   initial (refus, sans publication), épuiser les cinq opérations gratuites (le
-  bouton se verrouille, les packs apparaissent), retirer une offre déjà
+  bouton se verrouille, message sans prix : les packs ne sont pas tarifés), retirer une offre déjà
   commandée, annuler une commande après paiement (elle ne doit produire AUCUN
   ticket), passer une commande en « prête » puis attendre — la simulation ne
   doit pas écraser la décision du commerçant.
@@ -69,6 +69,29 @@ enforces).
   chemin pour le renseigner), commander plus que le stock, ouvrir l’écran avec
   un compte consommateur (les lots ne doivent pas être accessibles).
 - **Performance budget :** aucun seuil spécifique — écran de liste simple.
+
+## CUJ-005 — Après la commande (client)
+
+- **Owner :** squad produit TK LINK
+- **Flow :** aucun — couvert par `shop/__tests__/order-feedback.test.tsx`,
+  `loyalty/__tests__/rewards.test.tsx`, `referral/__tests__/referral.test.tsx`.
+- **Journey :** commande terminée → noter le commerçant (étoiles + tags) →
+  signaler un problème (point d’entrée unique : remboursement ou file Super
+  Admin) → récompenses débloquées (QR, partage) → parrainage (5 € déduits).
+- **Edge cases agents must try :** « je n’ai rien reçu » après la remise (file
+  admin, jamais remboursement direct), noter deux fois, partager puis utiliser
+  la même récompense, saisir son propre code de parrainage.
+
+## CUJ-006 — Le livreur (TK Deliver)
+
+- **Owner :** squad produit TK LINK
+- **Flow :** aucun — couvert par `courier/__tests__/courier.test.tsx`.
+- **Journey :** « Devenir livreur » → inscription → justificatifs → vérification
+  (simulée en démo) → biométrie → en ligne → accepter une mission → code de remise
+  donné par le commerçant → livraison avec preuve photo → revenus.
+- **Edge cases agents must try :** mauvais code de remise, remise sans preuve,
+  passer hors ligne en pleine mission, gain affiché « dès 3,00 € » tant que la
+  zone de base n’est pas définie.
 
 ## Template for new CUJs
 
