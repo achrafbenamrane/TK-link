@@ -60,7 +60,7 @@ describe('création d’un Flash — étapes 1 et 7 du CDC V1.1', () => {
     fillRequired();
     fireEvent.press(screen.getByTestId('publish-photo-galerie'));
     await waitFor(() => expect(screen.getByTestId('publish-photo-preview')).toBeTruthy());
-    fireEvent.press(screen.getByTestId('publish-mode-livraison')); // retire la livraison
+    fireEvent(screen.getByTestId('publish-mode-livraison'), 'valueChange', false); // retire la livraison
     fireEvent.press(screen.getByTestId('publish-submit'));
 
     expect(onPublish).toHaveBeenCalledTimes(1);
@@ -74,8 +74,8 @@ describe('création d’un Flash — étapes 1 et 7 du CDC V1.1', () => {
     const onPublish = jest.fn();
     render(<PublishForm onPublish={onPublish} onCancel={jest.fn()} />);
     fillRequired();
-    fireEvent.press(screen.getByTestId('publish-mode-touch-collect'));
-    fireEvent.press(screen.getByTestId('publish-mode-livraison'));
+    fireEvent(screen.getByTestId('publish-mode-touch-collect'), 'valueChange', false);
+    fireEvent(screen.getByTestId('publish-mode-livraison'), 'valueChange', false);
     fireEvent.press(screen.getByTestId('publish-submit'));
 
     expect(onPublish).not.toHaveBeenCalled();
@@ -120,5 +120,53 @@ describe('schémas — photo et modes de remise', () => {
     });
     expect(legacy.photoUri).toBe('');
     expect(legacy.modes).toEqual(['touch-collect', 'livraison']);
+  });
+});
+
+describe('page « Nouveau Flash » — la maquette du client', () => {
+  it('montre les trois étapes et avance avec la saisie', () => {
+    render(<PublishForm onPublish={jest.fn()} onCancel={jest.fn()} />);
+    expect(screen.getByTestId('publish-steps')).toBeTruthy();
+    expect(screen.getByTestId('publish-step')).toHaveTextContent('Étape 1/3');
+
+    fireEvent.changeText(screen.getByTestId('publish-title'), 'Casque audio sans fil');
+    fireEvent.changeText(screen.getByTestId('publish-old-price'), '89');
+    fireEvent.changeText(screen.getByTestId('publish-price'), '39');
+    expect(screen.getByTestId('publish-step')).toHaveTextContent('Étape 2/3');
+
+    fireEvent.changeText(screen.getByTestId('publish-stock'), '5');
+    expect(screen.getByTestId('publish-step')).toHaveTextContent('Étape 3/3');
+  });
+
+  it('montre l’aperçu en direct : titre, prix, remise, restants', () => {
+    render(<PublishForm shopName="Techno Capitole" onPublish={jest.fn()} onCancel={jest.fn()} />);
+    fireEvent.changeText(screen.getByTestId('publish-title'), 'Casque audio sans fil');
+    fireEvent.changeText(screen.getByTestId('publish-old-price'), '89');
+    fireEvent.changeText(screen.getByTestId('publish-price'), '39');
+    fireEvent.changeText(screen.getByTestId('publish-stock'), '5');
+
+    const preview = screen.getByTestId('publish-preview');
+    expect(preview).toHaveTextContent(/Casque audio sans fil/);
+    expect(preview).toHaveTextContent(/Techno Capitole/);
+    expect(preview).toHaveTextContent(/-56%/);
+    expect(preview).toHaveTextContent(/5 restants/);
+  });
+
+  it('règle le stock avec − et +, et choisit la catégorie dans une liste', () => {
+    render(<PublishForm onPublish={jest.fn()} onCancel={jest.fn()} />);
+    fireEvent.press(screen.getByTestId('publish-stock-inc'));
+    fireEvent.press(screen.getByTestId('publish-stock-inc'));
+    expect(screen.getByTestId('publish-stock-left')).toHaveTextContent('2 unités restantes');
+
+    expect(screen.queryByTestId('publish-cat-list')).toBeNull();
+    fireEvent.press(screen.getByTestId('publish-cat-open'));
+    fireEvent.press(screen.getByTestId('publish-cat-high-tech'));
+    expect(screen.queryByTestId('publish-cat-list')).toBeNull();
+  });
+
+  it('ne propose ni « Vidéo » ni « Sublime » : absents du CDC', () => {
+    render(<PublishForm onPublish={jest.fn()} onCancel={jest.fn()} />);
+    expect(screen.queryByText('Vidéo')).toBeNull();
+    expect(screen.queryByText(/Sublime/)).toBeNull();
   });
 });

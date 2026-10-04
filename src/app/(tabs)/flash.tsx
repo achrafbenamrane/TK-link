@@ -1,5 +1,6 @@
 import { MerchantOffersScreen } from '@/features/merchant';
 import { selectFirstName, selectRole, useOnboardingStore } from '@/features/onboarding';
+import { useShopStore } from '@/features/shop';
 
 /**
  * L'onglet central du commerçant : créer et suivre ses opérations Flash
@@ -12,11 +13,13 @@ import { selectFirstName, selectRole, useOnboardingStore } from '@/features/onbo
 export default function FlashRoute() {
   const role = useOnboardingStore(selectRole);
   const firstName = useOnboardingStore(selectFirstName);
+  const application = useShopStore((s) => s.merchantApplication);
 
   return (
     <MerchantOffersScreen
       audience={role === 'grossiste' ? 'commercants' : 'clients'}
       seller={firstName}
+      {...(application?.shopName ? { shopName: application.shopName } : {})}
     />
   );
 }

@@ -1,11 +1,11 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 
 import { CATEGORIES, CATEGORY_INFO, type Category } from '@/shared/lib/categories';
 import { cn } from '@/shared/lib/cn';
-import { AppText } from '@/shared/ui';
+import { AppText, ThemeToggle } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { commissionCents, formatCents, netCents, parseEurosToCents } from '../lib/billing';
@@ -26,63 +26,30 @@ const MODE_LABEL: Record<OfferMode, string> = {
 type Props = {
   onPublish: (draft: OfferDraft) => void;
   onCancel: () => void;
+  /** Nom du commerce, pour l'aperçu en direct. */
+  shopName?: string;
+  /** Titre de la page — « Nouveau Flash » pour un commerçant, « Nouveau lot » pour un grossiste. */
+  title?: string;
+  /** Opérations restantes, affichées sous le titre. */
+  subtitle?: string;
 };
 
 type Errors = Partial<Record<'title' | 'priceCents' | 'oldPriceCents' | 'stock' | 'modes', string>>;
 
-/** Champ de saisie court, avec son erreur sous lui. */
-function Field({
-  label,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
+/** Étiquette au-dessus d'un champ de la grille, comme la maquette. */
+function Label({ children }: { children: string }) {
   return (
-    <View className="gap-1.5">
-      <View className="flex-row items-baseline gap-2">
-        <AppText variant="caption" className="font-sans-semibold text-ink-muted">
-          {label}
-        </AppText>
-        {hint ? (
-          <AppText variant="caption" className="text-ink-faint" style={{ fontSize: 11 }}>
-            {hint}
-          </AppText>
-        ) : null}
-      </View>
+    <AppText className="text-ink-muted" style={{ fontSize: 11 }} numberOfLines={1}>
       {children}
-      {error ? (
-        <AppText variant="caption" className="text-brand-600">
-          {error}
-        </AppText>
-      ) : null}
-    </View>
+    </AppText>
   );
 }
 
 /**
- * PUBLIER UNE VENTE FLASH — CDC §9.
- *
- * Le formulaire ne demande QUE ce que la fiche client affiche (CDC §8) : titre,
- * catégorie, prix barré, prix flash, quantité, durée. Un champ de plus serait un
- * champ que le commerçant remplit sans que personne ne le lise.
- *
- * Le calcul de ce qu'il touchera vraiment — commission de 5 % déduite — est
- * affiché EN DIRECT sous les prix. Découvrir la commission sur le relevé du
- * mois suivant est la meilleure façon de perdre un commerçant.
- */
-/**
  * QUAND L'OFFRE PART — CDC §4.2, huitième étape : « publier ou programmer ».
  *
  * Des délais RELATIFS et non un calendrier. Un commerçant programme « ce soir »
- * ou « demain matin », il ne cherche pas une date dans un mois — et un sélecteur
- * de date complet sur mobile coûte une dépendance native pour un besoin que
- * quatre boutons couvrent. Le jour où un cas réel demande une date lointaine,
- * il sera temps.
+ * ou « demain matin », il ne cherche pas une date dans un mois.
  */
 const STARTS = [
   { minutes: 0, label: 'Maintenant' },
@@ -91,7 +58,23 @@ const STARTS = [
   { minutes: 1440, label: 'Demain' },
 ] as const;
 
-export function PublishForm({ onPublish, onCancel }: Props) {
+const pad = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * NOUVEAU FLASH — la page de création de la maquette du client : étapes
+ * Créer · Configurer · Publier, photo, « Aperçu en direct » de la carte telle que le
+ * client la verra, grille titre / prix / quantité, durée, fin du Flash, catégorie, stock
+ * et modes de remise.
+ *
+ * Le formulaire ne demande QUE ce que la fiche client affiche (CDC §8). La maquette
+ * propose aussi « Vidéo » et « Sublime » (retouche de la photo) : ni l'un ni l'autre
+ * n'est dans le CDC (étape 1 : « photo »), ils ne sont pas construits.
+ *
+ * Ce que le commerçant touchera VRAIMENT — commission de 5 % déduite — s'affiche en
+ * direct : la découvrir sur le relevé du mois suivant est la meilleure façon de
+ * perdre un commerçant.
+ */
+export function PublishForm({ onPublish, onCancel, shopName, title: pageTitle, subtitle }: Props) {
   const colors = useColors();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<Category>('restauration');
@@ -103,12 +86,29 @@ export function PublishForm({ onPublish, onCancel }: Props) {
   const [modes, setModes] = useState<OfferMode[]>([...OFFER_MODES]);
   const [startIn, setStartIn] = useState<number>(0);
   const [description, setDescription] = useState('');
+  const [categoryOpen, setCategoryOpen] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
+  // Instant figé au montage : pas d'horloge pendant le rendu.
+  const [mountedAt] = useState(() => Date.now());
 
   const priceCents = parseEurosToCents(price) ?? 0;
   const oldCents = parseEurosToCents(oldPrice) ?? 0;
   const qty = Number.parseInt(stock, 10) || 0;
   const potential = priceCents * qty;
+  const discount =
+    oldCents > 0 && priceCents > 0 ? Math.round((1 - priceCents / oldCents) * 100) : 0;
+
+  // Où en est le commerçant — Créer (titre et prix), Configurer (quantité, remise), Publier.
+  const created = title.trim().length >= 3 && priceCents > 0 && oldCents > priceCents;
+  const configured = created && qty > 0 && modes.length > 0;
+  const step = configured ? 3 : created ? 2 : 1;
+
+  const endsAt = new Date(mountedAt + (startIn + duration) * 60_000);
+  const endsDay =
+    endsAt.getDate() === new Date(mountedAt).getDate()
+      ? "Aujourd'hui"
+      : endsAt.toLocaleDateString('fr-FR');
+  const preview = `${pad(Math.floor(duration / 60))}:${pad(duration % 60)}:00`;
 
   const submit = (state: 'brouillon' | 'publiee') => {
     const parsed = OfferDraftSchema.safeParse({
@@ -140,227 +140,472 @@ export function PublishForm({ onPublish, onCancel }: Props) {
     onPublish(parsed.data);
   };
 
+  const toggleMode = (m: OfferMode) =>
+    setModes((current) => (current.includes(m) ? current.filter((x) => x !== m) : [...current, m]));
+
+  const inputClass =
+    'rounded-control border border-line bg-surface-muted px-2.5 font-sans text-ink';
+
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
-      contentContainerClassName="gap-4 px-5 pb-10"
+      contentContainerClassName="gap-3 px-5 pb-10"
       keyboardShouldPersistTaps="handled"
     >
-      {/* Étape 1 — la photo. Facultative : sans elle, la carte montre l'emoji de
-          la catégorie. */}
-      <Field label="Photo" hint="facultatif">
-        {photoUri ? (
-          <View testID="publish-photo-preview" className="overflow-hidden rounded-card">
-            <Image
-              source={{ uri: photoUri }}
-              style={{ width: '100%', height: 190 }}
-              contentFit="cover"
-              accessibilityLabel="Photo de l’offre"
-            />
-            <Pressable
-              testID="publish-photo-remove"
-              accessibilityRole="button"
-              accessibilityLabel="Retirer la photo"
-              hitSlop={8}
-              onPress={() => setPhotoUri('')}
-              className="absolute right-2 top-2 h-9 w-9 items-center justify-center rounded-pill bg-black/60"
+      {/* Titre · Étape n/3 · Nuit/Jour */}
+      <View className="flex-row items-center gap-2 pt-2">
+        <Pressable
+          testID="merchant-publish-back"
+          accessibilityRole="button"
+          accessibilityLabel="Retour"
+          hitSlop={10}
+          onPress={onCancel}
+        >
+          <Feather name="arrow-left" size={22} color={colors.ink} />
+        </Pressable>
+        <View className="flex-1 flex-row items-center gap-1.5">
+          <AppText variant="display" style={{ fontSize: 16 }} numberOfLines={1}>
+            {pageTitle ?? 'Nouveau Flash'}
+          </AppText>
+          <View className="rounded-pill border border-line px-2 py-0.5">
+            <AppText testID="publish-step" className="text-ink-muted" style={{ fontSize: 10 }}>
+              Étape {step}/3
+            </AppText>
+          </View>
+        </View>
+        <ThemeToggle />
+      </View>
+      {subtitle ? (
+        <AppText variant="caption" className="-mt-2 ml-8 text-ink-faint">
+          {subtitle}
+        </AppText>
+      ) : null}
+
+      {/* Les trois étapes */}
+      <View className="flex-row items-start" testID="publish-steps">
+        {(['Créer', 'Configurer', 'Publier'] as const).map((label, i) => {
+          const n = i + 1;
+          const reached = n <= step;
+          return (
+            <View key={label} className="flex-1 items-center gap-1">
+              <View className="w-full flex-row items-center">
+                <View
+                  className={cn(
+                    'h-0.5 flex-1',
+                    i === 0 ? 'bg-transparent' : reached ? 'bg-brand-500' : 'bg-line',
+                  )}
+                />
+                <View
+                  className={cn(
+                    'h-7 w-7 items-center justify-center rounded-pill border',
+                    reached ? 'border-brand-500 bg-brand-500' : 'border-line bg-surface-muted',
+                  )}
+                >
+                  <AppText
+                    className={reached ? 'font-sans-bold text-white' : 'text-ink-muted'}
+                    style={{ fontSize: 12 }}
+                  >
+                    {n}
+                  </AppText>
+                </View>
+                <View
+                  className={cn(
+                    'h-0.5 flex-1',
+                    i === 2 ? 'bg-transparent' : n < step ? 'bg-brand-500' : 'bg-line',
+                  )}
+                />
+              </View>
+              <AppText
+                className={n === step ? 'font-sans-bold text-brand-500' : 'text-ink-muted'}
+                style={{ fontSize: 11 }}
+              >
+                {label}
+              </AppText>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* La photo : prendre ou importer. Facultative — sans elle, la carte montre l'emoji de la catégorie. */}
+      <View className="flex-row gap-2">
+        {(
+          [
+            ['camera', 'camera', 'Prendre photo'],
+            ['galerie', 'image', 'Importer'],
+          ] as const
+        ).map(([source, icon, label]) => (
+          <Pressable
+            key={source}
+            testID={`publish-photo-${source}`}
+            accessibilityRole="button"
+            accessibilityLabel={
+              source === 'camera' ? 'Prendre une photo' : 'Choisir dans la galerie'
+            }
+            onPress={async () => {
+              const uri = await pickFlashPhoto(source);
+              if (uri) setPhotoUri(uri);
+            }}
+            className="flex-1 items-center gap-1 rounded-control border border-line bg-surface-muted py-3 active:opacity-70"
+          >
+            <Feather name={icon} size={20} color={colors.ink} />
+            <AppText className="text-ink-muted" style={{ fontSize: 11.5 }}>
+              {label}
+            </AppText>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Aperçu en direct — la carte telle que le client la verra */}
+      <View className="flex-row items-center gap-1.5">
+        <Feather name="eye" size={13} color={colors.ink} />
+        <AppText className="font-sans-semibold text-ink" style={{ fontSize: 13 }}>
+          Aperçu en direct
+        </AppText>
+      </View>
+      <View
+        testID="publish-preview"
+        className="gap-2 rounded-card border border-brand-500 bg-surface-muted p-2.5"
+      >
+        <View className="flex-row gap-2.5">
+          <View className="h-[104px] w-[88px] items-center justify-center overflow-hidden rounded-control bg-surface-sunken">
+            {photoUri ? (
+              <View testID="publish-photo-preview" className="h-full w-full">
+                <Image
+                  source={{ uri: photoUri }}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="cover"
+                  accessibilityLabel="Photo de l’offre"
+                />
+                <Pressable
+                  testID="publish-photo-remove"
+                  accessibilityRole="button"
+                  accessibilityLabel="Retirer la photo"
+                  hitSlop={6}
+                  onPress={() => setPhotoUri('')}
+                  className="absolute right-1 top-1 h-6 w-6 items-center justify-center rounded-pill bg-black/60"
+                >
+                  <Feather name="x" size={14} color="#FFFFFF" />
+                </Pressable>
+              </View>
+            ) : (
+              <AppText style={{ fontSize: 34 }}>{CATEGORY_INFO[category].emoji}</AppText>
+            )}
+          </View>
+          <View className="flex-1 gap-1">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center gap-1 rounded-pill bg-brand-500 px-2.5 py-1">
+                <Feather name="zap" size={12} color="#FFFFFF" />
+                <AppText
+                  className="font-sans-bold text-white"
+                  style={{ fontSize: 12, fontVariant: ['tabular-nums'] }}
+                >
+                  {preview}
+                </AppText>
+              </View>
+              <View className="flex-row items-center gap-1 rounded-pill bg-warning px-2 py-1">
+                <Feather name="package" size={11} color="#FFFFFF" />
+                <AppText className="font-sans-bold text-white" style={{ fontSize: 10.5 }}>
+                  {qty || 0} restant{qty > 1 ? 's' : ''}
+                </AppText>
+              </View>
+            </View>
+            <AppText className="font-sans-bold text-ink" style={{ fontSize: 15 }} numberOfLines={1}>
+              {title.trim() || 'Titre de l’offre'}
+            </AppText>
+            <AppText
+              variant="caption"
+              className="text-ink-muted"
+              style={{ fontSize: 11 }}
+              numberOfLines={1}
             >
-              <Feather name="x" size={18} color="#FFFFFF" />
-            </Pressable>
-          </View>
-        ) : (
-          <View className="flex-row gap-2">
-            {(
-              [
-                ['camera', 'camera', 'Prendre une photo'],
-                ['galerie', 'image', 'Choisir dans la galerie'],
-              ] as const
-            ).map(([source, icon, label]) => (
-              <Pressable
-                key={source}
-                testID={`publish-photo-${source}`}
-                accessibilityRole="button"
-                accessibilityLabel={label}
-                onPress={async () => {
-                  const uri = await pickFlashPhoto(source);
-                  if (uri) setPhotoUri(uri);
-                }}
-                className="flex-1 items-center gap-1.5 rounded-control border border-dashed border-brand-500 bg-brand-50 py-4"
-              >
-                <Feather name={icon} size={20} color={colors.brand500} />
-                <AppText
-                  className="font-sans-semibold text-brand-600"
-                  style={{ fontSize: 12 }}
-                  numberOfLines={1}
-                >
-                  {label}
+              {shopName ?? 'Votre commerce'}
+            </AppText>
+            <View className="flex-row items-end justify-between">
+              <View className="flex-row items-baseline gap-1.5">
+                {oldCents > 0 ? (
+                  <AppText className="text-ink-faint line-through" style={{ fontSize: 12 }}>
+                    {formatCents(oldCents)}
+                  </AppText>
+                ) : null}
+                <AppText className="font-display text-brand-500" style={{ fontSize: 22 }}>
+                  {formatCents(priceCents)}
                 </AppText>
-              </Pressable>
-            ))}
+              </View>
+              {discount > 0 ? (
+                <View className="rounded-pill bg-surface-inverse px-2 py-0.5">
+                  <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 11 }}>
+                    -{discount}%
+                  </AppText>
+                </View>
+              ) : null}
+            </View>
           </View>
-        )}
-      </Field>
-
-      <Field label="Ce que vous vendez" error={errors.title}>
-        <TextInput
-          testID="publish-title"
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Ex. Plateau de viennoiseries"
-          placeholderTextColor={colors.inkFaint}
-          className="rounded-control bg-surface-muted px-4 font-sans text-ink"
-          style={{ height: 50, fontSize: 16 }}
-          maxLength={60}
-          accessibilityLabel="Titre de l’offre"
-        />
-      </Field>
-
-      <Field label="Catégorie">
-        <View className="flex-row flex-wrap gap-2">
-          {CATEGORIES.map((c) => {
-            const on = category === c;
-            return (
-              <Pressable
-                key={c}
-                testID={`publish-cat-${c}`}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                accessibilityLabel={CATEGORY_INFO[c].label}
-                onPress={() => setCategory(c)}
-                className={cn(
-                  'flex-row items-center gap-1.5 rounded-pill px-3 py-2',
-                  on ? 'bg-brand-500' : 'bg-surface-muted',
-                )}
+        </View>
+        <View className="flex-row gap-2">
+          {modes.map((m) => (
+            <View
+              key={m}
+              className="flex-1 flex-row items-center justify-center gap-1.5 rounded-control border border-line py-1.5"
+            >
+              <Feather
+                name={m === 'livraison' ? 'truck' : 'shopping-bag'}
+                size={12}
+                color={m === 'livraison' ? colors.success : colors.accent}
+              />
+              <AppText
+                className={m === 'livraison' ? 'text-success' : 'text-accent-deep'}
+                style={{ fontSize: 11 }}
               >
-                <AppText style={{ fontSize: 13 }}>{CATEGORY_INFO[c].emoji}</AppText>
-                <AppText
-                  className={cn('font-sans-semibold', on ? 'text-ink-inverse' : 'text-ink-muted')}
-                  style={{ fontSize: 12.5 }}
-                >
-                  {CATEGORY_INFO[c].short}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </View>
-      </Field>
-
-      <View className="flex-row gap-3">
-        <View className="flex-1">
-          <Field label="Prix initial" hint="€" error={errors.oldPriceCents}>
-            <TextInput
-              testID="publish-old-price"
-              value={oldPrice}
-              onChangeText={setOldPrice}
-              placeholder="34,90"
-              placeholderTextColor={colors.inkFaint}
-              keyboardType="decimal-pad"
-              className="rounded-control bg-surface-muted px-4 font-sans text-ink"
-              style={{ height: 50, fontSize: 16 }}
-              accessibilityLabel="Prix initial en euros"
-            />
-          </Field>
-        </View>
-        <View className="flex-1">
-          <Field label="Prix flash" hint="€" error={errors.priceCents}>
-            <TextInput
-              testID="publish-price"
-              value={price}
-              onChangeText={setPrice}
-              placeholder="24,90"
-              placeholderTextColor={colors.inkFaint}
-              keyboardType="decimal-pad"
-              className="rounded-control bg-surface-muted px-4 font-sans text-ink"
-              style={{ height: 50, fontSize: 16 }}
-              accessibilityLabel="Prix flash en euros"
-            />
-          </Field>
+                {MODE_LABEL[m]}
+              </AppText>
+            </View>
+          ))}
         </View>
       </View>
 
-      <Field label="Quantité" hint="ce que vous avez en trop" error={errors.stock}>
-        <TextInput
-          testID="publish-stock"
-          value={stock}
-          onChangeText={setStock}
-          placeholder="8"
-          placeholderTextColor={colors.inkFaint}
-          keyboardType="number-pad"
-          className="rounded-control bg-surface-muted px-4 font-sans text-ink"
-          style={{ height: 50, fontSize: 16 }}
-          accessibilityLabel="Quantité disponible"
-        />
-      </Field>
-
-      <Field label="Durée de la vente">
-        <View className="flex-row flex-wrap gap-2">
-          {DURATIONS.map((m) => {
-            const on = duration === m;
-            return (
-              <Pressable
-                key={m}
-                testID={`publish-duration-${m}`}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                accessibilityLabel={m < 60 ? `${m} minutes` : `${m / 60} heures`}
-                onPress={() => setDuration(m)}
-                className={cn(
-                  'rounded-pill px-4 py-2',
-                  on ? 'bg-surface-inverse' : 'bg-surface-muted',
-                )}
-              >
-                <AppText
-                  className={cn('font-sans-semibold', on ? 'text-ink-inverse' : 'text-ink-muted')}
-                  style={{ fontSize: 12.5 }}
-                >
-                  {m < 60 ? `${m} min` : `${m / 60} h`}
-                </AppText>
-              </Pressable>
-            );
-          })}
+      {/* Titre · prix initial · prix flash · quantité */}
+      <View className="flex-row gap-2">
+        <View className="gap-1" style={{ flex: 1.7 }}>
+          <Label>Titre de l’offre</Label>
+          <TextInput
+            testID="publish-title"
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Casque audio"
+            placeholderTextColor={colors.inkFaint}
+            className={inputClass}
+            style={{ height: 40, fontSize: 13 }}
+            maxLength={60}
+            accessibilityLabel="Titre de l’offre"
+          />
         </View>
-      </Field>
-
-      {/* Étape 7 — le mode de remise : Touch & Collect, livraison, ou les deux. */}
-      <Field label="Mode de remise" error={errors.modes}>
-        <View className="flex-row gap-2">
-          {OFFER_MODES.map((m) => {
-            const on = modes.includes(m);
-            return (
-              <Pressable
-                key={m}
-                testID={`publish-mode-${m}`}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: on }}
-                accessibilityLabel={MODE_LABEL[m]}
-                onPress={() =>
-                  setModes((current) =>
-                    current.includes(m) ? current.filter((x) => x !== m) : [...current, m],
-                  )
-                }
-                className={cn(
-                  'flex-1 flex-row items-center justify-center gap-2 rounded-control border py-3',
-                  on ? 'border-brand-500 bg-brand-50' : 'border-line bg-surface-muted',
-                )}
-              >
-                <Feather
-                  name={on ? 'check-circle' : m === 'livraison' ? 'truck' : 'shopping-bag'}
-                  size={15}
-                  color={on ? colors.brand600 : colors.inkMuted}
-                />
-                <AppText
-                  className={cn('font-sans-semibold', on ? 'text-brand-600' : 'text-ink-muted')}
-                  style={{ fontSize: 13 }}
-                >
-                  {MODE_LABEL[m]}
-                </AppText>
-              </Pressable>
-            );
-          })}
+        <View className="flex-1 gap-1">
+          <Label>Prix initial</Label>
+          <TextInput
+            testID="publish-old-price"
+            value={oldPrice}
+            onChangeText={setOldPrice}
+            placeholder="89,00 €"
+            placeholderTextColor={colors.inkFaint}
+            keyboardType="decimal-pad"
+            className={inputClass}
+            style={{ height: 40, fontSize: 13 }}
+            accessibilityLabel="Prix initial en euros"
+          />
         </View>
-      </Field>
+        <View className="flex-1 gap-1">
+          <Label>Prix Flash</Label>
+          <TextInput
+            testID="publish-price"
+            value={price}
+            onChangeText={setPrice}
+            placeholder="39,00 €"
+            placeholderTextColor={colors.inkFaint}
+            keyboardType="decimal-pad"
+            className={inputClass}
+            style={{ height: 40, fontSize: 13 }}
+            accessibilityLabel="Prix flash en euros"
+          />
+        </View>
+        <View className="gap-1" style={{ flex: 0.8 }}>
+          <Label>Quantité</Label>
+          <TextInput
+            testID="publish-stock"
+            value={stock}
+            onChangeText={setStock}
+            placeholder="5"
+            placeholderTextColor={colors.inkFaint}
+            keyboardType="number-pad"
+            className={inputClass}
+            style={{ height: 40, fontSize: 13 }}
+            accessibilityLabel="Quantité disponible"
+          />
+        </View>
+      </View>
+      {errors.title || errors.oldPriceCents || errors.priceCents || errors.stock ? (
+        <View className="gap-0.5">
+          {[errors.title, errors.oldPriceCents, errors.priceCents, errors.stock]
+            .filter(Boolean)
+            .map((e) => (
+              <AppText key={e} variant="caption" className="text-brand-600">
+                {e}
+              </AppText>
+            ))}
+        </View>
+      ) : null}
 
-      <Field label="Précision" hint="facultatif">
+      {/* Durée · fin du Flash · catégorie */}
+      <View className="flex-row gap-2">
+        <View className="gap-1" style={{ flex: 1.1 }}>
+          <Label>Durée du Flash</Label>
+          <View className="h-10 flex-row items-center gap-1.5 rounded-control border border-line bg-surface-muted px-2.5">
+            <Feather name="zap" size={13} color={colors.brand500} />
+            <AppText className="text-ink" style={{ fontSize: 13 }}>
+              {duration < 60
+                ? `${duration} minutes`
+                : duration === 60
+                  ? '1 heure'
+                  : `${duration / 60} heures`}
+            </AppText>
+          </View>
+        </View>
+        <View className="gap-1" style={{ flex: 1.8 }}>
+          <Label>Fin du Flash</Label>
+          <View className="h-10 flex-row items-center gap-1.5 rounded-control border border-line bg-surface-muted px-2.5">
+            <Feather name="calendar" size={13} color={colors.inkMuted} />
+            <AppText
+              testID="publish-ends"
+              className="text-ink"
+              style={{ fontSize: 12.5 }}
+              numberOfLines={1}
+            >
+              {endsDay}, {pad(endsAt.getHours())}:{pad(endsAt.getMinutes())}
+            </AppText>
+          </View>
+        </View>
+        <View className="gap-1" style={{ flex: 0.9 }}>
+          <Label>Catégorie</Label>
+          <Pressable
+            testID="publish-cat-open"
+            accessibilityRole="button"
+            accessibilityState={{ expanded: categoryOpen }}
+            accessibilityLabel={`Catégorie : ${CATEGORY_INFO[category].label}`}
+            onPress={() => setCategoryOpen((v) => !v)}
+            className="h-10 flex-row items-center gap-1.5 rounded-control border border-line bg-surface-muted px-2.5"
+          >
+            <AppText style={{ fontSize: 13 }}>{CATEGORY_INFO[category].emoji}</AppText>
+            <AppText className="flex-1 text-ink" style={{ fontSize: 12 }} numberOfLines={1}>
+              {CATEGORY_INFO[category].short}
+            </AppText>
+            <Feather
+              name={categoryOpen ? 'chevron-up' : 'chevron-down'}
+              size={14}
+              color={colors.inkMuted}
+            />
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Les durées possibles — 15 min à 2 h (CDC V1.1) */}
+      <View className="flex-row gap-2">
+        {DURATIONS.map((m) => {
+          const on = duration === m;
+          return (
+            <Pressable
+              key={m}
+              testID={`publish-duration-${m}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={m < 60 ? `${m} minutes` : `${m / 60} heures`}
+              onPress={() => setDuration(m)}
+              className={cn(
+                'flex-1 items-center rounded-pill border py-1.5',
+                on ? 'border-brand-500 bg-brand-50' : 'border-line bg-surface-muted',
+              )}
+            >
+              <AppText
+                className={cn('font-sans-semibold', on ? 'text-brand-600' : 'text-ink-muted')}
+                style={{ fontSize: 12 }}
+              >
+                {m < 60 ? `${m} min` : `${m / 60} h`}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {categoryOpen ? (
+        <View
+          testID="publish-cat-list"
+          className="rounded-control border border-line bg-surface-muted"
+        >
+          {CATEGORIES.map((c) => (
+            <Pressable
+              key={c}
+              testID={`publish-cat-${c}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: category === c }}
+              accessibilityLabel={CATEGORY_INFO[c].label}
+              onPress={() => {
+                setCategory(c);
+                setCategoryOpen(false);
+              }}
+              className="flex-row items-center gap-2 px-3 py-2.5"
+            >
+              <AppText style={{ fontSize: 14 }}>{CATEGORY_INFO[c].emoji}</AppText>
+              <AppText
+                className={category === c ? 'font-sans-bold text-brand-500' : 'text-ink'}
+                style={{ fontSize: 13 }}
+              >
+                {CATEGORY_INFO[c].label}
+              </AppText>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      {/* Stock disponible · modes de remise (interrupteurs) */}
+      <View className="flex-row items-start gap-3">
+        <View className="flex-1 gap-1.5">
+          <Label>Stock disponible</Label>
+          <AppText testID="publish-stock-left" className="text-warning" style={{ fontSize: 12.5 }}>
+            {qty} unité{qty > 1 ? 's' : ''} restante{qty > 1 ? 's' : ''}
+          </AppText>
+          <View className="flex-row items-center gap-2">
+            <Pressable
+              testID="publish-stock-dec"
+              accessibilityRole="button"
+              accessibilityLabel="Une unité de moins"
+              hitSlop={8}
+              onPress={() => setStock(String(Math.max(0, qty - 1)))}
+              className="h-6 w-6 items-center justify-center rounded-pill border border-line"
+            >
+              <Feather name="minus" size={13} color={colors.ink} />
+            </Pressable>
+            <View className="h-1.5 flex-1 overflow-hidden rounded-pill bg-surface-sunken">
+              <View
+                className="h-full rounded-pill bg-warning"
+                style={{ width: `${Math.min(100, (qty / 50) * 100)}%` }}
+              />
+            </View>
+            <Pressable
+              testID="publish-stock-inc"
+              accessibilityRole="button"
+              accessibilityLabel="Une unité de plus"
+              hitSlop={8}
+              onPress={() => setStock(String(Math.min(999, qty + 1)))}
+              className="h-6 w-6 items-center justify-center rounded-pill border border-line"
+            >
+              <Feather name="plus" size={13} color={colors.ink} />
+            </Pressable>
+          </View>
+        </View>
+        {OFFER_MODES.map((m) => (
+          <View key={m} className="items-center gap-1.5">
+            <AppText className="text-ink-muted" style={{ fontSize: 10.5 }}>
+              {MODE_LABEL[m]}
+            </AppText>
+            <Switch
+              testID={`publish-mode-${m}`}
+              accessibilityLabel={MODE_LABEL[m]}
+              value={modes.includes(m)}
+              onValueChange={() => toggleMode(m)}
+              trackColor={{
+                true: m === 'livraison' ? colors.success : colors.accent,
+                false: colors.line,
+              }}
+            />
+          </View>
+        ))}
+      </View>
+      {errors.modes ? (
+        <AppText variant="caption" className="text-brand-600">
+          {errors.modes}
+        </AppText>
+      ) : null}
+
+      <View className="gap-1.5">
+        <Label>Précision (facultatif)</Label>
         <TextInput
           testID="publish-description"
           value={description}
@@ -368,45 +613,39 @@ export function PublishForm({ onPublish, onCancel }: Props) {
           placeholder="Ex. À retirer avant 19 h"
           placeholderTextColor={colors.inkFaint}
           multiline
-          className="rounded-control bg-surface-muted px-4 py-3 font-sans text-ink"
-          style={{ minHeight: 70, fontSize: 15 }}
+          className="rounded-control border border-line bg-surface-muted px-3 py-2 font-sans text-ink"
+          style={{ minHeight: 56, fontSize: 13 }}
           maxLength={240}
           accessibilityLabel="Précision sur l’offre"
         />
-      </Field>
+      </View>
 
       {/* Ce que ça rapporte VRAIMENT — CDC §21 */}
-      <View className="gap-2 rounded-card bg-surface-inverse p-4">
-        <View className="flex-row items-center gap-2">
-          <Feather name="trending-up" size={15} color={colors.accent} />
-          <AppText className="font-sans-semibold text-ink-inverse" style={{ fontSize: 13 }}>
-            Si tout part
-          </AppText>
-        </View>
+      <View className="gap-1.5 rounded-card bg-surface-inverse p-3.5">
         <View className="flex-row items-center justify-between">
-          <AppText className="text-ink-inverse/70" style={{ fontSize: 12.5 }}>
-            {qty || 0} × {formatCents(priceCents)}
+          <AppText className="text-ink-inverse/70" style={{ fontSize: 12 }}>
+            Si tout part : {qty || 0} × {formatCents(priceCents)}
           </AppText>
-          <AppText className="font-sans-semibold text-ink-inverse" style={{ fontSize: 13 }}>
+          <AppText className="font-sans-semibold text-ink-inverse" style={{ fontSize: 12.5 }}>
             {formatCents(potential)}
           </AppText>
         </View>
         <View className="flex-row items-center justify-between">
-          <AppText className="text-ink-inverse/70" style={{ fontSize: 12.5 }}>
+          <AppText className="text-ink-inverse/70" style={{ fontSize: 12 }}>
             Commission TK LINK (5 %)
           </AppText>
-          <AppText className="text-ink-inverse/70" style={{ fontSize: 12.5 }}>
+          <AppText className="text-ink-inverse/70" style={{ fontSize: 12 }}>
             − {formatCents(commissionCents(potential))}
           </AppText>
         </View>
-        <View className="mt-1 flex-row items-center justify-between border-t border-ink-inverse/15 pt-2">
+        <View className="flex-row items-center justify-between border-t border-ink-inverse/15 pt-1.5">
           <AppText className="font-sans-bold text-accent" style={{ fontSize: 13 }}>
             Vous touchez
           </AppText>
           <AppText
             testID="publish-net"
             className="font-display text-accent"
-            style={{ fontSize: 17 }}
+            style={{ fontSize: 16 }}
           >
             {formatCents(netCents(potential))}
           </AppText>
@@ -414,11 +653,9 @@ export function PublishForm({ onPublish, onCancel }: Props) {
       </View>
 
       {/* Quand elle part — CDC §4.2. */}
-      <View className="gap-2">
-        <AppText variant="caption" className="font-sans-semibold text-ink-muted">
-          Mise en ligne
-        </AppText>
-        <View className="flex-row flex-wrap gap-2">
+      <View className="gap-1.5">
+        <Label>Mise en ligne</Label>
+        <View className="flex-row gap-2">
           {STARTS.map((s) => (
             <Pressable
               key={s.minutes}
@@ -428,28 +665,24 @@ export function PublishForm({ onPublish, onCancel }: Props) {
               accessibilityLabel={`Mise en ligne : ${s.label}`}
               onPress={() => setStartIn(s.minutes)}
               className={cn(
-                'rounded-pill border px-3.5 py-2',
-                startIn === s.minutes ? 'border-brand-500 bg-brand-500' : 'border-line bg-surface',
+                'flex-1 items-center rounded-pill border py-1.5',
+                startIn === s.minutes
+                  ? 'border-brand-500 bg-brand-500'
+                  : 'border-line bg-surface-muted',
               )}
             >
               <AppText
                 className={cn(
                   'font-sans-semibold',
-                  startIn === s.minutes ? 'text-ink-inverse' : 'text-ink-muted',
+                  startIn === s.minutes ? 'text-white' : 'text-ink-muted',
                 )}
-                style={{ fontSize: 13 }}
+                style={{ fontSize: 11.5 }}
               >
                 {s.label}
               </AppText>
             </Pressable>
           ))}
         </View>
-        {startIn > 0 ? (
-          <AppText variant="caption" className="text-ink-faint">
-            Elle restera invisible jusque-là, puis s’ouvrira toute seule pour{' '}
-            {duration < 60 ? `${duration} min` : `${duration / 60} h`}.
-          </AppText>
-        ) : null}
       </View>
 
       <View className="gap-2">
@@ -458,27 +691,26 @@ export function PublishForm({ onPublish, onCancel }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Publier l’offre"
           onPress={() => submit('publiee')}
-          className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-4 active:bg-brand-600"
+          className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
         >
-          <Feather name="zap" size={17} color={colors.inkInverse} />
-          <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 15 }}>
-            {startIn === 0 ? 'Publier la vente flash' : 'Programmer la vente flash'}
+          <AppText className="font-sans-bold text-white" style={{ fontSize: 15 }}>
+            {startIn === 0 ? 'Publier le Flash' : 'Programmer le Flash'}
           </AppText>
+          <Feather name="zap" size={16} color="#FFFFFF" />
         </Pressable>
 
         {/* Le brouillon — premier état du §4.1. Il ne consomme pas d'opération :
-            enregistrer une idée n'est pas la publier, et facturer le brouillon
-            découragerait de préparer ses ventes à l'avance. */}
+            enregistrer une idée n'est pas la publier. */}
         <Pressable
           testID="publish-draft"
           accessibilityRole="button"
           accessibilityLabel="Enregistrer en brouillon"
           onPress={() => submit('brouillon')}
-          className="flex-row items-center justify-center gap-2 rounded-control border border-line py-3.5 active:opacity-70"
+          className="flex-row items-center justify-center gap-2 rounded-control border border-brand-500 py-3 active:opacity-70"
         >
-          <Feather name="save" size={16} color={colors.inkMuted} />
-          <AppText className="font-sans-semibold text-ink-muted" style={{ fontSize: 14 }}>
-            Enregistrer en brouillon
+          <Feather name="bookmark" size={15} color={colors.brand500} />
+          <AppText className="font-sans-semibold text-brand-600" style={{ fontSize: 14 }}>
+            Enregistrer le brouillon
           </AppText>
         </Pressable>
         <Pressable
@@ -486,7 +718,7 @@ export function PublishForm({ onPublish, onCancel }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Annuler"
           onPress={onCancel}
-          className="items-center py-2"
+          className="items-center py-1"
         >
           <AppText variant="caption" className="text-ink-muted">
             Annuler

@@ -29,6 +29,8 @@ type Props = {
   audience?: Audience;
   /** Nom affiché sur les lots B2B, où l'acheteur ne connaît pas l'enseigne. */
   seller?: string;
+  /** Nom du commerce, montré dans l'aperçu en direct du Flash. */
+  shopName?: string;
   onBack?: () => void;
 };
 
@@ -74,7 +76,12 @@ function timeLabel(seconds: number): string {
  * L'écran fait aussi le service après-vente du modèle économique : le quota du
  * §9 et la commission du §21 s'affichent AVANT d'être subis, jamais après.
  */
-export function MerchantOffersScreen({ audience = 'clients', seller = '', onBack }: Props) {
+export function MerchantOffersScreen({
+  audience = 'clients',
+  seller = '',
+  shopName,
+  onBack,
+}: Props) {
   const colors = useColors();
   const copy = COPY[audience];
   const [mode, setMode] = useState<'list' | 'publish'>('list');
@@ -125,26 +132,13 @@ export function MerchantOffersScreen({ audience = 'clients', seller = '', onBack
   if (mode === 'publish') {
     return (
       <Screen testID="merchant-publish" padded={false}>
-        <View className="flex-row items-center gap-3 px-5 pb-3 pt-2">
-          <Pressable
-            testID="merchant-publish-back"
-            accessibilityRole="button"
-            accessibilityLabel="Retour"
-            hitSlop={10}
-            onPress={() => setMode('list')}
-          >
-            <Feather name="chevron-left" size={26} color={colors.ink} />
-          </Pressable>
-          <View className="flex-1">
-            <AppText variant="display" className="text-2xl">
-              {audience === 'clients' ? 'Nouvelle vente flash' : 'Nouveau lot'}
-            </AppText>
-            <AppText variant="caption" className="mt-0.5">
-              {left} opération{left > 1 ? 's' : ''} restante{left > 1 ? 's' : ''}
-            </AppText>
-          </View>
-        </View>
-        <PublishForm onPublish={onPublish} onCancel={() => setMode('list')} />
+        <PublishForm
+          onPublish={onPublish}
+          onCancel={() => setMode('list')}
+          {...(shopName ? { shopName } : {})}
+          title={audience === 'clients' ? 'Nouveau Flash' : 'Nouveau lot'}
+          subtitle={`${left} opération${left > 1 ? 's' : ''} restante${left > 1 ? 's' : ''}`}
+        />
       </Screen>
     );
   }
