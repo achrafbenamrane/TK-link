@@ -12,6 +12,8 @@ export type TextFieldProps = TextInputProps & {
   accessory?: ReactNode;
   /** Bord rose : le champ est en erreur. */
   invalid?: boolean;
+  /** Hauteur réduite (40 px) pour les formulaires qui doivent tenir sur un seul écran. */
+  compact?: boolean;
 };
 
 /**
@@ -20,15 +22,24 @@ export type TextFieldProps = TextInputProps & {
  * Sans `icon`, il reste le champ nu qu'il a toujours été — l'enveloppe ne
  * s'ajoute que lorsqu'il y a quelque chose à y mettre.
  */
-export function TextField({ className, icon, accessory, invalid, style, ...rest }: TextFieldProps) {
+export function TextField({
+  className,
+  icon,
+  accessory,
+  invalid,
+  compact,
+  style,
+  ...rest
+}: TextFieldProps) {
   const colors = useColors();
 
   const input = (
     <TextInput
       placeholderTextColor={colors.inkFaint}
       className={cn(
-        'font-sans text-base text-ink',
-        icon || accessory ? 'min-w-0 flex-1' : 'h-12 flex-1 px-4',
+        'font-sans text-ink',
+        compact ? 'text-sm' : 'text-base',
+        icon || accessory ? 'min-w-0 flex-1' : cn('flex-1 px-4', compact ? 'h-10' : 'h-12'),
         !icon && !accessory && 'rounded-control border border-line bg-surface-muted',
         !icon && !accessory && invalid && 'border-brand-500',
         className,
@@ -43,7 +54,8 @@ export function TextField({ className, icon, accessory, invalid, style, ...rest 
   return (
     <View
       className={cn(
-        'h-12 flex-1 flex-row items-center gap-2.5 rounded-control border bg-surface-muted px-3.5',
+        'flex-1 flex-row items-center gap-2.5 rounded-control border bg-surface-muted px-3.5',
+        compact ? 'h-10' : 'h-12',
         invalid ? 'border-brand-500' : 'border-line',
       )}
     >

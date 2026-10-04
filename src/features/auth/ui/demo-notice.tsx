@@ -17,10 +17,26 @@ import { useAuthStore, selectDemoMode } from '../model/store';
  * Il disparaît de lui-même dès que `EXPO_PUBLIC_SUPABASE_URL` et la clé anon
  * sont renseignées : c'est le même drapeau qui pilote le comportement du store.
  */
-export function DemoNotice() {
+export function DemoNotice({ compact = false }: { compact?: boolean }) {
   const colors = useColors();
   const demoMode = useAuthStore(selectDemoMode);
   if (!demoMode) return null;
+
+  // Version d'une ligne pour les écrans qui doivent tenir sans défilement.
+  if (compact) {
+    return (
+      <View
+        testID="auth-demo-notice"
+        accessibilityRole="alert"
+        className="mb-1 flex-row items-center justify-center gap-1.5"
+      >
+        <Feather name="info" size={11} color={colors.inkFaint} />
+        <AppText variant="caption" className="text-ink-faint" style={{ fontSize: 10.5 }}>
+          Mode démonstration : compte local, aucun serveur connecté.
+        </AppText>
+      </View>
+    );
+  }
 
   return (
     <View

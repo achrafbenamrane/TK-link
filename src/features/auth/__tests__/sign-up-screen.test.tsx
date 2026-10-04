@@ -94,6 +94,17 @@ describe('<SignUpScreen /> — consommateur', () => {
   });
 });
 
+/** Un professionnel remplit d'abord ses coordonnées (étape 1), puis son commerce (étape 2). */
+function proStepOne() {
+  fill('signup-firstname', 'Neo');
+  fill('signup-lastname', 'Test');
+  fill('signup-email', 'pro@exemple.fr');
+  fill('signup-phone', '06 12 34 56 78');
+  fill('signup-password', 'motdepasse1');
+  fill('signup-confirm', 'motdepasse1');
+  fireEvent.press(screen.getByTestId('signup-next'));
+}
+
 describe('<SignUpScreen /> — commerçant et grossiste', () => {
   it('propose la bascule Commerçant / Grossiste et les 5 opérations gratuites', () => {
     const onRoleChange = jest.fn();
@@ -108,6 +119,7 @@ describe('<SignUpScreen /> — commerçant et grossiste', () => {
 
   it('propose Touch & Collect et Livraison — « Sur place » n’existe pas dans le CDC', () => {
     render(<SignUpScreen role="commercant" />);
+    proStepOne();
     expect(screen.getByTestId('signup-mode-touch-collect')).toBeTruthy();
     expect(screen.getByTestId('signup-mode-livraison')).toBeTruthy();
     expect(screen.queryByText('Sur place')).toBeNull();
@@ -116,15 +128,10 @@ describe('<SignUpScreen /> — commerçant et grossiste', () => {
   it('transmet la fiche du commerce à la route', async () => {
     const onProfile = jest.fn();
     render(<SignUpScreen role="commercant" onProfile={onProfile} onSignedUp={jest.fn()} />);
-    fill('signup-firstname', 'Neo');
-    fill('signup-lastname', 'Test');
-    fill('signup-email', 'pro@exemple.fr');
-    fill('signup-phone', '06 12 34 56 78');
+    proStepOne();
     fill('signup-shopname', 'O’Tokyo');
     fireEvent.press(screen.getByTestId('signup-category-restauration'));
     fill('signup-address', '12 rue des Arts, Toulouse');
-    fill('signup-password', 'motdepasse1');
-    fill('signup-confirm', 'motdepasse1');
     fireEvent.press(screen.getByTestId('signup-mode-livraison'));
     fireEvent.press(screen.getByTestId('signup-terms'));
     fireEvent.press(screen.getByTestId('signup-submit'));
@@ -140,10 +147,38 @@ describe('<SignUpScreen /> — commerçant et grossiste', () => {
 
   it('exige au moins un mode de remise', async () => {
     render(<SignUpScreen role="commercant" />);
+    proStepOne();
     fireEvent.press(screen.getByTestId('signup-mode-touch-collect')); // décoche le défaut
     fireEvent.press(screen.getByTestId('signup-terms'));
     fireEvent.press(screen.getByTestId('signup-submit'));
 
     await waitFor(() => expect(screen.getByTestId('signup-modes-error')).toBeTruthy());
+  });
+});
+
+describe('<SignUpScreen /> — une seule page', () => {
+  it('un professionnel ne voit pas les champs du commerce avant l’étape 2', () => {
+    render(<SignUpScreen role="commercant" />);
+    expect(screen.queryByTestId('signup-shopname')).toBeNull();
+    // Étape 1 incomplète : on reste dessus et l'erreur s'affiche.
+    fireEvent.press(screen.getByTestId('signup-next'));
+    expect(screen.getByTestId('signup-firstname-error')).toBeTruthy();
+    expect(screen.queryByTestId('signup-shopname')).toBeNull();
+  });
+
+  it('un consommateur a tous ses champs sur la même page, sans étape', () => {
+    render(<SignUpScreen role="consommateur" />);
+    for (const id of [
+      'firstname',
+      'lastname',
+      'email',
+      'phone',
+      'password',
+      'confirm',
+      'location',
+    ]) {
+      expect(screen.getByTestId(`signup-${id}`)).toBeTruthy();
+    }
+    expect(screen.queryByTestId('signup-next')).toBeNull();
   });
 });

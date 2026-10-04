@@ -103,6 +103,9 @@ export function SignUpScreen({
   const [submitting, setSubmitting] = useState(false);
   const [touched, setTouched] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Un professionnel a deux étapes sur la même page : lui, puis son commerce. Chaque
+  // écran tient sans défilement.
+  const [step, setStep] = useState<1 | 2>(1);
 
   const storeError = useAuthStore((s) => s.error);
   const signUp = useAuthStore((s) => s.signUp);
@@ -127,6 +130,14 @@ export function SignUpScreen({
     setModes((current) =>
       current.includes(mode) ? current.filter((m) => m !== mode) : [...current, mode],
     );
+
+  const STEP1_KEYS = ['firstName', 'lastName', 'email', 'phone', 'password', 'confirm'];
+  const next = () => {
+    const found = validateRegistration(draft, role);
+    const mine = Object.fromEntries(Object.entries(found).filter(([k]) => STEP1_KEYS.includes(k)));
+    setErrors(mine);
+    if (Object.keys(mine).length === 0) setStep(2);
+  };
 
   const submit = async () => {
     const found = validateRegistration(draft, role);
@@ -178,17 +189,17 @@ export function SignUpScreen({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerClassName="flex-grow pb-8 pt-3"
+          contentContainerClassName="flex-grow justify-between pb-3 pt-1"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="mb-5 flex-row items-center justify-between">
+          <View className="mb-2 flex-row items-center justify-between">
             <Wordmark size={24} />
             <ThemeToggle />
           </View>
 
-          <View className="mb-4 items-center gap-2">
-            <AppText variant="display" className="text-center" style={{ fontSize: 26 }}>
+          <View className="mb-2 items-center gap-1">
+            <AppText variant="display" className="text-center" style={{ fontSize: 22 }}>
               {pro ? proCopy.title : courier ? 'Créer mon compte livreur' : 'Créer mon compte'}
             </AppText>
             <AppText variant="caption" className="text-center">
@@ -196,24 +207,24 @@ export function SignUpScreen({
                 ? proCopy.subtitle
                 : courier
                   ? 'Rejoignez TK Deliver pour livrer les commandes de votre quartier.'
-                  : 'Inscris-toi pour accéder aux meilleures offres Flash autour de toi.'}
+                  : 'Inscris-toi pour accéder aux offres Flash autour de toi.'}
             </AppText>
           </View>
 
           {pro ? (
-            <View className="mb-4 items-center">
-              <View className="h-24 w-24 items-center justify-center rounded-pill border-2 border-brand-500">
-                <Feather name="shopping-bag" size={38} color={colors.brand500} />
+            <View className="mb-2 items-center">
+              <View className="h-14 w-14 items-center justify-center rounded-pill border-2 border-brand-500">
+                <Feather name="shopping-bag" size={24} color={colors.brand500} />
               </View>
             </View>
           ) : renderAvatar ? (
-            <View className="mb-4 items-center">{renderAvatar()}</View>
+            <View className="mb-2 items-center">{renderAvatar()}</View>
           ) : null}
 
           {pro && onRoleChange ? (
             <View
               accessibilityRole="tablist"
-              className="mb-4 flex-row rounded-control border border-line bg-surface-muted p-1"
+              className="mb-2 flex-row rounded-control border border-line bg-surface-muted p-0.5"
             >
               {(['commercant', 'grossiste'] as const).map((r) => {
                 const active = role === r;
@@ -244,57 +255,84 @@ export function SignUpScreen({
             </View>
           ) : null}
 
-          <DemoNotice />
+          <DemoNotice compact />
 
-          <View className="gap-3">
-            <Field
-              testID="signup-firstname"
-              icon="user"
-              value={draft.firstName}
-              onChangeText={(v) => set('firstName', v)}
-              error={errors.firstName}
-              placeholder="Prénom"
-              accessibilityLabel="Prénom"
-              autoCapitalize="words"
-              textContentType="givenName"
-            />
-            <Field
-              testID="signup-lastname"
-              icon="user"
-              value={draft.lastName}
-              onChangeText={(v) => set('lastName', v)}
-              error={errors.lastName}
-              placeholder="Nom"
-              accessibilityLabel="Nom"
-              autoCapitalize="words"
-              textContentType="familyName"
-            />
-            <Field
-              testID="signup-email"
-              icon="mail"
-              value={draft.email}
-              onChangeText={(v) => set('email', v)}
-              error={errors.email}
-              placeholder={pro ? 'E-mail professionnel' : 'E-mail'}
-              accessibilityLabel="Adresse e-mail"
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              textContentType="emailAddress"
-            />
-            <Field
-              testID="signup-phone"
-              icon="phone"
-              value={draft.phone}
-              onChangeText={(v) => set('phone', v)}
-              error={errors.phone}
-              placeholder="Téléphone"
-              accessibilityLabel="Numéro de téléphone"
-              keyboardType="phone-pad"
-              textContentType="telephoneNumber"
-            />
+          <View className="gap-1.5">
+            {!pro || step === 1 ? (
+              <>
+                <Field
+                  testID="signup-firstname"
+                  icon="user"
+                  value={draft.firstName}
+                  onChangeText={(v) => set('firstName', v)}
+                  error={errors.firstName}
+                  placeholder="Prénom"
+                  accessibilityLabel="Prénom"
+                  autoCapitalize="words"
+                  textContentType="givenName"
+                />
+                <Field
+                  testID="signup-lastname"
+                  icon="user"
+                  value={draft.lastName}
+                  onChangeText={(v) => set('lastName', v)}
+                  error={errors.lastName}
+                  placeholder="Nom"
+                  accessibilityLabel="Nom"
+                  autoCapitalize="words"
+                  textContentType="familyName"
+                />
+                <Field
+                  testID="signup-email"
+                  icon="mail"
+                  value={draft.email}
+                  onChangeText={(v) => set('email', v)}
+                  error={errors.email}
+                  placeholder={pro ? 'E-mail professionnel' : 'E-mail'}
+                  accessibilityLabel="Adresse e-mail"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  keyboardType="email-address"
+                  textContentType="emailAddress"
+                />
+                <Field
+                  testID="signup-phone"
+                  icon="phone"
+                  value={draft.phone}
+                  onChangeText={(v) => set('phone', v)}
+                  error={errors.phone}
+                  placeholder="Téléphone"
+                  accessibilityLabel="Numéro de téléphone"
+                  keyboardType="phone-pad"
+                  textContentType="telephoneNumber"
+                />
+                <Field
+                  testID="signup-password"
+                  icon="lock"
+                  value={draft.password}
+                  onChangeText={(v) => set('password', v)}
+                  error={errors.password}
+                  placeholder="Mot de passe"
+                  accessibilityLabel="Mot de passe"
+                  secureTextEntry={!showPassword}
+                  textContentType="newPassword"
+                  accessory={eye}
+                />
+                <Field
+                  testID="signup-confirm"
+                  icon="lock"
+                  value={draft.confirm}
+                  onChangeText={(v) => set('confirm', v)}
+                  error={errors.confirm}
+                  placeholder="Confirmer le mot de passe"
+                  accessibilityLabel="Confirmation du mot de passe"
+                  secureTextEntry={!showPassword}
+                  textContentType="newPassword"
+                />
+              </>
+            ) : null}
 
-            {pro ? (
+            {pro && step === 2 ? (
               <>
                 <Field
                   testID="signup-shopname"
@@ -380,43 +418,22 @@ export function SignUpScreen({
               </>
             ) : null}
 
-            <Field
-              testID="signup-location"
-              icon="map-pin"
-              value={draft.location}
-              onChangeText={(v) => set('location', v)}
-              error={errors.location}
-              placeholder={pro ? 'Ville / localisation' : 'Ville / localisation (optionnel)'}
-              accessibilityLabel={
-                pro ? 'Ville ou localisation' : 'Ville ou localisation, facultatif'
-              }
-              autoCapitalize="words"
-            />
-            <Field
-              testID="signup-password"
-              icon="lock"
-              value={draft.password}
-              onChangeText={(v) => set('password', v)}
-              error={errors.password}
-              placeholder="Mot de passe"
-              accessibilityLabel="Mot de passe"
-              secureTextEntry={!showPassword}
-              textContentType="newPassword"
-              accessory={eye}
-            />
-            <Field
-              testID="signup-confirm"
-              icon="lock"
-              value={draft.confirm}
-              onChangeText={(v) => set('confirm', v)}
-              error={errors.confirm}
-              placeholder="Confirmer le mot de passe"
-              accessibilityLabel="Confirmation du mot de passe"
-              secureTextEntry={!showPassword}
-              textContentType="newPassword"
-            />
+            {!pro || step === 2 ? (
+              <Field
+                testID="signup-location"
+                icon="map-pin"
+                value={draft.location}
+                onChangeText={(v) => set('location', v)}
+                error={errors.location}
+                placeholder={pro ? 'Ville / localisation' : 'Ville / localisation (optionnel)'}
+                accessibilityLabel={
+                  pro ? 'Ville ou localisation' : 'Ville ou localisation, facultatif'
+                }
+                autoCapitalize="words"
+              />
+            ) : null}
 
-            {pro ? (
+            {pro && step === 2 ? (
               <View className="gap-1.5">
                 <View className="flex-row gap-2">
                   {(['touch-collect', 'livraison'] as const).map((m) => {
@@ -460,28 +477,37 @@ export function SignUpScreen({
               </View>
             ) : null}
 
-            <View className="mt-1 gap-1.5">
-              <Checkbox
-                testID="signup-terms"
-                checked={accepted}
-                onChange={(v) => {
-                  setAccepted(v);
-                  if (v) setErrors((e) => ({ ...e, terms: '' }));
-                }}
-                invalid={!!errors.terms}
-                accessibilityLabel="J’accepte les CGU et la politique de confidentialité"
-              >
-                <AppText variant="caption" className="text-ink-muted">
-                  J’accepte les <AppText className="text-accent-deep">CGU</AppText> et la{' '}
-                  <AppText className="text-brand-600">politique de confidentialité</AppText>.
-                </AppText>
-              </Checkbox>
-              {errors.terms ? (
-                <AppText testID="signup-terms-error" variant="caption" className="text-brand-600">
-                  {errors.terms}
-                </AppText>
-              ) : null}
-            </View>
+            {!pro || step === 2 ? (
+              <View className="mt-1 gap-1.5">
+                <Checkbox
+                  testID="signup-terms"
+                  checked={accepted}
+                  onChange={(v) => {
+                    setAccepted(v);
+                    if (v) setErrors((e) => ({ ...e, terms: '' }));
+                  }}
+                  invalid={!!errors.terms}
+                  accessibilityLabel="J’accepte les CGU et la politique de confidentialité"
+                >
+                  <AppText variant="caption" className="text-ink-muted" style={{ fontSize: 11.5 }}>
+                    J’accepte les{' '}
+                    <AppText className="text-accent-deep" style={{ fontSize: 11.5 }}>
+                      CGU
+                    </AppText>{' '}
+                    et la{' '}
+                    <AppText className="text-brand-600" style={{ fontSize: 11.5 }}>
+                      politique de confidentialité
+                    </AppText>
+                    .
+                  </AppText>
+                </Checkbox>
+                {errors.terms ? (
+                  <AppText testID="signup-terms-error" variant="caption" className="text-brand-600">
+                    {errors.terms}
+                  </AppText>
+                ) : null}
+              </View>
+            ) : null}
 
             {serverError ? (
               <View className="flex-row items-start gap-2 rounded-control border border-brand-200 bg-brand-50 p-3">
@@ -493,12 +519,16 @@ export function SignUpScreen({
             ) : null}
 
             <View className="mt-1 gap-2.5">
-              <Button
-                testID="signup-submit"
-                label={pro ? 'Créer mon compte' : 'Créer mon compte'}
-                loading={submitting}
-                onPress={submit}
-              />
+              {pro && step === 1 ? (
+                <Button testID="signup-next" label="Continuer" onPress={next} />
+              ) : (
+                <Button
+                  testID="signup-submit"
+                  label="Créer mon compte"
+                  loading={submitting}
+                  onPress={submit}
+                />
+              )}
               {onSignIn ? (
                 <Button
                   testID="signup-to-signin"
@@ -528,7 +558,7 @@ export function SignUpScreen({
                 accessibilityRole="button"
                 accessibilityLabel="Continuer sans compte"
                 onPress={onSkip}
-                className="items-center py-2"
+                className="items-center py-1"
               >
                 <AppText variant="caption" className="text-ink-muted">
                   Continuer sans compte
@@ -537,7 +567,7 @@ export function SignUpScreen({
             ) : null}
 
             {/* La réassurance de la maquette : trois promesses que l'app tient. */}
-            <View className="mt-2 flex-row justify-between">
+            <View className="mt-1 flex-row justify-between">
               {(pro
                 ? ([
                     ['zap', 'Publication rapide'],
@@ -552,7 +582,7 @@ export function SignUpScreen({
               ).map(([icon, label]) => (
                 <View key={label} className="flex-1 flex-row items-center justify-center gap-1.5">
                   <Feather name={icon} size={15} color={colors.brand500} />
-                  <AppText variant="caption" style={{ fontSize: 11 }}>
+                  <AppText variant="caption" style={{ fontSize: 10 }}>
                     {label}
                   </AppText>
                 </View>
@@ -575,9 +605,9 @@ type FieldProps = {
 
 function Field({ testID, error, hint, ...rest }: FieldProps) {
   return (
-    <View className="gap-1">
+    <View className="gap-0.5">
       <View className="flex-row">
-        <TextField testID={testID} invalid={!!error} {...rest} />
+        <TextField testID={testID} invalid={!!error} compact {...rest} />
       </View>
       {error ? (
         <AppText testID={`${testID}-error`} variant="caption" className="text-brand-600">

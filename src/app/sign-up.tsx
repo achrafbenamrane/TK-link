@@ -58,7 +58,7 @@ export default function SignUpRoute() {
   return (
     <SignUpScreen
       role={role}
-      renderAvatar={() => <AvatarPicker />}
+      renderAvatar={() => <AvatarPicker size={48} />}
       onRoleChange={onRoleChange}
       onProfile={onProfile}
       onSignedUp={toOnboarding}
