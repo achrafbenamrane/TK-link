@@ -237,8 +237,11 @@ export function HomeScreen({
           boutons — « on ne le remarque pas ». C'est pourtant lui qui commande
           la bascule entre les deux façons de parcourir les offres : il mérite
           sa propre ligne et toute la largeur. */}
-      <View className="px-5 pb-3">
-        <ViewSwitch value={view} onChange={setView} />
+      <View className="flex-row items-center gap-3 px-5 pb-3">
+        <View className="flex-1">
+          <ViewSwitch value={view} onChange={setView} />
+        </View>
+        <ThemeToggle />
       </View>
 
       {/* Vue carte : même état de filtre que la liste, un seul `deals`. */}
@@ -284,14 +287,13 @@ export function HomeScreen({
                 <Feather name="search" size={18} color={colors.inkFaint} />
                 <TextField
                   testID="home-search"
-                  placeholder="Je sais ce que je veux…"
+                  placeholder="Rechercher une offre, une enseigne…"
                   value={query}
                   onChangeText={setQuery}
                   returnKeyType="search"
                   className="min-w-0 border-0 bg-transparent px-0"
                   style={{ minWidth: 0 }}
                 />
-                <ThemeToggle />
               </View>
 
               {/* Ad card sits above the filter and stays visible whatever the

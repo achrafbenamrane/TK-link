@@ -217,11 +217,7 @@ export function ProductScreen({ dealId }: Props) {
             </View>
             <View className="h-2 overflow-hidden rounded-pill bg-surface-sunken">
               <View
-                className={
-                  low
-                    ? 'h-full rounded-pill bg-brand-500'
-                    : 'h-full rounded-pill bg-surface-inverse'
-                }
+                className="h-full rounded-pill bg-brand-500"
                 style={{ width: `${Math.max(6, stockPct)}%` }}
               />
             </View>

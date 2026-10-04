@@ -292,7 +292,7 @@ export function DealsMap({ deals, category }: Props) {
       {styleFailed && !styleLoaded ? (
         <View
           testID="map-load-error"
-          className="absolute inset-x-4 top-4 rounded-card bg-ink/90 px-4 py-3"
+          className="absolute inset-x-4 top-4 rounded-card bg-surface-inverse/90 px-4 py-3"
         >
           <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 13 }}>
             Fond de carte indisponible

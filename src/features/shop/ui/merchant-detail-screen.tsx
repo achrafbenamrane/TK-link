@@ -166,7 +166,7 @@ export function MerchantDetailScreen({
               />
             </View>
 
-            <View className="flex-row items-center justify-between bg-ink-inverse px-4 py-3">
+            <View className="flex-row items-center justify-between bg-surface-inverse px-4 py-3">
               <View className="flex-1">
                 <AppText className="font-sans-bold text-ink" numberOfLines={1}>
                   {hero.title}

@@ -103,7 +103,7 @@ export function LiquidationRail({ limit = 8 }: Props) {
                 </View>
 
                 <View
-                  className="flex-row items-center gap-1 rounded-pill bg-ink/85 px-2 py-0.5"
+                  className="flex-row items-center gap-1 rounded-pill bg-surface-inverse/85 px-2 py-0.5"
                   style={{ flexShrink: 0 }}
                 >
                   <Feather name="clock" size={9} color={colors.inkInverse} />

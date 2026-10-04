@@ -95,6 +95,18 @@ export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, 
           convertibles en euros.
         </AppText>
 
+        {card.points === 0 && card.history.length === 0 ? (
+          <View
+            testID="loyalty-first-hint"
+            className="mb-3 flex-row items-center gap-2.5 rounded-card bg-brand-50 p-3.5"
+          >
+            <Feather name="zap" size={16} color={colors.brand600} />
+            <AppText variant="caption" className="flex-1 text-brand-700">
+              Passez une première commande chez {merchantName} : vos points arrivent tout de suite.
+            </AppText>
+          </View>
+        ) : null}
+
         {/* Prochain palier */}
         {goal ? (
           <View className="mb-4 gap-2 rounded-card bg-surface-muted p-4">
