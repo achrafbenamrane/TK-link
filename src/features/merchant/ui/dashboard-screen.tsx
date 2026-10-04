@@ -26,7 +26,16 @@ export type DashboardOrder = {
 };
 
 export type DashboardTarget =
-  'flash' | 'orders' | 'loyalty' | 'offers' | 'wholesale' | 'payouts' | 'documents' | 'account';
+  | 'flash'
+  | 'orders'
+  | 'loyalty'
+  | 'stats'
+  | 'offers'
+  | 'wholesale'
+  | 'payouts'
+  | 'documents'
+  | 'shop'
+  | 'account';
 
 type Props = {
   shopName: string;
@@ -48,11 +57,13 @@ const TILES: {
   { key: 'flash', label: 'Flash', icon: 'zap' },
   { key: 'orders', label: 'Commandes', icon: 'shopping-bag' },
   { key: 'loyalty', label: 'Fidélité', icon: 'award' },
-  { key: 'offers', label: 'Mes offres', icon: 'bar-chart-2' },
+  { key: 'stats', label: 'Statistiques', icon: 'bar-chart-2' },
+  { key: 'offers', label: 'Produits / Stock', icon: 'box' },
   { key: 'wholesale', label: 'Grossistes', icon: 'package' },
   { key: 'payouts', label: 'Versements', icon: 'credit-card' },
   { key: 'documents', label: 'Documents', icon: 'file-text' },
-  { key: 'account', label: 'Compte', icon: 'settings' },
+  { key: 'shop', label: 'Site magasin', icon: 'home' },
+  { key: 'account', label: 'Paramètres', icon: 'settings' },
 ];
 
 const TONE_CLASS: Record<DashboardOrder['tone'], string> = {

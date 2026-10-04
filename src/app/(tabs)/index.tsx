@@ -155,6 +155,8 @@ function MerchantHome() {
         flash: '/flash',
         orders: '/commandes',
         loyalty: '/fidelite',
+        stats: '/statistiques',
+        shop: '/boutique',
         offers: '/flash',
         wholesale: '/lots',
         payouts: '/versements',

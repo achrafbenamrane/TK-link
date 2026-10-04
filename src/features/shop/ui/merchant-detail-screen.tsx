@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
@@ -17,6 +18,12 @@ type Props = {
    * ne connaît pas la feature « loyalty » (pas d'import entre features).
    */
   loyaltyPoints?: number;
+  /**
+   * La vitrine réglée par le commerçant (présentation, photos, horaires) — fournie
+   * par la route : la boutique ne connaît pas l'espace commerçant. Absente pour
+   * les enseignes qui n'ont rien renseigné : on n'affiche rien plutôt qu'un bloc vide.
+   */
+  profile?: { presentation: string; photos: string[]; status: string };
   onOpenLoyalty: () => void;
   onOpenDeal: (dealId: string) => void;
   onBack: () => void;
@@ -31,6 +38,7 @@ type Props = {
 export function MerchantDetailScreen({
   merchantId,
   loyaltyPoints,
+  profile,
   onOpenLoyalty,
   onOpenDeal,
   onBack,
@@ -183,6 +191,39 @@ export function MerchantDetailScreen({
                   {hero.price.toFixed(2)}€
                 </AppText>
               </View>
+            </View>
+          </View>
+        ) : null}
+
+        {/* La vitrine du commerçant : présentation, photos, horaires. */}
+        {profile && (profile.presentation || profile.photos.length > 0) ? (
+          <View testID="merchant-shop-profile" className="mx-5 mt-4 gap-3">
+            {profile.photos.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerClassName="gap-2"
+              >
+                {profile.photos.map((uri) => (
+                  <Image
+                    key={uri}
+                    source={{ uri }}
+                    style={{ width: 160, height: 110, borderRadius: 14 }}
+                    contentFit="cover"
+                  />
+                ))}
+              </ScrollView>
+            ) : null}
+            {profile.presentation ? (
+              <AppText className="text-ink-muted" style={{ fontSize: 13.5 }}>
+                {profile.presentation}
+              </AppText>
+            ) : null}
+            <View className="flex-row items-center gap-1.5">
+              <Feather name="clock" size={13} color={colors.inkFaint} />
+              <AppText testID="merchant-open-status" variant="caption" className="text-ink-faint">
+                {profile.status}
+              </AppText>
             </View>
           </View>
         ) : null}

@@ -7,8 +7,10 @@ import { asyncStorageBackend } from '@/shared/lib/storage';
 import { canPublish } from '../lib/billing';
 import { seedWholesaleLots } from './seed';
 import {
+  EMPTY_PROFILE,
   PersistedMerchantSchema,
   type OfferDraftInput,
+  type ShopProfile,
   type PublishedOffer,
   type WholesaleOrder,
 } from './schema';
@@ -42,6 +44,9 @@ type MerchantState = {
   used: number;
   purchased: number;
   wholesaleOrders: WholesaleOrder[];
+  /** La boutique : présentation, horaires, photos, vidéos (CDC V1.1). */
+  profile: ShopProfile;
+  saveProfile: (profile: ShopProfile) => void;
 
   /** Publie une offre flash. Échoue si le quota est épuisé — CDC §9. */
   publish: (draft: OfferDraftInput, seller?: string, nowMs?: number) => PublishResult;
@@ -68,6 +73,8 @@ export const useMerchantStore = create<MerchantState>()(
       used: 0,
       purchased: 0,
       wholesaleOrders: [],
+      profile: EMPTY_PROFILE,
+      saveProfile: (profile) => set({ profile }),
 
       publish: (draft, seller = '', nowMs = Date.now()) => {
         const s = get();
@@ -155,6 +162,7 @@ export const useMerchantStore = create<MerchantState>()(
           used: 0,
           purchased: 0,
           wholesaleOrders: [],
+          profile: EMPTY_PROFILE,
         }),
     }),
     {
@@ -166,6 +174,7 @@ export const useMerchantStore = create<MerchantState>()(
         used: s.used,
         purchased: s.purchased,
         wholesaleOrders: s.wholesaleOrders,
+        profile: s.profile,
       }),
       merge: (persisted, current) => {
         const parsed = PersistedMerchantSchema.safeParse(persisted);
@@ -181,3 +190,4 @@ export const selectLots = (s: MerchantState) => s.lots;
 export const selectUsed = (s: MerchantState) => s.used;
 export const selectPurchased = (s: MerchantState) => s.purchased;
 export const selectWholesaleOrders = (s: MerchantState) => s.wholesaleOrders;
+export const selectProfile = (s: MerchantState) => s.profile;

@@ -13,12 +13,14 @@ export type PhotoSource = 'galerie' | 'camera';
 
 export async function pickImage(
   source: PhotoSource,
-  options: { aspect?: [number, number]; front?: boolean } = {},
+  options: { aspect?: [number, number]; front?: boolean; media?: 'images' | 'videos' } = {},
 ): Promise<string | null> {
   try {
     const base: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ['images'],
-      allowsEditing: true,
+      mediaTypes: options.media === 'videos' ? ['videos'] : ['images'],
+      // Une vidéo se garde telle quelle : le recadrage d'image n'a pas de sens.
+      allowsEditing: options.media !== 'videos',
+      ...(options.media === 'videos' ? { videoMaxDuration: 30 } : {}),
       aspect: options.aspect ?? [4, 3],
       quality: 0.7,
     };

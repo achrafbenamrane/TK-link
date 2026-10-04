@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { CATEGORIES } from '@/shared/lib/categories';
 
+import { defaultHours, MAX_PHOTOS, MAX_PRESENTATION, MAX_VIDEOS } from '../lib/shop-profile';
+
 /**
  * Contrat de l'offre flash publiée par un commerçant — CDC §9.
  *
@@ -179,7 +181,53 @@ export const WholesaleOrderSchema = z.object({
 
 export type WholesaleOrder = z.infer<typeof WholesaleOrderSchema>;
 
+/**
+ * La boutique — présentation, horaires, photos, vidéos, zone, modes de remise
+ * (CDC V1.1, Commerçant > Process ; étape 7 du parcours du client).
+ *
+ * Tout a un défaut : ce schéma relit des données déjà présentes sur les
+ * téléphones, enregistrées avant que la boutique n'existe.
+ */
+const CLOSED = { open: false, from: '09:00', to: '18:00' };
+
+const DayHoursSchema = z.object({
+  open: z.boolean().default(false),
+  from: z.string().default('09:00'),
+  to: z.string().default('18:00'),
+});
+
+export const ShopProfileSchema = z.object({
+  presentation: z.string().max(MAX_PRESENTATION).default(''),
+  photos: z.array(z.string()).max(MAX_PHOTOS).default([]),
+  videos: z.array(z.string()).max(MAX_VIDEOS).default([]),
+  zone: z.string().default(''),
+  modes: z.array(z.enum(OFFER_MODES)).default(() => [...OFFER_MODES]),
+  hours: z
+    .object({
+      lundi: DayHoursSchema.default(() => ({ ...CLOSED })),
+      mardi: DayHoursSchema.default(() => ({ ...CLOSED })),
+      mercredi: DayHoursSchema.default(() => ({ ...CLOSED })),
+      jeudi: DayHoursSchema.default(() => ({ ...CLOSED })),
+      vendredi: DayHoursSchema.default(() => ({ ...CLOSED })),
+      samedi: DayHoursSchema.default(() => ({ ...CLOSED })),
+      dimanche: DayHoursSchema.default(() => ({ ...CLOSED })),
+    })
+    .default(() => defaultHours()),
+});
+export type ShopProfile = z.infer<typeof ShopProfileSchema>;
+
+export const EMPTY_PROFILE: ShopProfile = {
+  presentation: '',
+  photos: [],
+  videos: [],
+  zone: '',
+  modes: [...OFFER_MODES],
+  hours: defaultHours(),
+};
+
 export const PersistedMerchantSchema = z.object({
+  /** La boutique du commerçant. `.default` : les anciennes données n'en ont pas. */
+  profile: ShopProfileSchema.default(() => EMPTY_PROFILE),
   offers: z.array(PublishedOfferSchema).default([]),
   /** Le marché B2B — conservé pour que les stocks entamés survivent — CDC §20. */
   lots: z.array(PublishedOfferSchema).default([]),
