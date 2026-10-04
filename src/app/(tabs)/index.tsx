@@ -163,6 +163,7 @@ function MerchantHome() {
         payouts: '/versements',
         documents: '/factures',
         account: '/profil',
+        setup: '/dossier-pro',
       } as const;
       router.push(href[target]);
     },
@@ -222,7 +223,7 @@ function WholesalerHome() {
           documents: '/factures',
           payouts: '/versements',
           account: '/profil',
-          setup: '/devenir-fournisseur',
+          setup: '/dossier-pro',
         } as const;
         router.push(href[target]);
       }}

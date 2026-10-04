@@ -15,8 +15,9 @@ import {
 } from '../lib/wholesale-orders';
 import { EMPTY_SUPPLIER, WholesaleOrderSchema } from '../model/schema';
 import { useMerchantStore } from '../model/store';
-import { SupplierLocked } from '../ui/supplier-locked';
-import { WholesalerSetupScreen } from '../ui/wholesaler-setup-screen';
+import { ProLocked } from '../ui/pro-locked';
+import { ProStatusBanner } from '../ui/pro-status-banner';
+import { ProSetupScreen } from '../ui/pro-setup-screen';
 import { PublishForm } from '../ui/publish-form';
 import { WholesalerDashboardScreen } from '../ui/wholesaler-dashboard-screen';
 import { WholesalerOrdersScreen } from '../ui/wholesaler-orders-screen';
@@ -216,7 +217,7 @@ describe('dossier fournisseur — étapes 3 à 6 du schéma', () => {
     const authenticate = jest.fn().mockResolvedValue(true);
     const onDone = jest.fn();
     render(
-      <WholesalerSetupScreen
+      <ProSetupScreen
         siret="44306184100047"
         address="8 rue des Carmes, 31000 Toulouse"
         authenticate={authenticate}
@@ -250,9 +251,9 @@ describe('dossier fournisseur — étapes 3 à 6 du schéma', () => {
 
   it('ferme la publication tant que le compte n’est pas validé', () => {
     const onOpenSetup = jest.fn();
-    render(<SupplierLocked status="en_verification" onOpenSetup={onOpenSetup} />);
+    render(<ProLocked status="en_verification" onOpenSetup={onOpenSetup} />);
     expect(screen.getByText('Dossier en cours de contrôle')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('supplier-locked-open'));
+    fireEvent.press(screen.getByTestId('pro-locked-open'));
     expect(onOpenSetup).toHaveBeenCalled();
   });
 
@@ -262,5 +263,38 @@ describe('dossier fournisseur — étapes 3 à 6 du schéma', () => {
     expect(screen.getByTestId('wholesaler-setup-banner')).toBeTruthy();
     fireEvent.press(screen.getByTestId('wholesaler-create-offer'));
     expect(onOpen).toHaveBeenCalledWith('setup');
+  });
+});
+
+describe('dossier pro du commerçant — mêmes étapes 3 à 6 que le grossiste', () => {
+  it('parle de commerçant et de Flash, pas de fournisseur', () => {
+    render(
+      <ProSetupScreen
+        role="commercant"
+        siret="44306184100047"
+        address="8 rue des Carmes, 31000 Toulouse"
+        authenticate={jest.fn().mockResolvedValue(true)}
+        onDone={jest.fn()}
+      />,
+    );
+    expect(screen.getByText(/tableau de bord commerçant/)).toBeTruthy();
+    expect(screen.queryByText(/fournisseur/)).toBeNull();
+  });
+
+  it('ferme la publication de Flash tant que le dossier n’est pas validé', () => {
+    render(<ProLocked status="brouillon" role="commercant" onOpenSetup={jest.fn()} />);
+    expect(screen.getByText(/publication de Flash/)).toBeTruthy();
+  });
+
+  it('rappelle le dossier sur le tableau de bord', () => {
+    const onPress = jest.fn();
+    render(<ProStatusBanner status="brouillon" role="commercant" onPress={onPress} />);
+    fireEvent.press(screen.getByTestId('pro-setup-banner'));
+    expect(onPress).toHaveBeenCalled();
+  });
+
+  it('s’efface une fois le dossier validé', () => {
+    render(<ProStatusBanner status="valide" role="commercant" onPress={jest.fn()} />);
+    expect(screen.queryByTestId('pro-setup-banner')).toBeNull();
   });
 });

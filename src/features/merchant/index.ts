@@ -16,8 +16,9 @@ export {
 } from './ui/dashboard-screen';
 export { PayoutsScreen, type PayoutLine } from './ui/payouts-screen';
 export { ShopSettingsScreen } from './ui/shop-settings-screen';
-export { SupplierLocked } from './ui/supplier-locked';
-export { WholesalerSetupScreen } from './ui/wholesaler-setup-screen';
+export { ProLocked } from './ui/pro-locked';
+export { ProStatusBanner } from './ui/pro-status-banner';
+export { ProSetupScreen } from './ui/pro-setup-screen';
 export { WholesalerOrdersScreen } from './ui/wholesaler-orders-screen';
 export { WholesalerDashboardScreen, type WholesalerTarget } from './ui/wholesaler-dashboard-screen';
 export {
@@ -38,7 +39,13 @@ export {
   selectProfile,
   selectSupplier,
 } from './model/store';
-export { canSupplierPublish, isValidIban, formatIban, type SupplierStatus } from './lib/supplier';
+export {
+  canSupplierPublish,
+  isValidIban,
+  formatIban,
+  type ProRole,
+  type SupplierStatus,
+} from './lib/supplier';
 export type { ShopProfile } from './model/schema';
 export type { Audience, OfferDraft, PublishedOffer, WholesaleOrder } from './model/schema';
 export { AUDIENCES, DURATIONS, FLASH_MIN_MINUTES, FLASH_MAX_MINUTES } from './model/schema';

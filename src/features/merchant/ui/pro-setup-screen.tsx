@@ -9,9 +9,12 @@ import { formatSiret } from '@/shared/lib/roles';
 import { AppText, Button, Screen, Wordmark } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
+import { PRO_COPY, type ProRole } from '../lib/supplier';
 import { selectSupplier, useMerchantStore } from '../model/store';
 
 type Props = {
+  /** Le profil qui dépose son dossier : change les mots, pas les étapes. */
+  role?: ProRole;
   /** Le SIRET et l'adresse saisis à l'inscription : on ne les redemande pas. */
   siret: string;
   address: string;
@@ -48,7 +51,8 @@ const STEP_TITLE: Record<Step, string> = {
  * le contrôle de l'entreprise est l'affaire de TK LINK. Faute de serveur, un bouton
  * « démo » le simule — et le dit.
  */
-export function WholesalerSetupScreen({
+export function ProSetupScreen({
+  role = 'grossiste',
   siret,
   address,
   initialIban = '',
@@ -134,7 +138,7 @@ export function WholesalerSetupScreen({
   );
 
   return (
-    <Screen testID="wholesaler-setup-screen">
+    <Screen testID="pro-setup-screen">
       <ScrollView
         contentContainerClassName="gap-4 pb-8 pt-3"
         showsVerticalScrollIndicator={false}
@@ -164,7 +168,7 @@ export function WholesalerSetupScreen({
           <View className="gap-4">
             <AppText variant="caption">
               SIRET, identité, adresse et coordonnées bancaires : TK LINK contrôle votre entreprise
-              avant l’ouverture du tableau de bord fournisseur.
+              avant l’ouverture du {PRO_COPY[role].dashboard}.
             </AppText>
 
             <View className="gap-1.5">
@@ -323,11 +327,12 @@ export function WholesalerSetupScreen({
               <Feather name="check" size={44} color={colors.brand500} />
             </View>
             <AppText className="text-center font-sans-bold" style={{ fontSize: 18 }}>
-              Votre compte fournisseur est validé
+              Votre compte {PRO_COPY[role].account} est validé
             </AppText>
             <AppText variant="caption" className="text-center">
-              Accédez à votre tableau de bord pour paramétrer votre catalogue et publier votre
-              première offre pro.
+              {role === 'commercant'
+                ? 'Accédez à votre tableau de bord pour paramétrer votre boutique et publier votre premier Flash.'
+                : 'Accédez à votre tableau de bord pour paramétrer votre catalogue et publier votre première offre pro.'}
             </AppText>
             <View className="w-full">
               <Button testID="supplier-done" label="Accéder au tableau de bord" onPress={onDone} />

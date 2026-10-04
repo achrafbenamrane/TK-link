@@ -66,15 +66,15 @@ export default function SignUpRoute() {
     [role, setFirstName, setSiret, submitMerchantApplication],
   );
 
-  // Un livreur et un fournisseur déposent leurs justificatifs ; les autres choisissent leurs
-  // centres d'intérêt.
+  // Un livreur, un commerçant et un fournisseur déposent leurs justificatifs ; le client
+  // choisit ses centres d'intérêt.
   const toOnboarding = useCallback(
     () =>
       router.replace(
         role === 'livreur'
           ? '/devenir-livreur'
-          : role === 'grossiste'
-            ? '/devenir-fournisseur'
+          : role === 'grossiste' || role === 'commercant'
+            ? '/dossier-pro'
             : '/onboarding',
       ),
     [router, role],

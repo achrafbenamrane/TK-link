@@ -106,6 +106,18 @@ livraison → Livrée
 l’empreinte brute. Le schéma dit la même chose — « empreinte digitale locale ». Un écran qui
 laisserait croire que TKLINK garde l’empreinte serait un écart grave, pas une approximation.
 
+## Où en est chaque parcours dans l’app (audit du 05/10/2026)
+
+| Parcours     | Étapes couvertes                                                                                                                                | Écarts assumés                                                                                                                                                                      |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Consommateur | 2 à 12 : compte, intérêts, localisation, sécurisation, offres Flash, panier, paiement, suivi, ticket + points                                   | « Offre repérée » n’est pas un statut de commande (le CDC §5.2 fait foi)                                                                                                            |
+| Commerçant   | 2 à 12 : compte, dossier pro (IBAN, pièce d’identité), vérification, sécurisation, validé, boutique, Flash, commandes, remise client ou livreur | « Acceptée » n’est pas un geste (CDC V1.1 : le paiement vaut acceptation) ; impression du ticket de préparation et confirmation sécurisée des commandes sensibles : non construites |
+| Grossiste    | 2 à 12 : même dossier pro, catalogue, offre pro B2B, commandes de commerçants, bon de préparation, expédition, livraison                        | Mêmes écarts que le commerçant (« Acceptée », confirmation sécurisée)                                                                                                               |
+| Livreur      | 2 à 12 : dossier, vérification, biométrie locale, disponibilité, mission, QR ou PIN, preuve de remise                                           | Le contrôle TK LINK (étape 4) est simulé par un bouton de démonstration, comme pour les pros                                                                                        |
+
+Le contrôle d’identité des professionnels et des livreurs (étape 4) attend un serveur : l’app
+affiche l’état « en cours de contrôle » et un bouton **Démo** le remplace.
+
 ## Ce que les affiches ajoutent
 
 Les quatre affiches commerciales montrent la carte Flash telle que le client la voit :

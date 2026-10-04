@@ -10,7 +10,8 @@ import { useColors } from '@/shared/theme/theme-provider';
 
 import { formatCents, freeLeft } from '../lib/billing';
 import { liveOffers, secondsLeft } from '../lib/offers';
-import { selectOffers, selectUsed, useMerchantStore } from '../model/store';
+import { selectOffers, selectSupplier, selectUsed, useMerchantStore } from '../model/store';
+import { ProStatusBanner } from './pro-status-banner';
 
 /** Une commande, déjà résumée par la route : `merchant` ne connaît pas `shop`. */
 export type DashboardOrder = {
@@ -38,7 +39,8 @@ export type DashboardTarget =
   | 'payouts'
   | 'documents'
   | 'shop'
-  | 'account';
+  | 'account'
+  | 'setup';
 
 type Props = {
   shopName: string;
@@ -108,6 +110,7 @@ export function MerchantDashboardScreen({
   const [now] = useState(() => Date.now());
   const offers = useMerchantStore(selectOffers);
   const used = useMerchantStore(selectUsed);
+  const supplier = useMerchantStore(selectSupplier);
 
   const live = liveOffers(offers, now);
   const todo = orders.filter((o) => o.tone === 'todo').length;
@@ -179,6 +182,13 @@ export function MerchantDashboardScreen({
           </View>
         </View>
 
+        {/* Dossier pro pas encore validé (étapes 3 à 6 du process commerçant). */}
+        <ProStatusBanner
+          status={supplier.status}
+          role="commercant"
+          onPress={() => onOpen('setup')}
+        />
+
         {/* Nouveau Flash — l'appel à l'action de la maquette. */}
         <View
           testID="dashboard-new-flash"
@@ -205,10 +215,12 @@ export function MerchantDashboardScreen({
             testID="dashboard-create-flash"
             accessibilityRole="button"
             accessibilityLabel="Créer un Flash"
-            onPress={() => onOpen('flash')}
+            onPress={() => onOpen(supplier.status === 'valide' ? 'flash' : 'setup')}
             className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
           >
-            <AppText className="font-sans-bold text-ink-inverse">Créer un Flash</AppText>
+            <AppText className="font-sans-bold text-ink-inverse">
+              {supplier.status === 'valide' ? 'Créer un Flash' : 'Finaliser mon dossier'}
+            </AppText>
             <Feather name="plus-circle" size={17} color={colors.inkInverse} />
           </Pressable>
         </View>

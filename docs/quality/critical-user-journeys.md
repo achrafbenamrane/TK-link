@@ -55,7 +55,7 @@ enforces).
 - **Performance budget :** publication < 500 ms entre le tap et l’offre visible
   sur l’accueil, sur un Android milieu de gamme.
 
-## CUJ-004b — Le parcours du grossiste / fournisseur
+## CUJ-004b — Le parcours du grossiste / fournisseur (le commerçant passe par le même dossier pro, étapes 3 à 6)
 
 - **Owner :** squad produit TK LINK
 - **Flow :** aucun — couvert par `merchant/__tests__/wholesaler.test.tsx`.

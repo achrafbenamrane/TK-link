@@ -4,7 +4,7 @@ import {
   canSupplierPublish,
   MerchantOffersScreen,
   selectSupplier,
-  SupplierLocked,
+  ProLocked,
   useMerchantStore,
 } from '@/features/merchant';
 import { selectFirstName, selectRole, useOnboardingStore } from '@/features/onboarding';
@@ -25,12 +25,13 @@ export default function FlashRoute() {
   const supplier = useMerchantStore(selectSupplier);
   const router = useRouter();
 
-  // Un fournisseur non validé ne publie pas (étape 6 du schéma grossiste).
-  if (role === 'grossiste' && !canSupplierPublish(supplier.status)) {
+  // Un professionnel dont le dossier n'est pas validé ne publie pas (étape 6 des schémas).
+  if ((role === 'grossiste' || role === 'commercant') && !canSupplierPublish(supplier.status)) {
     return (
-      <SupplierLocked
+      <ProLocked
         status={supplier.status}
-        onOpenSetup={() => router.push('/devenir-fournisseur')}
+        role={role}
+        onOpenSetup={() => router.push('/dossier-pro')}
       />
     );
   }

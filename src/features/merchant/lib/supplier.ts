@@ -11,6 +11,33 @@ import { isValidSiret } from '@/shared/lib/roles';
  * Un grossiste non validé ne publie pas d'offre : ses lots seraient visibles de commerçants
  * qui ne savent pas encore s'il est ce qu'il dit être.
  */
+/**
+ * Les deux profils professionnels qui passent par ce dossier : les cartes « Process
+ * commerçant » et « Process grossiste / fournisseur » ont les mêmes étapes 3 à 6 ; seuls les
+ * mots changent.
+ */
+export type ProRole = 'commercant' | 'grossiste';
+
+export const PRO_COPY: Record<
+  ProRole,
+  { account: string; dashboard: string; publish: string; locked: string }
+> = {
+  commercant: {
+    account: 'commerçant',
+    dashboard: 'tableau de bord commerçant',
+    publish: 'la publication de vos Flash',
+    locked:
+      'Déposez vos informations pro pour que TK LINK vérifie votre commerce : la publication de Flash s’ouvre ensuite.',
+  },
+  grossiste: {
+    account: 'fournisseur',
+    dashboard: 'tableau de bord fournisseur',
+    publish: 'la publication d’offres pro',
+    locked:
+      'Déposez vos informations pro pour que TK LINK vérifie votre entreprise : la publication d’offres s’ouvre ensuite.',
+  },
+};
+
 export const SUPPLIER_STATUSES = ['brouillon', 'en_verification', 'valide'] as const;
 export type SupplierStatus = (typeof SUPPLIER_STATUSES)[number];
 
