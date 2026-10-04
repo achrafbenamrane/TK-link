@@ -1,6 +1,6 @@
 import { Text } from 'react-native';
 
-import { render, screen, within } from '@/shared/testing/render';
+import { fireEvent, render, screen, within } from '@/shared/testing/render';
 
 import { ProfileScreen } from '../ui/profile-screen';
 
@@ -24,6 +24,15 @@ describe('<ProfileScreen />', () => {
     expect(screen.queryByTestId('claim-reward')).toBeNull();
     expect(screen.queryByTestId('share-points')).toBeNull();
     expect(screen.queryByText(/Fidélité TK LINK/)).toBeNull();
+  });
+});
+
+describe('se déconnecter', () => {
+  it('appelle l’action de la route, qui remet l’app à zéro et rouvre le logo', () => {
+    const onSignOut = jest.fn();
+    render(<ProfileScreen onSignOut={onSignOut} />);
+    fireEvent.press(screen.getByTestId('profile-signout'));
+    expect(onSignOut).toHaveBeenCalledTimes(1);
   });
 });
 

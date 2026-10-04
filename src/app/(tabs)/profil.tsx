@@ -7,8 +7,14 @@ import {
 } from '@/features/onboarding';
 import { useRouter } from 'expo-router';
 
-import { CourierAccountScreen } from '@/features/courier';
-import { ProfileScreen } from '@/features/shop';
+import { useAuthStore } from '@/features/auth';
+import { CourierAccountScreen, useCourierStore } from '@/features/courier';
+import { useMerchantLoyaltyStore } from '@/features/loyalty';
+import { useMerchantStore } from '@/features/merchant';
+import { useReceiptsStore } from '@/features/receipts';
+import { useReferralStore } from '@/features/referral';
+import { ProfileScreen, useShopStore } from '@/features/shop';
+import { useWelcomeStore } from '@/features/welcome';
 import { canPublishOffers, ROLE_LABEL } from '@/shared/lib/roles';
 
 /**
@@ -24,6 +30,34 @@ import { canPublishOffers, ROLE_LABEL } from '@/shared/lib/roles';
  * nom de quelqu'un est pire qu'une ligne en moins. Le rôle prend sa place —
  * il est vrai, et il explique ce que l'écran propose.
  */
+/**
+ * SE DÉCONNECTER : l'app revient comme pour un NOUVEL utilisateur. Le profil, les
+ * commandes, la fidélité, les offres, la boutique, le livreur et le parrainage
+ * repartent de zéro (en démonstration, tout vit sur l'appareil), et l'ouverture
+ * rejoue le logo animé avant le choix du profil.
+ */
+function useSignOut() {
+  const router = useRouter();
+  return () => {
+    void useAuthStore.getState().signOut();
+    useOnboardingStore.getState().reset();
+    useShopStore.setState({
+      cart: [],
+      favorites: [],
+      orders: [],
+      addresses: [],
+      merchantApplication: null,
+    });
+    useMerchantStore.getState().resetDemo();
+    useMerchantLoyaltyStore.setState({ cards: {}, programs: {}, rewards: [] });
+    useCourierStore.getState().reset();
+    useReferralStore.setState({ myCode: '', referredBy: null, credit: 'aucun' });
+    useReceiptsStore.setState({ receipts: [] });
+    useWelcomeStore.setState({ splashDone: false });
+    router.replace('/welcome');
+  };
+}
+
 export default function ProfilRoute() {
   const role = useOnboardingStore(selectRole);
   if (role === 'livreur') return <CourierAccountRoute />;
@@ -34,12 +68,13 @@ function CourierAccountRoute() {
   const router = useRouter();
   const setRole = useOnboardingStore((s) => s.setRole);
   const firstName = useOnboardingStore(selectFirstName);
+  const signOut = useSignOut();
   return (
     <CourierAccountScreen
       name={firstName}
       onOpenSetup={() => router.push('/devenir-livreur')}
       onLeave={() => setRole('consommateur')}
-      onSignOut={() => router.push('/sign-in')}
+      onSignOut={signOut}
     />
   );
 }
@@ -50,6 +85,7 @@ function DefaultProfil() {
   const router = useRouter();
   const avatar = useOnboardingStore(selectAvatar);
   const firstName = useOnboardingStore(selectFirstName);
+  const signOut = useSignOut();
 
   return (
     <ProfileScreen
@@ -58,6 +94,7 @@ function DefaultProfil() {
       name={firstName}
       subtitle={ROLE_LABEL[role]}
       onLeaveMerchantSpace={() => setRole('consommateur')}
+      onSignOut={signOut}
       onOpenTiers={() => router.push('/paliers')}
     />
   );

@@ -82,11 +82,17 @@ type ProfileScreenProps = {
    * défaut, pas une fonctionnalité.
    */
   onLeaveMerchantSpace?: () => void;
+  /**
+   * Se déconnecter : la route remet l'app à zéro et rouvre le logo animé, comme pour un
+   * nouvel utilisateur. Absent : la ligne mène à l'écran de connexion.
+   */
+  onSignOut?: () => void;
 };
 
 export function ProfileScreen({
   canPublishOffers = false,
   onLeaveMerchantSpace,
+  onSignOut,
   onOpenTiers,
   renderAvatar,
   name,
@@ -252,7 +258,8 @@ export function ProfileScreen({
             label="Se déconnecter"
             danger
             last
-            onPress={() => router.push('/sign-in')}
+            testID="profile-signout"
+            onPress={() => (onSignOut ? onSignOut() : router.push('/sign-in'))}
           />
         </View>
 
