@@ -100,7 +100,7 @@ export function WelcomeScreen() {
    */
   const enter = () => {
     markSeen();
-    router.replace('/sign-up');
+    router.replace('/role');
   };
 
   /** Un compte existe déjà : on va droit à la connexion. */

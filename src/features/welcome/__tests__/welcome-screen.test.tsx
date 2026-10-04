@@ -45,7 +45,7 @@ describe('<WelcomeScreen />', () => {
     // Pas `/` : passer par la boutique ferait clignoter l’accueil avant que la
     // porte du layout ne renvoie sur l’inscription. Le compte est l’étape 2 du
     // parcours dessiné par le client.
-    expect(mockReplace).toHaveBeenCalledWith('/sign-up');
+    expect(mockReplace).toHaveBeenCalledWith('/role');
   });
 
   it('« Passer » saute l’intro mais pas la création du compte', () => {
@@ -53,7 +53,7 @@ describe('<WelcomeScreen />', () => {
     fireEvent.press(screen.getByTestId('welcome-skip'));
 
     expect(useWelcomeStore.getState().seen).toBe(true);
-    expect(mockReplace).toHaveBeenCalledWith('/sign-up');
+    expect(mockReplace).toHaveBeenCalledWith('/role');
   });
 
   it('« Se connecter » mène à la connexion, sans revoir l’intro ensuite', () => {

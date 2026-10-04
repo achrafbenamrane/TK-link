@@ -4,6 +4,7 @@
  */
 export { OnboardingScreen, type OnboardingExit } from './ui/onboarding-screen';
 export { AvatarView } from './ui/avatar-view';
+export { RoleScreen } from './ui/role-screen';
 export { AvatarPicker } from './ui/avatar-picker';
 export {
   useOnboardingStore,

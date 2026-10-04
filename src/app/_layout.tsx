@@ -31,6 +31,7 @@ import { ThemeProvider, useColors, useScheme } from '@/shared/theme/theme-provid
  */
 const FIRST_RUN_ROUTES = new Set([
   'welcome',
+  'role',
   'onboarding',
   'sign-in',
   'sign-up',
