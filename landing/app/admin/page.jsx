@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import '../pro/pro.css';
-import { FREE_OPERATIONS, PACKS } from '../pro/billing';
+import { FREE_OPERATIONS } from '../pro/billing';
 import { formatDate } from '../pro/data';
 import './admin.css';
 import {
@@ -542,10 +542,7 @@ export default function AdminPage() {
               <div className="tkpro-stat eco">
                 <div className="k">Revenu TK LINK</div>
                 <div className="v">{formatEuros(TOTALS.revenueCents)}</div>
-                <div className="d">
-                  {formatEuros(TOTALS.commissionCents)} de commission ·{' '}
-                  {formatEuros(TOTALS.packsCents)} de packs
-                </div>
+                <div className="d">{COMMISSION_PCT} % de commission sur le volume vendu</div>
               </div>
             </div>
 
@@ -586,10 +583,6 @@ export default function AdminPage() {
                   <div className="tkadmin-bar" key={m.label}>
                     <div className="stack" aria-hidden="true">
                       <span
-                        className="packs"
-                        style={{ height: `${Math.round((m.packsCents / peak) * 100)}%` }}
-                      />
-                      <span
                         className="commission"
                         style={{ height: `${Math.round((m.commissionCents / peak) * 100)}%` }}
                       />
@@ -602,9 +595,6 @@ export default function AdminPage() {
               <div className="tkadmin-legend">
                 <span>
                   <i className="commission" /> Commission {COMMISSION_PCT}&nbsp;%
-                </span>
-                <span>
-                  <i className="packs" /> Packs d’opérations
                 </span>
               </div>
             </div>
@@ -938,7 +928,7 @@ export default function AdminPage() {
             <div className="tkpro-head">
               <div>
                 <h1>Revenus</h1>
-                <p>D’où vient l’argent de la plateforme — CDC §9 et §21.</p>
+                <p>D’où vient l’argent de la plateforme — CDC §21. La tarification des packs n’est pas arrêtée : elle n’est pas chiffrée ici.</p>
               </div>
             </div>
 
@@ -947,11 +937,6 @@ export default function AdminPage() {
                 <div className="k">Commission</div>
                 <div className="v">{formatEuros(TOTALS.commissionCents)}</div>
                 <div className="d">{COMMISSION_PCT} % du volume vendu</div>
-              </div>
-              <div className="tkpro-stat">
-                <div className="k">Packs vendus</div>
-                <div className="v">{TOTALS.packs}</div>
-                <div className="d">{formatEuros(TOTALS.packsCents)} encaissés</div>
               </div>
               <div className="tkpro-stat eco">
                 <div className="k">Total</div>
@@ -971,7 +956,6 @@ export default function AdminPage() {
                       <th>Mois</th>
                       <th className="num">Volume vendu</th>
                       <th className="num">Commission</th>
-                      <th className="num">Packs</th>
                       <th className="num">Revenu</th>
                     </tr>
                   </thead>
@@ -983,9 +967,6 @@ export default function AdminPage() {
                           <td>{m.label}</td>
                           <td className="num">{formatEuros(m.gmvCents)}</td>
                           <td className="num">{formatEuros(m.commissionCents)}</td>
-                          <td className="num">
-                            {m.packs} · {formatEuros(m.packsCents)}
-                          </td>
                           <td className="num">
                             <b>{formatEuros(m.revenueCents)}</b>
                           </td>
@@ -1008,16 +989,8 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <b>{FREE_OPERATIONS}</b>
-                  <span>Opérations offertes avant le premier pack — CDC §9</span>
+                  <span>Opérations offertes — CDC §9, réglable</span>
                 </div>
-                {PACKS.map((p) => (
-                  <div key={p.id}>
-                    <b>{formatEuros(p.priceCents)}</b>
-                    <span>
-                      {p.label} — {p.operations} opérations
-                    </span>
-                  </div>
-                ))}
               </div>
               <p className="tkpro-note" style={{ margin: '0 18px 18px' }}>
                 Ces valeurs sont celles proposées par le cahier des charges et marquées « à valider

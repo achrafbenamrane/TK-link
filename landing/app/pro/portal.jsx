@@ -298,7 +298,7 @@ export default function ProPortal({ role = 'commercant' }) {
                 <div className="k">Papier évité</div>
                 <div className="v">{totals.paperG} g</div>
                 <div className="d">
-                  {DOCUMENTS.length} tickets non imprimés · {totals.points} points offerts
+                  {DOCUMENTS.length} tickets non imprimés · {totals.points} points crédités à vos clients
                 </div>
               </div>
             </div>

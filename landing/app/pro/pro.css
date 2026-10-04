@@ -7,18 +7,18 @@
  */
 
 .tkpro {
-  --brand: #0f8a4c;
-  --brand-600: #0b6c3b;
-  --brand-50: #e8f7ec;
-  --forest: #123a22;
-  --lime: #c3f53c;
-  --ink: #0f1a12;
-  --ink-muted: #4d5b50;
-  --ink-faint: #84927f;
+  --brand: #ff1478;
+  --brand-600: #c70a5d;
+  --brand-50: #ffeaf3;
+  --forest: #0a0a0d;
+  --lime: #ff1478;
+  --ink: #111114;
+  --ink-muted: #4b4b57;
+  --ink-faint: #6c6c7a;
   --surface: #ffffff;
-  --surface-muted: #f2f7f0;
-  --surface-sunken: #e6efe3;
-  --line: #dce6d7;
+  --surface-muted: #f5f5f8;
+  --surface-sunken: #ececf1;
+  --line: #e5e5eb;
   --danger: #dc2626;
 
   min-height: 100vh;
@@ -38,7 +38,7 @@
 /* ---------------------------------------------------------------- barre */
 .tkpro-side {
   background: var(--forest);
-  color: #f2f7f0;
+  color: #f5f5f8;
   padding: 22px 16px;
   display: flex;
   flex-direction: column;
@@ -49,7 +49,7 @@
 }
 
 .tkpro-logo {
-  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
   font-weight: 800;
   font-size: 21px;
   letter-spacing: 1px;
@@ -73,7 +73,7 @@
   appearance: none;
   border: 0;
   background: transparent;
-  color: rgba(242, 247, 240, 0.72);
+  color: rgba(245, 245, 248, 0.72);
   font: inherit;
   text-align: left;
   padding: 10px 12px;
@@ -85,8 +85,8 @@
   transition: background 0.15s ease;
 }
 .tkpro-nav button:hover {
-  background: rgba(242, 247, 240, 0.08);
-  color: #f2f7f0;
+  background: rgba(245, 245, 248, 0.08);
+  color: #f5f5f8;
 }
 .tkpro-nav button[aria-current='page'] {
   background: var(--brand);
@@ -97,15 +97,15 @@
 .tkpro button:focus-visible,
 .tkpro select:focus-visible,
 .tkpro input:focus-visible {
-  outline: 2px solid var(--lime);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 .tkpro-side-foot {
   margin-top: auto;
   font-size: 12px;
-  color: rgba(242, 247, 240, 0.55);
-  border-top: 1px solid rgba(242, 247, 240, 0.14);
+  color: rgba(245, 245, 248, 0.55);
+  border-top: 1px solid rgba(245, 245, 248, 0.14);
   padding-top: 14px;
   line-height: 1.5;
 }
@@ -126,7 +126,7 @@
   margin-bottom: 22px;
 }
 .tkpro-head h1 {
-  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
   font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.5px;
@@ -159,7 +159,7 @@
   font-weight: 600;
 }
 .tkpro-stat .v {
-  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
   font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.5px;
@@ -174,16 +174,16 @@
 .tkpro-stat.eco {
   background: var(--forest);
   border-color: var(--forest);
-  color: #f2f7f0;
+  color: #f5f5f8;
 }
 .tkpro-stat.eco .k {
-  color: rgba(242, 247, 240, 0.6);
+  color: rgba(245, 245, 248, 0.6);
 }
 .tkpro-stat.eco .v {
-  color: var(--lime);
+  color: var(--accent);
 }
 .tkpro-stat.eco .d {
-  color: rgba(242, 247, 240, 0.7);
+  color: rgba(245, 245, 248, 0.7);
 }
 
 .tkpro-card {
@@ -419,12 +419,12 @@
   left: 50%;
   transform: translateX(-50%);
   background: var(--forest);
-  color: #f2f7f0;
+  color: #f5f5f8;
   padding: 12px 18px;
   border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
-  box-shadow: 0 8px 24px rgba(18, 58, 34, 0.28);
+  box-shadow: 0 8px 24px rgba(10, 10, 13, 0.28);
   z-index: 50;
 }
 
@@ -484,7 +484,7 @@
   bottom: 10px;
   background: var(--brand);
   color: #fff;
-  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
   font-weight: 800;
   font-size: 16px;
   padding: 5px 9px;
@@ -495,7 +495,7 @@
   right: 10px;
   bottom: 10px;
   background: rgba(15, 26, 18, 0.85);
-  color: #f2f7f0;
+  color: #f5f5f8;
   font-weight: 700;
   font-size: 12px;
   padding: 5px 9px;
@@ -520,7 +520,7 @@
   margin-top: 6px;
 }
 .tkpro-offer-prix b {
-  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
   font-size: 20px;
   color: var(--brand);
 }
@@ -608,7 +608,7 @@
   align-items: center;
   justify-content: space-between;
   background: var(--forest);
-  color: #f2f7f0;
+  color: #f5f5f8;
   border-radius: 16px;
   padding: 14px 18px;
   margin-bottom: 14px;
@@ -619,10 +619,10 @@
 }
 .tkpro-quota span {
   font-size: 12.5px;
-  color: rgba(242, 247, 240, 0.62);
+  color: rgba(245, 245, 248, 0.62);
 }
 .tkpro-quota.empty b {
-  color: var(--lime);
+  color: var(--accent);
 }
 .tkpro-packs {
   display: flex;
@@ -632,25 +632,25 @@
   appearance: none;
   font: inherit;
   cursor: pointer;
-  border: 1px solid rgba(242, 247, 240, 0.18);
-  background: rgba(242, 247, 240, 0.08);
-  color: #f2f7f0;
+  border: 1px solid rgba(245, 245, 248, 0.18);
+  background: rgba(245, 245, 248, 0.08);
+  color: #f5f5f8;
   border-radius: 12px;
   padding: 7px 12px;
   text-align: center;
   transition: background 0.15s ease;
 }
 .tkpro-pack:hover {
-  background: rgba(242, 247, 240, 0.16);
+  background: rgba(245, 245, 248, 0.16);
 }
 .tkpro-pack b {
   display: block;
   font-size: 15px;
-  color: var(--lime);
+  color: var(--accent);
 }
 .tkpro-pack span {
   font-size: 11.5px;
-  color: rgba(242, 247, 240, 0.62);
+  color: rgba(245, 245, 248, 0.62);
 }
 
 .tkpro-form {
@@ -734,7 +734,7 @@
 .tkpro-chip.on {
   background: var(--ink);
   border-color: var(--ink);
-  color: #f2f7f0;
+  color: #f5f5f8;
 }
 
 .tkpro-payout {
@@ -760,7 +760,7 @@
   text-align: right;
 }
 .tkpro-payout .net b {
-  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
   font-size: 19px;
   color: var(--brand-600);
 }
@@ -832,7 +832,7 @@
   flex-wrap: wrap;
 }
 .tkpro-order .foot > b {
-  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
   font-size: 17px;
 }
 .tkpro-order .actions {
@@ -868,7 +868,7 @@
   margin-bottom: 16px;
   border-bottom: 1px solid var(--line);
 }
-.tkpro-logo {
+.tkpro-identite .tkpro-logo {
   width: 76px;
   height: 76px;
   border-radius: 18px;
@@ -877,7 +877,7 @@
   background: var(--paper);
   border: 1px solid var(--line);
 }
-.tkpro-logo img {
+.tkpro-identite .tkpro-logo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -891,7 +891,7 @@
   min-width: 0;
 }
 .tkpro-identite b {
-  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
   font-size: 18px;
 }
 .tkpro-identite span {
@@ -961,7 +961,7 @@
    qui parle doit se lire à la forme, pas au nom. */
 .tkpro-msg.moi {
   margin-left: auto;
-  background: var(--brand-50, #e8f7ec);
+  background: var(--brand-50, #ffeaf3);
   border-color: transparent;
 }
 .tkpro-msg-head {

@@ -1,9 +1,9 @@
-import { COMMISSION_PCT, PACKS, commissionCents } from '../pro/billing';
+import { COMMISSION_PCT, commissionCents } from '../pro/billing';
 
 /**
  * Données de démonstration du Super Admin — CDC §17.
  *
- * ⚠️ Aucun back-end : ces inscrits, ces transactions et ces packs sont
+ * ⚠️ Aucun back-end : ces inscrits et ces transactions sont
  * fabriqués ici. Ils ont en revanche la MÊME forme que ce que le serveur
  * renverra (rôles du §3, SIRET du §5, montants en centimes, commission du
  * §21) : le jour où l'API existe, ce fichier disparaît et les écrans ne
@@ -246,28 +246,25 @@ export const MEMBERS = RAW_MEMBERS.map((m) => ({
 
 /** Six mois de volume, du plus ancien au plus récent. */
 const RAW_MONTHS = [
-  { label: 'mars', gmvCents: 412_000, packs: 2 },
-  { label: 'avril', gmvCents: 587_000, packs: 4 },
-  { label: 'mai', gmvCents: 703_000, packs: 3 },
-  { label: 'juin', gmvCents: 934_000, packs: 7 },
-  { label: 'juillet', gmvCents: 1_186_000, packs: 9 },
-  { label: 'août', gmvCents: 642_000, packs: 5 },
+  { label: 'mars', gmvCents: 412_000 },
+  { label: 'avril', gmvCents: 587_000 },
+  { label: 'mai', gmvCents: 703_000 },
+  { label: 'juin', gmvCents: 934_000 },
+  { label: 'juillet', gmvCents: 1_186_000 },
+  { label: 'août', gmvCents: 642_000 },
 ];
 
 /**
- * Le chiffre d'affaires DE LA PLATEFORME, mois par mois.
+ * Le chiffre d'affaires DE LA PLATEFORME, mois par mois : la commission du §21 (5 %
+ * du volume vendu).
  *
- * Deux sources et elles ne se confondent pas : la commission du §21 (5 % du
- * volume vendu) et les packs du §9 (revenu récurrent, indépendant des ventes).
- * Les additionner sans les distinguer masquerait laquelle des deux tient
- * réellement l'entreprise.
+ * Les packs d'opérations n'y figurent PAS : leur tarification est un point que le
+ * CDC laisse ouvert (V1.0 §14, V1.1). Les chiffrer ici reviendrait à inventer un
+ * revenu qui n'existe pas.
  */
 export const MONTHS = RAW_MONTHS.map((m) => {
   const commission = commissionCents(m.gmvCents);
-  // Prix moyen d'un pack, faute de connaître lequel a été vendu.
-  const packAvg = Math.round(PACKS.reduce((s, p) => s + p.priceCents, 0) / PACKS.length);
-  const packsCents = m.packs * packAvg;
-  return { ...m, commissionCents: commission, packsCents, revenueCents: commission + packsCents };
+  return { ...m, commissionCents: commission, revenueCents: commission };
 });
 
 export const TOTALS = {
@@ -276,12 +273,10 @@ export const TOTALS = {
   incomplete: MEMBERS.filter((m) => m.incomplete).length,
   gmvCents: MONTHS.reduce((s, m) => s + m.gmvCents, 0),
   commissionCents: MONTHS.reduce((s, m) => s + m.commissionCents, 0),
-  packsCents: MONTHS.reduce((s, m) => s + m.packsCents, 0),
-  packs: MONTHS.reduce((s, m) => s + m.packs, 0),
   offers: MEMBERS.reduce((s, m) => s + m.offers, 0),
 };
 
-TOTALS.revenueCents = TOTALS.commissionCents + TOTALS.packsCents;
+TOTALS.revenueCents = TOTALS.commissionCents;
 
 export { COMMISSION_PCT };
 

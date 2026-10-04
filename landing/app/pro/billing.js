@@ -10,17 +10,11 @@
  * Toute modification ici doit être reportée là-bas, et réciproquement.
  */
 
-/** Opérations offertes avant le premier pack — CDC §9. */
+/** Opérations offertes avant toute monétisation complémentaire — CDC §9. */
 export const FREE_OPERATIONS = 5;
 
 /** Commission prélevée par TK LINK sur chaque vente, en pourcent — CDC §21. */
 export const COMMISSION_PCT = 5;
-
-export const PACKS = [
-  { id: 'pack_10', label: 'Pack Découverte', operations: 10, priceCents: 990 },
-  { id: 'pack_30', label: 'Pack Quartier', operations: 30, priceCents: 2490 },
-  { id: 'pack_100', label: 'Pack Enseigne', operations: 100, priceCents: 6900 },
-];
 
 export function freeLeft(used) {
   return Math.max(0, FREE_OPERATIONS - used);

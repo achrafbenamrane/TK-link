@@ -1,30 +1,28 @@
 /*
- * Site vitrine TK LINK.
+ * Site vitrine TK LINK — charte du client (03/10/2026).
  *
- * L'histoire de la marque est écologique avant d'être technique : le ticket
- * papier disparaît. D'où le vert forêt en fond d'ouverture, le citron en
- * accent, et le papier très légèrement verdi pour les surfaces claires.
- *
- * Mêmes familles typographiques que l'app mobile (Unbounded en titrage,
- * Manrope en texte) pour que le site et l'app se ressemblent.
+ * Noir, blanc, rose #FF1478 et bleu #00B2FF : la même charte que l'app mobile,
+ * et la même typographie (Manrope). Les mots « forest » et « lime » des variables
+ * sont des noms hérités : ils désignent le fond sombre et la couleur d'action.
  *
  * NB : l'espace pro (/pro) porte ses propres styles sous `.tkpro` et n'hérite
  * d'ici que la remise à zéro.
  */
 
 :root {
-  --forest: #123a22;
-  --forest-deep: #0b2415;
-  --brand: #0f8a4c;
-  --brand-600: #0b6c3b;
-  --brand-50: #e8f7ec;
-  --lime: #c3f53c;
-  --paper: #f2f7f0;
+  --accent: #00b2ff;
+  --forest: #0a0a0d;
+  --forest-deep: #000000;
+  --brand: #ff1478;
+  --brand-600: #c70a5d;
+  --brand-50: #ffeaf3;
+  --lime: #ff1478;
+  --paper: #f5f5f8;
   --surface: #ffffff;
-  --ink: #0f1a12;
-  --ink-muted: #4d5b50;
-  --ink-faint: #84927f;
-  --line: #dce6d7;
+  --ink: #111114;
+  --ink-muted: #4b4b57;
+  --ink-faint: #6c6c7a;
+  --line: #e5e5eb;
 
   --wrap: 1140px;
   --r-card: 20px;
@@ -62,7 +60,7 @@ body {
 h1,
 h2,
 h3 {
-  font-family: Unbounded, ui-sans-serif, system-ui, sans-serif;
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.02;
@@ -103,13 +101,13 @@ img {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(18, 58, 34, 0.92);
+  background: rgba(10, 10, 13, 0.92);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid transparent;
   transition: border-color 0.2s ease;
 }
 #hdr.stuck {
-  border-bottom-color: rgba(242, 247, 240, 0.14);
+  border-bottom-color: rgba(245, 245, 248, 0.14);
 }
 .nav {
   display: flex;
@@ -117,10 +115,10 @@ img {
   justify-content: space-between;
   gap: 20px;
   height: 68px;
-  color: #f2f7f0;
+  color: #f5f5f8;
 }
 .logo {
-  font-family: Unbounded, sans-serif;
+  font-family: Manrope, sans-serif;
   font-weight: 800;
   font-size: 20px;
   letter-spacing: 1px;
@@ -142,7 +140,7 @@ img {
   font-weight: 600;
 }
 .nav-links a {
-  color: rgba(242, 247, 240, 0.78);
+  color: rgba(245, 245, 248, 0.78);
   text-decoration: none;
   transition: color 0.15s ease;
 }
@@ -190,11 +188,11 @@ img {
   filter: brightness(1.06);
 }
 .btn-ghost {
-  border-color: rgba(242, 247, 240, 0.32);
-  color: #f2f7f0;
+  border-color: rgba(245, 245, 248, 0.32);
+  color: #f5f5f8;
 }
 .btn-ghost:hover {
-  background: rgba(242, 247, 240, 0.1);
+  background: rgba(245, 245, 248, 0.1);
 }
 .btn-outline {
   border-color: var(--line);
@@ -205,14 +203,14 @@ img {
   background: var(--paper);
 }
 :where(a, button):focus-visible {
-  outline: 2px solid var(--lime);
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
 /* ----------------------------------------------------------------- hero */
 .hero {
   background: var(--forest);
-  color: #f2f7f0;
+  color: #f5f5f8;
   padding: 92px 0 100px;
   position: relative;
   overflow: hidden;
@@ -225,7 +223,7 @@ img {
   height: 780px;
   right: -260px;
   top: -320px;
-  background: radial-gradient(circle, rgba(195, 245, 60, 0.16), transparent 62%);
+  background: radial-gradient(circle, rgba(255, 20, 120, 0.16), transparent 62%);
   pointer-events: none;
 }
 .hero-grid {
@@ -242,15 +240,15 @@ img {
 }
 .hero h1 em {
   font-style: normal;
-  color: var(--lime);
+  color: var(--accent);
 }
 .hero .lead {
   font-size: 18px;
-  color: rgba(242, 247, 240, 0.82);
+  color: rgba(245, 245, 248, 0.82);
   max-width: 48ch;
 }
 .hero .eyebrow {
-  color: var(--lime);
+  color: var(--accent);
 }
 .hero-cta {
   display: flex;
@@ -261,7 +259,7 @@ img {
 .hero-note {
   margin-top: 20px;
   font-size: 13.5px;
-  color: rgba(242, 247, 240, 0.6);
+  color: rgba(245, 245, 248, 0.6);
 }
 @media (max-width: 940px) {
   .hero-grid {
@@ -279,26 +277,26 @@ img {
   gap: 9px;
   font-size: 14px;
   font-weight: 600;
-  color: rgba(242, 247, 240, 0.82);
+  color: rgba(245, 245, 248, 0.82);
 }
 .scene-caption .dot {
   width: 9px;
   height: 9px;
   border-radius: 50%;
   background: var(--lime);
-  box-shadow: 0 0 0 0 rgba(195, 245, 60, 0.6);
+  box-shadow: 0 0 0 0 rgba(255, 20, 120, 0.6);
   animation: beat 7s ease-out infinite;
 }
 @keyframes beat {
   0%,
   30% {
-    box-shadow: 0 0 0 0 rgba(195, 245, 60, 0.55);
+    box-shadow: 0 0 0 0 rgba(255, 20, 120, 0.55);
   }
   40% {
-    box-shadow: 0 0 0 10px rgba(195, 245, 60, 0);
+    box-shadow: 0 0 0 10px rgba(255, 20, 120, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(195, 245, 60, 0);
+    box-shadow: 0 0 0 0 rgba(255, 20, 120, 0);
   }
 }
 
@@ -319,7 +317,7 @@ img {
 }
 .sec-dark {
   background: var(--forest-deep);
-  color: #f2f7f0;
+  color: #f5f5f8;
 }
 .sec-head {
   max-width: 62ch;
@@ -334,10 +332,10 @@ img {
   font-size: 17px;
 }
 .sec-dark .sec-head p {
-  color: rgba(242, 247, 240, 0.75);
+  color: rgba(245, 245, 248, 0.75);
 }
 .sec-dark .eyebrow {
-  color: var(--lime);
+  color: var(--accent);
 }
 
 /* ------------------------------------------------------------- chiffres */
@@ -347,28 +345,28 @@ img {
   gap: 18px;
 }
 .stat {
-  background: rgba(242, 247, 240, 0.05);
-  border: 1px solid rgba(242, 247, 240, 0.12);
+  background: rgba(245, 245, 248, 0.05);
+  border: 1px solid rgba(245, 245, 248, 0.12);
   border-radius: var(--r-card);
   padding: 26px 22px;
 }
 .stat .v {
-  font-family: Unbounded, sans-serif;
+  font-family: Manrope, sans-serif;
   font-weight: 800;
   font-size: 34px;
-  color: var(--lime);
+  color: var(--accent);
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 .stat .k {
   margin-top: 6px;
-  color: rgba(242, 247, 240, 0.72);
+  color: rgba(245, 245, 248, 0.72);
   font-size: 14.5px;
 }
 .stats-note {
   margin-top: 26px;
   font-size: 14px;
-  color: rgba(242, 247, 240, 0.55);
+  color: rgba(245, 245, 248, 0.55);
 }
 
 /* ---------------------------------------------------------------- étapes */
@@ -386,7 +384,7 @@ img {
 }
 .step .n {
   counter-increment: step;
-  font-family: Unbounded, sans-serif;
+  font-family: Manrope, sans-serif;
   font-weight: 800;
   font-size: 13px;
   color: var(--brand);
@@ -501,7 +499,7 @@ img {
 /* ------------------------------------------------------------------- CTA */
 .cta {
   background: var(--forest);
-  color: #f2f7f0;
+  color: #f5f5f8;
   border-radius: 26px;
   padding: 56px 40px;
   text-align: center;
@@ -511,7 +509,7 @@ img {
   margin-bottom: 14px;
 }
 .cta p {
-  color: rgba(242, 247, 240, 0.78);
+  color: rgba(245, 245, 248, 0.78);
   max-width: 54ch;
   margin: 0 auto 26px;
 }
@@ -525,7 +523,7 @@ img {
 /* ---------------------------------------------------------------- footer */
 footer {
   background: var(--forest-deep);
-  color: rgba(242, 247, 240, 0.68);
+  color: rgba(245, 245, 248, 0.68);
   padding: 52px 0 34px;
   font-size: 14.5px;
 }
@@ -541,7 +539,7 @@ footer {
   }
 }
 .foot-col h4 {
-  color: #f2f7f0;
+  color: #f5f5f8;
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -558,9 +556,9 @@ footer {
 .foot-bot {
   margin-top: 34px;
   padding-top: 20px;
-  border-top: 1px solid rgba(242, 247, 240, 0.12);
+  border-top: 1px solid rgba(245, 245, 248, 0.12);
   font-size: 13px;
-  color: rgba(242, 247, 240, 0.45);
+  color: rgba(245, 245, 248, 0.45);
 }
 
 /* ------------------------------------------------------- apparition douce */
@@ -644,7 +642,7 @@ footer {
   height: 100%;
   border-radius: 12.4%/6%;
   overflow: hidden;
-  background: #0f1a12;
+  background: #111114;
   z-index: 1;
 }
 
@@ -738,7 +736,7 @@ footer {
   font-family: var(--font-display), sans-serif;
   font-weight: 700;
   font-size: 17px;
-  color: rgba(242, 247, 240, 0.5);
+  color: rgba(245, 245, 248, 0.5);
 }
 
 /* --------------------------------------------------- l'offre du héros
@@ -781,7 +779,7 @@ footer {
   bottom: 10px;
   background: var(--brand);
   color: #fff;
-  font-family: Unbounded, sans-serif;
+  font-family: Manrope, sans-serif;
   font-weight: 800;
   font-size: 24px;
   line-height: 1;
@@ -793,7 +791,7 @@ footer {
   right: 10px;
   bottom: 10px;
   background: rgba(15, 26, 18, 0.85);
-  color: #f2f7f0;
+  color: #f5f5f8;
   font-weight: 700;
   font-size: 12px;
   padding: 6px 10px;
@@ -820,13 +818,13 @@ footer {
   gap: 3px;
 }
 .chrono-valeur {
-  font-family: Unbounded, sans-serif;
+  font-family: Manrope, sans-serif;
   font-weight: 800;
   font-size: 26px;
   line-height: 1;
-  color: var(--lime);
+  color: var(--accent);
   font-variant-numeric: tabular-nums;
-  background: rgba(242, 247, 240, 0.08);
+  background: rgba(245, 245, 248, 0.08);
   border-radius: 8px;
   padding: 6px 8px;
   min-width: 40px;
@@ -838,13 +836,13 @@ footer {
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.12em;
-  color: rgba(242, 247, 240, 0.55);
+  color: rgba(245, 245, 248, 0.55);
 }
 .chrono-sep {
-  font-family: Unbounded, sans-serif;
+  font-family: Manrope, sans-serif;
   font-weight: 800;
   font-size: 20px;
-  color: rgba(242, 247, 240, 0.35);
+  color: rgba(245, 245, 248, 0.35);
   margin-top: 8px;
 }
 
@@ -861,7 +859,7 @@ footer {
   margin: 0;
 }
 .offre-titre {
-  font-family: Unbounded, sans-serif;
+  font-family: Manrope, sans-serif;
   font-size: 16px;
   line-height: 1.2;
   margin: 2px 0 0;
@@ -879,7 +877,7 @@ footer {
   margin-top: 6px;
 }
 .prix-flash {
-  font-family: Unbounded, sans-serif;
+  font-family: Manrope, sans-serif;
   font-weight: 800;
   font-size: 30px;
   line-height: 1;
@@ -916,7 +914,7 @@ footer {
   text-align: center;
   background: var(--lime);
   color: var(--forest-deep);
-  font-family: Unbounded, sans-serif;
+  font-family: Manrope, sans-serif;
   font-weight: 800;
   font-size: 13px;
   letter-spacing: 0.04em;

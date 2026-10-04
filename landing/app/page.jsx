@@ -12,7 +12,7 @@ import AppShowcase from './app-showcase';
  *
  * Le message tient désormais en une phrase, celle de la demande : l'app sert à
  * **obtenir des offres flash, des promotions importantes avec des dates
- * courtes**. Tout le reste — fidélité, jeux, factures — vient après, parce que
+ * courtes**. Tout le reste — fidélité, parrainage, factures — vient après, parce que
  * c'est après que ça se découvre.
  *
  * Ce qui subsiste du récit d'origine : la disparition du papier, qui reste
@@ -59,9 +59,8 @@ export default function Page() {
               Des prix imbattables, <em>pour un temps limité.</em>
             </h1>
             <p className="lead">
-              Les commerçants près de chez vous bradent ce qui doit partir aujourd’hui : −30, −50,
-              −70 %. Chaque offre a un compte à rebours et un stock qui fond. Vous la prenez, ou
-              elle disparaît.
+              Les commerçants près de chez vous bradent ce qui doit partir aujourd’hui. Chaque offre a
+              un compte à rebours et un stock qui fond. Vous la prenez, ou elle disparaît.
             </p>
             <div className="hero-cta">
               <a className="btn btn-lime" href="#telecharger">
@@ -168,7 +167,7 @@ export default function Page() {
               <ul>
                 <li>Des commerces indépendants, pas des enseignes</li>
                 <li>Des tickets numériques, gardés dans l’application</li>
-                <li>Des points échangeables contre un arbre planté</li>
+                <li>Des points de fidélité chez chacun de vos commerçants</li>
               </ul>
             </div>
           </div>
@@ -303,7 +302,8 @@ export default function Page() {
               <h4>Produit</h4>
               <a href="#fonctionnement">Comment ça marche</a>
               <a href="#publics">Pour qui</a>
-              <a href="/pro">Espace professionnel</a>
+              <a href="/pro">Espace commerçant</a>
+              <a href="/grossiste">Espace grossiste</a>
             </div>
             <div className="foot-col">
               <h4>En savoir plus</h4>
