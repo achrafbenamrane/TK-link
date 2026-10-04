@@ -5,13 +5,13 @@
  * dépendent (onboarding, auth, shop) et qu’une feature ne peut pas en importer
  * une autre. C’est le vocabulaire commun du produit, pas un détail d’écran.
  *
- * Le livreur (CDC §3.4) n’est pas ici : le CDC en fait une **application mobile
- * distincte**, et son intégration au MVP reste à confirmer (§23 Q5). L’ajouter
- * à cette liste laisserait croire qu’un livreur peut se connecter à l’app
- * client, ce qui est faux.
+ * Le livreur (« TK Deliver », CDC V1.1 §4) y est depuis le 03/10/2026 : le client a
+ * remis le parcours livreur en 12 étapes, dans la même charte que les autres
+ * rôles. Il a ses propres onglets (Missions · Revenus · Compte) ; il ne publie
+ * rien et n'achète rien.
  */
 
-export const ROLES = ['consommateur', 'commercant', 'grossiste'] as const;
+export const ROLES = ['consommateur', 'commercant', 'grossiste', 'livreur'] as const;
 export type Role = (typeof ROLES)[number];
 
 /**
@@ -24,13 +24,14 @@ export type Role = (typeof ROLES)[number];
  * du §3.2 en ont besoin : ce qui disparaît, c'est la possibilité de s'inscrire
  * comme grossiste depuis le téléphone, pas le rôle lui-même.
  */
-export const APP_ROLES = ['consommateur', 'commercant'] as const;
+export const APP_ROLES = ['consommateur', 'commercant', 'livreur'] as const;
 export type AppRole = (typeof APP_ROLES)[number];
 
 export const ROLE_LABEL: Record<Role, string> = {
   consommateur: 'Consommateur',
   commercant: 'Commerçant',
   grossiste: 'Grossiste',
+  livreur: 'Livreur',
 };
 
 /** Ce que le rôle vient faire ici — sert l’étape de choix à l’onboarding. */
@@ -38,12 +39,14 @@ export const ROLE_TAGLINE: Record<Role, string> = {
   consommateur: 'Je cherche les bons plans près de chez moi',
   commercant: 'J’achète mes lots en gros ; je vends depuis l’espace pro web',
   grossiste: 'Je propose des lots aux commerçants',
+  livreur: 'Je livre les commandes près de chez moi',
 };
 
 export const ROLE_ICON: Record<Role, string> = {
   consommateur: 'user',
   commercant: 'shopping-bag',
   grossiste: 'truck',
+  livreur: 'navigation',
 };
 
 /**
@@ -60,6 +63,7 @@ export const ROLE_ICON: Record<Role, string> = {
 export function audienceOf(role: Role): Role | null {
   if (role === 'consommateur') return 'commercant';
   if (role === 'commercant') return 'grossiste';
+  // Le grossiste publie, le livreur livre : ni l'un ni l'autre ne consulte d'offres.
   return null;
 }
 

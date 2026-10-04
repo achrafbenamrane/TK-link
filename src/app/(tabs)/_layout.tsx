@@ -12,6 +12,7 @@ import { useColors } from '@/shared/theme/theme-provider';
  *
  *   Consommateur : Accueil · Favoris · Commandes · Compte
  *   Commerçant   : Accueil · Commandes · [ FLASH ] · Fidélité · Compte
+ *   Livreur      : Missions · Revenus · Compte
  *
  * Chez le consommateur, l'accueil, ce sont les ventes Flash (CDC §3.1). « La
  * Chasse », qui occupait le centre, a disparu le 03/10/2026 : ni la V1.0 ni la
@@ -55,6 +56,7 @@ export default function TabsLayout() {
   const role = useOnboardingStore(selectRole);
 
   const pro = role === 'commercant';
+  const courier = role === 'livreur';
 
   // L'appareil du commerçant s'ouvre sur les commandes en cours (V1.1), pas sur
   // le tableau de bord. Une seule fois par lancement : cette disposition reste
@@ -92,14 +94,16 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Accueil',
-          tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} />,
+          title: courier ? 'Missions' : 'Accueil',
+          tabBarIcon: ({ color }) => (
+            <Feather name={courier ? 'navigation' : 'home'} size={22} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="favoris"
         options={{
-          href: pro ? null : undefined,
+          href: pro || courier ? null : undefined,
           title: 'Favoris',
           tabBarIcon: ({ color }) => <Feather name="heart" size={22} color={color} />,
         }}
@@ -107,8 +111,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="commandes"
         options={{
-          title: 'Commandes',
-          tabBarIcon: ({ color }) => <Feather name="clipboard" size={22} color={color} />,
+          title: courier ? 'Revenus' : 'Commandes',
+          tabBarIcon: ({ color }) => (
+            <Feather name={courier ? 'credit-card' : 'clipboard'} size={22} color={color} />
+          ),
         }}
       />
       <Tabs.Screen

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { CourierEarningsScreen } from '@/features/courier';
 import { selectOffers, useMerchantStore } from '@/features/merchant';
 import { selectRole, useOnboardingStore } from '@/features/onboarding';
 import { LOCAL_MERCHANT_DEAL_IDS, MerchantOrdersScreen, OrdersScreen } from '@/features/shop';
@@ -22,5 +23,6 @@ export default function CommandesRoute() {
     [published],
   );
 
+  if (role === 'livreur') return <CourierEarningsScreen />;
   return role === 'commercant' ? <MerchantOrdersScreen dealIds={dealIds} /> : <OrdersScreen />;
 }

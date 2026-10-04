@@ -84,7 +84,9 @@ export type RegistrationDraft = typeof EMPTY_REGISTRATION;
  * consommateur n'a aucun sens et allonge un formulaire déjà long.
  */
 export function needsSiret(role: Role): boolean {
-  return role !== 'consommateur';
+  // Commerçant et grossiste sont des professionnels ; le livreur (TK Deliver)
+  // s'inscrit comme une personne — ses justificatifs viennent à l'étape suivante.
+  return role === 'commercant' || role === 'grossiste';
 }
 
 /**

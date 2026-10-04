@@ -29,7 +29,15 @@ import { ThemeProvider, useColors, useScheme } from '@/shared/theme/theme-provid
  * l'inscription ou la connexion, et la porte les renverrait aussitôt à
  * l'onboarding puisqu'il n'est pas terminé.
  */
-const FIRST_RUN_ROUTES = new Set(['welcome', 'onboarding', 'sign-in', 'sign-up', 'commercant']);
+const FIRST_RUN_ROUTES = new Set([
+  'welcome',
+  'onboarding',
+  'sign-in',
+  'sign-up',
+  'commercant',
+  'livreur',
+  'devenir-livreur',
+]);
 
 /**
  * LA PORTE DU PREMIER LANCEMENT : bienvenue → onboarding → app.

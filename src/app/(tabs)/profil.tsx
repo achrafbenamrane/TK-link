@@ -7,6 +7,7 @@ import {
 } from '@/features/onboarding';
 import { useRouter } from 'expo-router';
 
+import { CourierAccountScreen } from '@/features/courier';
 import { ProfileScreen } from '@/features/shop';
 import { canPublishOffers, ROLE_LABEL } from '@/shared/lib/roles';
 
@@ -24,6 +25,26 @@ import { canPublishOffers, ROLE_LABEL } from '@/shared/lib/roles';
  * il est vrai, et il explique ce que l'écran propose.
  */
 export default function ProfilRoute() {
+  const role = useOnboardingStore(selectRole);
+  if (role === 'livreur') return <CourierAccountRoute />;
+  return <DefaultProfil />;
+}
+
+function CourierAccountRoute() {
+  const router = useRouter();
+  const setRole = useOnboardingStore((s) => s.setRole);
+  const firstName = useOnboardingStore(selectFirstName);
+  return (
+    <CourierAccountScreen
+      name={firstName}
+      onOpenSetup={() => router.push('/devenir-livreur')}
+      onLeave={() => setRole('consommateur')}
+      onSignOut={() => router.push('/sign-in')}
+    />
+  );
+}
+
+function DefaultProfil() {
   const role = useOnboardingStore(selectRole);
   const setRole = useOnboardingStore((s) => s.setRole);
   const router = useRouter();

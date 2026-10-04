@@ -114,3 +114,11 @@ describe('toProfile', () => {
     expect(toProfile(draft({ siret: '' })).siret).toBeNull();
   });
 });
+
+describe('livreur (TK Deliver)', () => {
+  it('s’inscrit comme une personne : ni SIRET ni nom de commerce', () => {
+    expect(needsSiret('livreur')).toBe(false);
+    expect(needsSiret('commercant')).toBe(true);
+    expect(needsSiret('grossiste')).toBe(true);
+  });
+});

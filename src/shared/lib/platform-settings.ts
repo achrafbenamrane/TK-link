@@ -49,6 +49,23 @@ export type PlatformSettings = {
    */
   deliveryFeeEur: number;
   /**
+   * Rémunération du livreur — CDC V1.1 : « 3,00 € par commande, puis 0,80 €/km au-delà
+   * de la zone de base ».
+   */
+  courierBaseFeeEur: number;
+  courierPerKmEur: number;
+  /**
+   * La zone de base, en km — **absente** : le CDC parle d'une « zone de base »
+   * sans la chiffrer. Tant qu'elle est `null`, on affiche « 3,00 € + 0,80 €/km au-delà
+   * de la zone de base » sans calculer un gain qu'on ne peut pas connaître.
+   */
+  courierBaseZoneKm: number | null;
+  /**
+   * Valeur d'un colis « important », en euros, au-delà de laquelle la remise exige
+   * la biométrie du livreur — **absente** (le CDC ne la chiffre pas).
+   */
+  importantParcelMinEur: number | null;
+  /**
    * Récompense de parrainage, en euros, créditée à chacun des deux — CDC V1.1
    * (« 5 € crédités au parrain et au filleul »). Financée par TK LINK.
    */
@@ -72,6 +89,10 @@ export const PLATFORM_SETTINGS: PlatformSettings = {
   commissionB2bPct: 5,
   cartHoldSeconds: null,
   deliveryFeeEur: 0,
+  courierBaseFeeEur: 3,
+  courierPerKmEur: 0.8,
+  courierBaseZoneKm: null,
+  importantParcelMinEur: null,
   referralRewardEur: 5,
   pointsPerEuro: 1,
   retentionYears: 10,

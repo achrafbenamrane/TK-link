@@ -14,7 +14,7 @@ import {
 describe('rôles — CDC §3', () => {
   it('expose exactement les trois rôles de l’app', () => {
     // Le livreur est une app distincte (CDC §3.4) : il n’a rien à faire ici.
-    expect([...ROLES]).toEqual(['consommateur', 'commercant', 'grossiste']);
+    expect([...ROLES]).toEqual(['consommateur', 'commercant', 'grossiste', 'livreur']);
   });
 
   it('libelle chaque rôle', () => {

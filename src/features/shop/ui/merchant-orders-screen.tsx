@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
+import { pickupPin } from '@/shared/lib/handover';
 import { AppText, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -250,6 +251,31 @@ function OrderCard({
           </View>
         ))}
       </View>
+
+      {/* Remise au livreur : le code que le livreur saisit au comptoir (V1.1,
+          « scan QR ou code PIN »). */}
+      {order.fulfilment === 'livraison' && order.status === 'prete' ? (
+        <View
+          testID={`merchant-order-${order.id}-handover`}
+          className="mt-3 flex-row items-center justify-between rounded-control bg-surface-muted px-3.5 py-3"
+        >
+          <View className="flex-1">
+            <AppText className="font-sans-bold text-ink" style={{ fontSize: 13 }}>
+              Remise au livreur
+            </AppText>
+            <AppText variant="caption" className="text-ink-faint">
+              À lui donner, ou le QR de l’étiquette.
+            </AppText>
+          </View>
+          <AppText
+            className="font-display text-ink"
+            style={{ fontSize: 22, letterSpacing: 4 }}
+            testID={`merchant-order-${order.id}-pin`}
+          >
+            {pickupPin(order.id)}
+          </AppText>
+        </View>
+      ) : null}
 
       {/* Le geste suivant. Les transitions viennent de la machine à états du
           §11 : on ne propose jamais un chemin illégal. */}

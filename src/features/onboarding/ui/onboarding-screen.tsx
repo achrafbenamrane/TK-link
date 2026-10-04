@@ -63,6 +63,12 @@ const INTEREST_COPY: Record<Role, { title: string; subtitle: string; label: stri
     subtitle: 'Vos rayons — pour cibler les bons commerçants.',
     label: 'Ce que vous distribuez',
   },
+  // Le livreur a son propre parcours (`/devenir-livreur`) ; ces mots ne s'affichent pas.
+  livreur: {
+    title: 'Votre zone',
+    subtitle: 'Les commerces que vous livrez.',
+    label: 'Où vous livrez',
+  },
 };
 
 export function OnboardingScreen({ onDone, onRequestLocation, onEnableBiometrics }: Props) {

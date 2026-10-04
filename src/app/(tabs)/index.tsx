@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { CourierHomeScreen } from '@/features/courier';
 import { programOf, useMerchantLoyaltyStore } from '@/features/loyalty';
 import {
   liveOffers,
@@ -20,8 +21,10 @@ import {
   useOnboardingStore,
 } from '@/features/onboarding';
 import {
+  authenticateBiometric,
   HomeScreen,
   isMerchantOrder,
+  missionOffers,
   LOCAL_MERCHANT_ID,
   selectOrders,
   summarizeOrder,
@@ -175,7 +178,27 @@ function MerchantHome() {
   );
 }
 
+/** L'accueil du livreur : disponibilité et missions (les commandes prêtes en livraison). */
+function CourierHome() {
+  const router = useRouter();
+  const orders = useShopStore(selectOrders);
+  const addresses = useShopStore((s) => s.addresses);
+  const setOrderStatus = useShopStore((s) => s.setOrderStatus);
+  const missions = useMemo(() => missionOffers(orders, addresses), [orders, addresses]);
+
+  return (
+    <CourierHomeScreen
+      missions={missions}
+      authenticate={async (reason) => (await authenticateBiometric(reason)).ok}
+      onPickedUp={(orderId) => setOrderStatus(orderId, 'en_livraison')}
+      onDelivered={(orderId) => setOrderStatus(orderId, 'livree')}
+      onOpenSetup={() => router.push('/devenir-livreur')}
+    />
+  );
+}
+
 export default function AccueilRoute() {
   const role = useOnboardingStore(selectRole);
+  if (role === 'livreur') return <CourierHome />;
   return role === 'commercant' ? <MerchantHome /> : <ConsumerHome />;
 }

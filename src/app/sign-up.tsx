@@ -48,7 +48,11 @@ export default function SignUpRoute() {
   );
 
   const onRoleChange = useCallback((next: Role) => setRole(next), [setRole]);
-  const toOnboarding = useCallback(() => router.replace('/onboarding'), [router]);
+  // Un livreur dépose ses justificatifs ; les autres choisissent leurs centres d'intérêt.
+  const toOnboarding = useCallback(
+    () => router.replace(role === 'livreur' ? '/devenir-livreur' : '/onboarding'),
+    [router, role],
+  );
   const toSignIn = useCallback(() => router.replace('/sign-in'), [router]);
 
   return (

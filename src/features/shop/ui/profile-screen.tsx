@@ -236,6 +236,12 @@ export function ProfileScreen({
             onPress={() => router.push('/adresses')}
           />
           <Row
+            testID="profile-livreur"
+            icon={<Feather name="navigation" size={17} color={colors.ink} />}
+            label="Devenir livreur"
+            onPress={() => router.push('/livreur')}
+          />
+          <Row
             testID="profile-commercant"
             icon={<Feather name="briefcase" size={17} color={colors.ink} />}
             label="Devenir commerçant"

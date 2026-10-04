@@ -14,6 +14,7 @@ export { LiquidationRail } from './ui/components/liquidation-rail';
 export { orderToTransaction, producesReceipt, type Transaction } from './lib/transactions';
 export { selectOrders } from './model/store';
 export { pointsByMerchant } from './lib/points';
+export { missionOffers, type MissionOffer } from './lib/missions';
 export {
   isHonoured,
   isMerchantOrder,

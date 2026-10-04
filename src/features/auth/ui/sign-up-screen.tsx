@@ -113,6 +113,7 @@ export function SignUpScreen({
   );
 
   const pro = needsSiret(role);
+  const courier = role === 'livreur';
   const proCopy = PRO_TITLE[role === 'grossiste' ? 'grossiste' : 'commercant'];
 
   const set = (key: keyof RegistrationDraft, value: string) => {
@@ -188,12 +189,14 @@ export function SignUpScreen({
 
           <View className="mb-4 items-center gap-2">
             <AppText variant="display" className="text-center" style={{ fontSize: 26 }}>
-              {pro ? proCopy.title : 'Créer mon compte'}
+              {pro ? proCopy.title : courier ? 'Créer mon compte livreur' : 'Créer mon compte'}
             </AppText>
             <AppText variant="caption" className="text-center">
               {pro
                 ? proCopy.subtitle
-                : 'Inscris-toi pour accéder aux meilleures offres Flash autour de toi.'}
+                : courier
+                  ? 'Rejoignez TK Deliver pour livrer les commandes de votre quartier.'
+                  : 'Inscris-toi pour accéder aux meilleures offres Flash autour de toi.'}
             </AppText>
           </View>
 
