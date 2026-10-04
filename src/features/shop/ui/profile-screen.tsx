@@ -1,7 +1,7 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Pressable, ScrollView, Share, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
@@ -94,16 +94,6 @@ export function ProfileScreen({
 }: ProfileScreenProps = {}) {
   const colors = useColors();
   const router = useRouter();
-  const invite = async () => {
-    try {
-      await Share.share({
-        message: 'Je déniche les meilleures ventes flash de mon quartier sur TK LINK ⚡',
-      });
-    } catch {
-      // partage indisponible (web) — sans effet pour la démo
-    }
-  };
-
   return (
     <Screen testID="profile-screen">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-10">
@@ -137,20 +127,20 @@ export function ProfileScreen({
         {/* Invite — bouton simple ; le bouton signature vit désormais sur les fiches produit. */}
         <View className="mb-5 gap-2 rounded-card border border-line bg-surface-muted p-5">
           <AppText variant="title" className="text-lg">
-            Partagez TK LINK
+            Parrainez vos proches
           </AppText>
           <AppText variant="caption" className="mb-1">
-            Un proche rejoint le quartier ? Offrez-lui l’app d’un simple geste.
+            5 € pour vous et pour lui, offerts par TK LINK après son premier achat.
           </AppText>
           <Pressable
             testID="invite-button"
             accessibilityRole="button"
-            accessibilityLabel="Partager l’application TK LINK"
-            onPress={invite}
+            accessibilityLabel="Parrainer un proche"
+            onPress={() => router.push('/parrainage')}
             className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
           >
-            <Feather name="share-2" size={15} color={colors.inkInverse} />
-            <AppText className="font-sans-bold text-ink-inverse">Partager l’app</AppText>
+            <Feather name="users" size={15} color={colors.inkInverse} />
+            <AppText className="font-sans-bold text-ink-inverse">Parrainer un proche</AppText>
           </Pressable>
         </View>
 
@@ -221,6 +211,12 @@ export function ProfileScreen({
 
         {/* Menu */}
         <View className="rounded-card border border-line bg-surface px-4">
+          <Row
+            testID="profile-recompenses"
+            icon={<Feather name="gift" size={17} color={colors.ink} />}
+            label="Mes récompenses"
+            onPress={() => router.push('/recompenses')}
+          />
           <Row
             testID="profile-empreinte"
             icon={<Ionicons name="finger-print" size={18} color={colors.ink} />}

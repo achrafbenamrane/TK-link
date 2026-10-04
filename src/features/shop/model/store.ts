@@ -2,8 +2,11 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { makeId } from '@/shared/lib/id';
+import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
 // Cart/favorites/orders hold no secrets → the plaintext tier is correct.
+import { routeIssue, type IssueKind } from '../lib/issues';
 import { canTransition, isActive, type Fulfilment, type OrderStatus } from '../lib/order-status';
+import { canRate, clampStars, type RatingTag } from '../lib/rating';
 import { DEFAULT_PREFERENCES, type Preferences } from '../lib/preferences';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
@@ -20,7 +23,8 @@ import {
   type Order,
 } from './schema';
 
-const DELIVERY_FEE = 0; // TK LINK : livraison offerte pour l'utilisateur.
+// Réglable (platform-settings) : le CDC ne dit pas ce que paie le client.
+const DELIVERY_FEE = PLATFORM_SETTINGS.deliveryFeeEur;
 
 // La règle des points (1 € TTC = 1 point) vit dans model/loyalty.ts.
 export { POINTS_PER_EURO } from './loyalty';
@@ -73,12 +77,35 @@ type ShopState = {
   syncOrderStatuses: () => void;
 
   /**
+   * Signale un problème sur une commande — point d'entrée unique, CDC V1.1.
+   * La route (remboursement ou file Super Admin) est décidée par `routeIssue`.
+   * Un seul signalement par commande.
+   */
+  reportIssue: (
+    orderId: string,
+    kind: IssueKind,
+  ) =>
+    | { ok: true; route: 'remboursement' | 'admin' }
+    | { ok: false; reason: 'introuvable' | 'deja_signale' };
+  /** Note le commerçant d'une commande terminée — étoiles + tags, sans texte libre. */
+  rateOrder: (
+    orderId: string,
+    stars: number,
+    tags: RatingTag[],
+  ) => { ok: true } | { ok: false; reason: 'introuvable' | 'non_terminee' | 'deja_notee' };
+
+  /**
    * Turn the cart into an order, award points, empty the cart.
    */
   checkout: (
     addressId?: string | null,
     /** Touch & Collect ou livraison — CDC §12. */
     fulfilment?: Fulfilment,
+    /**
+     * Réduction financée par TK LINK (crédit de parrainage — CDC V1.1), en euros.
+     * Bornée au sous-total : on ne rembourse jamais plus que les articles.
+     */
+    discountEur?: number,
   ) => { ok: false } | { ok: true; orderId: string };
 };
 
@@ -194,6 +221,42 @@ export const useShopStore = create<ShopState>()(
           return next.some((o, i) => o !== state.orders[i]) ? { orders: next } : state;
         }),
 
+      reportIssue: (orderId, kind) => {
+        const order = get().orders.find((o) => o.id === orderId);
+        if (!order) return { ok: false as const, reason: 'introuvable' as const };
+        if (order.issue) return { ok: false as const, reason: 'deja_signale' as const };
+        const decision = routeIssue(kind, order.status, order.fulfilment);
+        set((state) => ({
+          orders: state.orders.map((o) =>
+            o.id === orderId
+              ? {
+                  ...o,
+                  issue: { kind, route: decision.route, at: Date.now() },
+                  // Une commande en litige ou en remboursement ne doit plus être
+                  // réécrasée par la démo : on la reprend en main.
+                  ...(decision.status ? { status: decision.status, managed: true } : {}),
+                }
+              : o,
+          ),
+        }));
+        return { ok: true as const, route: decision.route };
+      },
+
+      rateOrder: (orderId, stars, tags) => {
+        const order = get().orders.find((o) => o.id === orderId);
+        if (!order) return { ok: false as const, reason: 'introuvable' as const };
+        if (!canRate(order.status)) return { ok: false as const, reason: 'non_terminee' as const };
+        if (order.rating) return { ok: false as const, reason: 'deja_notee' as const };
+        set((state) => ({
+          orders: state.orders.map((o) =>
+            o.id === orderId
+              ? { ...o, rating: { stars: clampStars(stars), tags, at: Date.now() } }
+              : o,
+          ),
+        }));
+        return { ok: true as const };
+      },
+
       toggleFavorite: (dealId) =>
         set((state) => ({
           favorites: state.favorites.includes(dealId)
@@ -201,16 +264,16 @@ export const useShopStore = create<ShopState>()(
             : [dealId, ...state.favorites],
         })),
 
-      checkout: (addressId = null, fulfilment = 'livraison') => {
+      checkout: (addressId = null, fulfilment = 'livraison', discountEur = 0) => {
         const { cart } = get();
         const lines = cartLines(cart);
         if (lines.length === 0) return { ok: false as const };
 
         const subtotal = lines.reduce((sum, l) => sum + l.lineTotal, 0);
-        // Aucune réduction n'est produite par l'app : le CDC V1.1 n'en connaît que
-        // financées par TK Link (parrainage, Flash boosté), calculées par le
-        // serveur. `discount` reste dans la commande, à 0, pour ce jour-là.
-        const discount = 0;
+        // Le CDC V1.1 ne connaît que des réductions financées par TK Link (crédit de
+        // parrainage, Flash boosté). Le serveur les calculera ; en attendant, la
+        // route passe le crédit de parrainage, borné au sous-total.
+        const discount = roundEur(Math.min(Math.max(0, discountEur), subtotal));
         const total = roundEur(subtotal - discount);
         // Les points récompensent ce qui est réellement payé (1 € TTC = 1 point).
         const pointsEarned = Math.round(total * POINTS_PER_EURO);
@@ -233,6 +296,8 @@ export const useShopStore = create<ShopState>()(
           status: 'creee',
           pointsEarned,
           managed: false,
+          rating: null,
+          issue: null,
         };
 
         set((state) => ({

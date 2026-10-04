@@ -34,6 +34,8 @@ beforeEach(() => {
         status: 'preparation',
         pointsEarned: 24,
         managed: false,
+        rating: null,
+        issue: null,
       },
     ],
     favorites: ['d_cote'],

@@ -20,9 +20,14 @@ type Props = {
    * tout de la fidélité.
    */
   onOrdered?: (orderId: string) => void;
+  /**
+   * Crédit de parrainage disponible, en euros (CDC V1.1). Fourni par la route :
+   * le panier ignore tout du parrainage, comme de la fidélité.
+   */
+  credit?: number;
 };
 
-export function CartScreen({ onOrdered }: Props = {}) {
+export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -41,10 +46,15 @@ export function CartScreen({ onOrdered }: Props = {}) {
   const addresses = useShopStore((s) => s.addresses);
   const biometricEnabled = useShopStore((s) => s.biometricEnabled);
 
-  const total = subtotal;
+  // Le coût de la livraison est dans le total AVANT le paiement — CDC V1.1 : jamais
+  // de frais révélé après coup. Le Touch & Collect est gratuit.
+  const deliveryFee = fulfilment === 'touch-collect' ? 0 : DELIVERY_FEE_EUR;
+  // Le crédit se déduit AVANT le paiement, borné aux articles.
+  const discount = Math.round(Math.min(Math.max(0, credit), subtotal) * 100) / 100;
+  const total = subtotal + deliveryFee - discount;
 
-  // Les points suivent ce qui est réellement payé (voir checkout).
-  const points = Math.round(total);
+  // Les points suivent les produits payés : livraison et frais exclus (CDC V1.1).
+  const points = Math.round(subtotal);
   // L'adresse par défaut est la cible de livraison ; sans adresse, on ne peut
   // pas commander — une app de livraison doit savoir où aller.
   const address = addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
@@ -64,7 +74,7 @@ export function CartScreen({ onOrdered }: Props = {}) {
       if (!auth.ok && auth.reason !== 'indisponible') return;
     }
 
-    const res = checkout(address?.id ?? null, fulfilment);
+    const res = checkout(address?.id ?? null, fulfilment, discount);
     if (res.ok) {
       onOrdered?.(res.orderId);
       router.replace('/commandes');
@@ -268,11 +278,23 @@ export function CartScreen({ onOrdered }: Props = {}) {
               {FULFILMENT_LABEL[fulfilment]}
             </AppText>
             <AppText className="font-sans-bold text-sm text-success">
-              {fulfilment === 'touch-collect' || DELIVERY_FEE_EUR === 0
-                ? 'Offerte'
-                : `${DELIVERY_FEE_EUR.toFixed(2)}€`}
+              {deliveryFee === 0
+                ? fulfilment === 'touch-collect'
+                  ? 'Gratuit'
+                  : 'Offerte'
+                : `${deliveryFee.toFixed(2)}€`}
             </AppText>
           </View>
+          {discount > 0 ? (
+            <View className="flex-row items-center justify-between" testID="cart-credit">
+              <AppText variant="caption" className="text-ink-muted">
+                Crédit de parrainage
+              </AppText>
+              <AppText className="font-sans-bold text-sm text-brand-600">
+                −{discount.toFixed(2)}€
+              </AppText>
+            </View>
+          ) : null}
           <View className="mt-1 flex-row items-center justify-between border-t border-line pt-2">
             <AppText variant="label">Total</AppText>
             <AppText variant="display" style={{ fontSize: 22 }} testID="cart-total">

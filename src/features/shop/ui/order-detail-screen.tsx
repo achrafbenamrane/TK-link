@@ -17,7 +17,9 @@ import {
 } from '../lib/order-status';
 import type { Order } from '../model/schema';
 import { useShopStore } from '../model/store';
+import { getDeal, getMerchant } from '../model/catalog';
 import { DeliveryTracker } from './components/delivery-tracker';
+import { RateMerchant, ReportIssue } from './components/order-feedback';
 
 type FeatherName = ComponentProps<typeof Feather>['name'];
 
@@ -158,6 +160,8 @@ export function OrderDetailScreen() {
   }
 
   const itemCount = order.items.reduce((n, i) => n + i.qty, 0);
+  const firstDeal = order.items[0] ? getDeal(order.items[0].dealId) : undefined;
+  const merchantName = (firstDeal && getMerchant(firstDeal.merchantId)?.name) || 'le commerçant';
 
   return (
     <Screen padded={false} testID="order-detail-screen">
@@ -269,6 +273,8 @@ export function OrderDetailScreen() {
           </View>
         </View>
 
+        <RateMerchant order={order} merchantName={merchantName} />
+
         <View className="items-center gap-3 rounded-card border border-line bg-surface p-5">
           <AppText className="font-sans-bold text-ink">Facture QR</AppText>
           {/* Fond blanc : un QR sur crème perd du contraste et certains
@@ -284,6 +290,11 @@ export function OrderDetailScreen() {
           <AppText variant="caption" className="text-center text-xs text-ink-faint">
             Présentez ce code au commerçant ou au livreur.
           </AppText>
+        </View>
+
+        {/* Point d'entrée UNIQUE — CDC V1.1. */}
+        <View className="mt-4">
+          <ReportIssue order={order} />
         </View>
       </ScrollView>
     </Screen>

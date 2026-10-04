@@ -51,6 +51,25 @@ const ProgramSchema = z.object({
 });
 export type Program = { unit: ProgramUnit; tiers: Tier[] };
 
+/**
+ * Une récompense DÉBLOQUÉE — l'inventaire du client (CDC V1.1 : « seule la
+ * récompense déjà débloquée est partageable entre comptes, jamais les points
+ * bruts »). On y entre en réclamant un palier ; on en sort en la faisant valider
+ * par QR chez le commerçant, ou en la partageant.
+ */
+const RewardSchema = z.object({
+  id: z.string(),
+  merchantId: z.string(),
+  merchantName: z.string().default(''),
+  rank: z.number().int().positive(),
+  label: z.string(),
+  /** Le code lu par le commerçant (le QR le contient). */
+  code: z.string(),
+  status: z.enum(['disponible', 'utilisee', 'partagee']),
+  at: z.number().int().positive(),
+});
+export type Reward = z.infer<typeof RewardSchema>;
+
 const PersistedSchema = z.object({
   cards: z.record(z.string(), CardSchema).default({}),
   /**
@@ -61,6 +80,8 @@ const PersistedSchema = z.object({
    * réhydratation. L'ancienne clé `tiers` est simplement ignorée.
    */
   programs: z.record(z.string(), ProgramSchema).default({}),
+  /** L'inventaire de récompenses. `.default([])` : les anciennes données n'en ont pas. */
+  rewards: z.array(RewardSchema).default([]),
 });
 
 /** Les paliers proposés tant qu'un commerçant n'a pas configuré les siens. */
@@ -116,10 +137,37 @@ type State = {
   saveProgram: (merchantId: string, program: Program) => void;
   /** Crédite des points chez une enseigne, pour un achat (CDC §8.1). */
   earn: (merchantId: string, points: number, label: string) => void;
-  /** Réclame un palier atteint. Renvoie false si le palier n'est pas ouvert. */
-  claim: (merchantId: string, rank: number) => boolean;
+  /** L'inventaire de récompenses débloquées. */
+  rewards: Reward[];
+  /**
+   * Réclame un palier atteint : il devient une récompense dans l'inventaire.
+   * Renvoie false si le palier n'est pas ouvert. `merchantName` n'est que
+   * l'étiquette affichée dans l'inventaire.
+   */
+  claim: (merchantId: string, rank: number, merchantName?: string) => boolean;
+  /**
+   * Partage une récompense débloquée avec un autre compte. Elle quitte alors
+   * cet inventaire : sans cela, on la partagerait et on l'utiliserait aussi.
+   */
+  shareReward: (rewardId: string) => boolean;
+  /**
+   * Le commerçant valide une récompense : il lit le code du QR. Refuse un code
+   * inconnu, déjà utilisé, partagé, ou d'un autre commerçant.
+   */
+  redeemReward: (
+    merchantId: string,
+    code: string,
+  ) => { ok: true; reward: Reward } | { ok: false; reason: 'inconnu' | 'deja_utilisee' };
   resetDemo: () => void;
 };
+
+/** Un code lisible, sans caractères qui se confondent (0/O, 1/I). */
+function rewardCode(): string {
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let out = '';
+  for (let i = 0; i < 6; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return `TK-${out}`;
+}
 
 const emptyCard = (): MerchantCard => ({ points: 0, claimed: [], history: [] });
 
@@ -129,6 +177,7 @@ export const useMerchantLoyaltyStore = create<State>()(
       // Vide au premier lancement : on ne montre pas de points qu'on n'a pas gagnés.
       cards: {},
       programs: {},
+      rewards: [],
 
       saveProgram: (merchantId, program) =>
         set((s) => ({
@@ -157,7 +206,7 @@ export const useMerchantLoyaltyStore = create<State>()(
           };
         }),
 
-      claim: (merchantId, rank) => {
+      claim: (merchantId, rank, merchantName = '') => {
         const card = get().cards[merchantId];
         // Les paliers de CE commerçant : réclamer suit son barème en vigueur.
         const tier = programOf(get().programs, merchantId).tiers.find((t) => t.rank === rank);
@@ -168,18 +217,57 @@ export const useMerchantLoyaltyStore = create<State>()(
             ...s.cards,
             [merchantId]: { ...card, claimed: [...card.claimed, rank] },
           },
+          rewards: [
+            {
+              id: `rw_${Date.now()}_${rank}`,
+              merchantId,
+              merchantName,
+              rank,
+              label: tier.reward,
+              code: rewardCode(),
+              status: 'disponible' as const,
+              at: Date.now(),
+            },
+            ...s.rewards,
+          ],
         }));
         return true;
       },
 
-      resetDemo: () => set({ cards: seedCards(), programs: {} }),
+      shareReward: (rewardId) => {
+        const reward = get().rewards.find((r) => r.id === rewardId);
+        if (!reward || reward.status !== 'disponible') return false;
+        set((s) => ({
+          rewards: s.rewards.map((r) =>
+            r.id === rewardId ? { ...r, status: 'partagee' as const } : r,
+          ),
+        }));
+        return true;
+      },
+
+      redeemReward: (merchantId, code) => {
+        const wanted = code.trim().toUpperCase();
+        const reward = get().rewards.find((r) => r.merchantId === merchantId && r.code === wanted);
+        if (!reward) return { ok: false as const, reason: 'inconnu' as const };
+        if (reward.status !== 'disponible') {
+          return { ok: false as const, reason: 'deja_utilisee' as const };
+        }
+        set((s) => ({
+          rewards: s.rewards.map((r) =>
+            r.id === reward.id ? { ...r, status: 'utilisee' as const } : r,
+          ),
+        }));
+        return { ok: true as const, reward: { ...reward, status: 'utilisee' as const } };
+      },
+
+      resetDemo: () => set({ cards: seedCards(), programs: {}, rewards: [] }),
     }),
     {
       name: 'tklink-merchant-loyalty-v1',
       storage: createJSONStorage(() => asyncStorageBackend),
       // Les programmes se persistent avec les cartes : un barème reconfiguré ne
       // doit pas revenir à celui par défaut au prochain lancement.
-      partialize: (s) => ({ cards: s.cards, programs: s.programs }),
+      partialize: (s) => ({ cards: s.cards, programs: s.programs, rewards: s.rewards }),
       merge: (persisted, current) => {
         const parsed = PersistedSchema.safeParse(persisted);
         return parsed.success ? { ...current, ...parsed.data } : current;
@@ -191,6 +279,7 @@ export const useMerchantLoyaltyStore = create<State>()(
 /* ---- sélecteurs : tranche brute uniquement ---- */
 export const selectCards = (s: State) => s.cards;
 export const selectPrograms = (s: State) => s.programs;
+export const selectRewards = (s: State) => s.rewards;
 
 /** Le programme en vigueur chez un commerçant (celui par défaut s'il n'a rien réglé). */
 export function programOf(programs: Record<string, Program>, merchantId: string): Program {

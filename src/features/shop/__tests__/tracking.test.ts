@@ -22,6 +22,8 @@ const orderAgedBy = (seconds: number): Order => ({
   status: 'prete',
   pointsEarned: 24,
   managed: false,
+  rating: null,
+  issue: null,
 });
 
 /** Ligne droite est-ouest, segments de longueurs très différentes. */

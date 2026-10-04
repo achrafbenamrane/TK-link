@@ -51,6 +51,25 @@ export function TiersSettingsScreen({ merchantId }: Props) {
     tiers.map((t) => ({ cost: String(t.cost), reward: t.reward })),
   );
   const [errors, setErrors] = useState<(string | undefined)[]>([]);
+  const redeemReward = useMerchantLoyaltyStore((s) => s.redeemReward);
+  const [code, setCode] = useState('');
+  const [redeemMsg, setRedeemMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const redeem = () => {
+    const res = redeemReward(merchantId, code);
+    setRedeemMsg(
+      res.ok
+        ? { ok: true, text: `Validée : ${res.reward.label}` }
+        : {
+            ok: false,
+            text:
+              res.reason === 'deja_utilisee'
+                ? 'Cette récompense a déjà été utilisée ou partagée.'
+                : 'Code inconnu chez vous.',
+          },
+    );
+    if (res.ok) setCode('');
+  };
 
   const set = (index: number, key: keyof Draft, value: string) => {
     setDrafts((list) => list.map((d, i) => (i === index ? { ...d, [key]: value } : d)));
@@ -231,6 +250,56 @@ export function TiersSettingsScreen({ merchantId }: Props) {
         <AppText variant="caption" className="text-center text-ink-faint">
           Les avantages déjà réclamés par vos clients leur restent acquis.
         </AppText>
+
+        {/* Valider une récompense — le client montre son QR ; on lit le code. */}
+        <View
+          testID="reward-redeem"
+          className="gap-2.5 rounded-card border border-line bg-surface p-4"
+        >
+          <AppText variant="label">Valider une récompense</AppText>
+          <AppText variant="caption" className="text-ink-faint">
+            Scannez le QR du client, ou saisissez le code affiché sous le QR.
+          </AppText>
+          <TextInput
+            testID="reward-redeem-code"
+            value={code}
+            onChangeText={(v) => {
+              setCode(v.toUpperCase());
+              setRedeemMsg(null);
+            }}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            placeholder="TK-XXXXXX"
+            placeholderTextColor={colors.inkFaint}
+            accessibilityLabel="Code de la récompense"
+            className="rounded-control border border-line bg-surface px-3.5 py-3 font-sans text-ink"
+            style={{ fontSize: 15, letterSpacing: 1 }}
+          />
+          {redeemMsg ? (
+            <AppText
+              testID="reward-redeem-result"
+              variant="caption"
+              className={redeemMsg.ok ? 'text-success' : 'text-danger'}
+            >
+              {redeemMsg.text}
+            </AppText>
+          ) : null}
+          <Pressable
+            testID="reward-redeem-submit"
+            accessibilityRole="button"
+            accessibilityLabel="Valider la récompense"
+            disabled={code.trim().length === 0}
+            onPress={redeem}
+            className={cn(
+              'items-center rounded-control bg-surface-inverse py-3',
+              code.trim().length === 0 && 'opacity-40',
+            )}
+          >
+            <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 14 }}>
+              Valider
+            </AppText>
+          </Pressable>
+        </View>
       </ScrollView>
     </Screen>
   );

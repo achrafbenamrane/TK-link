@@ -1,4 +1,6 @@
 import { earnedPoints, programOf, useMerchantLoyaltyStore } from '@/features/loyalty';
+import { selectCredit, useReferralStore } from '@/features/referral';
+import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
 import { CartScreen, pointsByMerchant, selectOrders, useShopStore } from '@/features/shop';
 
 /**
@@ -10,10 +12,18 @@ import { CartScreen, pointsByMerchant, selectOrders, useShopStore } from '@/feat
  */
 export default function PanierRoute() {
   const earn = useMerchantLoyaltyStore((s) => s.earn);
+  const credit = useReferralStore(selectCredit);
 
   return (
     <CartScreen
+      // Le crédit de parrainage, une fois débloqué, se déduit du prochain paiement.
+      credit={credit === 'disponible' ? PLATFORM_SETTINGS.referralRewardEur : 0}
       onOrdered={(orderId) => {
+        // Le crédit qui vient de servir est consommé AVANT que ce premier achat
+        // n'en débloque un autre.
+        const referral = useReferralStore.getState();
+        referral.consumeCredit();
+        referral.onPurchase();
         const order = selectOrders(useShopStore.getState()).find((o) => o.id === orderId);
         if (!order) return;
         const { programs } = useMerchantLoyaltyStore.getState();

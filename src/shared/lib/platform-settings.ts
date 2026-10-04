@@ -40,6 +40,19 @@ export type PlatformSettings = {
    * toute façon un back-end (§12.2 : le serveur est autoritaire sur le stock).
    */
   cartHoldSeconds: number | null;
+  /**
+   * Frais de livraison facturés au client, en euros. CDC V1.1 : le coût de la
+   * livraison « s'affiche avant validation, jamais de frais caché ». Le CDC ne
+   * chiffre que la rémunération du livreur (3 € + 0,80 €/km), pas ce que paie le
+   * client : tant que Farid ne l'a pas arrêté, la livraison reste offerte, et ce
+   * réglage est le seul endroit à changer.
+   */
+  deliveryFeeEur: number;
+  /**
+   * Récompense de parrainage, en euros, créditée à chacun des deux — CDC V1.1
+   * (« 5 € crédités au parrain et au filleul »). Financée par TK LINK.
+   */
+  referralRewardEur: number;
   /** Points crédités par euro dépensé en produits — CDC §8.1. */
   pointsPerEuro: number;
   /** Conservation des pièces comptables, en années — CDC §9.6. */
@@ -58,6 +71,8 @@ export const PLATFORM_SETTINGS: PlatformSettings = {
   commissionB2cPct: 5,
   commissionB2bPct: 5,
   cartHoldSeconds: null,
+  deliveryFeeEur: 0,
+  referralRewardEur: 5,
   pointsPerEuro: 1,
   retentionYears: 10,
 };

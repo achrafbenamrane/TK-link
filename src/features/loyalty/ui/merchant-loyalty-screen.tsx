@@ -228,7 +228,7 @@ export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, 
                         testID={`tier-claim-${tier.rank}`}
                         accessibilityRole="button"
                         accessibilityLabel={`Utiliser ${tier.reward}`}
-                        onPress={() => claim(merchantId, tier.rank)}
+                        onPress={() => claim(merchantId, tier.rank, merchantName)}
                         className="h-8 w-8 items-center justify-center rounded-pill bg-brand-500 active:bg-brand-600"
                       >
                         <Feather name="plus" size={17} color={colors.inkInverse} />

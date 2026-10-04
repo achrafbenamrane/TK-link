@@ -62,3 +62,38 @@ describe('<CartScreen /> — mode de retrait (CDC §12)', () => {
     expect(screen.getByTestId('cart-address')).toBeOnTheScreen();
   });
 });
+
+describe('<CartScreen /> — crédit de parrainage (CDC V1.1)', () => {
+  beforeEach(() => {
+    useShopStore.setState({ cart: [{ dealId: 'd_pizza', qty: 1 }], addresses: [], orders: [] });
+  });
+
+  it('déduit le crédit AVANT le paiement et le montre sur sa propre ligne', () => {
+    render(<CartScreen credit={5} />);
+    fireEvent.press(screen.getByTestId('cart-fulfilment-touch-collect'));
+
+    expect(screen.getByTestId('cart-credit')).toHaveTextContent(/−5.00€/);
+    expect(screen.getByTestId('cart-total')).toHaveTextContent('1.90€');
+  });
+
+  it('ne rembourse jamais plus que les articles', () => {
+    render(<CartScreen credit={50} />);
+    expect(screen.getByTestId('cart-total')).toHaveTextContent('0.00€');
+  });
+
+  it('enregistre la réduction dans la commande', async () => {
+    render(<CartScreen credit={5} />);
+    fireEvent.press(screen.getByTestId('cart-fulfilment-touch-collect'));
+    fireEvent.press(screen.getByTestId('cart-checkout'));
+    await screen.findByTestId('cart-checkout').catch(() => undefined);
+
+    const order = useShopStore.getState().orders[0];
+    expect(order?.discount).toBe(5);
+    expect(order?.total).toBe(1.9);
+  });
+
+  it('sans crédit, aucune ligne de réduction', () => {
+    render(<CartScreen />);
+    expect(screen.queryByTestId('cart-credit')).not.toBeOnTheScreen();
+  });
+});

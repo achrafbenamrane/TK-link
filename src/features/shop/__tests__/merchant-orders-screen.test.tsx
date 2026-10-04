@@ -24,6 +24,8 @@ const order = (over: Partial<Order> = {}): Order => ({
   status: 'payee',
   pointsEarned: 18,
   managed: false,
+  rating: null,
+  issue: null,
   ...over,
 });
 

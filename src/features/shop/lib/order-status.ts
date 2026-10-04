@@ -101,7 +101,7 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   payee: ['acceptee', 'preparation', 'refusee', 'annulee', 'remboursement_en_cours'],
   acceptee: ['preparation', 'annulee', 'remboursement_en_cours'],
   preparation: ['prete', 'annulee', 'remboursement_en_cours'],
-  prete: ['recuperee', 'en_livraison', 'annulee'],
+  prete: ['recuperee', 'en_livraison', 'annulee', 'litige'],
   en_livraison: ['livree', 'litige'],
   recuperee: ['remboursement_en_cours', 'litige'],
   livree: ['remboursement_en_cours', 'litige'],
@@ -130,13 +130,16 @@ export function nextStatuses(status: OrderStatus, fulfilment: Fulfilment): Order
   if (status !== 'prete') return all;
   // En livraison, « prête » mène au livreur — pas directement chez le client.
   const end: OrderStatus = fulfilment === 'touch-collect' ? 'recuperee' : 'en_livraison';
-  return all.filter((s) => s === end || s === 'annulee');
+  return all.filter((s) => s === end || s === 'annulee' || s === 'litige');
 }
 
 /**
  * Les gestes que le commerçant se voit proposer — CDC V1.1 : « le paiement vaut
  * acceptation, sans étape intermédiaire ». Même machine à états, sans le geste
  * « Accepter » : il n'y a plus rien à accepter, la commande payée se prépare.
+ *
+ * Le litige non plus : il est ouvert par le CLIENT (« Signaler un problème »), jamais
+ * par un geste du commerçant.
  *
  * Le remboursement n'y figure pas non plus : ce n'est pas un geste, c'est une
  * CONSÉQUENCE. Refuser une commande payée déclenche le remboursement ; après une
@@ -145,7 +148,7 @@ export function nextStatuses(status: OrderStatus, fulfilment: Fulfilment): Order
  */
 export function merchantActions(status: OrderStatus, fulfilment: Fulfilment): OrderStatus[] {
   return nextStatuses(status, fulfilment).filter(
-    (s) => s !== 'acceptee' && s !== 'remboursement_en_cours',
+    (s) => s !== 'acceptee' && s !== 'remboursement_en_cours' && s !== 'litige',
   );
 }
 

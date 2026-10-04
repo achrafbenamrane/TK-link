@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { CATEGORIES, CATEGORY_LABELS, type Category } from '@/shared/lib/categories';
 
+import { ISSUE_KINDS } from '../lib/issues';
+import { RATING_TAGS } from '../lib/rating';
 import {
   FULFILMENTS,
   FULFILMENT_LABEL,
@@ -235,6 +237,28 @@ export const OrderSchema = z.object({
   fulfilment: FulfilmentSchema.default('livraison'),
   status: OrderStatusSchema,
   pointsEarned: z.number().int().nonnegative(),
+  /**
+   * La note donnée au commerçant (étoiles + tags, V1.1) et le problème signalé
+   * (point d'entrée unique, V1.1). `.default(null)` : les commandes déjà
+   * stockées n'ont pas ces clés, et un champ requis effacerait tout
+   * l'historique à la réhydratation — même piège que `addressId`.
+   */
+  rating: z
+    .object({
+      stars: z.number().int().min(1).max(5),
+      tags: z.array(z.enum(RATING_TAGS)).default([]),
+      at: z.number().int().positive(),
+    })
+    .nullable()
+    .default(null),
+  issue: z
+    .object({
+      kind: z.enum(ISSUE_KINDS),
+      route: z.enum(['remboursement', 'admin']),
+      at: z.number().int().positive(),
+    })
+    .nullable()
+    .default(null),
 });
 export type Order = z.infer<typeof OrderSchema>;
 

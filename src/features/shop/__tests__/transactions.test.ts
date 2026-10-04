@@ -16,6 +16,8 @@ const order = (over: Partial<Order> = {}): Order => ({
   status: 'recuperee',
   pointsEarned: 19,
   managed: false,
+  rating: null,
+  issue: null,
   ...over,
 });
 

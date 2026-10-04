@@ -8,10 +8,13 @@
  * récompenses et le back-end.
  */
 export { MerchantLoyaltyScreen } from './ui/merchant-loyalty-screen';
+export { RewardsScreen } from './ui/rewards-screen';
 export {
   useMerchantLoyaltyStore,
   selectCards,
   selectPrograms,
+  selectRewards,
+  type Reward,
   programOf,
   DEFAULT_TIERS,
   DEFAULT_PROGRAM,
