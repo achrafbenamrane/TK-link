@@ -14,14 +14,7 @@ import { SignInScreen } from '@/features/auth';
  */
 export default function SignInRoute() {
   const router = useRouter();
-  const onCreateAccount = useCallback(() => router.push('/sign-up'), [router]);
+  const onCreateAccount = useCallback(() => router.replace('/role'), [router]);
   const onSignedIn = useCallback(() => router.replace('/'), [router]);
-  const onMerchantSignUp = useCallback(() => router.push('/commercant'), [router]);
-  return (
-    <SignInScreen
-      onCreateAccount={onCreateAccount}
-      onSignedIn={onSignedIn}
-      onMerchantSignUp={onMerchantSignUp}
-    />
-  );
+  return <SignInScreen onCreateAccount={onCreateAccount} onSignedIn={onSignedIn} />;
 }

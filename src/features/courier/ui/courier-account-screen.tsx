@@ -12,7 +12,6 @@ type Props = {
   /** Reprendre ou terminer l'inscription. */
   onOpenSetup: () => void;
   /** Démo : repasser côté consommateur (en production, c'est le compte qui décide). */
-  onLeave?: () => void;
   onSignOut?: () => void;
 };
 
@@ -23,7 +22,7 @@ const STATUS_TEXT = {
 } as const;
 
 /** LE COMPTE LIVREUR — identité, véhicule, sécurité. */
-export function CourierAccountScreen({ name, onOpenSetup, onLeave, onSignOut }: Props) {
+export function CourierAccountScreen({ name, onOpenSetup, onSignOut }: Props) {
   const colors = useColors();
   const status = useCourierStore((s) => s.status);
   const vehicle = useCourierStore((s) => s.vehicle);
@@ -88,25 +87,6 @@ export function CourierAccountScreen({ name, onOpenSetup, onLeave, onSignOut }: 
             className="items-center rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
           >
             <AppText className="font-sans-bold text-ink-inverse">Terminer mon inscription</AppText>
-          </Pressable>
-        ) : null}
-
-        {onLeave ? (
-          <Pressable
-            testID="courier-leave"
-            accessibilityRole="button"
-            onPress={onLeave}
-            className="flex-row items-center gap-3 rounded-card border border-line bg-surface-muted p-4"
-          >
-            <Feather name="repeat" size={16} color={colors.inkMuted} />
-            <View className="flex-1">
-              <AppText className="font-sans-bold text-ink" style={{ fontSize: 14 }}>
-                Revenir à l’app consommateur
-              </AppText>
-              <AppText variant="caption" className="text-ink-faint">
-                Démo : bascule le rôle de ce téléphone.
-              </AppText>
-            </View>
           </Pressable>
         ) : null}
 

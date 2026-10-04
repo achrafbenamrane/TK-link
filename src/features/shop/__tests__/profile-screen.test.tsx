@@ -27,6 +27,16 @@ describe('<ProfileScreen />', () => {
   });
 });
 
+describe('le rôle ne se change pas depuis le compte', () => {
+  it('aucune ligne « Devenir commerçant / livreur » ni « Revenir à l’app consommateur »', () => {
+    render(<ProfileScreen canPublishOffers />);
+    expect(screen.queryByTestId('profile-commercant')).toBeNull();
+    expect(screen.queryByTestId('profile-livreur')).toBeNull();
+    expect(screen.queryByTestId('profile-leave-merchant')).toBeNull();
+    expect(screen.queryByText(/Devenir/)).toBeNull();
+  });
+});
+
 describe('se déconnecter', () => {
   it('appelle l’action de la route, qui remet l’app à zéro et rouvre le logo', () => {
     const onSignOut = jest.fn();

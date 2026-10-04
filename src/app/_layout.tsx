@@ -35,8 +35,6 @@ const FIRST_RUN_ROUTES = new Set([
   'onboarding',
   'sign-in',
   'sign-up',
-  'commercant',
-  'livreur',
   'devenir-livreur',
 ]);
 

@@ -66,14 +66,12 @@ export default function ProfilRoute() {
 
 function CourierAccountRoute() {
   const router = useRouter();
-  const setRole = useOnboardingStore((s) => s.setRole);
   const firstName = useOnboardingStore(selectFirstName);
   const signOut = useSignOut();
   return (
     <CourierAccountScreen
       name={firstName}
       onOpenSetup={() => router.push('/devenir-livreur')}
-      onLeave={() => setRole('consommateur')}
       onSignOut={signOut}
     />
   );
@@ -81,7 +79,6 @@ function CourierAccountRoute() {
 
 function DefaultProfil() {
   const role = useOnboardingStore(selectRole);
-  const setRole = useOnboardingStore((s) => s.setRole);
   const router = useRouter();
   const avatar = useOnboardingStore(selectAvatar);
   const firstName = useOnboardingStore(selectFirstName);
@@ -93,7 +90,6 @@ function DefaultProfil() {
       renderAvatar={() => <AvatarView avatar={avatar} size={56} />}
       name={firstName}
       subtitle={ROLE_LABEL[role]}
-      onLeaveMerchantSpace={() => setRole('consommateur')}
       onSignOut={signOut}
       onOpenTiers={() => router.push('/paliers')}
     />

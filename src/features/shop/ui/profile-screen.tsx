@@ -81,7 +81,6 @@ type ProfileScreenProps = {
    * rien ne ramène en arrière. Une porte qui ne s'ouvre que dans un sens est un
    * défaut, pas une fonctionnalité.
    */
-  onLeaveMerchantSpace?: () => void;
   /**
    * Se déconnecter : la route remet l'app à zéro et rouvre le logo animé, comme pour un
    * nouvel utilisateur. Absent : la ligne mène à l'écran de connexion.
@@ -91,7 +90,6 @@ type ProfileScreenProps = {
 
 export function ProfileScreen({
   canPublishOffers = false,
-  onLeaveMerchantSpace,
   onSignOut,
   onOpenTiers,
   renderAvatar,
@@ -176,26 +174,6 @@ export function ProfileScreen({
           </Pressable>
         ) : null}
 
-        {canPublishOffers && onLeaveMerchantSpace ? (
-          <Pressable
-            testID="profile-leave-merchant"
-            accessibilityRole="button"
-            accessibilityLabel="Revenir à l’application consommateur"
-            onPress={onLeaveMerchantSpace}
-            className="mb-4 flex-row items-center gap-3 rounded-card border border-line bg-surface-muted p-4 active:opacity-70"
-          >
-            <Feather name="repeat" size={16} color={colors.inkMuted} />
-            <View className="flex-1">
-              <AppText className="font-sans-bold text-ink" style={{ fontSize: 14 }}>
-                Revenir à l’app consommateur
-              </AppText>
-              <AppText variant="caption" className="text-ink-faint">
-                Démo : bascule le rôle de ce téléphone. En production, c’est le compte qui décide.
-              </AppText>
-            </View>
-          </Pressable>
-        ) : null}
-
         {canPublishOffers ? (
           <View className="mb-4 gap-2 rounded-card bg-surface-inverse p-4">
             <View className="flex-row items-center gap-2">
@@ -240,18 +218,6 @@ export function ProfileScreen({
             icon={<Feather name="map-pin" size={17} color={colors.ink} />}
             label="Adresses de livraison"
             onPress={() => router.push('/adresses')}
-          />
-          <Row
-            testID="profile-livreur"
-            icon={<Feather name="navigation" size={17} color={colors.ink} />}
-            label="Devenir livreur"
-            onPress={() => router.push('/livreur')}
-          />
-          <Row
-            testID="profile-commercant"
-            icon={<Feather name="briefcase" size={17} color={colors.ink} />}
-            label="Devenir commerçant"
-            onPress={() => router.push('/commercant')}
           />
           <Row
             icon={<Feather name="log-out" size={17} color={colors.brand600} />}
