@@ -134,7 +134,9 @@ export function FlashCard({ deal }: Props) {
             className={cn('font-sans-bold', low ? 'text-surface' : 'text-ink-inverse')}
             style={{ fontSize: 12.5 }}
           >
-            {deal.stockLeft > 0 ? `${deal.stockLeft} / ${deal.stockTotal}` : 'Épuisé'}
+            {deal.stockLeft > 0
+              ? `${deal.stockLeft} restant${deal.stockLeft > 1 ? 's' : ''}`
+              : 'Épuisé'}
           </AppText>
         </View>
       </View>

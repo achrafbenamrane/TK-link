@@ -10,6 +10,8 @@ export type HomeView = 'liste' | 'carte';
 type Props = {
   value: HomeView;
   onChange: (value: HomeView) => void;
+  /** Version en ligne dans l'en-tête (maquette B) : plus petite, sans pleine largeur. */
+  compact?: boolean;
 };
 
 const OPTIONS: { key: HomeView; label: string; icon: 'list' | 'map' }[] = [
@@ -22,7 +24,7 @@ const OPTIONS: { key: HomeView; label: string; icon: 'list' | 'map' }[] = [
  * les deux états sont visibles en permanence, donc on sait toujours où l'on est
  * et ce qui se passera au tap — un bouton unique oblige à deviner.
  */
-export function ViewSwitch({ value, onChange }: Props) {
+export function ViewSwitch({ value, onChange, compact = false }: Props) {
   const colors = useColors();
   return (
     <View
@@ -31,7 +33,10 @@ export function ViewSwitch({ value, onChange }: Props) {
       // coincé à droite d'un en-tête déjà chargé, entre l'identité et deux
       // autres boutons : « on ne le remarque pas ». Il occupe désormais sa
       // propre ligne, et sa largeur lui vaut d'être vu.
-      className="w-full flex-row rounded-pill border border-line bg-surface-muted p-1"
+      className={cn(
+        'flex-row rounded-pill border border-line bg-surface-muted',
+        compact ? 'p-0.5' : 'w-full p-1',
+      )}
     >
       {OPTIONS.map((option) => {
         const active = value === option.key;
@@ -44,18 +49,19 @@ export function ViewSwitch({ value, onChange }: Props) {
             accessibilityLabel={`Afficher en ${option.label.toLowerCase()}`}
             onPress={() => onChange(option.key)}
             className={cn(
-              'flex-1 flex-row items-center justify-center gap-1.5 rounded-pill px-3.5 py-2',
+              'flex-row items-center justify-center rounded-pill',
+              compact ? 'gap-1 px-2.5 py-1.5' : 'flex-1 gap-1.5 px-3.5 py-2',
               active && 'border border-brand-500 bg-brand-50',
             )}
           >
             <Feather
               name={option.icon}
-              size={15}
+              size={compact ? 13 : 15}
               color={active ? colors.brand600 : colors.inkMuted}
             />
             <AppText
               className={cn(
-                'text-sm',
+                compact ? 'text-xs' : 'text-sm',
                 active ? 'font-sans-bold text-brand-600' : 'font-sans-medium text-ink-muted',
               )}
             >

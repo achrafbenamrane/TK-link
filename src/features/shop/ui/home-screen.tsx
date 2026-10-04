@@ -75,73 +75,48 @@ function RadiusNotice({ km }: { km: number }) {
 function FeaturedBanner({ deal }: { deal: Deal }) {
   const colors = useColors();
   const router = useRouter();
-  const open = () => router.push({ pathname: '/produit/[id]', params: { id: deal.id } });
-  const pct = deal.oldPrice ? Math.round((1 - deal.price / deal.oldPrice) * 100) : 0;
-  const [euros, cents] = deal.price.toFixed(2).split('.');
   return (
     <Pressable
       testID="featured-deal"
       accessibilityRole="button"
-      accessibilityLabel={`Offre flash : ${deal.title}`}
-      onPress={open}
-      className="mx-5 mb-5 overflow-hidden rounded-card border border-brand-500 bg-surface-inverse"
+      accessibilityLabel={`Vente flash : ${deal.title}`}
+      onPress={() => router.push({ pathname: '/produit/[id]', params: { id: deal.id } })}
+      className="mx-5 mb-4 flex-row items-center gap-3 rounded-card border border-brand-500 bg-surface-muted p-2.5"
     >
-      {/* Bandeau rose — « OFFRE FLASH » de la maquette. */}
-      <View className="flex-row items-center justify-center gap-2 bg-brand-500 py-2.5">
-        <Feather name="zap" size={18} color="#FFFFFF" />
-        <AppText className="font-display text-white" style={{ fontSize: 17 }}>
-          OFFRE FLASH
-        </AppText>
+      <View
+        className="h-[88px] w-[88px] items-center justify-center overflow-hidden rounded-control"
+        style={{ backgroundColor: deal.tint }}
+      >
+        <ProductImage deal={deal} emojiSize={42} />
       </View>
-
-      <View className="h-40 justify-end" style={{ backgroundColor: deal.tint }}>
-        <View className="absolute inset-0 items-center justify-center">
-          <ProductImage deal={deal} emojiSize={72} />
+      <View className="flex-1 gap-1">
+        <View className="flex-row items-center gap-1 self-start rounded-pill border border-brand-500 bg-brand-50 px-2 py-0.5">
+          <Feather name="zap" size={10} color={colors.brand500} />
+          <AppText className="font-sans-bold text-brand-600" style={{ fontSize: 9 }}>
+            VENTE FLASH
+          </AppText>
         </View>
-        {pct > 0 ? (
-          <View className="absolute left-3 top-3 h-14 w-14 items-center justify-center rounded-pill bg-brand-500">
-            <AppText className="font-display text-white" style={{ fontSize: 16 }}>
-              -{pct}%
+        <View className="flex-row items-center gap-2.5">
+          <Countdown seconds={deal.endsInSeconds} className="font-display text-brand-500" />
+          <View className="flex-1">
+            <AppText className="font-sans-bold text-ink" style={{ fontSize: 13 }} numberOfLines={2}>
+              {deal.title}
             </AppText>
           </View>
-        ) : null}
-      </View>
-
-      <View className="flex-row items-end justify-between gap-3 bg-surface px-4 py-3">
-        <View className="flex-1">
-          <AppText className="font-sans-bold text-ink" style={{ fontSize: 15 }} numberOfLines={1}>
-            {deal.title}
+        </View>
+        <View className="flex-row items-center justify-end gap-1.5">
+          <AppText className="font-display text-brand-500" style={{ fontSize: 18 }}>
+            {deal.price.toFixed(2)}€
           </AppText>
           {deal.oldPrice ? (
-            <AppText className="text-ink-faint line-through" style={{ fontSize: 13 }}>
+            <AppText className="text-ink-faint line-through" style={{ fontSize: 11 }}>
               {deal.oldPrice.toFixed(2)}€
             </AppText>
           ) : null}
+          <View className="h-6 w-6 items-center justify-center rounded-pill border border-brand-500">
+            <Feather name="chevron-right" size={14} color={colors.brand500} />
+          </View>
         </View>
-        <AppText className="font-display text-brand-500" style={{ fontSize: 30 }}>
-          {euros}
-          <AppText className="font-display text-brand-500" style={{ fontSize: 18 }}>
-            ,{cents}€
-          </AppText>
-        </AppText>
-      </View>
-
-      <View className="items-center gap-1 px-4 pb-3 pt-1">
-        <View className="flex-row items-center gap-1.5">
-          <Feather name="clock" size={12} color={colors.brand500} />
-          <AppText variant="caption" className="text-ink-muted" style={{ fontSize: 11 }}>
-            FIN DANS
-          </AppText>
-        </View>
-        <Countdown seconds={deal.endsInSeconds} className="font-display text-xl text-ink" />
-      </View>
-
-      <View className="mx-4 mb-4 flex-row items-center justify-between rounded-control bg-brand-500 px-4 py-3.5">
-        <View className="w-5" />
-        <AppText className="font-sans-bold text-white" style={{ fontSize: 15 }}>
-          J’EN PROFITE !
-        </AppText>
-        <Feather name="chevron-right" size={20} color="#FFFFFF" />
       </View>
     </Pressable>
   );
@@ -232,41 +207,26 @@ export function HomeScreen({
 
   return (
     <Screen padded={false} testID="home-screen">
-      <View className="flex-row items-center justify-between px-5 pb-3 pt-2">
-        {/* CDC §7 — l'écran d'accueil présente « l'identité de l'utilisateur ».
-            La marque seule ne disait pas à qui l'app parle. */}
-        <View className="flex-1 flex-row items-center gap-2.5">
-          {renderIdentity ? renderIdentity() : null}
-          <View className="flex-1">
-            <Wordmark size={22} />
-            {/* Une seule ligne. « Toulouse · Centre » se cassait en deux parce
-                que l'en-tête portait cinq éléments de front ; le sélecteur de
-                vue étant descendu, la place existe — et `numberOfLines` la
-                garantit même sur un écran étroit. */}
-            <View className="mt-0.5 flex-row items-center gap-1">
-              <Feather name="map-pin" size={12} color={colors.accent} />
-              <AppText variant="caption" className="flex-1 text-accent-deep" numberOfLines={1}>
-                Toulouse · Centre
-              </AppText>
-            </View>
+      {/* L'en-tête de la maquette B, sur UNE ligne : identité (avatar + prénom), logo et
+          ville, bascule Liste / Carte, filtres et panier avec leur pastille. */}
+      <View className="flex-row items-center gap-1.5 px-4 pb-3 pt-2">
+        {renderIdentity ? renderIdentity() : null}
+        <View className="min-w-0 flex-1">
+          <Wordmark size={18} />
+          <View className="mt-0.5 flex-row items-start gap-1">
+            <Feather name="map-pin" size={11} color={colors.accent} />
+            <AppText
+              variant="caption"
+              className="flex-1 text-accent-deep"
+              style={{ fontSize: 10.5 }}
+            >
+              Toulouse Centre
+            </AppText>
           </View>
         </View>
-        <View className="flex-row items-center gap-2">
-          <PreferencesButton />
-          <CartButton />
-        </View>
-      </View>
-
-      {/* Le sélecteur Liste / Carte, seul sur sa ligne.
-          Il était logé à droite de l'en-tête, entre l'identité et deux autres
-          boutons — « on ne le remarque pas ». C'est pourtant lui qui commande
-          la bascule entre les deux façons de parcourir les offres : il mérite
-          sa propre ligne et toute la largeur. */}
-      <View className="flex-row items-center gap-3 px-5 pb-3">
-        <View className="flex-1">
-          <ViewSwitch value={view} onChange={setView} />
-        </View>
-        <ThemeToggle />
+        <ViewSwitch value={view} onChange={setView} compact />
+        <PreferencesButton />
+        <CartButton />
       </View>
 
       {/* Vue carte : même état de filtre que la liste, un seul `deals`. */}
@@ -312,13 +272,14 @@ export function HomeScreen({
                 <Feather name="search" size={18} color={colors.inkFaint} />
                 <TextField
                   testID="home-search"
-                  placeholder="Rechercher une offre, une enseigne…"
+                  placeholder="Je sais ce que je veux…"
                   value={query}
                   onChangeText={setQuery}
                   returnKeyType="search"
                   className="min-w-0 border-0 bg-transparent px-0"
                   style={{ minWidth: 0 }}
                 />
+                <ThemeToggle />
               </View>
 
               {/* Ad card sits above the filter and stays visible whatever the
