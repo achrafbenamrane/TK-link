@@ -16,6 +16,17 @@ export const FREE_OPERATIONS = 5;
 /** Commission prélevée par TK LINK sur chaque vente, en pourcent — CDC §21. */
 export const COMMISSION_PCT = 5;
 
+/**
+ * Rythme de republication d'une offre B2B — CDC V1.1, Grossiste : « une offre B2B
+ * est ponctuelle ou récurrente (republication automatique au rythme choisi) ».
+ */
+export const RECURRENCES = [
+  { id: 'aucune', label: 'Ponctuelle' },
+  { id: 'quotidienne', label: 'Chaque jour' },
+  { id: 'hebdomadaire', label: 'Chaque semaine' },
+  { id: 'mensuelle', label: 'Chaque mois' },
+];
+
 export function freeLeft(used) {
   return Math.max(0, FREE_OPERATIONS - used);
 }
@@ -103,6 +114,14 @@ export function validateDraft(draft) {
   const stock = Number.parseInt(draft.stock, 10);
   if (!Number.isFinite(stock) || stock <= 0) errors.stock = 'Indiquez la quantité';
 
+  // Quantité minimale de commande (CDC V1.1, Grossiste) : vide = pas de minimum.
+  // Jamais au-dessus du stock : un minimum que personne ne peut atteindre
+  // fermerait l'offre sans le dire.
+  const minRaw = String(draft.minQty ?? '').trim();
+  const minQty = minRaw === '' ? 1 : Number.parseInt(minRaw, 10);
+  if (!Number.isFinite(minQty) || minQty <= 0) errors.minQty = 'Indiquez un nombre de lots';
+  else if (Number.isFinite(stock) && minQty > stock) errors.minQty = 'Au plus la quantité en stock';
+
   // CDC V1.1 : un Flash dure entre 15 minutes et 2 heures.
   const duration = Number(draft.duration);
   if (!(duration >= FLASH_MIN_MINUTES && duration <= FLASH_MAX_MINUTES)) {
@@ -115,5 +134,6 @@ export function validateDraft(draft) {
     priceCents: price,
     oldPriceCents: oldPrice,
     stock,
+    minQty: Number.isFinite(minQty) ? minQty : 1,
   };
 }

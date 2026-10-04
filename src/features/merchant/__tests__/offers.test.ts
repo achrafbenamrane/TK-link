@@ -38,6 +38,7 @@ const offer = (over: Partial<PublishedOffer> = {}): PublishedOffer => ({
   photoUri: '',
   modes: ['touch-collect', 'livraison'],
   seller: '',
+  minQty: 1,
   ...over,
 });
 

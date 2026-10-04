@@ -157,6 +157,12 @@ export const PublishedOfferSchema = z.object({
   modes: z.array(z.enum(OFFER_MODES)).default(() => [...OFFER_MODES]),
   /** Nom du vendeur, pour les lots B2B où l'on ne connaît pas l'enseigne. */
   seller: z.string().default(''),
+  /**
+   * Quantité minimale de commande — CDC V1.1, Grossiste (VALIDÉ) : « configurable
+   * par offre ; le panier acheteur ne valide pas en dessous ». `1` = pas de minimum,
+   * et c'est ce que valent les lots enregistrés avant ce champ.
+   */
+  minQty: z.number().int().positive().default(1),
 });
 
 export type PublishedOffer = z.infer<typeof PublishedOfferSchema>;

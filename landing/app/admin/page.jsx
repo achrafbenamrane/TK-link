@@ -928,7 +928,10 @@ export default function AdminPage() {
             <div className="tkpro-head">
               <div>
                 <h1>Revenus</h1>
-                <p>D’où vient l’argent de la plateforme — CDC §21. La tarification des packs n’est pas arrêtée : elle n’est pas chiffrée ici.</p>
+                <p>
+                  D’où vient l’argent de la plateforme — CDC §21. La tarification des packs n’est
+                  pas arrêtée : elle n’est pas chiffrée ici.
+                </p>
               </div>
             </div>
 

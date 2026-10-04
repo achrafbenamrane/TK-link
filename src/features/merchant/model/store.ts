@@ -30,7 +30,7 @@ import {
 type PublishResult = { ok: true; offer: PublishedOffer } | { ok: false; reason: 'quota' };
 
 type OrderResult =
-  { ok: true; order: WholesaleOrder } | { ok: false; reason: 'introuvable' | 'stock' };
+  { ok: true; order: WholesaleOrder } | { ok: false; reason: 'introuvable' | 'stock' | 'minimum' };
 
 type MerchantState = {
   /** MES publications, tous publics confondus. */
@@ -105,6 +105,7 @@ export const useMerchantStore = create<MerchantState>()(
           photoUri: draft.photoUri ?? '',
           modes: draft.modes ?? ['touch-collect', 'livraison'],
           seller,
+          minQty: 1,
         };
 
         set({ offers: [offer, ...s.offers], used: brouillon ? s.used : s.used + 1 });
@@ -129,6 +130,8 @@ export const useMerchantStore = create<MerchantState>()(
         // grossiste qui teste son annonce depuis le même appareil).
         const lot = s.lots.find((o) => o.id === offerId) ?? s.offers.find((o) => o.id === offerId);
         if (!lot) return { ok: false, reason: 'introuvable' };
+        // Le minimum du grossiste (V1.1) : on ne valide pas en dessous.
+        if (qty < (lot.minQty ?? 1)) return { ok: false, reason: 'minimum' };
         if (qty <= 0 || lot.stockLeft < qty) return { ok: false, reason: 'stock' };
 
         const order: WholesaleOrder = {

@@ -9,6 +9,7 @@ import {
   commissionCents,
   durationLabel,
   formatCents,
+  RECURRENCES,
   netCents,
   parseEurosToCents,
   validateDraft,
@@ -22,6 +23,8 @@ const EMPTY = {
   stock: '',
   duration: 60,
   description: '',
+  minQty: '',
+  recurrence: 'aucune',
 };
 
 /**
@@ -59,10 +62,12 @@ function toDraft(offer) {
       DURATIONS[0],
     ),
     description: offer.description ?? '',
+    minQty: offer.minQty > 1 ? String(offer.minQty) : '',
+    recurrence: offer.recurrence ?? 'aucune',
   };
 }
 
-export default function OfferForm({ onPublish, onCancel, initial = null }) {
+export default function OfferForm({ onPublish, onCancel, initial = null, wholesale = false }) {
   // `initial` ne sert qu'au montage : le formulaire est remonté par sa clé
   // quand on change d'offre, et une synchronisation continue écraserait la
   // saisie en cours sous les doigts.
@@ -98,6 +103,8 @@ export default function OfferForm({ onPublish, onCancel, initial = null }) {
       stock: result.stock,
       durationMinutes: draft.duration,
       description: draft.description.trim(),
+      // B2B seulement (CDC V1.1) : minimum de commande et republication automatique.
+      ...(wholesale ? { minQty: result.minQty, recurrence: draft.recurrence } : {}),
     });
     // On ne vide que la publication : après une modification, le formulaire se
     // ferme, et le vider ferait clignoter des champs vides avant sa fermeture.
@@ -107,8 +114,35 @@ export default function OfferForm({ onPublish, onCancel, initial = null }) {
   return (
     <form className="tkpro-form" onSubmit={submit} noValidate>
       <div className="tkpro-form-grid">
+        {wholesale ? (
+          <>
+            <label className="tkpro-input">
+              <span>Commande minimale (lots)</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={draft.minQty}
+                onChange={(e) => set('minQty', e.target.value.replace(/\D/g, ''))}
+                placeholder="Aucun minimum"
+                aria-invalid={Boolean(errors.minQty)}
+              />
+              {errors.minQty ? <em>{errors.minQty}</em> : null}
+            </label>
+            <label className="tkpro-input">
+              <span>Republication</span>
+              <select value={draft.recurrence} onChange={(e) => set('recurrence', e.target.value)}>
+                {RECURRENCES.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        ) : null}
+
         <label className="tkpro-input wide">
-          <span>Ce que vous vendez</span>
+          <span>Précision (facultatif)</span>
           <input
             type="text"
             value={draft.title}

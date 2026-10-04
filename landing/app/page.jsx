@@ -59,8 +59,8 @@ export default function Page() {
               Des prix imbattables, <em>pour un temps limité.</em>
             </h1>
             <p className="lead">
-              Les commerçants près de chez vous bradent ce qui doit partir aujourd’hui. Chaque offre a
-              un compte à rebours et un stock qui fond. Vous la prenez, ou elle disparaît.
+              Les commerçants près de chez vous bradent ce qui doit partir aujourd’hui. Chaque offre
+              a un compte à rebours et un stock qui fond. Vous la prenez, ou elle disparaît.
             </p>
             <div className="hero-cta">
               <a className="btn btn-lime" href="#telecharger">

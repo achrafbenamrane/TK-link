@@ -95,3 +95,34 @@ describe('marché des grossistes — CDC §20', () => {
     expect(onFixProfile).toHaveBeenCalled();
   });
 });
+
+describe('quantité minimale de commande — CDC V1.1 (Grossiste)', () => {
+  const withMin = (min: number) => {
+    const lot = LOTS[0]!;
+    useMerchantStore.setState((s) => ({
+      lots: s.lots.map((l) => (l.id === lot.id ? { ...l, minQty: min } : l)),
+    }));
+    return lot;
+  };
+
+  it('ne valide pas en dessous du minimum du grossiste', () => {
+    const lot = withMin(3);
+    expect(useMerchantStore.getState().orderLot(lot.id, 2)).toEqual({
+      ok: false,
+      reason: 'minimum',
+    });
+    expect(useMerchantStore.getState().wholesaleOrders).toHaveLength(0);
+  });
+
+  it('accepte le minimum pile, et au-dessus', () => {
+    const lot = withMin(3);
+    expect(useMerchantStore.getState().orderLot(lot.id, 3).ok).toBe(true);
+  });
+
+  it('annonce le minimum sur la carte du lot, mais pas quand il n’y en a pas', () => {
+    const lot = withMin(4);
+    render(<WholesaleScreen />);
+    expect(screen.getByTestId(`lot-${lot.id}-min`)).toHaveTextContent(/4 lots/);
+    expect(screen.queryByTestId(`lot-${LOTS[1]!.id}-min`)).toBeNull();
+  });
+});

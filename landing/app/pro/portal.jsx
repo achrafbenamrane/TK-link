@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import './pro.css';
-import { COMMISSION_PCT, formatCents, freeLeft } from './billing';
+import { COMMISSION_PCT, RECURRENCES, formatCents, freeLeft } from './billing';
 import {
   conversionPct,
   discountPct,
@@ -68,6 +68,10 @@ function toCard(draft) {
       draft.durationMinutes < 60
         ? `${draft.durationMinutes} min`
         : `${draft.durationMinutes / 60} h`
+    }${draft.minQty > 1 ? ` · min. ${draft.minQty} lots` : ''}${
+      draft.recurrence && draft.recurrence !== 'aucune'
+        ? ` · ${RECURRENCES.find((r) => r.id === draft.recurrence)?.label.toLowerCase()}`
+        : ''
     }`,
     flash: true,
     live: true,
@@ -298,7 +302,8 @@ export default function ProPortal({ role = 'commercant' }) {
                 <div className="k">Papier évité</div>
                 <div className="v">{totals.paperG} g</div>
                 <div className="d">
-                  {DOCUMENTS.length} tickets non imprimés · {totals.points} points crédités à vos clients
+                  {DOCUMENTS.length} tickets non imprimés · {totals.points} points crédités à vos
+                  clients
                 </div>
               </div>
             </div>
@@ -698,6 +703,7 @@ export default function ProPortal({ role = 'commercant' }) {
 
             {composing ? (
               <OfferForm
+                wholesale={role === 'grossiste'}
                 onPublish={(draft) => {
                   setOffers((list) => [toCard(draft), ...list]);
                   setUsed((n) => n + 1);
@@ -737,6 +743,7 @@ export default function ProPortal({ role = 'commercant' }) {
                 écrans pour les mêmes champs finiraient par diverger. */}
             {editingOffer ? (
               <OfferForm
+                wholesale={role === 'grossiste'}
                 key={editingOffer.id}
                 initial={editingOffer}
                 onPublish={(draft) => {

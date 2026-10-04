@@ -61,22 +61,29 @@ export function WholesaleScreen({ blockedReason = null, onFixProfile, onBack }: 
 
   const order = (lot: PublishedOffer) => {
     if (blockedReason) return;
+    // On commande au minimum exigé par le grossiste — jamais en dessous.
+    const qty = Math.max(1, lot.minQty);
     Alert.alert(
       lot.title,
-      `Commander 1 lot à ${formatCents(lot.priceCents)} chez ${lot.seller || 'ce grossiste'} ?`,
+      `Commander ${qty} lot${qty > 1 ? 's' : ''} à ${formatCents(lot.priceCents)} pièce chez ${lot.seller || 'ce grossiste'} ?`,
       [
         { text: 'Annuler', style: 'cancel' },
         {
           text: 'Commander',
           onPress: () => {
-            const result = orderLot(lot.id, 1);
+            const result = orderLot(lot.id, qty);
             if (!result.ok) {
-              Alert.alert('Impossible', 'Ce lot vient de partir.');
+              Alert.alert(
+                'Impossible',
+                result.reason === 'minimum'
+                  ? `Ce grossiste exige au moins ${lot.minQty} lots.`
+                  : 'Ce lot vient de partir.',
+              );
               return;
             }
             Alert.alert(
               'Commande passée',
-              `${result.order.qty} lot — ${formatCents(result.order.totalCents)}.\n\nLe grossiste est prévenu.`,
+              `${result.order.qty} lot${result.order.qty > 1 ? 's' : ''} — ${formatCents(result.order.totalCents)}.\n\nLe grossiste est prévenu.`,
             );
           },
         },
@@ -189,6 +196,16 @@ export function WholesaleScreen({ blockedReason = null, onFixProfile, onBack }: 
                       </View>
                     ) : null}
                   </View>
+
+                  {lot.minQty > 1 ? (
+                    <AppText
+                      testID={`lot-${lot.id}-min`}
+                      variant="caption"
+                      className="mt-1.5 font-sans-semibold text-brand-600"
+                    >
+                      Commande minimale : {lot.minQty} lots
+                    </AppText>
+                  ) : null}
 
                   {lot.description ? (
                     <AppText variant="caption" className="mt-1.5 text-ink-muted">
