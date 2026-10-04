@@ -45,8 +45,6 @@ type Props = {
    * Un professionnel n'en a pas : son logo viendra avec le serveur.
    */
   renderAvatar?: () => ReactNode;
-  /** Bascule Commerçant ⇄ Grossiste, pour un professionnel. */
-  onRoleChange?: (role: Role) => void;
   /** Ce que l'inscription apprend de la personne — à ranger côté profil local. */
   onProfile?: (profile: SignUpProfile) => void;
   onSignedUp?: () => void;
@@ -92,7 +90,6 @@ const PRO_TITLE: Record<'commercant' | 'grossiste', { title: string; subtitle: s
 export function SignUpScreen({
   role,
   renderAvatar,
-  onRoleChange,
   onProfile,
   onSignedUp,
   onSignIn,
@@ -347,40 +344,6 @@ export function SignUpScreen({
             <View className="mb-1.5 items-center">{renderAvatar()}</View>
           ) : null}
 
-          {pro && onRoleChange ? (
-            <View
-              accessibilityRole="tablist"
-              className="mb-1.5 flex-row rounded-control border border-line bg-surface-muted p-0.5"
-            >
-              {(['commercant', 'grossiste'] as const).map((r) => {
-                const active = role === r;
-                return (
-                  <Pressable
-                    key={r}
-                    testID={`signup-role-${r}`}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: active }}
-                    onPress={() => onRoleChange(r)}
-                    className={cn(
-                      'flex-1 items-center rounded-lg py-1',
-                      active && 'border border-brand-500 bg-brand-50',
-                    )}
-                  >
-                    <AppText
-                      className={cn(
-                        'font-sans-semibold',
-                        active ? 'text-brand-600' : 'text-ink-muted',
-                      )}
-                      style={{ fontSize: 12.5 }}
-                    >
-                      {r === 'commercant' ? 'Commerçant' : 'Grossiste'}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : null}
-
           <View className={dense ? 'gap-1' : 'gap-1.5'}>
             {firstName}
             {lastName}
@@ -453,7 +416,7 @@ export function SignUpScreen({
                         accessibilityLabel={MODE_LABEL[m]}
                         onPress={() => toggleMode(m)}
                         className={cn(
-                          'h-8 flex-1 flex-row items-center justify-center gap-1.5 rounded-control border',
+                          'h-9 flex-1 flex-row items-center justify-center gap-1.5 rounded-control border',
                           on ? 'border-brand-500 bg-brand-50' : 'border-line bg-surface-muted',
                         )}
                       >
@@ -525,7 +488,7 @@ export function SignUpScreen({
             <View className="gap-1.5">
               <Button
                 testID="signup-submit"
-                label={pro ? 'Créer mon compte commerçant' : 'Créer mon compte'}
+                label={pro ? proCopy.title : 'Créer mon compte'}
                 loading={submitting}
                 onPress={submit}
                 className={pro ? 'h-10' : undefined}
@@ -541,7 +504,7 @@ export function SignUpScreen({
               ) : null}
             </View>
 
-            {pro ? (
+            {role === 'commercant' ? (
               <View
                 testID="signup-free-ops"
                 className="flex-row items-center justify-center gap-2 rounded-control border border-line bg-surface-muted py-1.5"
@@ -686,7 +649,7 @@ function CategorySelect({
         accessibilityState={{ expanded: open }}
         onPress={() => setOpen((v) => !v)}
         className={cn(
-          'h-8 flex-row items-center gap-2.5 rounded-control border bg-surface-muted px-3.5',
+          'h-9 flex-row items-center gap-2.5 rounded-control border bg-surface-muted px-3.5',
           error ? 'border-brand-500' : 'border-line',
         )}
       >

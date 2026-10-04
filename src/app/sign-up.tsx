@@ -4,7 +4,6 @@ import { useCallback } from 'react';
 import { SignUpScreen, type SignUpProfile } from '@/features/auth';
 import { AvatarPicker, selectRole, useOnboardingStore } from '@/features/onboarding';
 import { useShopStore } from '@/features/shop';
-import type { Role } from '@/shared/lib/roles';
 
 /**
  * INSCRIPTION — CDC V1.0 §2.2.
@@ -21,7 +20,6 @@ import type { Role } from '@/shared/lib/roles';
 export default function SignUpRoute() {
   const router = useRouter();
   const role = useOnboardingStore(selectRole);
-  const setRole = useOnboardingStore((s) => s.setRole);
   const setFirstName = useOnboardingStore((s) => s.setFirstName);
   const setSiret = useOnboardingStore((s) => s.setSiret);
   const submitMerchantApplication = useShopStore((s) => s.submitMerchantApplication);
@@ -47,7 +45,6 @@ export default function SignUpRoute() {
     [role, setFirstName, setSiret, submitMerchantApplication],
   );
 
-  const onRoleChange = useCallback((next: Role) => setRole(next), [setRole]);
   // Un livreur dépose ses justificatifs ; les autres choisissent leurs centres d'intérêt.
   const toOnboarding = useCallback(
     () => router.replace(role === 'livreur' ? '/devenir-livreur' : '/onboarding'),
@@ -59,7 +56,6 @@ export default function SignUpRoute() {
     <SignUpScreen
       role={role}
       renderAvatar={() => <AvatarPicker size={48} />}
-      onRoleChange={onRoleChange}
       onProfile={onProfile}
       onSignedUp={toOnboarding}
       onSignIn={toSignIn}

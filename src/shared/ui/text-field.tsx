@@ -47,12 +47,19 @@ export function TextField({
         dense ? 'text-[12.5px]' : compact ? 'text-sm' : 'text-base',
         icon || accessory
           ? 'min-w-0 flex-1'
-          : cn('flex-1 px-4', dense ? 'h-8' : compact ? 'h-10' : 'h-12'),
+          : cn('flex-1 px-4', dense ? 'h-9' : compact ? 'h-10' : 'h-12'),
         !icon && !accessory && 'rounded-control border border-line bg-surface-muted',
         !icon && !accessory && invalid && 'border-brand-500',
         className,
       )}
-      style={[{ minWidth: 0 }, style]}
+      style={[
+        { minWidth: 0 },
+        // Sur Android, le remplissage vertical natif d'un champ bas rogne le texte : on le retire.
+        dense
+          ? { paddingVertical: 0, textAlignVertical: 'center', includeFontPadding: false }
+          : null,
+        style,
+      ]}
       {...rest}
     />
   );
@@ -63,7 +70,7 @@ export function TextField({
     <View
       className={cn(
         'flex-1 flex-row items-center gap-2.5 rounded-control border bg-surface-muted px-3.5',
-        dense ? 'h-8' : compact ? 'h-10' : 'h-12',
+        dense ? 'h-9' : compact ? 'h-10' : 'h-12',
         invalid ? 'border-brand-500' : 'border-line',
       )}
     >

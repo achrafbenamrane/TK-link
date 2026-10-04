@@ -71,7 +71,7 @@ describe('<SignUpScreen /> — consommateur', () => {
   });
 
   it('ne montre ni commerce, ni catégorie, ni onglets Commerçant / Grossiste', () => {
-    render(<SignUpScreen role="consommateur" onRoleChange={jest.fn()} />);
+    render(<SignUpScreen role="consommateur" />);
     expect(screen.queryByTestId('signup-shopname')).toBeNull();
     expect(screen.queryByTestId('signup-role-commercant')).toBeNull();
     expect(screen.queryByTestId('signup-free-ops')).toBeNull();
@@ -105,15 +105,17 @@ function proStepOne() {
 }
 
 describe('<SignUpScreen /> — commerçant et grossiste', () => {
-  it('propose la bascule Commerçant / Grossiste et les 5 opérations gratuites', () => {
-    const onRoleChange = jest.fn();
-    render(<SignUpScreen role="commercant" onRoleChange={onRoleChange} />);
-
+  it('ne propose plus de bascule de rôle : le profil est choisi avant, et les 5 opérations gratuites sont celles du commerçant', () => {
+    const { unmount } = render(<SignUpScreen role="commercant" />);
+    expect(screen.queryByTestId('signup-role-grossiste')).toBeNull();
     expect(screen.getAllByText('Créer mon compte commerçant').length).toBeGreaterThan(0);
-    fireEvent.press(screen.getByTestId('signup-role-grossiste'));
-    expect(onRoleChange).toHaveBeenCalledWith('grossiste');
-    // « 5 » vient du paramètre administrable, pas d’une constante du code (CDC §6.2).
+    // « 5 » vient du paramètre administrable, pas d'une constante du code (CDC §6.2).
     expect(screen.getByTestId('signup-free-ops')).toHaveTextContent(/5 opérations Flash/);
+    unmount();
+
+    render(<SignUpScreen role="grossiste" />);
+    expect(screen.getAllByText('Créer mon compte grossiste').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('signup-free-ops')).toBeNull();
   });
 
   it('propose Touch & Collect et Livraison — « Sur place » n’existe pas dans le CDC', () => {
