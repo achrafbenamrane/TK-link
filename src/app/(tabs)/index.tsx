@@ -7,6 +7,7 @@ import { programOf, useMerchantLoyaltyStore } from '@/features/loyalty';
 import {
   liveOffers,
   MerchantDashboardScreen,
+  WholesalerDashboardScreen,
   secondsLeft,
   selectOffers,
   useMerchantStore,
@@ -201,8 +202,36 @@ function CourierHome() {
   );
 }
 
+/** L'accueil du grossiste : son tableau de bord fournisseur, pas la vitrine des ventes Flash. */
+function WholesalerHome() {
+  const router = useRouter();
+  const avatar = useOnboardingStore(selectAvatar);
+  const firstName = useOnboardingStore(selectFirstName);
+  const application = useShopStore((s) => s.merchantApplication);
+
+  return (
+    <WholesalerDashboardScreen
+      companyName={application?.shopName ?? (firstName || 'Mon entreprise')}
+      {...(application?.area ? { area: application.area } : {})}
+      renderAvatar={() => <AvatarView avatar={avatar} size={52} />}
+      onOpen={(target) => {
+        const href = {
+          new: '/flash',
+          catalog: '/flash',
+          orders: '/commandes',
+          documents: '/factures',
+          payouts: '/versements',
+          account: '/profil',
+        } as const;
+        router.push(href[target]);
+      }}
+    />
+  );
+}
+
 export default function AccueilRoute() {
   const role = useOnboardingStore(selectRole);
+  if (role === 'grossiste') return <WholesalerHome />;
   if (role === 'livreur') return <CourierHome />;
   return role === 'commercant' ? <MerchantHome /> : <ConsumerHome />;
 }

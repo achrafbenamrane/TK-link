@@ -136,7 +136,8 @@ export function MerchantOffersScreen({
           onPublish={onPublish}
           onCancel={() => setMode('list')}
           {...(shopName ? { shopName } : {})}
-          title={audience === 'clients' ? 'Nouveau Flash' : 'Nouveau lot'}
+          wholesale={audience === 'commercants'}
+          title={audience === 'clients' ? 'Nouveau Flash' : 'Nouvelle offre pro'}
           subtitle={`${left} opération${left > 1 ? 's' : ''} restante${left > 1 ? 's' : ''}`}
         />
       </Screen>

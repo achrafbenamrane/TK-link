@@ -16,6 +16,13 @@ export {
 } from './ui/dashboard-screen';
 export { PayoutsScreen, type PayoutLine } from './ui/payouts-screen';
 export { ShopSettingsScreen } from './ui/shop-settings-screen';
+export { WholesalerOrdersScreen } from './ui/wholesaler-orders-screen';
+export { WholesalerDashboardScreen, type WholesalerTarget } from './ui/wholesaler-dashboard-screen';
+export {
+  WHOLESALE_STATUSES,
+  WHOLESALE_STATUS_LABEL,
+  type WholesaleStatus,
+} from './lib/wholesale-orders';
 export { MerchantStatsScreen } from './ui/stats-screen';
 export { DAY_LABEL, DAYS, openStatus, type Hours } from './lib/shop-profile';
 export {

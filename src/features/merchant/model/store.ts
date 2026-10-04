@@ -5,6 +5,7 @@ import { makeId } from '@/shared/lib/id';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
 import { canPublish } from '../lib/billing';
+import { nextWholesaleStatus } from '../lib/wholesale-orders';
 import { seedWholesaleLots } from './seed';
 import {
   EMPTY_PROFILE,
@@ -60,6 +61,8 @@ type MerchantState = {
   orderLot: (offerId: string, qty: number, nowMs?: number) => OrderResult;
   /** Retire une offre avant son terme. */
   takeOffline: (id: string) => void;
+  /** Le grossiste fait avancer une commande reçue d'un cran — jamais en arrière, jamais deux fois. */
+  advanceWholesaleOrder: (orderId: string) => boolean;
   /** Simule une vente : décrémente le stock (le vrai flux viendra du serveur). */
   sellOne: (id: string) => void;
   resetDemo: () => void;
@@ -105,7 +108,7 @@ export const useMerchantStore = create<MerchantState>()(
           photoUri: draft.photoUri ?? '',
           modes: draft.modes ?? ['touch-collect', 'livraison'],
           seller,
-          minQty: 1,
+          minQty: draft.minQty ?? 1,
         };
 
         set({ offers: [offer, ...s.offers], used: brouillon ? s.used : s.used + 1 });
@@ -145,6 +148,8 @@ export const useMerchantStore = create<MerchantState>()(
           unitCents: lot.priceCents,
           totalCents: lot.priceCents * qty,
           at: nowMs,
+          status: 'recue',
+          buyer: '',
         };
 
         const take = (list: PublishedOffer[]) =>
@@ -156,6 +161,18 @@ export const useMerchantStore = create<MerchantState>()(
           wholesaleOrders: [order, ...s.wholesaleOrders],
         });
         return { ok: true, order };
+      },
+
+      advanceWholesaleOrder: (orderId) => {
+        const order = get().wholesaleOrders.find((o) => o.id === orderId);
+        const next = order ? nextWholesaleStatus(order.status) : null;
+        if (!order || !next) return false;
+        set((s) => ({
+          wholesaleOrders: s.wholesaleOrders.map((o) =>
+            o.id === orderId ? { ...o, status: next } : o,
+          ),
+        }));
+        return true;
       },
 
       resetDemo: () =>

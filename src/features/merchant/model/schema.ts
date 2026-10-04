@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { CATEGORIES } from '@/shared/lib/categories';
 
+import { WHOLESALE_STATUSES } from '../lib/wholesale-orders';
 import { defaultHours, MAX_PHOTOS, MAX_PRESENTATION, MAX_VIDEOS } from '../lib/shop-profile';
 
 /**
@@ -59,6 +60,8 @@ export const OfferDraftSchema = z
     stock: z.number().int().positive('Indiquez la quantité').max(999, 'Quantité trop élevée'),
     durationMinutes: z.number().int().positive(),
     description: z.string().trim().max(240).default(''),
+    /** Quantité minimale de commande — offres B2B (CDC V1.1). 1 = pas de minimum. */
+    minQty: z.number().int().positive().default(1),
     audience: z.enum(AUDIENCES).default('clients'),
     /** Étape 1 de la création : la photo du produit (adresse locale ou distante). Facultative. */
     photoUri: z.string().default(''),
@@ -183,6 +186,14 @@ export const WholesaleOrderSchema = z.object({
   unitCents: z.number().int().nonnegative(),
   totalCents: z.number().int().nonnegative(),
   at: z.number().int().positive(),
+  /**
+   * Où en est la commande côté grossiste. `.default('recue')` : les commandes déjà
+   * enregistrées sur les téléphones n'ont pas ce champ, et un champ requis effacerait
+   * toute la réhydratation.
+   */
+  status: z.enum(WHOLESALE_STATUSES).default('recue'),
+  /** Le commerçant acheteur, tel que le grossiste le voit. */
+  buyer: z.string().default(''),
 });
 
 export type WholesaleOrder = z.infer<typeof WholesaleOrderSchema>;

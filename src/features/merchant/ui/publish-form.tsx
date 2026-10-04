@@ -32,6 +32,12 @@ type Props = {
   title?: string;
   /** Opérations restantes, affichées sous le titre. */
   subtitle?: string;
+  /**
+   * Offre B2B d'un grossiste : prix catalogue / prix grossiste, quantité minimale de
+   * commande, durées longues (jusqu'à 7 jours), retrait ou expédition. Le Flash du
+   * commerçant, lui, dure de 15 minutes à 2 heures (CDC V1.1).
+   */
+  wholesale?: boolean;
 };
 
 type Errors = Partial<Record<'title' | 'priceCents' | 'oldPriceCents' | 'stock' | 'modes', string>>;
@@ -60,6 +66,16 @@ const STARTS = [
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
+/** Les durées d'une offre B2B : pas bornée à 2 h (le CDC ne le demande qu'aux Flash clients). */
+const B2B_DURATIONS = [120, 1440, 4320, 10080] as const;
+const durationLabel = (m: number) =>
+  m < 60 ? `${m} min` : m < 1440 ? `${m / 60} h` : m === 1440 ? '1 jour' : `${m / 1440} jours`;
+
+const WHOLESALE_MODE_LABEL: Record<OfferMode, string> = {
+  'touch-collect': 'Retrait',
+  livraison: 'Expédition',
+};
+
 /**
  * NOUVEAU FLASH — la page de création de la maquette du client : étapes
  * Créer · Configurer · Publier, photo, « Aperçu en direct » de la carte telle que le
@@ -74,14 +90,24 @@ const pad = (n: number) => String(n).padStart(2, '0');
  * direct : la découvrir sur le relevé du mois suivant est la meilleure façon de
  * perdre un commerçant.
  */
-export function PublishForm({ onPublish, onCancel, shopName, title: pageTitle, subtitle }: Props) {
+export function PublishForm({
+  onPublish,
+  onCancel,
+  shopName,
+  title: pageTitle,
+  subtitle,
+  wholesale = false,
+}: Props) {
+  const durations: readonly number[] = wholesale ? B2B_DURATIONS : DURATIONS;
+  const modeLabel = wholesale ? WHOLESALE_MODE_LABEL : MODE_LABEL;
   const colors = useColors();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<Category>('restauration');
   const [oldPrice, setOldPrice] = useState('');
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('');
-  const [duration, setDuration] = useState<number>(60);
+  const [duration, setDuration] = useState<number>(wholesale ? 1440 : 60);
+  const [minQty, setMinQty] = useState('');
   const [photoUri, setPhotoUri] = useState('');
   const [modes, setModes] = useState<OfferMode[]>([...OFFER_MODES]);
   const [startIn, setStartIn] = useState<number>(0);
@@ -108,7 +134,10 @@ export function PublishForm({ onPublish, onCancel, shopName, title: pageTitle, s
     endsAt.getDate() === new Date(mountedAt).getDate()
       ? "Aujourd'hui"
       : endsAt.toLocaleDateString('fr-FR');
-  const preview = `${pad(Math.floor(duration / 60))}:${pad(duration % 60)}:00`;
+  const preview =
+    duration >= 1440
+      ? durationLabel(duration)
+      : `${pad(Math.floor(duration / 60))}:${pad(duration % 60)}:00`;
 
   const submit = (state: 'brouillon' | 'publiee') => {
     const parsed = OfferDraftSchema.safeParse({
@@ -121,6 +150,8 @@ export function PublishForm({ onPublish, onCancel, shopName, title: pageTitle, s
       description,
       photoUri,
       modes,
+      audience: wholesale ? 'commercants' : 'clients',
+      minQty: Number.parseInt(minQty, 10) || 1,
       // Une intention, pas une date : c'est le store qui horodate.
       startInMinutes: startIn,
       state,
@@ -356,7 +387,7 @@ export function PublishForm({ onPublish, onCancel, shopName, title: pageTitle, s
                 className={m === 'livraison' ? 'text-success' : 'text-accent-deep'}
                 style={{ fontSize: 11 }}
               >
-                {MODE_LABEL[m]}
+                {modeLabel[m]}
               </AppText>
             </View>
           ))}
@@ -380,7 +411,7 @@ export function PublishForm({ onPublish, onCancel, shopName, title: pageTitle, s
           />
         </View>
         <View className="flex-1 gap-1">
-          <Label>Prix initial</Label>
+          <Label>{wholesale ? 'Prix catalogue' : 'Prix initial'}</Label>
           <TextInput
             testID="publish-old-price"
             value={oldPrice}
@@ -394,7 +425,7 @@ export function PublishForm({ onPublish, onCancel, shopName, title: pageTitle, s
           />
         </View>
         <View className="flex-1 gap-1">
-          <Label>Prix Flash</Label>
+          <Label>{wholesale ? 'Prix grossiste' : 'Prix Flash'}</Label>
           <TextInput
             testID="publish-price"
             value={price}
@@ -437,7 +468,7 @@ export function PublishForm({ onPublish, onCancel, shopName, title: pageTitle, s
       {/* Durée · fin du Flash · catégorie */}
       <View className="flex-row gap-2">
         <View className="gap-1" style={{ flex: 1.1 }}>
-          <Label>Durée du Flash</Label>
+          <Label>{wholesale ? 'Durée de l’offre' : 'Durée du Flash'}</Label>
           <View className="h-10 flex-row items-center gap-1.5 rounded-control border border-line bg-surface-muted px-2.5">
             <Feather name="zap" size={13} color={colors.brand500} />
             <AppText className="text-ink" style={{ fontSize: 13 }}>
@@ -445,12 +476,14 @@ export function PublishForm({ onPublish, onCancel, shopName, title: pageTitle, s
                 ? `${duration} minutes`
                 : duration === 60
                   ? '1 heure'
-                  : `${duration / 60} heures`}
+                  : duration < 1440
+                    ? `${duration / 60} heures`
+                    : durationLabel(duration)}
             </AppText>
           </View>
         </View>
         <View className="gap-1" style={{ flex: 1.8 }}>
-          <Label>Fin du Flash</Label>
+          <Label>{wholesale ? 'Fin de l’offre' : 'Fin du Flash'}</Label>
           <View className="h-10 flex-row items-center gap-1.5 rounded-control border border-line bg-surface-muted px-2.5">
             <Feather name="calendar" size={13} color={colors.inkMuted} />
             <AppText
@@ -488,7 +521,7 @@ export function PublishForm({ onPublish, onCancel, shopName, title: pageTitle, s
 
       {/* Les durées possibles — 15 min à 2 h (CDC V1.1) */}
       <View className="flex-row gap-2">
-        {DURATIONS.map((m) => {
+        {durations.map((m) => {
           const on = duration === m;
           return (
             <Pressable
@@ -507,12 +540,29 @@ export function PublishForm({ onPublish, onCancel, shopName, title: pageTitle, s
                 className={cn('font-sans-semibold', on ? 'text-brand-600' : 'text-ink-muted')}
                 style={{ fontSize: 12 }}
               >
-                {m < 60 ? `${m} min` : `${m / 60} h`}
+                {durationLabel(m)}
               </AppText>
             </Pressable>
           );
         })}
       </View>
+
+      {wholesale ? (
+        <View className="gap-1">
+          <Label>Commande minimale (lots) — vide : aucun minimum</Label>
+          <TextInput
+            testID="publish-min-qty"
+            value={minQty}
+            onChangeText={(v) => setMinQty(v.replace(/\D/g, ''))}
+            placeholder="Ex. 10"
+            placeholderTextColor={colors.inkFaint}
+            keyboardType="number-pad"
+            className={inputClass}
+            style={{ height: 40, fontSize: 13 }}
+            accessibilityLabel="Quantité minimale de commande"
+          />
+        </View>
+      ) : null}
 
       {categoryOpen ? (
         <View
@@ -583,11 +633,11 @@ export function PublishForm({ onPublish, onCancel, shopName, title: pageTitle, s
         {OFFER_MODES.map((m) => (
           <View key={m} className="items-center gap-1.5">
             <AppText className="text-ink-muted" style={{ fontSize: 10.5 }}>
-              {MODE_LABEL[m]}
+              {modeLabel[m]}
             </AppText>
             <Switch
               testID={`publish-mode-${m}`}
-              accessibilityLabel={MODE_LABEL[m]}
+              accessibilityLabel={modeLabel[m]}
               value={modes.includes(m)}
               onValueChange={() => toggleMode(m)}
               trackColor={{
@@ -694,7 +744,13 @@ export function PublishForm({ onPublish, onCancel, shopName, title: pageTitle, s
           className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
         >
           <AppText className="font-sans-bold text-white" style={{ fontSize: 15 }}>
-            {startIn === 0 ? 'Publier le Flash' : 'Programmer le Flash'}
+            {wholesale
+              ? startIn === 0
+                ? 'Publier l’offre'
+                : 'Programmer l’offre'
+              : startIn === 0
+                ? 'Publier le Flash'
+                : 'Programmer le Flash'}
           </AppText>
           <Feather name="zap" size={16} color="#FFFFFF" />
         </Pressable>

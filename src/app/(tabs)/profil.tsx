@@ -91,7 +91,8 @@ function DefaultProfil() {
       name={firstName}
       subtitle={ROLE_LABEL[role]}
       onSignOut={signOut}
-      onOpenTiers={() => router.push('/paliers')}
+      // Les paliers de fidélité sont ceux d'un COMMERÇANT ; un grossiste vend des lots, pas des points.
+      {...(role === 'commercant' ? { onOpenTiers: () => router.push('/paliers') } : {})}
     />
   );
 }

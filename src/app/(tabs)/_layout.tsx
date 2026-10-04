@@ -13,6 +13,7 @@ import { useColors } from '@/shared/theme/theme-provider';
  *   Consommateur : Accueil · Favoris · Commandes · Compte
  *   Commerçant   : Accueil · Commandes · [ FLASH ] · Fidélité · Compte
  *   Livreur      : Missions · Revenus · Compte
+ *   Grossiste    : Accueil · Commandes · [ OFFRES ] · Compte
  *
  * Chez le consommateur, l'accueil, ce sont les ventes Flash (CDC §3.1). « La
  * Chasse », qui occupait le centre, a disparu le 03/10/2026 : ni la V1.0 ni la
@@ -50,6 +51,27 @@ function FlashTabIcon({ focused }: { focused: boolean }) {
   );
 }
 
+/** L'onglet central du grossiste : ses offres pro (un colis, pas un éclair). */
+function OfferTabIcon({ focused }: { focused: boolean }) {
+  const colors = useColors();
+  return (
+    <View
+      className="h-12 w-12 items-center justify-center rounded-pill bg-brand-500"
+      style={{
+        marginTop: -18,
+        opacity: focused ? 1 : 0.9,
+        shadowColor: colors.brand500,
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 8,
+      }}
+    >
+      <Feather name="package" size={22} color={colors.inkInverse} />
+    </View>
+  );
+}
+
 export default function TabsLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -57,6 +79,7 @@ export default function TabsLayout() {
 
   const pro = role === 'commercant';
   const courier = role === 'livreur';
+  const wholesaler = role === 'grossiste';
 
   // L'appareil du commerçant s'ouvre sur les commandes en cours (V1.1), pas sur
   // le tableau de bord. Une seule fois par lancement : cette disposition reste
@@ -103,7 +126,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="favoris"
         options={{
-          href: pro || courier ? null : undefined,
+          href: pro || courier || wholesaler ? null : undefined,
           title: 'Favoris',
           tabBarIcon: ({ color }) => <Feather name="heart" size={22} color={color} />,
         }}
@@ -120,9 +143,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="flash"
         options={{
-          href: pro ? undefined : null,
-          title: 'Flash',
-          tabBarIcon: ({ focused }) => <FlashTabIcon focused={focused} />,
+          href: pro || wholesaler ? undefined : null,
+          title: wholesaler ? 'Offres' : 'Flash',
+          tabBarIcon: ({ focused }) =>
+            wholesaler ? <OfferTabIcon focused={focused} /> : <FlashTabIcon focused={focused} />,
         }}
       />
       <Tabs.Screen

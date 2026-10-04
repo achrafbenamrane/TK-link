@@ -128,25 +128,27 @@ export function ProfileScreen({
           </View>
         </View>
 
-        {/* Invite — bouton simple ; le bouton signature vit désormais sur les fiches produit. */}
-        <View className="mb-5 gap-2 rounded-card border border-line bg-surface-muted p-5">
-          <AppText variant="title" className="text-lg">
-            Parrainez vos proches
-          </AppText>
-          <AppText variant="caption" className="mb-1">
-            5 € pour vous et pour lui, offerts par TK LINK après son premier achat.
-          </AppText>
-          <Pressable
-            testID="invite-button"
-            accessibilityRole="button"
-            accessibilityLabel="Parrainer un proche"
-            onPress={() => router.push('/parrainage')}
-            className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
-          >
-            <Feather name="users" size={15} color={colors.inkInverse} />
-            <AppText className="font-sans-bold text-ink-inverse">Parrainer un proche</AppText>
-          </Pressable>
-        </View>
+        {/* Parrainage — pour les clients : un professionnel n'invite pas des « proches » à acheter. */}
+        {!canPublishOffers ? (
+          <View className="mb-5 gap-2 rounded-card border border-line bg-surface-muted p-5">
+            <AppText variant="title" className="text-lg">
+              Parrainez vos proches
+            </AppText>
+            <AppText variant="caption" className="mb-1">
+              5 € pour vous et pour lui, offerts par TK LINK après son premier achat.
+            </AppText>
+            <Pressable
+              testID="invite-button"
+              accessibilityRole="button"
+              accessibilityLabel="Parrainer un proche"
+              onPress={() => router.push('/parrainage')}
+              className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
+            >
+              <Feather name="users" size={15} color={colors.inkInverse} />
+              <AppText className="font-sans-bold text-ink-inverse">Parrainer un proche</AppText>
+            </Pressable>
+          </View>
+        ) : null}
 
         {/* Décision client du 2026-08-10 : un professionnel PILOTE ses ventes
             depuis le web, pas depuis l'app. Le téléphone lui sert à
@@ -195,12 +197,14 @@ export function ProfileScreen({
 
         {/* Menu */}
         <View className="rounded-card border border-line bg-surface px-4">
-          <Row
-            testID="profile-recompenses"
-            icon={<Feather name="gift" size={17} color={colors.ink} />}
-            label="Mes récompenses"
-            onPress={() => router.push('/recompenses')}
-          />
+          {!canPublishOffers ? (
+            <Row
+              testID="profile-recompenses"
+              icon={<Feather name="gift" size={17} color={colors.ink} />}
+              label="Mes récompenses"
+              onPress={() => router.push('/recompenses')}
+            />
+          ) : null}
           <Row
             testID="profile-empreinte"
             icon={<Ionicons name="finger-print" size={18} color={colors.ink} />}
@@ -210,15 +214,17 @@ export function ProfileScreen({
           <Row
             testID="profile-factures"
             icon={<Feather name="maximize" size={17} color={colors.ink} />}
-            label="Mes factures QR"
+            label={canPublishOffers ? 'Mes factures' : 'Mes factures QR'}
             onPress={() => router.push('/factures')}
           />
-          <Row
-            testID="profile-adresses"
-            icon={<Feather name="map-pin" size={17} color={colors.ink} />}
-            label="Adresses de livraison"
-            onPress={() => router.push('/adresses')}
-          />
+          {!canPublishOffers ? (
+            <Row
+              testID="profile-adresses"
+              icon={<Feather name="map-pin" size={17} color={colors.ink} />}
+              label="Adresses de livraison"
+              onPress={() => router.push('/adresses')}
+            />
+          ) : null}
           <Row
             icon={<Feather name="log-out" size={17} color={colors.brand600} />}
             label="Se déconnecter"
