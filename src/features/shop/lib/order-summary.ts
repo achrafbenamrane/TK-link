@@ -19,6 +19,8 @@ export type OrderSummary = {
   statusLabel: string;
   tone: 'todo' | 'progress' | 'done';
   totalCents: number;
+  /** Quand la commande a été passée (ms) — pour les chiffres « du jour ». */
+  createdAt: number;
 };
 
 /**
@@ -55,6 +57,7 @@ export function summarizeOrder(order: Order): OrderSummary {
     statusLabel: ORDER_STATUS_LABEL[order.status],
     tone: toneOf(order.status),
     totalCents: Math.round(order.total * 100),
+    createdAt: order.createdAt,
   };
 }
 

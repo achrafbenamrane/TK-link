@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import type { ComponentProps, ReactNode } from 'react';
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -23,6 +24,8 @@ export type DashboardOrder = {
   /** À faire (orange), en cours (bleu), terminé (vert). */
   tone: 'todo' | 'progress' | 'done';
   totalCents: number;
+  /** Quand la commande a été passée (ms). */
+  createdAt: number;
 };
 
 export type DashboardTarget =
@@ -54,7 +57,7 @@ const TILES: {
   label: string;
   icon: ComponentProps<typeof Feather>['name'];
 }[] = [
-  { key: 'flash', label: 'Flash', icon: 'zap' },
+  { key: 'flash', label: 'Nouveau Flash', icon: 'zap' },
   { key: 'orders', label: 'Commandes', icon: 'shopping-bag' },
   { key: 'loyalty', label: 'Fidélité', icon: 'award' },
   { key: 'stats', label: 'Statistiques', icon: 'bar-chart-2' },
@@ -108,7 +111,10 @@ export function MerchantDashboardScreen({
 
   const live = liveOffers(offers, now);
   const todo = orders.filter((o) => o.tone === 'todo').length;
-  const revenue = orders.reduce((sum, o) => sum + o.totalCents, 0);
+  // « Du jour » : les commandes passées depuis minuit — la maquette parle du jour, pas du total.
+  const midnight = new Date(now).setHours(0, 0, 0, 0);
+  const today = orders.filter((o) => o.createdAt >= midnight);
+  const revenue = today.reduce((sum, o) => sum + o.totalCents, 0);
   const free = freeLeft(used);
 
   return (
@@ -139,7 +145,38 @@ export function MerchantDashboardScreen({
               </View>
             ) : null}
           </View>
-          <ThemeToggle />
+          <View className="items-end gap-2">
+            <View className="flex-row items-center gap-4">
+              <Pressable
+                testID="dashboard-bell"
+                accessibilityRole="button"
+                accessibilityLabel={
+                  todo > 0 ? `${todo} commande${todo > 1 ? 's' : ''} à préparer` : 'Commandes'
+                }
+                hitSlop={8}
+                onPress={() => onOpen('orders')}
+              >
+                <Feather name="bell" size={20} color={colors.ink} />
+                {todo > 0 ? (
+                  <View className="absolute -right-1.5 -top-1.5 h-4 min-w-[16px] items-center justify-center rounded-pill bg-brand-500 px-1">
+                    <AppText className="font-sans-bold text-white" style={{ fontSize: 9 }}>
+                      {todo}
+                    </AppText>
+                  </View>
+                ) : null}
+              </Pressable>
+              <Pressable
+                testID="dashboard-settings"
+                accessibilityRole="button"
+                accessibilityLabel="Paramètres"
+                hitSlop={8}
+                onPress={() => onOpen('account')}
+              >
+                <Feather name="settings" size={20} color={colors.ink} />
+              </Pressable>
+            </View>
+            <ThemeToggle />
+          </View>
         </View>
 
         {/* Nouveau Flash — l'appel à l'action de la maquette. */}
@@ -179,8 +216,8 @@ export function MerchantDashboardScreen({
         {/* Les chiffres qui existent vraiment. */}
         <View className="mb-4 flex-row gap-2">
           <Tile value={String(live.length)} label="Flash actifs" icon="zap" />
-          <Tile value={String(orders.length)} label="Commandes" icon="shopping-bag" />
-          <Tile value={formatCents(revenue)} label="Chiffre d’affaires" icon="trending-up" />
+          <Tile value={String(today.length)} label="Commandes du jour" icon="shopping-bag" />
+          <Tile value={formatCents(revenue)} label="Chiffre du jour" icon="trending-up" />
           <Tile value={String(todo)} label="À préparer" icon="clock" />
         </View>
 
@@ -199,7 +236,7 @@ export function MerchantDashboardScreen({
               <AppText
                 className="text-center font-sans-semibold text-ink"
                 style={{ fontSize: 11 }}
-                numberOfLines={1}
+                numberOfLines={2}
               >
                 {t.label}
               </AppText>
@@ -211,33 +248,63 @@ export function MerchantDashboardScreen({
           {live.length === 0 ? (
             <Empty text="Aucun Flash en ligne pour l’instant." />
           ) : (
-            live.slice(0, 3).map((o) => (
-              <View
-                key={o.id}
-                testID={`dashboard-flash-${o.id}`}
-                className="flex-row items-center gap-3 rounded-card border border-line bg-surface-muted p-3"
-              >
-                <View className="flex-1">
-                  <AppText className="font-sans-semibold text-ink" numberOfLines={1}>
-                    {o.title}
-                  </AppText>
-                  <View className="mt-0.5 flex-row items-center gap-1.5">
-                    <Feather name="clock" size={12} color={colors.brand600} />
-                    <AppText variant="caption" className="text-brand-600">
-                      {timeLabel(secondsLeft(o, now))}
+            <View className="flex-row flex-wrap gap-2.5">
+              {live.slice(0, 4).map((o) => (
+                <View
+                  key={o.id}
+                  testID={`dashboard-flash-${o.id}`}
+                  className="w-[48%] flex-row items-center gap-2.5 rounded-card border border-line bg-surface-muted p-2.5"
+                >
+                  <View className="h-14 w-14 items-center justify-center overflow-hidden rounded-control bg-surface-sunken">
+                    {o.photoUri ? (
+                      <Image
+                        source={{ uri: o.photoUri }}
+                        style={{ width: '100%', height: '100%' }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <Feather name="zap" size={20} color={colors.brand500} />
+                    )}
+                  </View>
+                  <View className="flex-1 gap-0.5">
+                    <AppText
+                      className="font-sans-semibold text-ink"
+                      style={{ fontSize: 12 }}
+                      numberOfLines={2}
+                    >
+                      {o.title}
                     </AppText>
+                    <View className="flex-row items-center gap-1">
+                      <Feather name="clock" size={10} color={colors.brand600} />
+                      <AppText
+                        variant="caption"
+                        className="text-brand-600"
+                        style={{ fontSize: 10.5 }}
+                      >
+                        {timeLabel(secondsLeft(o, now))}
+                      </AppText>
+                    </View>
+                    <AppText className="font-sans-bold text-ink" style={{ fontSize: 13 }}>
+                      {formatCents(o.priceCents)}
+                    </AppText>
+                    <View className="flex-row items-center justify-between">
+                      <AppText
+                        variant="caption"
+                        className="text-ink-faint"
+                        style={{ fontSize: 10 }}
+                      >
+                        Stock : {o.stockLeft}
+                      </AppText>
+                      <View className="rounded-sm border border-success px-1">
+                        <AppText className="text-success" style={{ fontSize: 9 }}>
+                          Actif
+                        </AppText>
+                      </View>
+                    </View>
                   </View>
                 </View>
-                <View className="items-end">
-                  <AppText className="font-sans-bold text-brand-600">
-                    {formatCents(o.priceCents)}
-                  </AppText>
-                  <AppText variant="caption" className="text-ink-faint" style={{ fontSize: 11 }}>
-                    Stock : {o.stockLeft} restants
-                  </AppText>
-                </View>
-              </View>
-            ))
+              ))}
+            </View>
           )}
         </Section>
 
@@ -245,30 +312,51 @@ export function MerchantDashboardScreen({
           {orders.length === 0 ? (
             <Empty text="Aucune commande pour l’instant." />
           ) : (
-            orders.slice(0, 3).map((o) => (
-              <View
-                key={o.id}
-                testID={`dashboard-order-${o.id}`}
-                className="flex-row items-center gap-3 rounded-card border border-line bg-surface-muted p-3"
-              >
-                <View className="flex-1">
-                  <AppText className="font-sans-semibold text-ink" numberOfLines={1}>
+            <View className="overflow-hidden rounded-card border border-line bg-surface-muted">
+              {orders.slice(0, 4).map((o, i) => (
+                <View
+                  key={o.id}
+                  testID={`dashboard-order-${o.id}`}
+                  className={cn(
+                    'flex-row items-center gap-2 px-3 py-2.5',
+                    i > 0 && 'border-t border-line',
+                  )}
+                >
+                  <AppText
+                    className="text-ink-muted"
+                    style={{ fontSize: 10, width: 74 }}
+                    numberOfLines={1}
+                  >
+                    {o.ref}
+                  </AppText>
+                  <AppText
+                    className="flex-1 font-sans-semibold text-ink"
+                    style={{ fontSize: 12 }}
+                    numberOfLines={1}
+                  >
                     {o.title}
                   </AppText>
-                  <AppText variant="caption" className="text-ink-faint" style={{ fontSize: 11.5 }}>
-                    {o.ref} · {o.modeLabel}
-                  </AppText>
+                  <View className="flex-row items-center gap-1">
+                    <Feather
+                      name={o.modeLabel === 'Livraison' ? 'truck' : 'shopping-bag'}
+                      size={11}
+                      color={colors.inkMuted}
+                    />
+                    <AppText className="text-ink-muted" style={{ fontSize: 10 }}>
+                      {o.modeLabel}
+                    </AppText>
+                  </View>
+                  <View className={cn('rounded-sm border px-1.5 py-0.5', TONE_CLASS[o.tone])}>
+                    <AppText
+                      className={cn('font-sans-semibold', TONE_CLASS[o.tone].split(' ')[1])}
+                      style={{ fontSize: 9.5 }}
+                    >
+                      {o.statusLabel}
+                    </AppText>
+                  </View>
                 </View>
-                <View className={cn('rounded-pill border px-2.5 py-1', TONE_CLASS[o.tone])}>
-                  <AppText
-                    className={cn('font-sans-semibold', TONE_CLASS[o.tone].split(' ')[1])}
-                    style={{ fontSize: 11 }}
-                  >
-                    {o.statusLabel}
-                  </AppText>
-                </View>
-              </View>
-            ))
+              ))}
+            </View>
           )}
         </Section>
 
