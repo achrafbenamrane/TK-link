@@ -17,8 +17,6 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: 'o1' }),
 }));
 jest.mock('expo-image', () => ({ Image: () => null }));
-// La carte Mapbox est native : on ne teste pas le suivi ici, mais les retours client.
-jest.mock('../ui/components/delivery-tracker', () => ({ DeliveryTracker: () => null }));
 
 const order = (over: Partial<Order> = {}): Order => ({
   id: 'o1',

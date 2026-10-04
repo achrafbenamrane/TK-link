@@ -18,7 +18,6 @@ import {
 import type { Order } from '../model/schema';
 import { useShopStore } from '../model/store';
 import { getDeal, getMerchant } from '../model/catalog';
-import { DeliveryTracker } from './components/delivery-tracker';
 import { RateMerchant, ReportIssue } from './components/order-feedback';
 
 type FeatherName = ComponentProps<typeof Feather>['name'];
@@ -186,13 +185,6 @@ export function OrderDetailScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-5 pb-10">
-        {/* La carte n'a de sens qu'en course : avant, il n'y a rien à suivre ;
-            après, le trajet est terminé. Et jamais en Touch & Collect, où
-            personne ne se déplace vers le client. */}
-        {order.status === 'prete' && order.fulfilment === 'livraison' && address ? (
-          <DeliveryTracker order={order} address={address} />
-        ) : null}
-
         <View className="mb-4 rounded-card border border-line bg-surface p-4">
           <Timeline status={order.status} fulfilment={order.fulfilment} />
         </View>
