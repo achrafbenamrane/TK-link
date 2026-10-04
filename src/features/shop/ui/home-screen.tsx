@@ -75,48 +75,73 @@ function RadiusNotice({ km }: { km: number }) {
 function FeaturedBanner({ deal }: { deal: Deal }) {
   const colors = useColors();
   const router = useRouter();
+  const open = () => router.push({ pathname: '/produit/[id]', params: { id: deal.id } });
+  const pct = deal.oldPrice ? Math.round((1 - deal.price / deal.oldPrice) * 100) : 0;
+  const [euros, cents] = deal.price.toFixed(2).split('.');
   return (
     <Pressable
       testID="featured-deal"
-      onPress={() => router.push({ pathname: '/produit/[id]', params: { id: deal.id } })}
-      className="mx-5 mb-5 overflow-hidden rounded-card bg-surface-inverse"
+      accessibilityRole="button"
+      accessibilityLabel={`Offre flash : ${deal.title}`}
+      onPress={open}
+      className="mx-5 mb-5 overflow-hidden rounded-card border border-brand-500 bg-surface-inverse"
     >
-      <View className="flex-row items-center gap-3 p-3.5">
-        <View
-          className="h-20 w-20 items-center justify-center rounded-control"
-          style={{ backgroundColor: deal.tint }}
-        >
-          <ProductImage deal={deal} emojiSize={42} />
+      {/* Bandeau rose — « OFFRE FLASH » de la maquette. */}
+      <View className="flex-row items-center justify-center gap-2 bg-brand-500 py-2.5">
+        <Feather name="zap" size={18} color="#FFFFFF" />
+        <AppText className="font-display text-white" style={{ fontSize: 17 }}>
+          OFFRE FLASH
+        </AppText>
+      </View>
+
+      <View className="h-40 justify-end" style={{ backgroundColor: deal.tint }}>
+        <View className="absolute inset-0 items-center justify-center">
+          <ProductImage deal={deal} emojiSize={72} />
         </View>
-        <View className="flex-1 gap-1">
-          <View className="flex-row items-center gap-2">
-            <View className="flex-row items-center gap-1 rounded-pill bg-brand-500 px-2 py-0.5">
-              <Feather name="zap" size={10} color={colors.inkInverse} />
-              <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 9 }}>
-                VENTE FLASH
-              </AppText>
-            </View>
-            <Countdown seconds={deal.endsInSeconds} className="text-xs text-ink-inverse" />
+        {pct > 0 ? (
+          <View className="absolute left-3 top-3 h-14 w-14 items-center justify-center rounded-pill bg-brand-500">
+            <AppText className="font-display text-white" style={{ fontSize: 16 }}>
+              -{pct}%
+            </AppText>
           </View>
-          <AppText
-            className="font-display text-ink-inverse"
-            style={{ fontSize: 15 }}
-            numberOfLines={1}
-          >
+        ) : null}
+      </View>
+
+      <View className="flex-row items-end justify-between gap-3 bg-surface px-4 py-3">
+        <View className="flex-1">
+          <AppText className="font-sans-bold text-ink" style={{ fontSize: 15 }} numberOfLines={1}>
             {deal.title}
           </AppText>
-          <View className="flex-row items-baseline gap-1.5">
-            <AppText className="font-display text-lg text-ink-inverse">
-              {deal.price.toFixed(2)}€
+          {deal.oldPrice ? (
+            <AppText className="text-ink-faint line-through" style={{ fontSize: 13 }}>
+              {deal.oldPrice.toFixed(2)}€
             </AppText>
-            {deal.oldPrice ? (
-              <AppText className="text-xs text-ink-inverse/60 line-through">
-                {deal.oldPrice.toFixed(2)}€
-              </AppText>
-            ) : null}
-          </View>
+          ) : null}
         </View>
-        <Feather name="chevron-right" size={22} color={colors.inkInverse} />
+        <AppText className="font-display text-brand-500" style={{ fontSize: 30 }}>
+          {euros}
+          <AppText className="font-display text-brand-500" style={{ fontSize: 18 }}>
+            ,{cents}€
+          </AppText>
+        </AppText>
+      </View>
+
+      <View className="items-center gap-1 px-4 pb-3 pt-1">
+        <View className="flex-row items-center gap-1.5">
+          <Feather name="clock" size={12} color={colors.brand500} />
+          <AppText variant="caption" className="text-ink-muted" style={{ fontSize: 11 }}>
+            FIN DANS
+          </AppText>
+        </View>
+        <Countdown seconds={deal.endsInSeconds} className="font-display text-xl text-ink" />
+      </View>
+
+      <View className="mx-4 mb-4 flex-row items-center justify-between rounded-control bg-brand-500 px-4 py-3.5">
+        <View className="w-5" />
+        <AppText className="font-sans-bold text-white" style={{ fontSize: 15 }}>
+          J’EN PROFITE !
+        </AppText>
+        <Feather name="chevron-right" size={20} color="#FFFFFF" />
       </View>
     </Pressable>
   );

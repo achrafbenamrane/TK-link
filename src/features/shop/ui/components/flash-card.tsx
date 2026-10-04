@@ -70,7 +70,6 @@ export function FlashCard({ deal }: Props) {
   return (
     <Pressable
       testID={`deal-${deal.id}`}
-      accessibilityRole="button"
       accessibilityLabel={`${deal.title}${
         // Sans le film et l'heure, la carte est inutilisable sans les yeux :
         // c'est la séance qui décide de l'achat, pas le mot « place ».
