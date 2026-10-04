@@ -1,19 +1,12 @@
 import { Feather } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { AppText, Screen } from '@/shared/ui';
+import { AppText, Screen, ThemeToggle } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
-import {
-  nextTier,
-  pointsToGo,
-  reachedCount,
-  tierProgress,
-  tierState,
-  UNIT_LABEL,
-} from '../lib/tiers';
+import { nextTier, pointsToGo, tierProgress, tierState, UNIT_LABEL } from '../lib/tiers';
 import {
   programOf,
   selectCards,
@@ -24,81 +17,202 @@ import {
 type Props = {
   merchantId: string;
   merchantName: string;
-  /** Sous-titre : spécialité, note, adresse… */
-  merchantMeta?: string;
+  /** Note et quartier du commerce — l'en-tête de la maquette. */
+  merchantRating?: number;
+  merchantArea?: string;
+  /** « Ouvert » ou « Fermé » quand les horaires sont connus. */
+  openState?: 'open' | 'closed';
+  /** Ouvre l'inventaire de récompenses (QR, partage) — fourni par la route. */
+  onOpenRewards?: () => void;
   onBack: () => void;
 };
 
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('');
+
+const MONTHS = [
+  'janv.',
+  'févr.',
+  'mars',
+  'avr.',
+  'mai',
+  'juin',
+  'juil.',
+  'août',
+  'sept.',
+  'oct.',
+  'nov.',
+  'déc.',
+];
+const dateLabel = (ms: number) => {
+  const d = new Date(ms);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+};
+
 /**
- * La carte de fidélité d'UNE enseigne — reprise de la maquette du client :
- * le solde en tête, les quatre paliers (atteints, à réclamer, verrouillés),
- * et l'historique. Les points bruts ne se transfèrent pas (CDC V1.1).
+ * LA FIDÉLITÉ CHEZ UN COMMERCE — la maquette « Fidélité chez un commerce » du client :
+ * l'identité du commerce, le solde de points et la progression, « Mes récompenses »
+ * (disponible → « Utiliser », à débloquer → cadenas) et « Historique des points ».
+ *
+ * La maquette propose « Transférer des points » : le CDC V1.1 l'interdit (« les points
+ * bruts ne sont jamais transférables ») — le CDC gagne. La place est donnée à « Mes
+ * récompenses », l'inventaire où se partage une récompense DÉBLOQUÉE.
  */
-export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, onBack }: Props) {
+export function MerchantLoyaltyScreen({
+  merchantId,
+  merchantName,
+  merchantRating,
+  merchantArea,
+  openState,
+  onOpenRewards,
+  onBack,
+}: Props) {
   const colors = useColors();
   const cards = useMerchantLoyaltyStore(selectCards);
-  // Le programme de CE commerçant : ses paliers et son unité de calcul.
   const programs = useMerchantLoyaltyStore(selectPrograms);
   const { tiers, unit } = programOf(programs, merchantId);
   const claim = useMerchantLoyaltyStore((s) => s.claim);
 
-  const [tab, setTab] = useState<'avantages' | 'historique'>('avantages');
+  const scrollRef = useRef<ScrollView>(null);
+  const historyY = useRef(0);
 
   const card = useMemo(
     () => cards[merchantId] ?? { points: 0, claimed: [], history: [] },
     [cards, merchantId],
   );
-  const reached = reachedCount(tiers, card.points);
   const goal = nextTier(tiers, card.points);
+  const pct = goal ? Math.round(tierProgress(goal, card.points) * 100) : 100;
 
   return (
     <Screen testID="merchant-loyalty-screen" padded={false}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-5 pb-10">
-        {/* Bandeau */}
-        <View className="flex-row items-center gap-3 pb-4 pt-2">
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerClassName="gap-3.5 px-5 pb-10"
+      >
+        {/* Retour · Nuit/Jour */}
+        <View className="flex-row items-center justify-between pt-2">
           <Pressable
             testID="loyalty-back"
             accessibilityRole="button"
             accessibilityLabel="Retour"
             hitSlop={10}
             onPress={onBack}
-            className="h-9 w-9 items-center justify-center rounded-pill bg-surface-muted"
           >
-            <Feather name="chevron-left" size={22} color={colors.ink} />
+            <Feather name="arrow-left" size={24} color={colors.ink} />
           </Pressable>
-          <View className="flex-1">
-            <AppText variant="display" className="text-xl" numberOfLines={1}>
-              {merchantName}
-            </AppText>
-            {merchantMeta ? (
-              <AppText variant="caption" numberOfLines={1}>
-                {merchantMeta}
-              </AppText>
-            ) : null}
-          </View>
-          <View className="flex-row items-center gap-1.5 rounded-pill bg-brand-500 px-3 py-1.5">
-            <Feather name="award" size={14} color={colors.inkInverse} />
-            <AppText
-              className="font-sans-bold text-ink-inverse"
-              style={{ fontSize: 14, fontVariant: ['tabular-nums'] }}
-            >
-              {card.points}
-            </AppText>
-            <AppText className="text-ink-inverse/80" style={{ fontSize: 11 }}>
-              points
-            </AppText>
-          </View>
+          <ThemeToggle />
         </View>
 
-        <AppText testID="loyalty-rule" variant="caption" className="mb-3 text-ink-faint">
-          {UNIT_LABEL[unit].rule} chez {merchantName}. Les points ne sont ni transférables ni
-          convertibles en euros.
-        </AppText>
+        {/* Identité du commerce */}
+        <View className="flex-row items-center gap-3.5">
+          <View className="h-16 w-16 items-center justify-center rounded-pill border-2 border-brand-500 bg-surface-muted">
+            <AppText className="font-display text-brand-500" style={{ fontSize: 22 }}>
+              {initials(merchantName)}
+            </AppText>
+          </View>
+          <View className="flex-1 gap-1">
+            <AppText className="font-display text-ink" style={{ fontSize: 21 }} numberOfLines={1}>
+              {merchantName}
+            </AppText>
+            <View className="flex-row items-center gap-3">
+              {merchantRating !== undefined ? (
+                <View className="flex-row items-center gap-1">
+                  <Feather name="star" size={13} color={colors.warning} />
+                  <AppText className="font-sans-semibold text-ink" style={{ fontSize: 13 }}>
+                    {merchantRating}
+                  </AppText>
+                </View>
+              ) : null}
+              {merchantArea ? (
+                <View className="flex-1 flex-row items-center gap-1">
+                  <Feather name="map-pin" size={13} color={colors.accent} />
+                  <AppText variant="caption" className="flex-1 text-ink-muted" numberOfLines={1}>
+                    {merchantArea}
+                  </AppText>
+                </View>
+              ) : null}
+            </View>
+          </View>
+          {openState ? (
+            <View
+              className={cn(
+                'rounded-control border px-2.5 py-1',
+                openState === 'open' ? 'border-success' : 'border-danger',
+              )}
+            >
+              <AppText
+                className={cn(
+                  'font-sans-bold',
+                  openState === 'open' ? 'text-success' : 'text-danger',
+                )}
+                style={{ fontSize: 11 }}
+              >
+                {openState === 'open' ? 'OUVERT' : 'FERMÉ'}
+              </AppText>
+            </View>
+          ) : null}
+        </View>
+
+        {/* Le solde et la progression */}
+        <View
+          testID="loyalty-balance"
+          className="gap-2 rounded-card border border-brand-500 bg-surface-muted p-4"
+        >
+          <View className="flex-row items-center gap-4">
+            <View className="h-16 w-16 items-center justify-center rounded-pill bg-brand-500">
+              <Feather name="star" size={30} color="#FFFFFF" />
+            </View>
+            <View className="flex-1">
+              <AppText className="font-display text-brand-500" style={{ fontSize: 30 }}>
+                {card.points}{' '}
+                <AppText className="font-sans-bold text-ink" style={{ fontSize: 17 }}>
+                  points
+                </AppText>
+              </AppText>
+              <AppText variant="caption" className="text-ink-muted">
+                Ton solde fidélité chez {merchantName}
+              </AppText>
+            </View>
+          </View>
+          <View className="flex-row items-center gap-3">
+            <View className="h-2 flex-1 overflow-hidden rounded-pill bg-surface-sunken">
+              <View className="h-full rounded-pill bg-brand-500" style={{ width: `${pct}%` }} />
+            </View>
+            <AppText className="text-ink-muted" style={{ fontSize: 12 }}>
+              {pct}%
+            </AppText>
+          </View>
+          <AppText
+            testID="loyalty-next"
+            variant="caption"
+            className="text-center text-ink-muted"
+            style={{ fontSize: 11.5 }}
+          >
+            {goal
+              ? `Plus que ${pointsToGo(goal, card.points)} points avant votre prochain palier : ${goal.reward}`
+              : 'Tous les paliers sont débloqués. Bravo !'}
+          </AppText>
+          <AppText
+            testID="loyalty-rule"
+            variant="caption"
+            className="text-center text-ink-faint"
+            style={{ fontSize: 10.5 }}
+          >
+            {UNIT_LABEL[unit].rule} chez {merchantName}. Les points ne sont ni transférables ni
+            convertibles en euros.
+          </AppText>
+        </View>
 
         {card.points === 0 && card.history.length === 0 ? (
           <View
             testID="loyalty-first-hint"
-            className="mb-3 flex-row items-center gap-2.5 rounded-card bg-brand-50 p-3.5"
+            className="flex-row items-center gap-2.5 rounded-card bg-brand-50 p-3.5"
           >
             <Feather name="zap" size={16} color={colors.brand600} />
             <AppText variant="caption" className="flex-1 text-brand-700">
@@ -107,186 +221,175 @@ export function MerchantLoyaltyScreen({ merchantId, merchantName, merchantMeta, 
           </View>
         ) : null}
 
-        {/* Prochain palier */}
-        {goal ? (
-          <View className="mb-4 gap-2 rounded-card bg-surface-muted p-4">
-            <View className="flex-row items-center justify-between">
-              <AppText className="font-sans-semibold text-ink">
-                Palier {goal.rank}/{tiers.length}
-              </AppText>
-              <AppText variant="caption" className="text-brand-600">
-                encore {pointsToGo(goal, card.points)} points
-              </AppText>
-            </View>
-            <View className="h-2 overflow-hidden rounded-pill bg-surface-sunken">
-              <View
-                className="h-full rounded-pill bg-brand-500"
-                style={{ width: `${Math.round(tierProgress(goal, card.points) * 100)}%` }}
-              />
-            </View>
-          </View>
-        ) : (
-          <View className="mb-4 flex-row items-center gap-2 rounded-card bg-brand-50 p-4">
-            <Feather name="check-circle" size={18} color={colors.brand600} />
-            <AppText variant="caption" className="flex-1 text-brand-700">
-              Tous les paliers sont débloqués. Bravo !
+        {/* Mes récompenses · Mon historique */}
+        <View className="flex-row gap-3">
+          <Pressable
+            testID="loyalty-open-rewards"
+            accessibilityRole="button"
+            accessibilityLabel="Mes récompenses débloquées"
+            onPress={onOpenRewards}
+            disabled={!onOpenRewards}
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-pill border border-line bg-surface-muted py-3"
+          >
+            <Feather name="gift" size={15} color={colors.brand500} />
+            <AppText className="text-ink" style={{ fontSize: 13 }}>
+              Mes récompenses
             </AppText>
-          </View>
-        )}
-
-        {/* Onglets */}
-        <View className="mb-3 flex-row gap-2">
-          {[
-            { key: 'avantages' as const, label: `Avantages ${reached}/${tiers.length}` },
-            { key: 'historique' as const, label: 'Mon historique' },
-          ].map((t) => (
-            <Pressable
-              key={t.key}
-              testID={`loyalty-tab-${t.key}`}
-              accessibilityRole="button"
-              accessibilityLabel={t.label}
-              onPress={() => setTab(t.key)}
-              className={cn(
-                'rounded-pill px-4 py-2',
-                tab === t.key ? 'bg-surface-inverse' : 'bg-surface-muted',
-              )}
-            >
-              <AppText
-                className={cn(
-                  'font-sans-semibold',
-                  tab === t.key ? 'text-ink-inverse' : 'text-ink-muted',
-                )}
-                style={{ fontSize: 13 }}
-              >
-                {t.label}
-              </AppText>
-            </Pressable>
-          ))}
+          </Pressable>
+          <Pressable
+            testID="loyalty-open-history"
+            accessibilityRole="button"
+            accessibilityLabel="Mon historique"
+            onPress={() => scrollRef.current?.scrollTo({ y: historyY.current, animated: true })}
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-pill border border-line bg-surface-muted py-3"
+          >
+            <Feather name="clock" size={15} color={colors.brand500} />
+            <AppText className="text-ink" style={{ fontSize: 13 }}>
+              Mon historique
+            </AppText>
+          </Pressable>
         </View>
 
-        {/* Paliers */}
-        {tab === 'avantages' ? (
-          <View className="gap-2.5">
-            {tiers.map((tier) => {
-              const state = tierState(tier, card.points, card.claimed);
-              return (
+        {/* Mes récompenses : les paliers */}
+        <View className="flex-row items-center gap-2">
+          <Feather name="gift" size={14} color={colors.brand500} />
+          <AppText className="font-sans-semibold text-ink" style={{ fontSize: 13 }}>
+            Mes récompenses
+          </AppText>
+        </View>
+        <View className="gap-2">
+          {tiers.map((tier) => {
+            const state = tierState(tier, card.points, card.claimed);
+            return (
+              <View
+                key={tier.rank}
+                testID={`tier-${tier.rank}`}
+                className="flex-row items-center gap-3 overflow-hidden rounded-control border border-line bg-surface-muted pr-3"
+              >
                 <View
-                  key={tier.rank}
-                  testID={`tier-${tier.rank}`}
-                  className="flex-row items-center gap-3 rounded-card bg-surface p-3.5"
-                  style={{
-                    borderWidth: 1,
-                    borderColor: state === 'locked' ? colors.line : colors.brand200,
-                  }}
+                  className={cn(
+                    'h-14 w-14 items-center justify-center',
+                    state === 'locked' ? 'bg-surface-sunken' : 'bg-brand-50',
+                  )}
                 >
+                  <Feather
+                    name="gift"
+                    size={22}
+                    color={state === 'locked' ? colors.inkFaint : colors.brand500}
+                  />
+                </View>
+                <View className="flex-1 py-2">
+                  <AppText style={{ fontSize: 13.5 }} className="text-ink">
+                    <AppText className="font-sans-bold text-brand-500" style={{ fontSize: 13.5 }}>
+                      {tier.cost}
+                    </AppText>{' '}
+                    points
+                  </AppText>
+                  <AppText variant="caption" className="text-ink-muted" numberOfLines={2}>
+                    {tier.reward}
+                  </AppText>
+                </View>
+                <View className="items-end gap-1">
                   <View
-                    className="h-12 w-12 items-center justify-center rounded-control"
-                    style={{
-                      backgroundColor: state === 'locked' ? colors.surfaceSunken : colors.brand50,
-                    }}
+                    className={cn(
+                      'rounded-sm border px-1.5 py-0.5',
+                      state === 'available'
+                        ? 'border-brand-500'
+                        : state === 'claimed'
+                          ? 'border-success'
+                          : 'border-warning',
+                    )}
                   >
-                    <Feather
-                      name={state === 'locked' ? 'lock' : state === 'claimed' ? 'check' : 'gift'}
-                      size={20}
-                      color={state === 'locked' ? colors.inkFaint : colors.brand600}
-                    />
-                  </View>
-
-                  <View className="flex-1 gap-0.5">
-                    <View className="flex-row items-center gap-2">
-                      <AppText variant="caption" className="text-ink-faint">
-                        {tier.rank}/{tiers.length}
-                      </AppText>
-                      {state === 'available' ? (
-                        <View className="rounded-pill bg-brand-500 px-2 py-0.5">
-                          <AppText
-                            className="font-sans-bold text-ink-inverse"
-                            style={{ fontSize: 10 }}
-                          >
-                            FÉLICITATIONS
-                          </AppText>
-                        </View>
-                      ) : null}
-                      {state === 'claimed' ? (
-                        <AppText
-                          variant="caption"
-                          className="text-brand-600"
-                          style={{ fontSize: 11 }}
-                        >
-                          Utilisé
-                        </AppText>
-                      ) : null}
-                    </View>
                     <AppText
                       className={cn(
-                        'font-sans-semibold',
-                        state === 'locked' ? 'text-ink-faint' : 'text-ink',
+                        'font-sans-bold',
+                        state === 'available'
+                          ? 'text-brand-500'
+                          : state === 'claimed'
+                            ? 'text-success'
+                            : 'text-warning',
                       )}
-                      numberOfLines={2}
+                      style={{ fontSize: 8.5 }}
                     >
-                      {tier.reward}
+                      {state === 'available'
+                        ? 'DISPONIBLE'
+                        : state === 'claimed'
+                          ? 'DÉBLOQUÉE'
+                          : 'À DÉBLOQUER'}
                     </AppText>
                   </View>
-
-                  <View className="items-end gap-1.5">
-                    <AppText
-                      className="font-sans-bold text-ink"
-                      style={{ fontSize: 13, fontVariant: ['tabular-nums'] }}
+                  {state === 'available' ? (
+                    <Pressable
+                      testID={`tier-claim-${tier.rank}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Utiliser ${tier.reward}`}
+                      onPress={() => claim(merchantId, tier.rank, merchantName)}
+                      className="rounded-pill bg-brand-500 px-4 py-1.5 active:bg-brand-600"
                     >
-                      {tier.cost} pts
-                    </AppText>
-                    {state === 'available' ? (
-                      <Pressable
-                        testID={`tier-claim-${tier.rank}`}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Utiliser ${tier.reward}`}
-                        onPress={() => claim(merchantId, tier.rank, merchantName)}
-                        className="h-8 w-8 items-center justify-center rounded-pill bg-brand-500 active:bg-brand-600"
-                      >
-                        <Feather name="plus" size={17} color={colors.inkInverse} />
-                      </Pressable>
-                    ) : null}
-                  </View>
+                      <AppText className="font-sans-bold text-white" style={{ fontSize: 12 }}>
+                        Utiliser
+                      </AppText>
+                    </Pressable>
+                  ) : state === 'locked' ? (
+                    <View className="h-7 w-7 items-center justify-center rounded-pill border border-warning">
+                      <Feather name="lock" size={13} color={colors.warning} />
+                    </View>
+                  ) : (
+                    <Feather name="check-circle" size={20} color={colors.success} />
+                  )}
                 </View>
-              );
-            })}
-          </View>
-        ) : (
-          <View className="gap-2">
-            {card.history.length === 0 ? (
-              <View testID="loyalty-history-empty" className="items-center gap-2 py-10">
-                <Feather name="clock" size={26} color={colors.inkFaint} />
-                <AppText variant="caption">Aucun mouvement pour le moment.</AppText>
               </View>
-            ) : (
-              card.history.map((h) => (
+            );
+          })}
+        </View>
+
+        {/* Historique des points */}
+        <View onLayout={(e) => (historyY.current = e.nativeEvent.layout.y)}>
+          <AppText className="mb-2 font-sans-semibold text-ink" style={{ fontSize: 14 }}>
+            Historique des points
+          </AppText>
+          {card.history.length === 0 ? (
+            <View testID="loyalty-history-empty" className="items-center gap-2 py-6">
+              <Feather name="clock" size={24} color={colors.inkFaint} />
+              <AppText variant="caption">Aucun mouvement pour le moment.</AppText>
+            </View>
+          ) : (
+            <View className="overflow-hidden rounded-control border border-line bg-surface-muted">
+              {card.history.map((h, i) => (
                 <View
                   key={h.id}
-                  className="flex-row items-center justify-between rounded-card bg-surface p-3.5"
-                  style={{ borderWidth: 1, borderColor: colors.line }}
+                  testID={`history-${h.id}`}
+                  className={cn(
+                    'flex-row items-center gap-3 px-3 py-2.5',
+                    i < card.history.length - 1 && 'border-b border-line',
+                  )}
                 >
-                  <View>
-                    <AppText className="font-sans-medium text-ink" style={{ fontSize: 14 }}>
+                  <View className="h-8 w-8 items-center justify-center rounded-control bg-brand-50">
+                    <Feather
+                      name={h.label === 'Commande' ? 'shopping-bag' : 'star'}
+                      size={15}
+                      color={colors.brand500}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <AppText className="text-ink" style={{ fontSize: 13 }}>
                       {h.label}
                     </AppText>
-                    <AppText variant="caption" className="text-ink-faint">
-                      {new Date(h.at).toLocaleDateString('fr-FR')}
+                    <AppText variant="caption" className="text-ink-faint" style={{ fontSize: 11 }}>
+                      {dateLabel(h.at)}
                     </AppText>
                   </View>
                   <AppText
-                    className={cn(
-                      'font-sans-bold',
-                      h.points >= 0 ? 'text-brand-600' : 'text-ink-muted',
-                    )}
-                    style={{ fontVariant: ['tabular-nums'] }}
+                    className={cn('font-sans-bold', h.points >= 0 ? 'text-success' : 'text-danger')}
+                    style={{ fontSize: 13, fontVariant: ['tabular-nums'] }}
                   >
-                    {h.points >= 0 ? `+${h.points}` : h.points}
+                    {h.points >= 0 ? `+${h.points}` : h.points} points
                   </AppText>
                 </View>
-              ))
-            )}
-          </View>
-        )}
+              ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
     </Screen>
   );

@@ -23,7 +23,7 @@ describe('<MerchantLoyaltyScreen />', () => {
   it('monte et reproduit le cas de la maquette : 113 points, 2 paliers ouverts', () => {
     mount();
     expect(screen.getByTestId('merchant-loyalty-screen')).toBeTruthy();
-    expect(screen.getByText('113')).toBeTruthy();
+    expect(screen.getByTestId('loyalty-balance')).toHaveTextContent(/113/);
     // Les deux premiers sont réclamables, les deux suivants verrouillés.
     expect(screen.getByTestId('tier-claim-1')).toBeTruthy();
     expect(screen.getByTestId('tier-claim-2')).toBeTruthy();
@@ -39,9 +39,9 @@ describe('<MerchantLoyaltyScreen />', () => {
     expect(screen.queryByTestId('tier-claim-1')).toBeNull();
   });
 
-  it('bascule sur l’historique', () => {
+  it('montre l’historique des points sur la même page', () => {
     mount();
-    fireEvent.press(screen.getByTestId('loyalty-tab-historique'));
+    // L'historique est sur la même page que les récompenses, comme la maquette.
     expect(screen.getAllByText('Commande').length).toBeGreaterThan(0);
   });
 
@@ -68,6 +68,6 @@ describe('<MerchantLoyaltyScreen />', () => {
       <MerchantLoyaltyScreen merchantId="inconnu" merchantName="Nouveau" onBack={jest.fn()} />,
     );
     expect(screen.getByTestId('merchant-loyalty-screen')).toBeTruthy();
-    expect(screen.getByTestId('loyalty-tab-historique')).toBeTruthy();
+    expect(screen.getByTestId('loyalty-history-empty')).toBeTruthy();
   });
 });
