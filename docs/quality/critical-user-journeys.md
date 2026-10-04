@@ -55,6 +55,18 @@ enforces).
 - **Performance budget :** publication < 500 ms entre le tap et l’offre visible
   sur l’accueil, sur un Android milieu de gamme.
 
+## CUJ-004b — Le parcours du grossiste / fournisseur
+
+- **Owner :** squad produit TK LINK
+- **Flow :** aucun — couvert par `merchant/__tests__/wholesaler.test.tsx`.
+- **Journey :** s’inscrire comme grossiste → déposer son dossier (SIRET, adresse, IBAN, pièce d’identité)
+  → vérification TK LINK → sécurisation de l’appareil → compte validé → tableau de bord fournisseur →
+  créer une offre pro (prix grossiste, minimum, durée) → recevoir une commande de commerçant → cocher
+  le bon de préparation → expédier → livrer → terminer.
+- **Edge cases agents must try :** publier avant validation (bloqué), expédier sans bon de préparation
+  coché (bloqué), IBAN à clé fausse (refusé).
+- **Performance budget :** aucun seuil spécifique — écrans de liste.
+
 ## CUJ-004 — Le parcours du commerçant (approvisionnement)
 
 - **Owner :** squad produit TK LINK

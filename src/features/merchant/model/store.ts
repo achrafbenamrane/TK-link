@@ -5,11 +5,14 @@ import { makeId } from '@/shared/lib/id';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
 import { canPublish } from '../lib/billing';
-import { nextWholesaleStatus } from '../lib/wholesale-orders';
+import { missingSupplierFields, normalizeIban } from '../lib/supplier';
+import { PREP_STEPS, nextWholesaleStatus, type PrepStep } from '../lib/wholesale-orders';
 import { seedWholesaleLots } from './seed';
 import {
   EMPTY_PROFILE,
+  EMPTY_SUPPLIER,
   PersistedMerchantSchema,
+  type Supplier,
   type OfferDraftInput,
   type ShopProfile,
   type PublishedOffer,
@@ -49,6 +52,19 @@ type MerchantState = {
   profile: ShopProfile;
   saveProfile: (profile: ShopProfile) => void;
 
+  /** Le dossier fournisseur : pièces déposées, contrôle TK LINK, sécurisation. */
+  supplier: Supplier;
+  /** Étape 3 : dépose le dossier, qui part en vérification. */
+  submitSupplier: (draft: {
+    siret: string;
+    address: string;
+    iban: string;
+    idUri: string;
+  }) => { ok: true } | { ok: false; errors: Record<string, string> };
+  /** DÉMO — simule le contrôle par TK LINK (étape 4 → 6). Disparaît avec le serveur. */
+  validateSupplier: () => void;
+  setSupplierDevice: (enrolled: boolean) => void;
+
   /** Publie une offre flash. Échoue si le quota est épuisé — CDC §9. */
   publish: (draft: OfferDraftInput, seller?: string, nowMs?: number) => PublishResult;
   /**
@@ -63,6 +79,8 @@ type MerchantState = {
   takeOffline: (id: string) => void;
   /** Le grossiste fait avancer une commande reçue d'un cran — jamais en arrière, jamais deux fois. */
   advanceWholesaleOrder: (orderId: string) => boolean;
+  /** Coche ou décoche un geste du bon de préparation (prélevé, emballé, étiqueté). */
+  togglePrep: (orderId: string, step: PrepStep) => void;
   /** Simule une vente : décrémente le stock (le vrai flux viendra du serveur). */
   sellOne: (id: string) => void;
   resetDemo: () => void;
@@ -78,6 +96,28 @@ export const useMerchantStore = create<MerchantState>()(
       wholesaleOrders: [],
       profile: EMPTY_PROFILE,
       saveProfile: (profile) => set({ profile }),
+
+      supplier: EMPTY_SUPPLIER,
+      submitSupplier: (draft) => {
+        const errors = missingSupplierFields(draft);
+        if (Object.keys(errors).length > 0) return { ok: false as const, errors };
+        set((s) => ({
+          supplier: {
+            ...s.supplier,
+            iban: normalizeIban(draft.iban),
+            idUri: draft.idUri,
+            status: 'en_verification',
+          },
+        }));
+        return { ok: true as const };
+      },
+      validateSupplier: () => {
+        if (get().supplier.status === 'en_verification') {
+          set((s) => ({ supplier: { ...s.supplier, status: 'valide' } }));
+        }
+      },
+      setSupplierDevice: (enrolled) =>
+        set((s) => ({ supplier: { ...s.supplier, deviceEnrolled: enrolled } })),
 
       publish: (draft, seller = '', nowMs = Date.now()) => {
         const s = get();
@@ -150,6 +190,7 @@ export const useMerchantStore = create<MerchantState>()(
           at: nowMs,
           status: 'recue',
           buyer: '',
+          prep: [],
         };
 
         const take = (list: PublishedOffer[]) =>
@@ -167,6 +208,14 @@ export const useMerchantStore = create<MerchantState>()(
         const order = get().wholesaleOrders.find((o) => o.id === orderId);
         const next = order ? nextWholesaleStatus(order.status) : null;
         if (!order || !next) return false;
+        // Le bon de préparation se remplit AVANT l'expédition : on n'envoie pas un colis
+        // dont on n'a pas coché le contenu.
+        if (
+          order.status === 'preparation' &&
+          !PREP_STEPS.every((p) => order.prep.includes(p.key))
+        ) {
+          return false;
+        }
         set((s) => ({
           wholesaleOrders: s.wholesaleOrders.map((o) =>
             o.id === orderId ? { ...o, status: next } : o,
@@ -175,8 +224,23 @@ export const useMerchantStore = create<MerchantState>()(
         return true;
       },
 
+      togglePrep: (orderId, step) =>
+        set((s) => ({
+          wholesaleOrders: s.wholesaleOrders.map((o) =>
+            o.id === orderId && o.status === 'preparation'
+              ? {
+                  ...o,
+                  prep: o.prep.includes(step)
+                    ? o.prep.filter((p) => p !== step)
+                    : [...o.prep, step],
+                }
+              : o,
+          ),
+        })),
+
       resetDemo: () =>
         set({
+          supplier: EMPTY_SUPPLIER,
           offers: [],
           lots: seedWholesaleLots(),
           used: 0,
@@ -195,6 +259,7 @@ export const useMerchantStore = create<MerchantState>()(
         purchased: s.purchased,
         wholesaleOrders: s.wholesaleOrders,
         profile: s.profile,
+        supplier: s.supplier,
       }),
       merge: (persisted, current) => {
         const parsed = PersistedMerchantSchema.safeParse(persisted);
@@ -211,3 +276,4 @@ export const selectUsed = (s: MerchantState) => s.used;
 export const selectPurchased = (s: MerchantState) => s.purchased;
 export const selectWholesaleOrders = (s: MerchantState) => s.wholesaleOrders;
 export const selectProfile = (s: MerchantState) => s.profile;
+export const selectSupplier = (s: MerchantState) => s.supplier;

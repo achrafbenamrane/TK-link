@@ -16,9 +16,12 @@ export {
 } from './ui/dashboard-screen';
 export { PayoutsScreen, type PayoutLine } from './ui/payouts-screen';
 export { ShopSettingsScreen } from './ui/shop-settings-screen';
+export { SupplierLocked } from './ui/supplier-locked';
+export { WholesalerSetupScreen } from './ui/wholesaler-setup-screen';
 export { WholesalerOrdersScreen } from './ui/wholesaler-orders-screen';
 export { WholesalerDashboardScreen, type WholesalerTarget } from './ui/wholesaler-dashboard-screen';
 export {
+  PREP_STEPS,
   WHOLESALE_STATUSES,
   WHOLESALE_STATUS_LABEL,
   type WholesaleStatus,
@@ -33,7 +36,9 @@ export {
   selectPurchased,
   selectWholesaleOrders,
   selectProfile,
+  selectSupplier,
 } from './model/store';
+export { canSupplierPublish, isValidIban, formatIban, type SupplierStatus } from './lib/supplier';
 export type { ShopProfile } from './model/schema';
 export type { Audience, OfferDraft, PublishedOffer, WholesaleOrder } from './model/schema';
 export { AUDIENCES, DURATIONS, FLASH_MIN_MINUTES, FLASH_MAX_MINUTES } from './model/schema';

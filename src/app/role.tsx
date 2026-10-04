@@ -279,6 +279,7 @@ function seedDemo(role: Role) {
     at: now - ageMs,
     status,
     buyer,
+    prep: [] as string[],
   });
   const b2bOffers = [
     lot(
@@ -363,6 +364,13 @@ function seedDemo(role: Role) {
     ),
   ];
   useMerchantStore.setState({
+    // Démonstration : le dossier fournisseur est déjà validé (étapes 3 à 6 du schéma faites).
+    supplier: {
+      status: 'valide',
+      iban: 'FR7630006000011234567890189',
+      idUri: 'demo',
+      deviceEnrolled: true,
+    },
     wholesaleOrders: role === 'grossiste' ? b2bOrders : [],
     offers:
       role === 'grossiste'

@@ -9,8 +9,10 @@ import { useColors } from '@/shared/theme/theme-provider';
 import { formatCents } from '../lib/billing';
 import {
   isOpenWholesale,
+  PREP_STEPS,
   WHOLESALE_ACTION_LABEL,
   WHOLESALE_STATUS_LABEL,
+  WHOLESALE_STATUSES,
   type WholesaleStatus,
 } from '../lib/wholesale-orders';
 import { selectWholesaleOrders, useMerchantStore } from '../model/store';
@@ -34,6 +36,7 @@ export function WholesalerOrdersScreen({ onBack }: { onBack?: () => void }) {
   const colors = useColors();
   const orders = useMerchantStore(selectWholesaleOrders);
   const advance = useMerchantStore((s) => s.advanceWholesaleOrder);
+  const togglePrep = useMerchantStore((s) => s.togglePrep);
   const [done, setDone] = useState(false);
 
   const shown = useMemo(
@@ -113,6 +116,9 @@ export function WholesalerOrdersScreen({ onBack }: { onBack?: () => void }) {
         ) : (
           shown.map((o) => {
             const action = WHOLESALE_ACTION_LABEL[o.status];
+            const prepDone = PREP_STEPS.every((p) => o.prep.includes(p.key));
+            const blocked = o.status === 'preparation' && !prepDone;
+            const stage = WHOLESALE_STATUSES.indexOf(o.status);
             return (
               <View
                 key={o.id}
@@ -149,11 +155,64 @@ export function WholesalerOrdersScreen({ onBack }: { onBack?: () => void }) {
                   </AppText>
                 </View>
 
+                {/* Suivi intégré : où en est la commande, d'un coup d'œil */}
+                <View testID={`wholesaler-order-${o.id}-track`} className="flex-row gap-1">
+                  {WHOLESALE_STATUSES.map((s, i) => (
+                    <View
+                      key={s}
+                      className={cn(
+                        'h-1 flex-1 rounded-pill',
+                        i <= stage ? 'bg-brand-500' : 'bg-line',
+                      )}
+                    />
+                  ))}
+                </View>
+
                 {o.status === 'preparation' ? (
+                  <View
+                    testID={`wholesaler-order-${o.id}-slip`}
+                    className="gap-1.5 rounded-control border border-line bg-surface p-3"
+                  >
+                    <View className="flex-row items-center gap-1.5">
+                      <Feather name="clipboard" size={13} color={colors.inkMuted} />
+                      <AppText className="font-sans-semibold text-ink" style={{ fontSize: 12.5 }}>
+                        Bon de préparation · {o.qty} lot{o.qty > 1 ? 's' : ''}
+                      </AppText>
+                    </View>
+                    {PREP_STEPS.map((p) => {
+                      const on = o.prep.includes(p.key);
+                      return (
+                        <Pressable
+                          key={p.key}
+                          testID={`wholesaler-order-${o.id}-prep-${p.key}`}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: on }}
+                          accessibilityLabel={p.label}
+                          onPress={() => togglePrep(o.id, p.key)}
+                          className="flex-row items-center gap-2 py-1"
+                        >
+                          <Feather
+                            name={on ? 'check-square' : 'square'}
+                            size={17}
+                            color={on ? colors.brand500 : colors.inkFaint}
+                          />
+                          <AppText
+                            className={on ? 'text-ink' : 'text-ink-muted'}
+                            style={{ fontSize: 13 }}
+                          >
+                            {p.label}
+                          </AppText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
+
+                {o.status === 'expediee' ? (
                   <View className="flex-row items-center gap-1.5">
-                    <Feather name="clipboard" size={13} color={colors.inkMuted} />
+                    <Feather name="truck" size={13} color={colors.inkMuted} />
                     <AppText variant="caption" className="text-ink-muted">
-                      Bon de préparation, emballage, puis expédition.
+                      Remise au transporteur — suivi intégré jusqu’à la livraison.
                     </AppText>
                   </View>
                 ) : null}
@@ -163,11 +222,19 @@ export function WholesalerOrdersScreen({ onBack }: { onBack?: () => void }) {
                     testID={`wholesaler-order-${o.id}-advance`}
                     accessibilityRole="button"
                     accessibilityLabel={action}
+                    disabled={blocked}
+                    accessibilityState={{ disabled: blocked }}
                     onPress={() => advance(o.id)}
-                    className="items-center rounded-control bg-brand-500 py-3 active:bg-brand-600"
+                    className={cn(
+                      'items-center rounded-control py-3',
+                      blocked ? 'bg-surface-sunken' : 'bg-brand-500 active:bg-brand-600',
+                    )}
                   >
-                    <AppText className="font-sans-bold text-white" style={{ fontSize: 13.5 }}>
-                      {action}
+                    <AppText
+                      className={cn('font-sans-bold', blocked ? 'text-ink-faint' : 'text-white')}
+                      style={{ fontSize: 13.5 }}
+                    >
+                      {blocked ? 'Cochez le bon de préparation' : action}
                     </AppText>
                   </Pressable>
                 ) : null}

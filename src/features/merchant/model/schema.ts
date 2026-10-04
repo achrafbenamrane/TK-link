@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { CATEGORIES } from '@/shared/lib/categories';
 
+import { SUPPLIER_STATUSES } from '../lib/supplier';
 import { WHOLESALE_STATUSES } from '../lib/wholesale-orders';
 import { defaultHours, MAX_PHOTOS, MAX_PRESENTATION, MAX_VIDEOS } from '../lib/shop-profile';
 
@@ -194,6 +195,8 @@ export const WholesaleOrderSchema = z.object({
   status: z.enum(WHOLESALE_STATUSES).default('recue'),
   /** Le commerçant acheteur, tel que le grossiste le voit. */
   buyer: z.string().default(''),
+  /** Les gestes de préparation déjà faits (bon de préparation) : voir `PREP_STEPS`. */
+  prep: z.array(z.string()).default([]),
 });
 
 export type WholesaleOrder = z.infer<typeof WholesaleOrderSchema>;
@@ -242,7 +245,28 @@ export const EMPTY_PROFILE: ShopProfile = {
   hours: defaultHours(),
 };
 
+/**
+ * Le dossier du fournisseur (étapes 3 à 6 du schéma grossiste). Le SIRET et l'adresse vivent
+ * ailleurs (inscription) ; ici : ce que TK LINK contrôle, et l'état du contrôle.
+ */
+export const SupplierSchema = z.object({
+  status: z.enum(SUPPLIER_STATUSES).default('brouillon'),
+  iban: z.string().default(''),
+  idUri: z.string().default(''),
+  /** L'appareil est-il enregistré avec une authentification locale ? Un drapeau, jamais l'empreinte. */
+  deviceEnrolled: z.boolean().default(false),
+});
+export type Supplier = z.infer<typeof SupplierSchema>;
+export const EMPTY_SUPPLIER: Supplier = {
+  status: 'brouillon',
+  iban: '',
+  idUri: '',
+  deviceEnrolled: false,
+};
+
 export const PersistedMerchantSchema = z.object({
+  /** Le dossier fournisseur. `.default` : les anciennes données n'en ont pas. */
+  supplier: SupplierSchema.default(() => EMPTY_SUPPLIER),
   /** La boutique du commerçant. `.default` : les anciennes données n'en ont pas. */
   profile: ShopProfileSchema.default(() => EMPTY_PROFILE),
   offers: z.array(PublishedOfferSchema).default([]),

@@ -8,9 +8,16 @@ import { useColors } from '@/shared/theme/theme-provider';
 
 import { formatCents } from '../lib/billing';
 import { WHOLESALE_STATUS_LABEL } from '../lib/wholesale-orders';
-import { selectOffers, selectWholesaleOrders, useMerchantStore } from '../model/store';
+import { canSupplierPublish } from '../lib/supplier';
+import {
+  selectOffers,
+  selectSupplier,
+  selectWholesaleOrders,
+  useMerchantStore,
+} from '../model/store';
 
-export type WholesalerTarget = 'new' | 'orders' | 'catalog' | 'documents' | 'payouts' | 'account';
+export type WholesalerTarget =
+  'new' | 'orders' | 'catalog' | 'documents' | 'payouts' | 'account' | 'setup';
 
 type Props = {
   /** Le nom de l'entreprise, vérifiée. */
@@ -45,6 +52,8 @@ export function WholesalerDashboardScreen({ companyName, area, renderAvatar, onO
   const colors = useColors();
   const offers = useMerchantStore(selectOffers).filter((o) => o.audience === 'commercants');
   const orders = useMerchantStore(selectWholesaleOrders);
+  const supplier = useMerchantStore(selectSupplier);
+  const validated = canSupplierPublish(supplier.status);
 
   const active = offers.filter((o) => o.state === 'publiee' && !o.offline && o.stockLeft > 0);
   const todo = orders.filter((o) => o.status === 'recue').length;
@@ -97,6 +106,30 @@ export function WholesalerDashboardScreen({ companyName, area, renderAvatar, onO
           </View>
         </View>
 
+        {/* Compte pas encore validé : l'étape à finir (3 à 6 du schéma) */}
+        {validated ? null : (
+          <Pressable
+            testID="wholesaler-setup-banner"
+            accessibilityRole="button"
+            accessibilityLabel="Finaliser mon dossier fournisseur"
+            onPress={() => onOpen('setup')}
+            className="mb-4 flex-row items-center gap-3 rounded-card border border-warning bg-surface-muted p-3.5"
+          >
+            <Feather name="shield" size={20} color={colors.brand500} />
+            <View className="flex-1">
+              <AppText className="font-sans-bold text-ink" style={{ fontSize: 13.5 }}>
+                {supplier.status === 'en_verification'
+                  ? 'Dossier en cours de contrôle'
+                  : 'Finalisez votre dossier fournisseur'}
+              </AppText>
+              <AppText variant="caption" style={{ fontSize: 11.5 }}>
+                La publication d’offres s’ouvre une fois votre entreprise vérifiée par TK LINK.
+              </AppText>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.inkFaint} />
+          </Pressable>
+        )}
+
         {/* Nouvelle offre pro */}
         <View
           testID="wholesaler-new-offer"
@@ -138,10 +171,12 @@ export function WholesalerDashboardScreen({ companyName, area, renderAvatar, onO
             testID="wholesaler-create-offer"
             accessibilityRole="button"
             accessibilityLabel="Créer une offre pro"
-            onPress={() => onOpen('new')}
+            onPress={() => onOpen(validated ? 'new' : 'setup')}
             className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
           >
-            <AppText className="font-sans-bold text-white">Créer une offre pro</AppText>
+            <AppText className="font-sans-bold text-white">
+              {validated ? 'Créer une offre pro' : 'Finaliser mon dossier'}
+            </AppText>
             <Feather name="plus-circle" size={17} color="#FFFFFF" />
           </Pressable>
         </View>
@@ -173,6 +208,35 @@ export function WholesalerDashboardScreen({ companyName, area, renderAvatar, onO
                 numberOfLines={2}
               >
                 {t.l}
+              </AppText>
+            </View>
+          ))}
+        </View>
+
+        {/* Contrôles & sécurité — le bandeau du schéma */}
+        <View testID="wholesaler-controls" className="mb-4 flex-row gap-2">
+          {[
+            { l: 'Identité entreprise', ok: validated, i: 'shield' as const },
+            { l: 'Compte sécurisé', ok: supplier.deviceEnrolled, i: 'lock' as const },
+            { l: 'Stock temps réel', ok: true, i: 'refresh-cw' as const },
+            { l: 'Factures & traçabilité', ok: true, i: 'file-text' as const },
+          ].map((c) => (
+            <View
+              key={c.l}
+              testID={`wholesaler-control-${c.ok ? 'ok' : 'todo'}`}
+              className="flex-1 items-center gap-1 rounded-card border border-line bg-surface-muted px-1 py-2.5"
+            >
+              <Feather name={c.i} size={15} color={c.ok ? colors.brand500 : colors.inkFaint} />
+              <AppText
+                variant="caption"
+                className={c.ok ? 'text-center text-ink' : 'text-center text-ink-faint'}
+                style={{ fontSize: 9.5 }}
+                numberOfLines={2}
+              >
+                {c.l}
+              </AppText>
+              <AppText className={c.ok ? 'text-success' : 'text-ink-faint'} style={{ fontSize: 9 }}>
+                {c.ok ? 'Vérifié' : 'À faire'}
               </AppText>
             </View>
           ))}

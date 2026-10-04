@@ -222,6 +222,7 @@ function WholesalerHome() {
           documents: '/factures',
           payouts: '/versements',
           account: '/profil',
+          setup: '/devenir-fournisseur',
         } as const;
         router.push(href[target]);
       }}

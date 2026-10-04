@@ -1,18 +1,30 @@
-import { fireEvent, render, screen } from '@/shared/testing/render';
+import { fireEvent, render, screen, waitFor } from '@/shared/testing/render';
 
 import {
+  canSupplierPublish,
+  formatIban,
+  isValidIban,
+  missingSupplierFields,
+} from '../lib/supplier';
+import {
   nextWholesaleStatus,
+  PREP_STEPS,
   WHOLESALE_ACTION_LABEL,
   WHOLESALE_STATUS_LABEL,
   WHOLESALE_STATUSES,
 } from '../lib/wholesale-orders';
-import { WholesaleOrderSchema } from '../model/schema';
+import { EMPTY_SUPPLIER, WholesaleOrderSchema } from '../model/schema';
 import { useMerchantStore } from '../model/store';
+import { SupplierLocked } from '../ui/supplier-locked';
+import { WholesalerSetupScreen } from '../ui/wholesaler-setup-screen';
 import { PublishForm } from '../ui/publish-form';
 import { WholesalerDashboardScreen } from '../ui/wholesaler-dashboard-screen';
 import { WholesalerOrdersScreen } from '../ui/wholesaler-orders-screen';
 
 jest.mock('expo-image', () => ({ Image: () => null }));
+jest.mock('@/shared/lib/image-picker', () => ({
+  pickImage: jest.fn().mockResolvedValue('file://id.jpg'),
+}));
 
 const order = (id: string, status: 'recue' | 'preparation' | 'terminee' = 'recue') => ({
   id,
@@ -25,9 +37,12 @@ const order = (id: string, status: 'recue' | 'preparation' | 'terminee' = 'recue
   at: 1_700_000_000_000,
   status,
   buyer: 'Le Petit Toulousain',
+  prep: [] as string[],
 });
 
-beforeEach(() => useMerchantStore.setState({ wholesaleOrders: [], offers: [] }));
+beforeEach(() =>
+  useMerchantStore.setState({ wholesaleOrders: [], offers: [], supplier: EMPTY_SUPPLIER }),
+);
 
 describe('cycle d’une commande grossiste — schéma du client, CDC V1.1', () => {
   it('suit les statuts du schéma, sans étape « Acceptée » (le paiement vaut acceptation)', () => {
@@ -76,6 +91,22 @@ describe('<WholesalerOrdersScreen />', () => {
     expect(screen.getByTestId('wholesaler-order-w_abc12')).toHaveTextContent(/EN PRÉPARATION/);
   });
 
+  it('exige le bon de préparation rempli avant d’expédier', () => {
+    useMerchantStore.setState({ wholesaleOrders: [order('w_prep1', 'preparation')] });
+    render(<WholesalerOrdersScreen />);
+
+    // Tant que rien n'est coché, « expédiée » reste hors de portée.
+    fireEvent.press(screen.getByTestId('wholesaler-order-w_prep1-advance'));
+    expect(useMerchantStore.getState().wholesaleOrders[0]?.status).toBe('preparation');
+
+    for (const p of PREP_STEPS) {
+      fireEvent.press(screen.getByTestId(`wholesaler-order-w_prep1-prep-${p.key}`));
+    }
+    fireEvent.press(screen.getByTestId('wholesaler-order-w_prep1-advance'));
+    expect(useMerchantStore.getState().wholesaleOrders[0]?.status).toBe('expediee');
+    expect(screen.getByTestId('wholesaler-order-w_prep1')).toHaveTextContent(/transporteur/);
+  });
+
   it('range les commandes terminées dans leur onglet, sans bouton d’action', () => {
     useMerchantStore.setState({ wholesaleOrders: [order('w_done1', 'terminee')] });
     render(<WholesalerOrdersScreen />);
@@ -98,7 +129,8 @@ describe('<WholesalerDashboardScreen />', () => {
     expect(screen.queryByText('Fidélité')).toBeNull();
   });
 
-  it('ouvre la création d’une offre pro', () => {
+  it('ouvre la création d’une offre pro quand le compte est validé', () => {
+    useMerchantStore.setState({ supplier: { ...EMPTY_SUPPLIER, status: 'valide' } });
     const onOpen = jest.fn();
     render(<WholesalerDashboardScreen companyName="Grossiste Occitan" onOpen={onOpen} />);
     fireEvent.press(screen.getByTestId('wholesaler-create-offer'));
@@ -132,5 +164,103 @@ describe('<PublishForm wholesale />', () => {
       durationMinutes: 4320,
       audience: 'commercants',
     });
+  });
+});
+
+describe('dossier fournisseur — étapes 3 à 6 du schéma', () => {
+  const VALID = {
+    siret: '44306184100047',
+    address: '8 rue des Carmes, 31000 Toulouse',
+    iban: 'FR76 3000 6000 0112 3456 7890 189',
+    idUri: 'file://id.jpg',
+  };
+
+  it('valide un IBAN par sa clé, pas par sa seule longueur', () => {
+    expect(isValidIban('FR76 3000 6000 0112 3456 7890 189')).toBe(true);
+    expect(isValidIban('FR76 3000 6000 0112 3456 7890 188')).toBe(false);
+    expect(isValidIban('1234')).toBe(false);
+    expect(formatIban('fr7630006000011234567890189')).toBe('FR76 3000 6000 0112 3456 7890 189');
+  });
+
+  it('liste ce qui manque au dossier', () => {
+    expect(
+      Object.keys(missingSupplierFields({ siret: '', address: '', iban: '', idUri: '' })),
+    ).toEqual(['siret', 'address', 'iban', 'idUri']);
+    expect(missingSupplierFields(VALID)).toEqual({});
+  });
+
+  it('ne publie qu’une fois le compte validé', () => {
+    expect(canSupplierPublish('brouillon')).toBe(false);
+    expect(canSupplierPublish('en_verification')).toBe(false);
+    expect(canSupplierPublish('valide')).toBe(true);
+  });
+
+  it('refuse un dossier incomplet, accepte un dossier complet puis le fait valider', () => {
+    const { submitSupplier, validateSupplier } = useMerchantStore.getState();
+    expect(submitSupplier({ ...VALID, iban: 'FR00' }).ok).toBe(false);
+    expect(useMerchantStore.getState().supplier.status).toBe('brouillon');
+
+    // Valider un dossier jamais envoyé ne fait rien.
+    validateSupplier();
+    expect(useMerchantStore.getState().supplier.status).toBe('brouillon');
+
+    expect(submitSupplier(VALID).ok).toBe(true);
+    expect(useMerchantStore.getState().supplier.status).toBe('en_verification');
+    expect(useMerchantStore.getState().supplier.iban).toBe('FR7630006000011234567890189');
+
+    validateSupplier();
+    expect(useMerchantStore.getState().supplier.status).toBe('valide');
+  });
+
+  it('parcourt l’écran : informations, vérification, sécurité, compte validé', async () => {
+    const authenticate = jest.fn().mockResolvedValue(true);
+    const onDone = jest.fn();
+    render(
+      <WholesalerSetupScreen
+        siret="44306184100047"
+        address="8 rue des Carmes, 31000 Toulouse"
+        authenticate={authenticate}
+        onDone={onDone}
+      />,
+    );
+
+    // Dossier vide : l'envoi est refusé, avec les champs en cause.
+    fireEvent.press(screen.getByTestId('supplier-submit'));
+    expect(screen.getByText('Cet IBAN n’est pas valide')).toBeTruthy();
+    expect(screen.getByText('Ajoutez la pièce d’identité du dirigeant')).toBeTruthy();
+
+    fireEvent.changeText(screen.getByTestId('supplier-iban'), VALID.iban);
+    fireEvent.press(screen.getByTestId('supplier-id-add'));
+    await waitFor(() => expect(screen.getByTestId('supplier-id-preview')).toBeTruthy());
+
+    fireEvent.press(screen.getByTestId('supplier-submit'));
+    expect(screen.getByTestId('supplier-verification-status')).toHaveTextContent(/en cours/);
+
+    // La validation vient de TK LINK : ici, le bouton de démonstration.
+    fireEvent.press(screen.getByTestId('supplier-demo-validate'));
+    fireEvent.press(screen.getByTestId('supplier-to-security'));
+    fireEvent.press(screen.getByTestId('supplier-enrol'));
+    await waitFor(() => expect(screen.getByTestId('supplier-done')).toBeTruthy());
+    expect(authenticate).toHaveBeenCalled();
+    expect(useMerchantStore.getState().supplier.deviceEnrolled).toBe(true);
+
+    fireEvent.press(screen.getByTestId('supplier-done'));
+    expect(onDone).toHaveBeenCalled();
+  });
+
+  it('ferme la publication tant que le compte n’est pas validé', () => {
+    const onOpenSetup = jest.fn();
+    render(<SupplierLocked status="en_verification" onOpenSetup={onOpenSetup} />);
+    expect(screen.getByText('Dossier en cours de contrôle')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('supplier-locked-open'));
+    expect(onOpenSetup).toHaveBeenCalled();
+  });
+
+  it('le tableau de bord renvoie vers le dossier tant qu’il n’est pas validé', () => {
+    const onOpen = jest.fn();
+    render(<WholesalerDashboardScreen companyName="Grossiste Occitan" onOpen={onOpen} />);
+    expect(screen.getByTestId('wholesaler-setup-banner')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('wholesaler-create-offer'));
+    expect(onOpen).toHaveBeenCalledWith('setup');
   });
 });

@@ -38,6 +38,17 @@ export function nextWholesaleStatus(status: WholesaleStatus): WholesaleStatus | 
   return WHOLESALE_STATUSES[i + 1] ?? null;
 }
 
+/**
+ * LE BON DE PRÉPARATION — étape 11 du schéma : « bon de préparation, emballage, expédition ».
+ * Trois gestes à cocher avant de pouvoir marquer la commande expédiée.
+ */
+export const PREP_STEPS = [
+  { key: 'preleve', label: 'Articles prélevés' },
+  { key: 'emballe', label: 'Colis emballé' },
+  { key: 'etiquete', label: 'Étiquette de transport posée' },
+] as const;
+export type PrepStep = (typeof PREP_STEPS)[number]['key'];
+
 /** À traiter = pas encore terminée. */
 export function isOpenWholesale(status: WholesaleStatus): boolean {
   return status !== 'terminee';
