@@ -36,7 +36,7 @@ const MODE_LABEL: Record<OfferMode, string> = {
  * maquette). Les horaires sont vides tant qu'on ne les a pas réglés : on
  * n'affiche pas d'horaires inventés.
  */
-export function ShopSettingsScreen() {
+export function ShopSettingsScreen({ onPreview }: { onPreview?: () => void } = {}) {
   const colors = useColors();
   const saved = useMerchantStore(selectProfile);
   const saveProfile = useMerchantStore((s) => s.saveProfile);
@@ -297,6 +297,14 @@ export function ShopSettingsScreen() {
           </AppText>
         ) : null}
         <Button testID="shop-save" label="Enregistrer" onPress={save} />
+        {onPreview ? (
+          <Button
+            testID="shop-preview"
+            label="Voir ma vitrine"
+            variant="secondary"
+            onPress={onPreview}
+          />
+        ) : null}
       </ScrollView>
     </Screen>
   );

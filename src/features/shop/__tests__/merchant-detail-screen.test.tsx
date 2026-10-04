@@ -12,7 +12,7 @@ function mount(over: Partial<Parameters<typeof MerchantDetailScreen>[0]> = {}) {
   return render(
     <MerchantDetailScreen
       merchantId={MID}
-      loyaltyPoints={85}
+      loyalty={{ points: 85, remaining: 165, progress: 0.4 }}
       onOpenLoyalty={jest.fn()}
       onOpenDeal={jest.fn()}
       onBack={jest.fn()}
@@ -26,10 +26,11 @@ beforeEach(() => {
 });
 
 describe('<MerchantDetailScreen />', () => {
-  it('monte et montre le solde de fidélité reçu en props', () => {
+  it('monte et montre le solde de fidélité et ce qu’il reste avant le palier', () => {
     mount();
     expect(screen.getByTestId('merchant-detail-screen')).toBeTruthy();
-    expect(screen.getByText('85')).toBeTruthy();
+    expect(screen.getByText('85 points')).toBeTruthy();
+    expect(screen.getByText(/Plus que 165 points/)).toBeTruthy();
   });
 
   it('ouvre la fidélité', () => {
@@ -39,11 +40,41 @@ describe('<MerchantDetailScreen />', () => {
     expect(onOpenLoyalty).toHaveBeenCalled();
   });
 
-  it('le bouton FLASH PROMO ouvre l’offre', () => {
+  it('toucher une carte « Flash du moment » ouvre l’offre', () => {
     const onOpenDeal = jest.fn();
     mount({ onOpenDeal });
-    fireEvent.press(screen.getByTestId('merchant-flash-go'));
+    fireEvent.press(screen.getByTestId(`merchant-deal-${HERO.id}`));
     expect(onOpenDeal).toHaveBeenCalledWith(HERO.id);
+  });
+
+  it('le « + » ajoute l’offre au panier', () => {
+    mount();
+    fireEvent.press(screen.getByTestId(`merchant-add-${HERO.id}`));
+    expect(useShopStore.getState().cart[0]?.dealId).toBe(HERO.id);
+  });
+
+  it('n’invente ni vidéo ni numéro : « Appeler » est grisé, la vidéo absente', () => {
+    mount();
+    expect(screen.queryByTestId('merchant-video')).toBeNull();
+    expect(screen.getByTestId('merchant-action-call').props.accessibilityState?.disabled).toBe(
+      true,
+    );
+  });
+
+  it('montre la vidéo, l’état ouvert et le téléphone quand le commerçant les a réglés', () => {
+    mount({
+      phone: '06 12 34 56 78',
+      profile: {
+        presentation: 'Pizzeria familiale',
+        photos: [],
+        videos: ['file:///v.mp4'],
+        status: 'Ouvert jusqu’à 22:00',
+      },
+    });
+    expect(screen.getByTestId('merchant-video')).toBeTruthy();
+    expect(screen.getByTestId('merchant-open-badge')).toHaveTextContent('OUVERT');
+    fireEvent.press(screen.getByTestId('merchant-action-infos'));
+    expect(screen.getByText('Pizzeria familiale')).toBeTruthy();
   });
 
   it('le cœur agit sur l’OFFRE, jamais sur l’enseigne', () => {

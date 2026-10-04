@@ -1,34 +1,57 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { selectCards, useMerchantLoyaltyStore } from '@/features/loyalty';
+import {
+  nextTier,
+  pointsToGo,
+  programOf,
+  selectCards,
+  selectPrograms,
+  tierProgress,
+  useMerchantLoyaltyStore,
+} from '@/features/loyalty';
 import { openStatus, selectProfile, useMerchantStore } from '@/features/merchant';
-import { LOCAL_MERCHANT_ID, MerchantDetailScreen } from '@/features/shop';
+import { LOCAL_MERCHANT_ID, MerchantDetailScreen, useShopStore } from '@/features/shop';
 
 /**
- * La fiche d'une enseigne. La boutique et la fidélité ne se connaissent pas :
- * c'est cette route qui les assemble — elle lit le solde et le passe en props.
+ * La vitrine d'une enseigne. La boutique, la fidélité et l'espace commerçant ne se
+ * connaissent pas : c'est cette route qui les assemble — le solde et le prochain
+ * palier viennent de `loyalty`, la vitrine réglée de `merchant`.
  */
 export default function EnseigneRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const cards = useMerchantLoyaltyStore(selectCards);
+  const programs = useMerchantLoyaltyStore(selectPrograms);
+  const application = useShopStore((s) => s.merchantApplication);
   const merchantId = id ?? '';
   const shop = useMerchantStore(selectProfile);
+
+  const points = cards[merchantId]?.points ?? 0;
+  const goal = nextTier(programOf(programs, merchantId).tiers, points);
+  const loyalty = {
+    points,
+    remaining: goal ? pointsToGo(goal, points) : null,
+    progress: goal ? tierProgress(goal, points) : 1,
+  };
+
   // Seule l'enseigne de CET appareil a une vitrine réglée ; les autres viennent du catalogue.
-  const profile =
-    merchantId === LOCAL_MERCHANT_ID
-      ? {
-          presentation: shop.presentation,
-          photos: shop.photos,
-          status: openStatus(shop.hours, new Date()),
-        }
-      : undefined;
+  const local = merchantId === LOCAL_MERCHANT_ID;
+  const profile = local
+    ? {
+        presentation: shop.presentation,
+        photos: shop.photos,
+        videos: shop.videos,
+        status: openStatus(shop.hours, new Date()),
+        zone: shop.zone,
+      }
+    : undefined;
 
   return (
     <MerchantDetailScreen
       merchantId={merchantId}
-      loyaltyPoints={cards[merchantId]?.points ?? 0}
+      loyalty={loyalty}
       {...(profile ? { profile } : {})}
+      {...(local && application?.phone ? { phone: application.phone } : {})}
       onOpenLoyalty={() => router.push({ pathname: '/fidelite/[id]', params: { id: merchantId } })}
       onOpenDeal={(dealId) => router.push({ pathname: '/produit/[id]', params: { id: dealId } })}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
