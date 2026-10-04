@@ -58,7 +58,7 @@ const TILES: {
   { key: 'orders', label: 'Commandes', icon: 'shopping-bag' },
   { key: 'loyalty', label: 'Fidélité', icon: 'award' },
   { key: 'stats', label: 'Statistiques', icon: 'bar-chart-2' },
-  { key: 'offers', label: 'Produits / Stock', icon: 'box' },
+  { key: 'offers', label: 'Stock', icon: 'box' },
   { key: 'wholesale', label: 'Grossistes', icon: 'package' },
   { key: 'payouts', label: 'Versements', icon: 'credit-card' },
   { key: 'documents', label: 'Documents', icon: 'file-text' },
