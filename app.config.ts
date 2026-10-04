@@ -50,9 +50,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     bundleIdentifier: bundleId,
     supportsTablet: false,
-    // Pas de surcharge iOS : `assets/expo.icon` est le bundle Icon Composer
-    // livré par le squelette — il contient le symbole EXPO, pas le nôtre. Sans
-    // cette ligne, iOS reprend l'icône TK LINK commune définie plus haut.
+    // Pas de surcharge iOS : iOS reprend l'icône TK LINK commune définie plus haut
+    // (le bundle Icon Composer du squelette, qui portait le symbole Expo, est retiré).
     // Answers the App Store export-compliance prompt automatically (set true
     // only if you add non-exempt encryption). Store-readiness: STORE-APL-EXPORT.
     config: {
@@ -89,10 +88,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: bundleId,
     adaptiveIcon: {
-      // Le vert de la marque, comme android-icon-background.png : l'image
+      // Le fond nuit de la charte, comme android-icon-background.png : l'image
       // l'emporte, mais une couleur contradictoire ici induirait en erreur le
       // prochain lecteur — et se verrait pendant le chargement de l'image.
-      backgroundColor: '#0B6C3B',
+      backgroundColor: '#0A0A0D',
       foregroundImage: './assets/images/android-icon-foreground.png',
       backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
@@ -113,7 +112,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#17140F',
+        backgroundColor: '#0A0A0D',
         android: {
           image: './assets/images/splash-icon.png',
           imageWidth: 140,

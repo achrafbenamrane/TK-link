@@ -1,7 +1,7 @@
-# Freedoo — Landing (Next.js)
+# TK LINK — Site (Next.js)
 
-Landing page marketing de Freedoo, portée en **Next.js (App Router)**.
-Même design, même contenu que la maquette HTML d'origine — architecture Next.js.
+Site vitrine de TK LINK, portée en **Next.js (App Router)**.
+Aux couleurs de la charte du client (noir, blanc, rose, bleu), typographie Manrope.
 
 ## Stack
 

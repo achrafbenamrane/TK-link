@@ -8,7 +8,7 @@ lit avant de trancher.
 
     python scripts/make-demo-kbis.py
 
-⚠️ Outil d'ATELIER, comme `make-icons.py`. Il ne tourne pas dans la
+⚠️ Outil d'ATELIER, comme l'ancien générateur d'icônes. Il ne tourne pas dans la
 vérification et n'est pas une dépendance : le PDF est versionné, on ne le
 régénère qu'en changeant sa forme. Il demande Python et Pillow.
 
