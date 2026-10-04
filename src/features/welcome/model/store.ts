@@ -14,6 +14,12 @@ import { asyncStorageBackend } from '@/shared/lib/storage';
 type WelcomeState = {
   seen: boolean;
   hydrated: boolean;
+  /**
+   * L'animation d'ouverture a-t-elle été jouée DEPUIS LE LANCEMENT ? Jamais persisté :
+   * l'app s'ouvre sur le logo à chaque démarrage.
+   */
+  splashDone: boolean;
+  markSplashDone: () => void;
   markSeen: () => void;
   /** Pour re-tester la démo : remet l'accueil à zéro. */
   reset: () => void;
@@ -24,6 +30,8 @@ export const useWelcomeStore = create<WelcomeState>()(
     (set) => ({
       seen: false,
       hydrated: false,
+      splashDone: false,
+      markSplashDone: () => set({ splashDone: true }),
       markSeen: () => set({ seen: true }),
       reset: () => set({ seen: false }),
     }),

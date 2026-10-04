@@ -41,7 +41,7 @@ const FIRST_RUN_ROUTES = new Set([
 ]);
 
 /**
- * LA PORTE DU PREMIER LANCEMENT : bienvenue → onboarding → app.
+ * LA PORTE DU LANCEMENT : logo animé → choix du profil → inscription → app.
  *
  * L'écran de bienvenue montre le produit (la vente flash, les offres proches) ;
  * l'onboarding personnalise et propose le compte. L'ordre compte : demander un
@@ -57,19 +57,21 @@ function FirstRunGate() {
   const segments = useSegments();
   const completed = useOnboardingStore(selectCompleted);
   const onboardingHydrated = useOnboardingStore(selectHydrated);
-  const seenWelcome = useWelcomeStore((s) => s.seen);
+  const splashDone = useWelcomeStore((s) => s.splashDone);
   const welcomeHydrated = useWelcomeStore((s) => s.hydrated);
 
   useEffect(() => {
     if (!onboardingHydrated || !welcomeHydrated) return;
     const here = segments[0] ?? '';
 
-    if (!seenWelcome) {
+    // À chaque lancement l'app s'ouvre sur le logo animé, qui enchaîne sur le choix
+    // du profil (ou l'accueil si le compte existe déjà).
+    if (!splashDone) {
       if (here !== 'welcome') router.replace('/welcome');
       return;
     }
-    if (!completed && !FIRST_RUN_ROUTES.has(here)) router.replace('/onboarding');
-  }, [onboardingHydrated, welcomeHydrated, seenWelcome, completed, segments, router]);
+    if (!completed && !FIRST_RUN_ROUTES.has(here)) router.replace('/role');
+  }, [onboardingHydrated, welcomeHydrated, splashDone, completed, segments, router]);
 
   return null;
 }

@@ -1,66 +1,35 @@
-import { fireEvent, render, screen } from '@/shared/testing/render';
+import { act, render, screen } from '@/shared/testing/render';
 
 import { useWelcomeStore } from '../model/store';
-import { WelcomeScreen } from '../ui/welcome-screen';
-
-// Préfixe `mock` obligatoire : Babel remonte `jest.mock` au-dessus des
-// imports, et seule cette convention autorise la fabrique à voir la variable.
-const mockReplace = jest.fn();
-
-jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: mockReplace, push: jest.fn(), back: jest.fn() }),
-}));
+import { SPLASH_MS, WelcomeScreen } from '../ui/welcome-screen';
 
 beforeEach(() => {
-  useWelcomeStore.setState({ seen: false });
+  jest.useFakeTimers();
+  useWelcomeStore.setState({ seen: false, splashDone: false });
 });
+afterEach(() => jest.useRealTimers());
 
-describe('<WelcomeScreen />', () => {
-  it('montre les deux plans du produit', () => {
-    render(<WelcomeScreen />);
-
+describe('<WelcomeScreen /> — le logo animé', () => {
+  it('montre le logo et ne demande rien : ni bouton, ni lien', () => {
+    render(<WelcomeScreen onDone={jest.fn()} />);
     expect(screen.getByTestId('welcome-screen')).toBeTruthy();
-    expect(screen.getByTestId('welcome-panel-flash')).toBeTruthy();
-    // Les mini-jeux sont hors du pilote (CDC V1.1) : plus de panneau « jeux ».
-    expect(screen.queryByTestId('welcome-panel-jeux')).toBeNull();
-    expect(screen.getByTestId('welcome-panel-proximite')).toBeTruthy();
-    // Les scènes animées sont là, pas seulement leurs titres.
-    // Le premier plan montre une VENTE FLASH, plus une carte sur un lecteur :
-    // ce matériel ne sera pas réalisé, et la scène le vendait.
-    expect(screen.getByTestId('welcome-flash')).toBeTruthy();
-    expect(screen.queryByTestId('welcome-card-scene')).toBeNull();
-    expect(screen.queryByTestId('welcome-pacman')).toBeNull();
-    // « La Chasse » a été retirée le 18/08 : deux panneaux sur trois parlaient
-    // de jeux, alors que l'app sert à obtenir des promotions sur un temps
-    // court. Sa place revient aux offres personnalisées et proches.
-    expect(screen.queryByTestId('welcome-hub')).toBeNull();
-    expect(screen.getByTestId('welcome-nearby')).toBeTruthy();
+    expect(screen.getByTestId('welcome-logo')).toBeTruthy();
+    expect(screen.queryByTestId('welcome-start')).toBeNull();
+    expect(screen.queryByTestId('welcome-skip')).toBeNull();
   });
 
-  it('« Commencer » marque l’accueil vu et enchaîne sur la création du compte', () => {
-    render(<WelcomeScreen />);
-    fireEvent.press(screen.getByTestId('welcome-start'));
-
-    expect(useWelcomeStore.getState().seen).toBe(true);
-    // Pas `/` : passer par la boutique ferait clignoter l’accueil avant que la
-    // porte du layout ne renvoie sur l’inscription. Le compte est l’étape 2 du
-    // parcours dessiné par le client.
-    expect(mockReplace).toHaveBeenCalledWith('/role');
+  it('passe tout seul à la suite une fois l’animation jouée', () => {
+    const onDone = jest.fn();
+    render(<WelcomeScreen onDone={onDone} />);
+    expect(onDone).not.toHaveBeenCalled();
+    act(() => {
+      jest.advanceTimersByTime(SPLASH_MS + 50);
+    });
+    expect(onDone).toHaveBeenCalledTimes(1);
   });
 
-  it('« Passer » saute l’intro mais pas la création du compte', () => {
-    render(<WelcomeScreen />);
-    fireEvent.press(screen.getByTestId('welcome-skip'));
-
+  it('marque l’accueil comme vu', () => {
+    render(<WelcomeScreen onDone={jest.fn()} />);
     expect(useWelcomeStore.getState().seen).toBe(true);
-    expect(mockReplace).toHaveBeenCalledWith('/role');
-  });
-
-  it('« Se connecter » mène à la connexion, sans revoir l’intro ensuite', () => {
-    render(<WelcomeScreen />);
-    fireEvent.press(screen.getByTestId('welcome-signin'));
-
-    expect(useWelcomeStore.getState().seen).toBe(true);
-    expect(mockReplace).toHaveBeenCalledWith('/sign-in');
   });
 });

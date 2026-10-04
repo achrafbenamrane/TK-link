@@ -17,6 +17,27 @@ import { useShopStore } from '@/features/shop';
  * d'intérêt, la localisation et la sécurisation. La porte du layout laisse
  * passer tant que l'onboarding n'est pas terminé.
  */
+/**
+ * DÉMONSTRATION : l'inscription s'ouvre déjà REMPLIE, pour que le client puisse tester
+ * sans rien saisir. Le SIRET est un numéro valide au sens de la clé de Luhn ; l'e-mail,
+ * le téléphone et le mot de passe sont des exemples. À retirer avec la démonstration.
+ */
+const DEMO_DRAFT = {
+  firstName: 'Neo',
+  lastName: 'Démo',
+  email: 'demo@tklink.fr',
+  phone: '06 12 34 56 78',
+  password: 'demo12345',
+  confirm: 'demo12345',
+  location: 'Toulouse',
+};
+const DEMO_SHOP = {
+  shopName: 'Le Petit Toulousain',
+  category: 'restauration',
+  siret: '44306184100047',
+  address: '8 rue des Carmes, 31000 Toulouse',
+};
+
 export default function SignUpRoute() {
   const router = useRouter();
   const role = useOnboardingStore(selectRole);
@@ -55,6 +76,10 @@ export default function SignUpRoute() {
   return (
     <SignUpScreen
       role={role}
+      initialDraft={
+        role === 'commercant' || role === 'grossiste' ? { ...DEMO_DRAFT, ...DEMO_SHOP } : DEMO_DRAFT
+      }
+      initialAccepted
       renderAvatar={() => <AvatarPicker size={48} />}
       onProfile={onProfile}
       onSignedUp={toOnboarding}

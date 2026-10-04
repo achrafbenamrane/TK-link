@@ -1,243 +1,100 @@
-import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEffect } from 'react';
+import { View } from 'react-native';
 import Animated, {
   Easing,
-  FadeIn,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
-import { cn } from '@/shared/lib/cn';
 import { AppText, Wordmark } from '@/shared/ui';
-import { ThemeScope, useColors } from '@/shared/theme/theme-provider';
+import { ThemeScope } from '@/shared/theme/theme-provider';
 
 import { useWelcomeStore } from '../model/store';
-import { FlashScene } from './scenes/flash-scene';
-import { NearbyScene } from './scenes/nearby-scene';
 
-/** Temps d'affichage d'un panneau — calé sur la durée d'un cycle de scène. */
-const DWELL = 5200;
+/** Durée de l'animation avant de passer à la suite, en ms. */
+export const SPLASH_MS = 2300;
 
-type Panel = {
-  key: string;
-  title: string;
-  accent: string;
-  line: string;
+type Props = {
+  /**
+   * Appelé quand l'animation est finie — la route décide où aller : le choix du profil
+   * au premier lancement, l'accueil quand le compte existe déjà.
+   */
+  onDone: () => void;
 };
 
-const PANELS: Panel[] = [
-  {
-    key: 'flash',
-    // Formulation demandée par la conduite de projet le 18/08 : « des prix qui
-    // tombent » décrivait le MÉCANISME, pas le bénéfice, et ne se comprenait
-    // pas au premier coup d'œil. Celle-ci dit ce qu'on y gagne et pourquoi il
-    // faut se dépêcher — les deux arguments de la vente flash, en six mots.
-    title: 'Des prix imbattables,',
-    accent: 'pour un temps limité',
-    line: 'Les commerçants du quartier bradent ce qui doit partir aujourd’hui. Un compte à rebours, un stock qui fond : vous prenez, ou ça disparaît.',
-  },
-  {
-    // Panneau ajouté le 18/08, à la place de « La Chasse ». Deux panneaux sur
-    // trois parlaient de jeux, alors que l'app sert à obtenir des promotions
-    // sur un temps court : « un seul panneau suffit ». Celui-ci prend la place
-    // libérée pour dire ce que le parcours consommateur promet aux étapes 3
-    // et 4 — centres d'intérêt, puis localisation.
-    key: 'proximite',
-    title: 'Des offres personnalisées,',
-    accent: 'tout près de chez vous',
-    line: 'Choisissez vos catégories préférées et découvrez les offres flash qui correspondent à côté de chez vous.',
-  },
-];
-
 /**
- * PREMIER ÉCRAN — des plans qui MONTRENT le produit plutôt que de le décrire.
+ * L'OUVERTURE — le logo TKlink qui s'anime, puis l'app passe d'elle-même à la suite.
  *
- * Un écran d'accueil qui aligne trois lignes de texte et un bouton ne prouve
- * rien : on y promet une app sans jamais la faire bouger. Ici le prix tombe
- * vraiment et le stock se vide vraiment — chaque panneau tient quelques
- * secondes et démontre une promesse.
- *
- * Les panneaux défilent seuls (barres de progression en tête, comme une story)
- * mais restent balayables : personne n'est obligé d'attendre, personne n'est
- * obligé d'agir.
+ * Le logo entre (fondu + ressort), un halo rose pulse derrière, la signature « Le bon
+ * plan, partout. » apparaît dessous. Aucun bouton : l'écran ne demande rien, il
+ * présente la marque le temps que l'app se charge. Avec « réduire les animations »,
+ * le logo est posé tel quel.
  */
-export function WelcomeScreen() {
-  const colors = useColors();
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
+export function WelcomeScreen({ onDone }: Props) {
   const reduced = useReducedMotion();
-  const { width } = useWindowDimensions();
   const markSeen = useWelcomeStore((s) => s.markSeen);
 
-  const [index, setIndex] = useState(0);
-  const scroller = useRef<ScrollView>(null);
-  const panel = PANELS[index]!;
-  const stage = Math.min(width - 48, 320);
+  const logoOpacity = useSharedValue(reduced ? 1 : 0);
+  const logoScale = useSharedValue(reduced ? 1 : 0.72);
+  const glow = useSharedValue(reduced ? 0.6 : 0);
+  const tagOpacity = useSharedValue(reduced ? 1 : 0);
 
-  // Défilement automatique. En mode « réduire les animations », il n'y a pas
-  // d'avance seule : un écran qui bouge tout seul est exactement ce que ce
-  // réglage demande d'éviter.
   useEffect(() => {
-    if (reduced) return;
-    const id = setTimeout(() => {
-      const next = (index + 1) % PANELS.length;
-      scroller.current?.scrollTo({ x: next * width, animated: true });
-      setIndex(next);
-    }, DWELL);
-    return () => clearTimeout(id);
-  }, [index, width, reduced]);
-
-  /**
-   * On enchaîne sur la création du compte : c'est l'étape 2 du parcours du
-   * client. Passer par `/` d'abord ferait clignoter la boutique avant que la
-   * porte du layout ne renvoie sur l'inscription.
-   */
-  const enter = () => {
     markSeen();
-    router.replace('/role');
-  };
+    if (!reduced) {
+      logoOpacity.value = withTiming(1, { duration: 550, easing: Easing.out(Easing.cubic) });
+      logoScale.value = withSpring(1, { damping: 11, stiffness: 120 });
+      glow.value = withRepeat(
+        withSequence(withTiming(1, { duration: 900 }), withTiming(0.35, { duration: 900 })),
+        -1,
+      );
+      tagOpacity.value = withDelay(900, withTiming(1, { duration: 600 }));
+    }
+    const timer = setTimeout(onDone, reduced ? 900 : SPLASH_MS);
+    return () => clearTimeout(timer);
+    // L'animation ne se rejoue pas : une seule passe au montage.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  /** Un compte existe déjà : on va droit à la connexion. */
-  const signIn = () => {
-    markSeen();
-    router.replace('/sign-in');
-  };
+  const logoStyle = useAnimatedStyle(() => ({
+    opacity: logoOpacity.value,
+    transform: [{ scale: logoScale.value }],
+  }));
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glow.value * 0.55,
+    transform: [{ scale: 0.9 + glow.value * 0.25 }],
+  }));
+  const tagStyle = useAnimatedStyle(() => ({ opacity: tagOpacity.value }));
 
   return (
     <ThemeScope scheme="night">
-      <View
-        testID="welcome-screen"
-        className="flex-1 bg-surface"
-        style={{ paddingTop: insets.top }}
-      >
-        {/* Fond très sombre → icônes de statut claires, sinon elles disparaissent. */}
+      <View testID="welcome-screen" className="flex-1 items-center justify-center bg-surface">
         <StatusBar style="light" />
 
-        {/* En-tête : la marque, et de quoi couper court. */}
-        <View className="flex-row items-start justify-between px-6 pb-3 pt-2">
-          <Wordmark size={26} />
-          <Pressable
-            testID="welcome-skip"
-            accessibilityRole="button"
-            accessibilityLabel="Passer l’introduction"
-            onPress={enter}
-            hitSlop={10}
-            className="rounded-pill bg-ink/10 px-3 py-1.5"
-          >
-            <AppText className="font-sans-semibold text-ink/70" style={{ fontSize: 12.5 }}>
-              Passer
-            </AppText>
-          </Pressable>
-        </View>
+        {/* Le halo rose derrière le logo */}
+        <Animated.View
+          pointerEvents="none"
+          className="absolute h-72 w-72 rounded-pill bg-brand-500"
+          style={[glowStyle, { opacity: 0.2 }]}
+        />
 
-        {/* Progression, façon story : où l'on en est, combien il reste. */}
-        <View className="flex-row gap-1.5 px-6">
-          {PANELS.map((p, i) => (
-            <Segment key={p.key} active={i === index} done={i < index} still={reduced} />
-          ))}
-        </View>
+        <Animated.View testID="welcome-logo" style={logoStyle}>
+          <Wordmark size={64} />
+        </Animated.View>
 
-        {/* Les plans. Balayables — l'automatique ne doit jamais bloquer la main. */}
-        <ScrollView
-          ref={scroller}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={(e) =>
-            setIndex(Math.round(e.nativeEvent.contentOffset.x / Math.max(1, width)))
-          }
-          style={{ flexGrow: 0 }}
-        >
-          {PANELS.map((p) => (
-            <View
-              key={p.key}
-              testID={`welcome-panel-${p.key}`}
-              style={{ width }}
-              className="items-center justify-center py-2"
-            >
-              {p.key === 'flash' ? <FlashScene size={stage} still={reduced} /> : null}
-              {p.key === 'proximite' ? <NearbyScene size={stage} still={reduced} /> : null}
-            </View>
-          ))}
-        </ScrollView>
-
-        {/* Le discours suit le plan affiché. */}
-        <View className="flex-1 justify-start px-6 pt-2">
-          <Animated.View key={panel.key} entering={reduced ? undefined : FadeIn.duration(320)}>
-            <AppText className="font-display text-ink" style={{ fontSize: 30, lineHeight: 40 }}>
-              {panel.title} <AppText style={{ color: colors.brand500 }}>{panel.accent}</AppText>
-            </AppText>
-            <AppText className="mt-2 text-ink/70" style={{ fontSize: 15, lineHeight: 22 }}>
-              {panel.line}
-            </AppText>
-          </Animated.View>
-        </View>
-
-        {/* L'action, toujours au même endroit : elle ne se cherche pas. */}
-        <View className="gap-1 px-6" style={{ paddingBottom: insets.bottom + 18 }}>
-          <Pressable
-            testID="welcome-start"
-            accessibilityRole="button"
-            accessibilityLabel="Commencer"
-            onPress={enter}
-            className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-4 active:opacity-85"
-          >
-            <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 16 }}>
-              Commencer
-            </AppText>
-            <Feather name="arrow-right" size={18} color={colors.inkInverse} />
-          </Pressable>
-          <Pressable
-            testID="welcome-signin"
-            accessibilityRole="button"
-            accessibilityLabel="Se connecter"
-            onPress={signIn}
-            className="py-3"
-          >
-            <AppText className="text-center text-ink/60" style={{ fontSize: 14 }}>
-              J’ai déjà un compte{' '}
-              <AppText className="font-sans-bold text-ink">Se connecter</AppText>
-            </AppText>
-          </Pressable>
-        </View>
+        <Animated.View style={tagStyle} className="mt-5">
+          <AppText className="text-ink-muted" style={{ fontSize: 15, letterSpacing: 0.4 }}>
+            Le bon plan, partout.
+          </AppText>
+        </Animated.View>
       </View>
     </ThemeScope>
-  );
-}
-
-/**
- * Un segment de progression. Le segment actif se remplit sur la durée
- * d'affichage : on sait combien de temps il reste avant le plan suivant, donc
- * on sait qu'attendre est un choix.
- */
-function Segment({ active, done, still }: { active: boolean; done: boolean; still: boolean }) {
-  const colors = useColors();
-  const fill = useSharedValue(done ? 1 : 0);
-
-  useEffect(() => {
-    if (done) {
-      fill.value = 1;
-      return;
-    }
-    if (!active) {
-      fill.value = 0;
-      return;
-    }
-    fill.value = 0;
-    fill.value = still ? 1 : withTiming(1, { duration: DWELL, easing: Easing.linear });
-  }, [active, done, still, fill]);
-
-  const style = useAnimatedStyle(() => ({ width: `${fill.value * 100}%` }));
-
-  return (
-    <View className={cn('h-1 flex-1 overflow-hidden rounded-pill bg-ink/15')}>
-      <Animated.View style={[style, { height: '100%', backgroundColor: colors.brand500 }]} />
-    </View>
   );
 }

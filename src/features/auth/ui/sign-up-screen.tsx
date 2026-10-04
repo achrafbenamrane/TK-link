@@ -5,7 +5,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'rea
 import { cn } from '@/shared/lib/cn';
 import { CATEGORIES, CATEGORY_INFO, type Category } from '@/shared/lib/categories';
 import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
-import { formatSiret, type Role } from '@/shared/lib/roles';
+import { type Role } from '@/shared/lib/roles';
 import { AppText, Button, Checkbox, Screen, TextField, ThemeToggle, Wordmark } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -54,6 +54,13 @@ type Props = {
   onSkip?: () => void;
   /** Flèche retour (maquette professionnelle) — vers le choix du profil. */
   onBack?: () => void;
+  /**
+   * Un formulaire déjà REMPLI — pour la démonstration : on arrive sur l'inscription avec
+   * tout d'écrit, il n'y a plus qu'à valider. Absent : formulaire vierge.
+   */
+  initialDraft?: Partial<RegistrationDraft>;
+  /** Cocher d'avance les CGU (démonstration). */
+  initialAccepted?: boolean;
 };
 
 const MODE_LABEL: Record<ShopMode, string> = {
@@ -95,11 +102,16 @@ export function SignUpScreen({
   onSignIn,
   onSkip,
   onBack,
+  initialDraft,
+  initialAccepted = false,
 }: Props) {
   const colors = useColors();
-  const [draft, setDraft] = useState<RegistrationDraft>(EMPTY_REGISTRATION);
+  const [draft, setDraft] = useState<RegistrationDraft>({
+    ...EMPTY_REGISTRATION,
+    ...initialDraft,
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [accepted, setAccepted] = useState(false);
+  const [accepted, setAccepted] = useState(initialAccepted);
   const [modes, setModes] = useState<ShopMode[]>(['touch-collect']);
   const [submitting, setSubmitting] = useState(false);
   const [touched, setTouched] = useState(false);
@@ -333,8 +345,8 @@ export function SignUpScreen({
 
           {pro ? (
             <View className="mb-1.5 items-center">
-              <View className="h-12 w-12 items-center justify-center rounded-pill border-2 border-brand-500">
-                <Feather name="shopping-bag" size={22} color={colors.brand500} />
+              <View className="h-10 w-10 items-center justify-center rounded-pill border-2 border-brand-500">
+                <Feather name="shopping-bag" size={19} color={colors.brand500} />
                 <View className="absolute -bottom-0.5 -right-0.5 h-5 w-5 items-center justify-center rounded-pill bg-brand-500">
                   <Feather name="plus" size={12} color="#FFFFFF" />
                 </View>
@@ -378,7 +390,6 @@ export function SignUpScreen({
                   placeholder="SIRET"
                   accessibilityLabel="SIRET"
                   keyboardType="number-pad"
-                  {...(draft.siret.trim() !== '' ? { hint: formatSiret(draft.siret) } : {})}
                 />
                 <Field
                   dense
@@ -507,7 +518,7 @@ export function SignUpScreen({
             {role === 'commercant' ? (
               <View
                 testID="signup-free-ops"
-                className="flex-row items-center justify-center gap-2 rounded-control border border-line bg-surface-muted py-1.5"
+                className="flex-row items-center justify-center gap-2 rounded-control border border-line bg-surface-muted py-1"
               >
                 <Feather name="gift" size={14} color={colors.brand500} />
                 <AppText variant="caption" className="text-ink-muted" style={{ fontSize: 11.5 }}>
