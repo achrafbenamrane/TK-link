@@ -288,3 +288,46 @@ describe('<CourierEarningsScreen />', () => {
     expect(screen.getByTestId('courier-partial-note')).toBeTruthy();
   });
 });
+
+describe('missions d’exemple — démonstration au client', () => {
+  const props = {
+    missions: [] as Mission[],
+    authenticate: jest.fn().mockResolvedValue(true),
+    onPickedUp: jest.fn(),
+    onDelivered: jest.fn(),
+    onOpenSetup: jest.fn(),
+  };
+
+  it('affichées seulement si on le demande, et signalées « exemples »', () => {
+    state().submitProfile({ vehicle: 'velo', zone: 'Toulouse', idUri: 'a', selfieUri: 'b' });
+    state().validateAccount();
+    state().setOnline(true);
+
+    const { unmount } = render(<CourierHomeScreen {...props} />);
+    expect(screen.getByTestId('courier-no-missions')).toBeTruthy();
+    unmount();
+
+    render(<CourierHomeScreen {...props} showExamples />);
+    expect(screen.getByTestId('courier-examples-badge')).toBeTruthy();
+    expect(screen.getByTestId('courier-offer-demo_8892')).toBeTruthy();
+  });
+
+  it('un geste active un compte d’exemple et passe en ligne', () => {
+    render(<CourierHomeScreen {...props} showExamples />);
+    fireEvent.press(screen.getByTestId('courier-demo-activate'));
+    expect(state().status).toBe('valide');
+    expect(state().online).toBe(true);
+  });
+
+  it('une mission d’exemple montre son code de remise de démonstration', () => {
+    state().submitProfile({ vehicle: 'velo', zone: 'Toulouse', idUri: 'a', selfieUri: 'b' });
+    state().validateAccount();
+    state().setOnline(true);
+    render(<CourierHomeScreen {...props} showExamples />);
+    fireEvent.press(screen.getByTestId('courier-accept-demo_8892'));
+    fireEvent.press(screen.getByTestId('courier-start-route'));
+    expect(screen.getByTestId('courier-demo-pin')).toHaveTextContent(
+      new RegExp(pickupPin('demo_8892')),
+    );
+  });
+});

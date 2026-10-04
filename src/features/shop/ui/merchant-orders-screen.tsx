@@ -25,6 +25,8 @@ type Props = {
    */
   dealIds?: string[];
   onBack?: () => void;
+  /** Ouvre la validation de la remise au livreur (commande prête en livraison). */
+  onHandover?: (orderId: string) => void;
 };
 
 /**
@@ -76,7 +78,7 @@ function money(value: number): string {
  * proposer « livrée » sur un Touch & Collect, ni de ressusciter une commande
  * remboursée. C'est la même règle que côté client, testée une seule fois.
  */
-export function MerchantOrdersScreen({ dealIds, onBack }: Props) {
+export function MerchantOrdersScreen({ dealIds, onBack, onHandover }: Props) {
   const colors = useColors();
   const allOrders = useShopStore(selectOrders);
   const setOrderStatus = useShopStore((s) => s.setOrderStatus);
@@ -197,6 +199,7 @@ export function MerchantOrdersScreen({ dealIds, onBack }: Props) {
                 key={order.id}
                 order={order}
                 onAdvance={(status) => setOrderStatus(order.id, status)}
+                {...(onHandover ? { onHandover } : {})}
               />
             ))}
           </View>
@@ -209,9 +212,11 @@ export function MerchantOrdersScreen({ dealIds, onBack }: Props) {
 function OrderCard({
   order,
   onAdvance,
+  onHandover,
 }: {
   order: Order;
   onAdvance: (status: OrderStatus) => void;
+  onHandover?: (orderId: string) => void;
 }) {
   const options = merchantActions(order.status, order.fulfilment);
   const tone = toneOf(order.status);
@@ -267,6 +272,19 @@ function OrderCard({
               À lui donner, ou le QR de l’étiquette.
             </AppText>
           </View>
+          {onHandover ? (
+            <Pressable
+              testID={`merchant-order-${order.id}-handover-open`}
+              accessibilityRole="button"
+              accessibilityLabel="Valider la remise au livreur"
+              onPress={() => onHandover(order.id)}
+              className="mr-3 rounded-control bg-brand-500 px-3 py-2"
+            >
+              <AppText className="font-sans-bold text-white" style={{ fontSize: 12 }}>
+                Valider
+              </AppText>
+            </Pressable>
+          ) : null}
           <AppText
             className="font-display text-ink"
             style={{ fontSize: 22, letterSpacing: 4 }}

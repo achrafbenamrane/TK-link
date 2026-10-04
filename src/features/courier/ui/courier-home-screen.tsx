@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { isImportantParcel } from '@/shared/lib/handover';
+import { isImportantParcel, pickupPin } from '@/shared/lib/handover';
 import { pickImage } from '@/shared/lib/image-picker';
 import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
 import { AppText, Button, Screen, Wordmark } from '@/shared/ui';
@@ -17,6 +17,7 @@ import {
   STEP_LABEL,
   VEHICLE_LABEL,
 } from '../lib/courier';
+import { DEMO_MISSIONS, isDemoMission } from '../lib/demo';
 import { useCourierStore, type Mission } from '../model/store';
 
 type Props = {
@@ -30,6 +31,11 @@ type Props = {
   onDelivered: (orderId: string) => void;
   /** Reprendre l'inscription (compte pas encore validé). */
   onOpenSetup: () => void;
+  /**
+   * Montrer des missions d'EXEMPLE quand il n'y en a aucune — pour la démonstration
+   * au client. Elles sont signalées comme telles.
+   */
+  showExamples?: boolean;
 };
 
 function GainLine({ mission }: { mission: Mission }) {
@@ -56,6 +62,7 @@ export function CourierHomeScreen({
   onPickedUp,
   onDelivered,
   onOpenSetup,
+  showExamples = false,
 }: Props) {
   const colors = useColors();
   const status = useCourierStore((s) => s.status);
@@ -75,7 +82,19 @@ export function CourierHomeScreen({
   const [message, setMessage] = useState<string | null>(null);
 
   const ready = status === 'valide';
-  const offers = missions.filter((m) => !declined.includes(m.orderId));
+  const examples = showExamples && missions.length === 0;
+  const offers = (examples ? DEMO_MISSIONS : missions).filter((m) => !declined.includes(m.orderId));
+  const submitProfile = useCourierStore((s) => s.submitProfile);
+  const validateAccount = useCourierStore((s) => s.validateAccount);
+  const setDeviceEnrolled = useCourierStore((s) => s.setDeviceEnrolled);
+
+  // Démo : un compte prêt à livrer en un geste, sans passer par les justificatifs.
+  const activateDemo = () => {
+    submitProfile({ vehicle: 'velo', zone: 'Toulouse', idUri: 'demo', selfieUri: 'demo' });
+    validateAccount();
+    setDeviceEnrolled(true);
+    setOnline(true);
+  };
 
   const pickup = async () => {
     if (!active) return;
@@ -150,6 +169,19 @@ export function CourierHomeScreen({
             trackColor={{ true: colors.brand500, false: colors.line }}
           />
         </View>
+
+        {!ready && showExamples ? (
+          <Pressable
+            testID="courier-demo-activate"
+            accessibilityRole="button"
+            onPress={activateDemo}
+            className="items-center rounded-control border border-dashed border-brand-500 py-3.5"
+          >
+            <AppText className="font-sans-semibold text-brand-600" style={{ fontSize: 13.5 }}>
+              Démo — activer un compte livreur d’exemple
+            </AppText>
+          </Pressable>
+        ) : null}
 
         {!ready ? (
           <Pressable
@@ -228,6 +260,11 @@ export function CourierHomeScreen({
                   Au comptoir : scannez le QR de l’étiquette ou saisissez le code de remise donné
                   par le commerçant.
                 </AppText>
+                {isDemoMission(active.mission.orderId) ? (
+                  <AppText testID="courier-demo-pin" variant="caption" className="text-brand-600">
+                    Démo — code de remise : {pickupPin(active.mission.orderId)}
+                  </AppText>
+                ) : null}
                 <TextInput
                   testID="courier-pin"
                   value={pin}
@@ -272,7 +309,19 @@ export function CourierHomeScreen({
         {/* Offres — étapes 8 et 9 */}
         {!active && ready && online ? (
           <View className="gap-3">
-            <AppText variant="label">Missions disponibles</AppText>
+            <View className="flex-row items-center justify-between">
+              <AppText variant="label">Missions disponibles</AppText>
+              {examples ? (
+                <View
+                  testID="courier-examples-badge"
+                  className="rounded-pill bg-brand-50 px-2.5 py-1"
+                >
+                  <AppText className="font-sans-semibold text-brand-600" style={{ fontSize: 11 }}>
+                    Exemples
+                  </AppText>
+                </View>
+              ) : null}
+            </View>
             {offers.length === 0 ? (
               <View testID="courier-no-missions" className="items-center gap-2 py-10">
                 <Feather name="navigation" size={28} color={colors.inkFaint} />
@@ -300,15 +349,33 @@ export function CourierHomeScreen({
                     </View>
                     <GainLine mission={m} />
                   </View>
-                  <View className="flex-row items-center gap-4">
-                    <AppText variant="caption" className="text-ink-faint">
-                      {m.itemCount} article{m.itemCount > 1 ? 's' : ''}
-                    </AppText>
-                    {m.distanceKm !== null ? (
-                      <AppText variant="caption" className="text-ink-faint">
-                        {m.distanceKm.toFixed(1).replace('.', ',')} km
-                      </AppText>
-                    ) : null}
+                  <View className="flex-row justify-between rounded-control bg-surface-muted px-3 py-2.5">
+                    {[
+                      { icon: 'package', label: 'Articles', value: String(m.itemCount) },
+                      {
+                        icon: 'map-pin',
+                        label: 'Distance',
+                        value:
+                          m.distanceKm !== null
+                            ? `${m.distanceKm.toFixed(1).replace('.', ',')} km`
+                            : '—',
+                      },
+                      { icon: 'clock', label: 'Délai', value: m.etaMin ? `${m.etaMin} min` : '—' },
+                    ].map((c) => (
+                      <View key={c.label} className="flex-1 items-center gap-0.5">
+                        <Feather name={c.icon as 'clock'} size={14} color={colors.brand500} />
+                        <AppText className="font-sans-bold text-ink" style={{ fontSize: 13 }}>
+                          {c.value}
+                        </AppText>
+                        <AppText
+                          variant="caption"
+                          className="text-ink-faint"
+                          style={{ fontSize: 10.5 }}
+                        >
+                          {c.label}
+                        </AppText>
+                      </View>
+                    ))}
                   </View>
                   <View className="flex-row gap-2">
                     <View className="flex-1">

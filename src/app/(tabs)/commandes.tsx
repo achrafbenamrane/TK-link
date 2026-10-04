@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 
 import { CourierEarningsScreen } from '@/features/courier';
@@ -15,6 +16,7 @@ import { LOCAL_MERCHANT_DEAL_IDS, MerchantOrdersScreen, OrdersScreen } from '@/f
  * se trouve dans « Grossistes », depuis le tableau de bord.
  */
 export default function CommandesRoute() {
+  const router = useRouter();
   const role = useOnboardingStore(selectRole);
   const published = useMerchantStore(selectOffers);
 
@@ -24,5 +26,12 @@ export default function CommandesRoute() {
   );
 
   if (role === 'livreur') return <CourierEarningsScreen />;
-  return role === 'commercant' ? <MerchantOrdersScreen dealIds={dealIds} /> : <OrdersScreen />;
+  return role === 'commercant' ? (
+    <MerchantOrdersScreen
+      dealIds={dealIds}
+      onHandover={(orderId) => router.push({ pathname: '/remise/[id]', params: { id: orderId } })}
+    />
+  ) : (
+    <OrdersScreen />
+  );
 }

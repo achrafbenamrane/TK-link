@@ -36,6 +36,8 @@ export type Mission = {
   totalEur: number;
   /** Absente quand on ne la connaît pas : on n'invente pas de kilomètres. */
   distanceKm: number | null;
+  /** Délai estimé en minutes — renseigné seulement par les missions d'exemple. */
+  etaMin?: number;
 };
 
 const MissionSchema = z.object({
@@ -46,6 +48,7 @@ const MissionSchema = z.object({
   itemCount: z.number().int().nonnegative().default(0),
   totalEur: z.number().nonnegative().default(0),
   distanceKm: z.number().nonnegative().nullable().default(null),
+  etaMin: z.number().nonnegative().optional(),
 });
 
 const DeliveredSchema = z.object({

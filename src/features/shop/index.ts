@@ -40,6 +40,7 @@ export { BiometricsScreen } from './ui/biometrics-screen';
 export { InvoicesScreen } from './ui/invoices-screen';
 export { AddressesScreen } from './ui/addresses-screen';
 export { MerchantOrdersScreen } from './ui/merchant-orders-screen';
+export { HandoverScreen, type HandoverCourier } from './ui/handover-screen';
 export { MerchantDetailScreen } from './ui/merchant-detail-screen';
 export { useShopStore, selectCartCount, selectCartSubtotal } from './model/store';
 export { getDeal, getMerchant, MERCHANTS } from './model/catalog';

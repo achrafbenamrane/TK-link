@@ -10,6 +10,7 @@ export { CourierSetupScreen } from './ui/courier-setup-screen';
 export { CourierHomeScreen } from './ui/courier-home-screen';
 export { CourierEarningsScreen } from './ui/courier-earnings-screen';
 export { CourierAccountScreen } from './ui/courier-account-screen';
+export { DEMO_MISSIONS, isDemoMission } from './lib/demo';
 export { useCourierStore, selectActive, selectHistory, type Mission } from './model/store';
 export {
   VEHICLES,

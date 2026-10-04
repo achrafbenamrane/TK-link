@@ -195,6 +195,8 @@ function CourierHome() {
       onPickedUp={(orderId) => setOrderStatus(orderId, 'en_livraison')}
       onDelivered={(orderId) => setOrderStatus(orderId, 'livree')}
       onOpenSetup={() => router.push('/devenir-livreur')}
+      // Démonstration au client : des missions d'exemple tant qu'aucune vraie course n'existe.
+      showExamples
     />
   );
 }
