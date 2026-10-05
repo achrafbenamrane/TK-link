@@ -30,6 +30,16 @@ or deletes stale ones. Newest first; keep entries one line each:
   loop → crash. Subscribe to the raw slice and derive with `useMemo`, or wrap
   with `useShallow`. Selectors returning `.length`/`.reduce` (a number) are safe.
 
+- Après `npx expo install` d'un module natif (expo-camera, expo-video…), le serveur Metro
+  garde son ancien cache : « Unable to resolve … » alors que le fichier existe. Relancer
+  `npx expo start --clear`. Le même module exige un nouveau build natif (EAS) : un APK
+  construit avant l'installation n'a pas le module.
+- Le navigateur n'a ni empreinte, ni caméra, ni Mapbox : la biométrie rend « indisponible »
+  (le démo propose un contournement), `QrScanner` affiche son repli et `RouteMap` son dessin.
+  Ce qui s'y voit n'est pas la preuve que le téléphone fonctionne.
+- `assets/videos/*.mp4` sont des diaporamas de démonstration (`scripts/make-demo-videos.mjs`),
+  dont l'un tiré de photos non libres : à retirer avant toute publication (voir CREDITS.md).
+
 ## Wishlist (pull when convenient)
 
 - FlashList adoption for long lists (when a real long list exists).

@@ -99,11 +99,19 @@ enforces).
 - **Owner :** squad produit TK LINK
 - **Flow :** aucun — couvert par `courier/__tests__/courier.test.tsx`.
 - **Journey :** « Devenir livreur » → inscription → justificatifs → vérification
-  (simulée en démo) → biométrie → en ligne → accepter une mission → code de remise
-  donné par le commerçant → livraison avec preuve photo → revenus.
-- **Edge cases agents must try :** mauvais code de remise, remise sans preuve,
-  passer hors ligne en pleine mission, gain affiché « dès 3,00 € » tant que la
-  zone de base n’est pas définie.
+  (simulée en démo) → biométrie → accueil (résumé du jour) → « Passer disponible » →
+  onglet Missions : accepter → mission active → « Récupérer la commande » : empreinte,
+  puis code à 4 chiffres ou QR de l’étiquette → navigation → « J’arrive chez le client »
+  → validation finale par le code à 6 chiffres (ou QR) du client → « Livraison confirmée ».
+  Les onglets Carte et Messages et le bouton « Historique » font partie du parcours.
+- **Edge cases agents must try :** retrait sans empreinte (refusé, même avec le bon
+  code), empreinte non reconnue, téléphone sans empreinte enregistrée (une vraie
+  course est bloquée ; seule une mission d’exemple propose « Démo »), mauvais code de
+  remise ou mauvais code client, passer hors ligne en pleine mission, gain affiché
+  « dès 3,00 € » tant que la zone de base n’est pas définie, l’identité du livreur
+  qui s’affiche sur l’écran de remise du commerçant (même appareil en démo).
+- **À vérifier sur téléphone, pas en navigateur :** le scan du QR (caméra), la
+  biométrie réelle, la carte Mapbox, la lecture de la vidéo de la vitrine.
 
 ## Template for new CUJs
 
