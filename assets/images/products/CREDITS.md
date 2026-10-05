@@ -52,3 +52,11 @@ Ces images sont des **bouche-trous**. Le CDC §3.2 et §18 prévoient que le
 commerçant ajoute sa propre photo au formulaire d’offre : le jour où de vrais
 commerçants publient, ce dossier se vide. Pour en ajouter ou en remplacer une,
 voir [`docs/product/photos-produit.md`](../../../docs/product/photos-produit.md).
+
+## Vidéos de démonstration (`assets/videos/`)
+
+`techno-capitole.mp4` et `petit-toulousain.mp4` sont des diaporamas de dix secondes fabriqués par
+`scripts/make-demo-videos.mjs` à partir des photos ci-dessus (casque et tablette : CC0 ;
+cassoulet, pizza, viennoiseries : **non libres**, démonstration seulement). Ce ne sont pas des
+vidéos de commerçants. **À retirer avant toute publication**, avec les huit photos non libres.
+

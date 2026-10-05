@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@/shared/testing/render';
 
+import { demoShowcase, videoSource } from '../lib/showcase';
 import { DEALS } from '../model/catalog';
 import { useShopStore } from '../model/store';
 import { MerchantDetailScreen } from '../ui/merchant-detail-screen';
@@ -96,5 +97,40 @@ describe('<MerchantDetailScreen />', () => {
       />,
     );
     expect(screen.getByTestId('merchant-detail-missing')).toBeTruthy();
+  });
+});
+
+describe('<MerchantDetailScreen /> — la vidéo du magasin', () => {
+  it('montre une vignette, puis lance le lecteur au premier appui', () => {
+    mount({
+      profile: { presentation: '', photos: [], videos: ['file:///v.mp4'], status: 'Ouvert' },
+    });
+    // Rien n'est chargé avant que le client ne le demande.
+    expect(screen.queryByTestId('merchant-video-player')).toBeNull();
+
+    fireEvent.press(screen.getByTestId('merchant-video-play'));
+    expect(screen.getByTestId('merchant-video-player')).toBeTruthy();
+    expect(screen.queryByTestId('merchant-video-play')).toBeNull();
+  });
+
+  it('la vitrine d’exemple de Techno Capitole a sa vidéo, son portfolio et son téléphone', () => {
+    const showcase = demoShowcase('m_techno')!;
+    mount({ merchantId: 'm_techno', profile: showcase.profile, phone: showcase.phone });
+    expect(screen.getByTestId('merchant-video')).toBeTruthy();
+    expect(screen.getByText('Techno Capitole')).toBeTruthy();
+  });
+});
+
+describe('vitrines d’exemple', () => {
+  it('seule Techno Capitole en a une, et sa vidéo est une clé du dépôt', () => {
+    expect(demoShowcase('m_techno')?.profile.videos).toEqual(['demo-techno']);
+    expect(demoShowcase('m_inconnu')).toBeUndefined();
+  });
+
+  it('résout les clés d’exemple, l’ancien « demo » et l’adresse d’un commerçant', () => {
+    expect(videoSource('demo-techno')).toBe(videoSource('demo-techno'));
+    expect(videoSource('demo')).toBe(videoSource('demo-resto'));
+    expect(videoSource('demo-techno')).not.toBe(videoSource('demo-resto'));
+    expect(videoSource('file:///v.mp4')).toEqual({ uri: 'file:///v.mp4' });
   });
 });

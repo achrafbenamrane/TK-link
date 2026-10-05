@@ -5,10 +5,13 @@ import { Linking, Pressable, ScrollView, Share, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen, ThemeToggle } from '@/shared/ui';
+import { ShopVideo } from '@/shared/ui/shop-video';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { FULFILMENT_LABEL, FULFILMENTS } from '../lib/order-status';
+import { videoSource } from '../lib/showcase';
 import { DEALS, getMerchant } from '../model/catalog';
+import { productImageUri } from '../model/product-images';
 import type { Deal } from '../model/schema';
 import { useShopStore } from '../model/store';
 import { Countdown } from './components/countdown';
@@ -345,21 +348,14 @@ export function MerchantDetailScreen({
         {video ? (
           <View className="gap-2">
             <AppText className="font-sans-bold text-ink">Vidéo du magasin</AppText>
-            <View
+            <ShopVideo
               testID="merchant-video"
-              className="h-40 items-center justify-center overflow-hidden rounded-card border border-brand-500 bg-surface-inverse"
-            >
-              {profile?.photos[0] ? (
-                <Image
-                  source={{ uri: profile.photos[0] }}
-                  style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.55 }}
-                  contentFit="cover"
-                />
-              ) : null}
-              <View className="h-14 w-14 items-center justify-center rounded-pill bg-brand-500">
-                <Feather name="play" size={24} color="#FFFFFF" />
-              </View>
-            </View>
+              source={videoSource(video)}
+              poster={
+                profile?.photos[0] ??
+                (deals[0] ? productImageUri(deals[0].id) || undefined : undefined)
+              }
+            />
           </View>
         ) : null}
 

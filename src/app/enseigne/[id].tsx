@@ -10,7 +10,12 @@ import {
   useMerchantLoyaltyStore,
 } from '@/features/loyalty';
 import { openStatus, selectProfile, useMerchantStore } from '@/features/merchant';
-import { LOCAL_MERCHANT_ID, MerchantDetailScreen, useShopStore } from '@/features/shop';
+import {
+  demoShowcase,
+  LOCAL_MERCHANT_ID,
+  MerchantDetailScreen,
+  useShopStore,
+} from '@/features/shop';
 
 /**
  * La vitrine d'une enseigne. La boutique, la fidélité et l'espace commerçant ne se
@@ -34,8 +39,10 @@ export default function EnseigneRoute() {
     progress: goal ? tierProgress(goal, points) : 1,
   };
 
-  // Seule l'enseigne de CET appareil a une vitrine réglée ; les autres viennent du catalogue.
+  // Seule l'enseigne de CET appareil a une vitrine réglée ; les autres viennent du catalogue —
+  // sauf les vitrines d'exemple de la démonstration (vidéo, portfolio).
   const local = merchantId === LOCAL_MERCHANT_ID;
+  const showcase = local ? undefined : demoShowcase(merchantId);
   const profile = local
     ? {
         presentation: shop.presentation,
@@ -44,7 +51,7 @@ export default function EnseigneRoute() {
         status: openStatus(shop.hours, new Date()),
         zone: shop.zone,
       }
-    : undefined;
+    : showcase?.profile;
 
   return (
     <MerchantDetailScreen
@@ -52,6 +59,7 @@ export default function EnseigneRoute() {
       loyalty={loyalty}
       {...(profile ? { profile } : {})}
       {...(local && application?.phone ? { phone: application.phone } : {})}
+      {...(showcase ? { phone: showcase.phone } : {})}
       onOpenLoyalty={() => router.push({ pathname: '/fidelite/[id]', params: { id: merchantId } })}
       onOpenDeal={(dealId) => router.push({ pathname: '/produit/[id]', params: { id: dealId } })}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}

@@ -16,6 +16,7 @@ export { selectOrders } from './model/store';
 export { pointsByMerchant } from './lib/points';
 export { missionOffers, type MissionOffer } from './lib/missions';
 export { useMissionOffers } from './model/use-mission-offers';
+export { demoShowcase, videoSource } from './lib/showcase';
 export {
   isHonoured,
   isMerchantOrder,

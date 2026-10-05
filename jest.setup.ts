@@ -11,6 +11,22 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 );
 
 /**
+ * Lecteur vidéo : le module natif n'existe pas sous Jest. `useVideoPlayer` rend un lecteur factice
+ * et `VideoView` une simple vue, assez pour vérifier qu'une vidéo est montée et lancée.
+ */
+jest.mock('expo-video', () => {
+  const { View } = require('react-native');
+  return {
+    useVideoPlayer: (_source: unknown, setup?: (p: Record<string, unknown>) => void) => {
+      const player = { loop: false, play: jest.fn(), pause: jest.fn() };
+      setup?.(player);
+      return player;
+    },
+    VideoView: View,
+  };
+});
+
+/**
  * Routeur par défaut.
  *
  * `BackButton` est désormais posé sur tous les écrans empilés — il tire donc

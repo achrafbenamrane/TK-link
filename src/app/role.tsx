@@ -466,7 +466,7 @@ function seedDemo(role: Role) {
               productImageUri('d_pizza'),
               productImageUri('d_brunch'),
             ],
-            videos: ['demo'],
+            videos: ['demo-resto'],
             zone: 'Toulouse centre · rayon 5 km',
             modes: ['touch-collect', 'livraison'],
             hours: {
