@@ -167,7 +167,8 @@ export function ProSetupScreen({
         {step === 'infos' ? (
           <View className="gap-4">
             <AppText variant="caption">
-              SIRET, identité, adresse et coordonnées bancaires : TK LINK contrôle votre entreprise
+              SIRET, identité, adresse et coordonnées bancaires : TK LINK contrôle votre{' '}
+              {PRO_COPY[role].entity}
               avant l’ouverture du {PRO_COPY[role].dashboard}.
             </AppText>
 
@@ -194,7 +195,13 @@ export function ProSetupScreen({
               ) : null}
             </View>
 
-            {field('address', 'Adresse de l’entreprise', addr, setAddr, '8 rue des Carmes, 31000')}
+            {field(
+              'address',
+              `Adresse ${role === 'grossiste' ? 'de l’entreprise' : 'du commerce'}`,
+              addr,
+              setAddr,
+              '8 rue des Carmes, 31000',
+            )}
             {field('iban', 'IBAN (coordonnées bancaires)', iban, setIban, 'FR76 …')}
 
             <View className="gap-1.5">
@@ -262,12 +269,12 @@ export function ProSetupScreen({
               </View>
               <AppText testID="supplier-verification-status" className="text-center font-sans-bold">
                 {supplier.status === 'valide'
-                  ? 'Votre entreprise est vérifiée'
+                  ? `Votre ${PRO_COPY[role].entity} est vérifié${role === 'grossiste' ? 'e' : ''}`
                   : 'Votre dossier est en cours de contrôle'}
               </AppText>
               <AppText variant="caption" className="text-center">
-                TK LINK contrôle les informations de votre entreprise avant d’ouvrir la publication
-                d’offres. Vous serez prévenu dès que c’est fait.
+                TK LINK contrôle les informations de votre {PRO_COPY[role].entity} avant d’ouvrir la
+                publication d’offres. Vous serez prévenu dès que c’est fait.
               </AppText>
             </View>
 

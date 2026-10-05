@@ -17,7 +17,7 @@ import {
 } from '../model/store';
 
 export type WholesalerTarget =
-  'new' | 'orders' | 'catalog' | 'documents' | 'payouts' | 'account' | 'setup';
+  'new' | 'orders' | 'catalog' | 'offers' | 'documents' | 'payouts' | 'account' | 'setup';
 
 type Props = {
   /** Le nom de l'entreprise, vérifiée. */
@@ -271,7 +271,7 @@ export function WholesalerDashboardScreen({ companyName, area, renderAvatar, onO
             <AppText variant="title" className="text-base">
               Offres en cours
             </AppText>
-            <Pressable accessibilityRole="button" hitSlop={8} onPress={() => onOpen('catalog')}>
+            <Pressable accessibilityRole="button" hitSlop={8} onPress={() => onOpen('offers')}>
               <AppText className="font-sans-semibold text-accent-deep" style={{ fontSize: 13 }}>
                 Voir tout
               </AppText>

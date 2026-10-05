@@ -72,3 +72,16 @@ describe('l’identité affichée est celle de l’utilisateur', () => {
     expect(within(header).queryByText(/Toulouse|Empalot|Farid/)).toBeNull();
   });
 });
+
+describe('<ProfileScreen /> — l’espace pro parle du bon métier', () => {
+  it('un grossiste lit « offres pro » et « commandes des commerçants », pas « ventes flash »', () => {
+    render(<ProfileScreen canPublishOffers wholesaler />);
+    expect(screen.getByText(/Vos offres pro, les commandes des commerçants/)).toBeTruthy();
+    expect(screen.queryByText(/ventes flash/)).toBeNull();
+  });
+
+  it('un commerçant lit « ventes flash »', () => {
+    render(<ProfileScreen canPublishOffers />);
+    expect(screen.getByText(/Vos ventes flash/)).toBeTruthy();
+  });
+});

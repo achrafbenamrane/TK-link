@@ -77,6 +77,8 @@ type MerchantState = {
   orderLot: (offerId: string, qty: number, nowMs?: number) => OrderResult;
   /** Retire une offre avant son terme. */
   takeOffline: (id: string) => void;
+  /** Le grossiste règle le stock d'un lot (paramétrage du catalogue). Jamais sous zéro. */
+  adjustStock: (id: string, delta: number) => void;
   /** Le grossiste fait avancer une commande reçue d'un cran — jamais en arrière, jamais deux fois. */
   advanceWholesaleOrder: (orderId: string) => boolean;
   /** Coche ou décoche un geste du bon de préparation (prélevé, emballé, étiqueté). */
@@ -125,7 +127,11 @@ export const useMerchantStore = create<MerchantState>()(
         // une idée n'est pas la publier. Facturer le brouillon découragerait de
         // préparer ses ventes à l'avance — exactement ce qu'on veut encourager.
         const brouillon = draft.state === 'brouillon';
-        if (!brouillon && !canPublish(s.used, s.purchased)) return { ok: false, reason: 'quota' };
+        // Le quota d'opérations est celui des FLASH du commerçant (CDC §9). Une offre pro de
+        // grossiste n'est pas un Flash : elle ne le consomme pas et n'en dépend pas.
+        const b2b = draft.audience === 'commercants';
+        const counted = !brouillon && !b2b;
+        if (counted && !canPublish(s.used, s.purchased)) return { ok: false, reason: 'quota' };
 
         const offer: PublishedOffer = {
           id: makeId(),
@@ -151,13 +157,26 @@ export const useMerchantStore = create<MerchantState>()(
           minQty: draft.minQty ?? 1,
         };
 
-        set({ offers: [offer, ...s.offers], used: brouillon ? s.used : s.used + 1 });
+        set({ offers: [offer, ...s.offers], used: counted ? s.used + 1 : s.used });
         return { ok: true, offer };
       },
 
       takeOffline: (id) =>
         set((s) => ({
           offers: s.offers.map((o) => (o.id === id ? { ...o, offline: true } : o)),
+        })),
+
+      adjustStock: (id, delta) =>
+        set((s) => ({
+          offers: s.offers.map((o) =>
+            o.id === id
+              ? {
+                  ...o,
+                  stock: Math.max(o.stock + delta, 0),
+                  stockLeft: Math.max(o.stockLeft + delta, 0),
+                }
+              : o,
+          ),
         })),
 
       sellOne: (id) =>

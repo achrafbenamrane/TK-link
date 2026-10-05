@@ -15,9 +15,11 @@ import {
 } from '../lib/wholesale-orders';
 import { EMPTY_SUPPLIER, WholesaleOrderSchema } from '../model/schema';
 import { useMerchantStore } from '../model/store';
+import { MerchantOffersScreen } from '../ui/offers-screen';
 import { ProLocked } from '../ui/pro-locked';
 import { ProStatusBanner } from '../ui/pro-status-banner';
 import { ProSetupScreen } from '../ui/pro-setup-screen';
+import { WholesalerCatalogScreen } from '../ui/wholesaler-catalog-screen';
 import { PublishForm } from '../ui/publish-form';
 import { WholesalerDashboardScreen } from '../ui/wholesaler-dashboard-screen';
 import { WholesalerOrdersScreen } from '../ui/wholesaler-orders-screen';
@@ -296,5 +298,92 @@ describe('dossier pro du commerçant — mêmes étapes 3 à 6 que le grossiste'
   it('s’efface une fois le dossier validé', () => {
     render(<ProStatusBanner status="valide" role="commercant" onPress={jest.fn()} />);
     expect(screen.queryByTestId('pro-setup-banner')).toBeNull();
+  });
+});
+
+describe('le grossiste n’est pas un commerçant', () => {
+  const lot = (id: string) => ({
+    id,
+    title: 'Cagettes',
+    category: 'restauration' as const,
+    priceCents: 4500,
+    oldPriceCents: 6800,
+    stock: 10,
+    stockLeft: 10,
+    durationMinutes: 1440,
+    description: '',
+    publishedAt: 1,
+    startsAt: 0,
+    state: 'publiee' as const,
+    offline: false,
+    audience: 'commercants' as const,
+    photoUri: '',
+    modes: ['touch-collect' as const, 'livraison' as const],
+    seller: 'Grossiste Occitan',
+    minQty: 3,
+  });
+  const draft = {
+    title: 'Cagettes',
+    category: 'restauration' as const,
+    priceCents: 4500,
+    oldPriceCents: 6800,
+    stock: 10,
+    durationMinutes: 1440,
+    audience: 'commercants' as const,
+  };
+
+  it('une offre pro ne consomme pas le quota des Flash et n’en dépend pas', () => {
+    useMerchantStore.setState({ used: 5, purchased: 0 });
+    const res = useMerchantStore.getState().publish(draft, 'G');
+    expect(res.ok).toBe(true);
+    expect(useMerchantStore.getState().used).toBe(5);
+
+    // Le même quota épuisé bloque, lui, un Flash de commerçant.
+    expect(useMerchantStore.getState().publish({ ...draft, audience: 'clients' }, 'K').ok).toBe(
+      false,
+    );
+  });
+
+  it('l’écran des lots ne parle ni de quota Flash ni d’opérations offertes', () => {
+    useMerchantStore.setState({ offers: [lot('l1')], used: 5 });
+    render(<MerchantOffersScreen audience="commercants" />);
+    expect(screen.getByTestId('merchant-live-lots')).toHaveTextContent('1');
+    expect(screen.queryByText(/offerte/)).toBeNull();
+    expect(screen.queryByText(/CDC/)).toBeNull();
+    expect(screen.getByText('Publier un lot')).toBeTruthy();
+    // Un lot s'annonce « Lot · min. 3 », pas « Resto ».
+    expect(screen.getByTestId('merchant-offer-l1')).toHaveTextContent(/Lot · min\. 3/);
+  });
+
+  it('règle le stock d’un lot, jamais sous zéro', () => {
+    useMerchantStore.setState({ offers: [lot('l1')] });
+    const { adjustStock } = useMerchantStore.getState();
+    adjustStock('l1', 5);
+    expect(useMerchantStore.getState().offers[0]?.stockLeft).toBe(15);
+    adjustStock('l1', -100);
+    expect(useMerchantStore.getState().offers[0]?.stockLeft).toBe(0);
+  });
+
+  it('paramètre le catalogue : stocks, livraison (retrait ou expédition), zone', () => {
+    useMerchantStore.setState({ offers: [lot('l1')] });
+    render(<WholesalerCatalogScreen />);
+    expect(screen.getByText('Retrait sur place')).toBeTruthy();
+    expect(screen.getByText('Expédition')).toBeTruthy();
+    expect(screen.queryByText('Touch & Collect')).toBeNull();
+
+    fireEvent.press(screen.getByTestId('wholesaler-lot-l1-inc'));
+    expect(screen.getByTestId('wholesaler-lot-l1-stock')).toHaveTextContent('11');
+
+    fireEvent.changeText(screen.getByTestId('wholesaler-zone'), 'Occitanie');
+    fireEvent(screen.getByTestId('wholesaler-mode-touch-collect'), 'valueChange', false);
+    fireEvent(screen.getByTestId('wholesaler-mode-livraison'), 'valueChange', false);
+    fireEvent.press(screen.getByTestId('wholesaler-catalog-save'));
+    expect(screen.getByTestId('wholesaler-modes-error')).toBeTruthy();
+
+    fireEvent(screen.getByTestId('wholesaler-mode-livraison'), 'valueChange', true);
+    fireEvent.press(screen.getByTestId('wholesaler-catalog-save'));
+    expect(screen.getByTestId('wholesaler-catalog-saved')).toBeTruthy();
+    expect(useMerchantStore.getState().profile.zone).toBe('Occitanie');
+    expect(useMerchantStore.getState().profile.modes).toEqual(['livraison']);
   });
 });

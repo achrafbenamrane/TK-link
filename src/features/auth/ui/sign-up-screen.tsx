@@ -68,6 +68,12 @@ const MODE_LABEL: Record<ShopMode, string> = {
   livraison: 'Livraison',
 };
 
+/** Un grossiste retire ou expédie : « Touch & Collect » est le mot du commerce. */
+const WHOLESALE_MODE_LABEL: Record<ShopMode, string> = {
+  'touch-collect': 'Retrait',
+  livraison: 'Expédition',
+};
+
 const PRO_TITLE: Record<'commercant' | 'grossiste', { title: string; subtitle: string }> = {
   commercant: {
     title: 'Créer mon compte commerçant',
@@ -128,6 +134,7 @@ export function SignUpScreen({
   const pro = needsSiret(role);
   const courier = role === 'livreur';
   const proCopy = PRO_TITLE[role === 'grossiste' ? 'grossiste' : 'commercant'];
+  const modeLabel = role === 'grossiste' ? WHOLESALE_MODE_LABEL : MODE_LABEL;
   const dense = pro;
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -424,7 +431,7 @@ export function SignUpScreen({
                         testID={`signup-mode-${m}`}
                         accessibilityRole="checkbox"
                         accessibilityState={{ checked: on }}
-                        accessibilityLabel={MODE_LABEL[m]}
+                        accessibilityLabel={modeLabel[m]}
                         onPress={() => toggleMode(m)}
                         className={cn(
                           'h-9 flex-1 flex-row items-center justify-center gap-1.5 rounded-control border',
@@ -443,7 +450,7 @@ export function SignUpScreen({
                           )}
                           style={{ fontSize: 12 }}
                         >
-                          {MODE_LABEL[m]}
+                          {modeLabel[m]}
                         </AppText>
                       </Pressable>
                     );

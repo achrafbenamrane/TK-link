@@ -118,6 +118,19 @@ laisserait croire que TKLINK garde l’empreinte serait un écart grave, pas une
 Le contrôle d’identité des professionnels et des livreurs (étape 4) attend un serveur : l’app
 affiche l’état « en cours de contrôle » et un bouton **Démo** le remplace.
 
+## Grossiste et commerçant ne se mélangent pas
+
+Ils partagent le dossier pro (étapes 3 à 6 des deux cartes sont identiques) et rien d’autre. Ce
+qui reste propre à chacun, et que les écrans doivent garder :
+
+| Sujet     | Commerçant                                 | Grossiste                                                            |
+| --------- | ------------------------------------------ | -------------------------------------------------------------------- |
+| Étape 7   | Boutique : horaires, zone, Touch & Collect | Catalogue : stocks, lots, prix pro, retrait / expédition             |
+| Offre     | Flash (15 min à 2 h), quota d’opérations   | Offre pro (2 h à 7 jours), minimum de commande, **sans quota Flash** |
+| Mots      | Touch & Collect, Livraison, ventes flash   | Retrait, Expédition, lots, commandes des commerçants                 |
+| Commandes | Prête → remise client ou livreur           | Bon de préparation → expédiée → livrée                               |
+| Fidélité  | Paliers de fidélité                        | Aucune                                                               |
+
 ## Ce que les affiches ajoutent
 
 Les quatre affiches commerciales montrent la carte Flash telle que le client la voit :

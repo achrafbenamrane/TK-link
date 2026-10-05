@@ -37,6 +37,15 @@ const DEMO_SHOP = {
   siret: '44306184100047',
   address: '8 rue des Carmes, 31000 Toulouse',
 };
+/** Le grossiste de démonstration n'est pas le commerce de démonstration : autre entreprise, autre SIRET. */
+const DEMO_WHOLESALER = {
+  shopName: 'Grossiste Occitan',
+  category: 'restauration',
+  siret: '51209876500013',
+  address: '14 avenue des Pyrénées, 31600 Muret',
+  location: 'Muret',
+  email: 'contact@grossiste-occitan.fr',
+};
 
 export default function SignUpRoute() {
   const router = useRouter();
@@ -85,7 +94,11 @@ export default function SignUpRoute() {
     <SignUpScreen
       role={role}
       initialDraft={
-        role === 'commercant' || role === 'grossiste' ? { ...DEMO_DRAFT, ...DEMO_SHOP } : DEMO_DRAFT
+        role === 'grossiste'
+          ? { ...DEMO_DRAFT, ...DEMO_WHOLESALER }
+          : role === 'commercant'
+            ? { ...DEMO_DRAFT, ...DEMO_SHOP }
+            : DEMO_DRAFT
       }
       initialAccepted
       renderAvatar={() => <AvatarPicker size={48} />}

@@ -87,6 +87,7 @@ function DefaultProfil() {
   return (
     <ProfileScreen
       canPublishOffers={canPublishOffers(role)}
+      wholesaler={role === 'grossiste'}
       renderAvatar={() => <AvatarView avatar={avatar} size={56} />}
       name={firstName}
       subtitle={ROLE_LABEL[role]}

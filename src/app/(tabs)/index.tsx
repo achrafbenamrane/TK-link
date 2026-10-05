@@ -218,7 +218,8 @@ function WholesalerHome() {
       onOpen={(target) => {
         const href = {
           new: '/flash',
-          catalog: '/flash',
+          offers: '/flash',
+          catalog: '/catalogue',
           orders: '/commandes',
           documents: '/factures',
           payouts: '/versements',

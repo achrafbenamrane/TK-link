@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 
 import { useCourierStore } from '@/features/courier';
 import { DEFAULT_TIERS, useMerchantLoyaltyStore } from '@/features/loyalty';
-import { useMerchantStore } from '@/features/merchant';
+import { defaultHours, useMerchantStore } from '@/features/merchant';
 import { RoleScreen, useOnboardingStore } from '@/features/onboarding';
 import { useReferralStore } from '@/features/referral';
 import { LOCAL_MERCHANT_DEAL_IDS, productImageUri, useShopStore } from '@/features/shop';
@@ -415,28 +415,38 @@ function seedDemo(role: Role) {
           ],
     used: 3,
     purchased: 0,
-    profile: {
-      presentation:
-        'Cuisine du Sud-Ouest depuis 1998, au cœur des Carmes. Nous vendons à prix réduit ce qui doit partir dans la journée : plats mijotés, viennoiseries, pizzas.',
-      photos: [
-        productImageUri('d_cassoulet'),
-        productImageUri('d_viennoiseries'),
-        productImageUri('d_pizza'),
-        productImageUri('d_brunch'),
-      ],
-      videos: ['demo'],
-      zone: 'Toulouse centre · rayon 5 km',
-      modes: ['touch-collect', 'livraison'],
-      hours: {
-        lundi: { open: true, from: '09:00', to: '19:00' },
-        mardi: { open: true, from: '09:00', to: '19:00' },
-        mercredi: { open: true, from: '09:00', to: '19:00' },
-        jeudi: { open: true, from: '09:00', to: '19:00' },
-        vendredi: { open: true, from: '09:00', to: '21:00' },
-        samedi: { open: true, from: '10:00', to: '21:00' },
-        dimanche: { open: false, from: '09:00', to: '18:00' },
-      },
-    },
+    profile:
+      role === 'grossiste'
+        ? {
+            presentation: '',
+            photos: [],
+            videos: [],
+            zone: 'Occitanie · expédition sous 48 h',
+            modes: ['touch-collect', 'livraison'] as ('touch-collect' | 'livraison')[],
+            hours: defaultHours(),
+          }
+        : {
+            presentation:
+              'Cuisine du Sud-Ouest depuis 1998, au cœur des Carmes. Nous vendons à prix réduit ce qui doit partir dans la journée : plats mijotés, viennoiseries, pizzas.',
+            photos: [
+              productImageUri('d_cassoulet'),
+              productImageUri('d_viennoiseries'),
+              productImageUri('d_pizza'),
+              productImageUri('d_brunch'),
+            ],
+            videos: ['demo'],
+            zone: 'Toulouse centre · rayon 5 km',
+            modes: ['touch-collect', 'livraison'],
+            hours: {
+              lundi: { open: true, from: '09:00', to: '19:00' },
+              mardi: { open: true, from: '09:00', to: '19:00' },
+              mercredi: { open: true, from: '09:00', to: '19:00' },
+              jeudi: { open: true, from: '09:00', to: '19:00' },
+              vendredi: { open: true, from: '09:00', to: '21:00' },
+              samedi: { open: true, from: '10:00', to: '21:00' },
+              dimanche: { open: false, from: '09:00', to: '18:00' },
+            },
+          },
   });
 
   // --- Livreur : compte validé, en ligne, quelques courses livrées ----------

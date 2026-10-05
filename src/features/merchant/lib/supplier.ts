@@ -20,10 +20,11 @@ export type ProRole = 'commercant' | 'grossiste';
 
 export const PRO_COPY: Record<
   ProRole,
-  { account: string; dashboard: string; publish: string; locked: string }
+  { account: string; entity: string; dashboard: string; publish: string; locked: string }
 > = {
   commercant: {
     account: 'commerçant',
+    entity: 'commerce',
     dashboard: 'tableau de bord commerçant',
     publish: 'la publication de vos Flash',
     locked:
@@ -31,6 +32,7 @@ export const PRO_COPY: Record<
   },
   grossiste: {
     account: 'fournisseur',
+    entity: 'entreprise',
     dashboard: 'tableau de bord fournisseur',
     publish: 'la publication d’offres pro',
     locked:

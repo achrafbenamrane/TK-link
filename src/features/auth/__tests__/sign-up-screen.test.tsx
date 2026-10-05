@@ -204,3 +204,18 @@ describe('<SignUpScreen /> — une seule page', () => {
     expect(screen.queryByTestId('signup-next')).toBeNull();
   });
 });
+
+describe('<SignUpScreen /> — le grossiste parle de retrait et d’expédition', () => {
+  it('ne propose pas « Touch & Collect », mot du commerce', () => {
+    render(<SignUpScreen role="grossiste" />);
+    expect(screen.getByLabelText('Retrait')).toBeTruthy();
+    expect(screen.getByLabelText('Expédition')).toBeTruthy();
+    expect(screen.queryByLabelText('Touch & Collect')).toBeNull();
+  });
+
+  it('garde « Touch & Collect » et « Livraison » pour le commerçant', () => {
+    render(<SignUpScreen role="commercant" />);
+    expect(screen.getByLabelText('Touch & Collect')).toBeTruthy();
+    expect(screen.getByLabelText('Livraison')).toBeTruthy();
+  });
+});

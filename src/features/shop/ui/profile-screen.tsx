@@ -52,6 +52,8 @@ type ProfileScreenProps = {
    * simplement pas le renvoi vers l'espace pro.
    */
   canPublishOffers?: boolean;
+  /** Un grossiste vend des lots à des commerçants : ses mots ne sont pas ceux des ventes flash. */
+  wholesaler?: boolean;
   /**
    * L'avatar CHOISI à l'inscription, rendu par la route.
    *
@@ -90,6 +92,7 @@ type ProfileScreenProps = {
 
 export function ProfileScreen({
   canPublishOffers = false,
+  wholesaler = false,
   onSignOut,
   onOpenTiers,
   renderAvatar,
@@ -183,8 +186,9 @@ export function ProfileScreen({
               <AppText className="font-sans-bold text-ink-inverse">Espace professionnel</AppText>
             </View>
             <AppText variant="caption" className="text-ink-inverse/70">
-              Vos ventes flash, vos commandes reçues et votre facturation se gèrent sur le web —
-              écran large, clavier, export comptable.
+              {wholesaler
+                ? 'Vos offres pro, les commandes des commerçants et votre facturation se gèrent sur le web — écran large, clavier, export comptable.'
+                : 'Vos ventes flash, vos commandes reçues et votre facturation se gèrent sur le web — écran large, clavier, export comptable.'}
             </AppText>
             <View className="mt-1 flex-row items-center gap-2 rounded-control bg-ink-inverse/10 px-3 py-2.5">
               <Feather name="link" size={14} color={colors.inkInverse} />

@@ -9,6 +9,7 @@ import { useColors } from '@/shared/theme/theme-provider';
 
 import {
   canPublish,
+  COMMISSION_PCT,
   commissionCents,
   formatCents,
   freeLeft,
@@ -45,7 +46,7 @@ const COPY: Record<Audience, { title: string; subtitle: string; cta: string; emp
   },
   commercants: {
     title: 'Mes lots',
-    subtitle: 'Ce que les commerçants voient — CDC §20.',
+    subtitle: 'Ce que les commerçants voient dans l’app.',
     cta: 'Publier un lot',
     empty:
       'Publiez vos fins de série : les commerçants de la plateforme les verront immédiatement.',
@@ -93,11 +94,14 @@ export function MerchantOffersScreen({
   const publish = useMerchantStore((s) => s.publish);
   const takeOffline = useMerchantStore((s) => s.takeOffline);
 
+  const wholesale = audience === 'commercants';
   const left = operationsLeft(used, purchased);
   const free = freeLeft(used);
-  const allowed = canPublish(used, purchased);
+  // Le quota ne vaut que pour les Flash du commerçant : un lot de grossiste n'en dépend pas.
+  const allowed = wholesale || canPublish(used, purchased);
 
   const revenue = useMemo(() => offers.reduce((sum, o) => sum + soldCents(o), 0), [offers]);
+  const liveCount = offers.filter((o) => o.state === 'publiee' && !o.offline).length;
 
   const onPublish = (draft: OfferDraft) => {
     const result = publish({ ...draft, audience }, seller);
@@ -169,29 +173,51 @@ export function MerchantOffersScreen({
           </View>
         </View>
 
-        {/* Le quota — CDC §9 */}
+        {/* Le quota — CDC §9 (Flash du commerçant) ou, pour le grossiste, ses lots en ligne */}
         <View className="mx-5 gap-3 rounded-card bg-surface-inverse p-4">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-1">
-              <AppText className="font-display text-ink-inverse" style={{ fontSize: 15 }}>
-                {left} opération{left > 1 ? 's' : ''} disponible{left > 1 ? 's' : ''}
-              </AppText>
-              <AppText variant="caption" className="mt-0.5 text-ink-inverse/60">
-                {free > 0
-                  ? `Dont ${free} offerte${free > 1 ? 's' : ''} — les 5 premières sont gratuites.`
-                  : 'Vos opérations gratuites sont consommées.'}
-              </AppText>
+          {wholesale ? (
+            <View className="flex-row items-center justify-between">
+              <View className="flex-1">
+                <AppText className="font-display text-ink-inverse" style={{ fontSize: 15 }}>
+                  {liveCount} lot{liveCount > 1 ? 's' : ''} en ligne
+                </AppText>
+                <AppText variant="caption" className="mt-0.5 text-ink-inverse/60">
+                  Commission TK LINK de {COMMISSION_PCT} % déduite de chaque vente.
+                </AppText>
+              </View>
+              <View className="h-12 w-12 items-center justify-center rounded-pill bg-accent">
+                <AppText
+                  testID="merchant-live-lots"
+                  className="font-display text-surface-inverse"
+                  style={{ fontSize: 17 }}
+                >
+                  {liveCount}
+                </AppText>
+              </View>
             </View>
-            <View className="h-12 w-12 items-center justify-center rounded-pill bg-accent">
-              <AppText
-                testID="merchant-quota"
-                className="font-display text-surface-inverse"
-                style={{ fontSize: 17 }}
-              >
-                {left}
-              </AppText>
+          ) : (
+            <View className="flex-row items-center justify-between">
+              <View className="flex-1">
+                <AppText className="font-display text-ink-inverse" style={{ fontSize: 15 }}>
+                  {left} opération{left > 1 ? 's' : ''} disponible{left > 1 ? 's' : ''}
+                </AppText>
+                <AppText variant="caption" className="mt-0.5 text-ink-inverse/60">
+                  {free > 0
+                    ? `Dont ${free} offerte${free > 1 ? 's' : ''} — les 5 premières sont gratuites.`
+                    : 'Vos opérations gratuites sont consommées.'}
+                </AppText>
+              </View>
+              <View className="h-12 w-12 items-center justify-center rounded-pill bg-accent">
+                <AppText
+                  testID="merchant-quota"
+                  className="font-display text-surface-inverse"
+                  style={{ fontSize: 17 }}
+                >
+                  {left}
+                </AppText>
+              </View>
             </View>
-          </View>
+          )}
 
           {revenue > 0 ? (
             <View className="flex-row items-center justify-between border-t border-ink-inverse/15 pt-2.5">
@@ -303,7 +329,9 @@ function OfferCard({
             {offer.title}
           </AppText>
           <AppText variant="caption" className="mt-0.5 text-ink-faint">
-            {CATEGORY_INFO[offer.category].emoji} {CATEGORY_INFO[offer.category].short}
+            {offer.audience === 'commercants'
+              ? `Lot${offer.minQty > 1 ? ` · min. ${offer.minQty}` : ''}`
+              : `${CATEGORY_INFO[offer.category].emoji} ${CATEGORY_INFO[offer.category].short}`}
             {state === 'en-ligne' ? ` · ${timeLabel(secondsLeft(offer, now))}` : ''}
           </AppText>
         </View>
