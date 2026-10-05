@@ -10,6 +10,7 @@ import { useColors } from '@/shared/theme/theme-provider';
 
 import { commissionCents, formatCents, netCents, parseEurosToCents } from '../lib/billing';
 import { pickFlashPhoto } from '../lib/photo';
+import { RECURRENCE_LABEL, RECURRENCES, type Recurrence } from '../lib/recurrence';
 import {
   DURATIONS,
   OFFER_MODES,
@@ -108,6 +109,7 @@ export function PublishForm({
   const [stock, setStock] = useState('');
   const [duration, setDuration] = useState<number>(wholesale ? 1440 : 60);
   const [minQty, setMinQty] = useState('');
+  const [recurrence, setRecurrence] = useState<Recurrence>('aucune');
   const [photoUri, setPhotoUri] = useState('');
   const [modes, setModes] = useState<OfferMode[]>([...OFFER_MODES]);
   const [startIn, setStartIn] = useState<number>(0);
@@ -152,6 +154,7 @@ export function PublishForm({
       modes,
       audience: wholesale ? 'commercants' : 'clients',
       minQty: Number.parseInt(minQty, 10) || 1,
+      recurrence: wholesale ? recurrence : 'aucune',
       // Une intention, pas une date : c'est le store qui horodate.
       startInMinutes: startIn,
       state,
@@ -561,6 +564,40 @@ export function PublishForm({
             style={{ height: 40, fontSize: 13 }}
             accessibilityLabel="Quantité minimale de commande"
           />
+        </View>
+      ) : null}
+
+      {/* CDC V1.1, Grossiste : une offre B2B est ponctuelle ou récurrente. */}
+      {wholesale ? (
+        <View className="gap-1">
+          <Label>Récurrence — republication automatique</Label>
+          <View className="flex-row gap-1.5">
+            {RECURRENCES.map((r) => {
+              const on = recurrence === r;
+              return (
+                <Pressable
+                  key={r}
+                  testID={`publish-recurrence-${r}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}
+                  accessibilityLabel={RECURRENCE_LABEL[r]}
+                  onPress={() => setRecurrence(r)}
+                  className={cn(
+                    'flex-1 items-center rounded-control border py-2',
+                    on ? 'border-brand-500 bg-brand-50' : 'border-line bg-surface-muted',
+                  )}
+                >
+                  <AppText
+                    className={cn('font-sans-semibold', on ? 'text-brand-600' : 'text-ink-muted')}
+                    style={{ fontSize: 11 }}
+                    numberOfLines={1}
+                  >
+                    {RECURRENCE_LABEL[r]}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       ) : null}
 

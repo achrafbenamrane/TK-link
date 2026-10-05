@@ -31,6 +31,7 @@ export function seedWholesaleLots(nowMs: number = Date.now()): PublishedOffer[] 
       modes: ['livraison'],
       seller: 'Grossiste Occitan',
       minQty: 1,
+      recurrence: 'aucune' as const,
     },
     {
       id: 'lot_gobelets',
@@ -51,6 +52,7 @@ export function seedWholesaleLots(nowMs: number = Date.now()): PublishedOffer[] 
       modes: ['livraison'],
       seller: 'Sud Emballage',
       minQty: 1,
+      recurrence: 'aucune' as const,
     },
     {
       id: 'lot_tshirts',
@@ -71,6 +73,7 @@ export function seedWholesaleLots(nowMs: number = Date.now()): PublishedOffer[] 
       modes: ['livraison'],
       seller: 'Textile Garonne',
       minQty: 1,
+      recurrence: 'aucune' as const,
     },
   ];
 }

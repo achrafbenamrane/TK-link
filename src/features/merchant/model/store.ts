@@ -5,6 +5,8 @@ import { makeId } from '@/shared/lib/id';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
 import { canPublish } from '../lib/billing';
+import { dueOccurrence } from '../lib/recurrence';
+import { startOf } from '../lib/offers';
 import { missingSupplierFields, normalizeIban } from '../lib/supplier';
 import { PREP_STEPS, nextWholesaleStatus, type PrepStep } from '../lib/wholesale-orders';
 import { seedWholesaleLots } from './seed';
@@ -77,6 +79,11 @@ type MerchantState = {
   orderLot: (offerId: string, qty: number, nowMs?: number) => OrderResult;
   /** Retire une offre avant son terme. */
   takeOffline: (id: string) => void;
+  /**
+   * Republie les offres récurrentes dont l'occurrence suivante est échue — CDC V1.1, Grossiste.
+   * Renvoie le nombre d'offres republiées. Idempotent : rappeler tout de suite ne republie rien.
+   */
+  republishDue: (nowMs?: number) => number;
   /** Le grossiste règle le stock d'un lot (paramétrage du catalogue). Jamais sous zéro. */
   adjustStock: (id: string, delta: number) => void;
   /** Le grossiste fait avancer une commande reçue d'un cran — jamais en arrière, jamais deux fois. */
@@ -155,6 +162,7 @@ export const useMerchantStore = create<MerchantState>()(
           modes: draft.modes ?? ['touch-collect', 'livraison'],
           seller,
           minQty: draft.minQty ?? 1,
+          recurrence: draft.recurrence ?? 'aucune',
         };
 
         set({ offers: [offer, ...s.offers], used: counted ? s.used + 1 : s.used });
@@ -165,6 +173,29 @@ export const useMerchantStore = create<MerchantState>()(
         set((s) => ({
           offers: s.offers.map((o) => (o.id === id ? { ...o, offline: true } : o)),
         })),
+
+      republishDue: (nowMs = Date.now()) => {
+        const created: PublishedOffer[] = [];
+        const offers = get().offers.map((o) => {
+          if (o.state !== 'publiee' || o.offline || o.recurrence === 'aucune') return o;
+          const at = dueOccurrence(startOf(o), o.recurrence, nowMs);
+          if (at === null) return o;
+          // La nouvelle occurrence reprend l'offre à neuf (stock plein) et porte la récurrence ;
+          // l'ancienne reste dans l'historique, ponctuelle : une seule chaîne vivante.
+          created.push({
+            ...o,
+            id: makeId(),
+            publishedAt: at,
+            startsAt: at,
+            stockLeft: o.stock,
+            offline: false,
+          });
+          return { ...o, recurrence: 'aucune' as const };
+        });
+        if (created.length === 0) return 0;
+        set({ offers: [...created, ...offers] });
+        return created.length;
+      },
 
       adjustStock: (id, delta) =>
         set((s) => ({

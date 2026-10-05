@@ -119,3 +119,24 @@ describe('setOrderStatus — la garde du §11', () => {
     });
   });
 });
+
+describe('<MerchantOrdersScreen /> — ticket de préparation avec QR (CDC V1.1)', () => {
+  it('ouvre le ticket d’une commande payée : lignes et partie détachable', () => {
+    useShopStore.setState({ orders: [order({ id: 'o_t1' })] });
+    render(<MerchantOrdersScreen dealIds={[MINE]} />);
+
+    expect(screen.queryByTestId('merchant-order-o_t1-ticket')).toBeNull();
+    fireEvent.press(screen.getByTestId('merchant-order-o_t1-ticket-toggle'));
+
+    const ticket = screen.getByTestId('merchant-order-o_t1-ticket');
+    expect(ticket).toHaveTextContent(/Plateau de viennoiseries/);
+    expect(ticket).toHaveTextContent(/×2/);
+    expect(ticket).toHaveTextContent(/Partie détachable/);
+  });
+
+  it('pas de ticket une fois la commande prête', () => {
+    useShopStore.setState({ orders: [order({ id: 'o_t2', status: 'prete' })] });
+    render(<MerchantOrdersScreen dealIds={[MINE]} />);
+    expect(screen.queryByTestId('merchant-order-o_t2-ticket-toggle')).toBeNull();
+  });
+});

@@ -131,6 +131,21 @@ qui reste propre à chacun, et que les écrans doivent garder :
 | Commandes | Prête → remise client ou livreur           | Bon de préparation → expédiée → livrée                               |
 | Fidélité  | Paliers de fidélité                        | Aucune                                                               |
 
+## Audit contre le CDC V1.1 (05/10/2026)
+
+Le CDC V1.1 du 31/08/2026 fait foi sur les cartes. Écarts trouvés et traités ce jour :
+
+- **Offre B2B récurrente** (Grossiste, EXIGENCE) : ponctuelle, chaque jour, chaque semaine ou chaque
+  mois ; republication automatique, sans quota Flash.
+- **Ticket de préparation avec étiquette QR détachable** (Commerçant et Grossiste, VALIDÉ) : affiché
+  pour une commande payée ; l’impression thermique reste à brancher.
+- **Statistiques B2B séparées des B2C** (Grossiste, EXIGENCE) : écran dédié ; les statistiques du
+  commerçant ne comptent plus les offres pro.
+
+Non construits, car ils dépendent d’un serveur, de matériel ou d’un point ouvert du CDC : impression
+sur imprimante thermique ; filtre véhicule du moteur d’attribution ; Flash national (Chronopost,
+Colissimo) ; panier multi-commerçants ; paiement atomique côté serveur ; Stripe Connect.
+
 ## Ce que les affiches ajoutent
 
 Les quatre affiches commerciales montrent la carte Flash telle que le client la voit :

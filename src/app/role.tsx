@@ -241,6 +241,7 @@ function seedDemo(role: Role) {
     modes: ['touch-collect' as const, 'livraison' as const],
     seller: '',
     minQty: 1,
+    recurrence: 'aucune' as const,
   });
   // Un grossiste publie des OFFRES PRO (lots, prix grossiste, minimum de commande) et reçoit
   // les commandes des commerçants ; un commerçant publie des Flash pour les clients.
@@ -259,6 +260,7 @@ function seedDemo(role: Role) {
     audience: 'commercants' as const,
     seller: 'Grossiste Occitan',
     minQty,
+    recurrence: 'aucune' as 'aucune' | 'hebdomadaire',
   });
   const wOrder = (
     id: string,
@@ -374,7 +376,8 @@ function seedDemo(role: Role) {
     wholesaleOrders: role === 'grossiste' ? b2bOrders : [],
     offers:
       role === 'grossiste'
-        ? b2bOffers
+        ? // Démonstration : le premier lot se republie toutes les semaines (offre B2B récurrente).
+          b2bOffers.map((o, i) => (i === 0 ? { ...o, recurrence: 'hebdomadaire' as const } : o))
         : [
             offer(
               'demo_o1',

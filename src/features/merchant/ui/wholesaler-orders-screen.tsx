@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { AppText, Screen } from '@/shared/ui';
+import { AppText, PrepTicket, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { formatCents } from '../lib/billing';
@@ -38,6 +38,7 @@ export function WholesalerOrdersScreen({ onBack }: { onBack?: () => void }) {
   const advance = useMerchantStore((s) => s.advanceWholesaleOrder);
   const togglePrep = useMerchantStore((s) => s.togglePrep);
   const [done, setDone] = useState(false);
+  const [ticketFor, setTicketFor] = useState<string | null>(null);
 
   const shown = useMemo(
     () => orders.filter((o) => isOpenWholesale(o.status) !== done),
@@ -154,6 +155,46 @@ export function WholesalerOrdersScreen({ onBack }: { onBack?: () => void }) {
                     {formatCents(o.totalCents)}
                   </AppText>
                 </View>
+
+                {o.status === 'recue' || o.status === 'preparation' ? (
+                  <View className="gap-2">
+                    <Pressable
+                      testID={`wholesaler-order-${o.id}-ticket-toggle`}
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: ticketFor === o.id }}
+                      accessibilityLabel="Ticket de préparation"
+                      onPress={() => setTicketFor((cur) => (cur === o.id ? null : o.id))}
+                      className="flex-row items-center gap-2 self-start rounded-control border border-line px-3 py-2"
+                    >
+                      <Feather
+                        name="printer"
+                        size={14}
+                        color={ticketFor === o.id ? colors.brand500 : colors.inkMuted}
+                      />
+                      <AppText
+                        className="font-sans-semibold text-ink-muted"
+                        style={{ fontSize: 12.5 }}
+                      >
+                        {ticketFor === o.id ? 'Masquer le ticket' : 'Ticket de préparation'}
+                      </AppText>
+                    </Pressable>
+                    {ticketFor === o.id ? (
+                      <PrepTicket
+                        testID={`wholesaler-order-${o.id}-ticket`}
+                        reference={`#B2B-${o.id.slice(-5).toUpperCase()}`}
+                        subtitle={o.buyer ? `Commerçant : ${o.buyer}` : 'Commande de commerçant'}
+                        lines={[{ label: o.title, qty: o.qty }]}
+                        qrValue={JSON.stringify({
+                          v: 1,
+                          id: o.id,
+                          t: o.totalCents,
+                          n: o.qty,
+                          b2b: 1,
+                        })}
+                      />
+                    ) : null}
+                  </View>
+                ) : null}
 
                 {/* Suivi intégré : où en est la commande, d'un coup d'œil */}
                 <View testID={`wholesaler-order-${o.id}-track`} className="flex-row gap-1">

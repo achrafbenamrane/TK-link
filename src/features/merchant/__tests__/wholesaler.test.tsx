@@ -321,6 +321,7 @@ describe('le grossiste n’est pas un commerçant', () => {
     modes: ['touch-collect' as const, 'livraison' as const],
     seller: 'Grossiste Occitan',
     minQty: 3,
+    recurrence: 'aucune' as const,
   });
   const draft = {
     title: 'Cagettes',

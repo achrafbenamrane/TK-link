@@ -4,7 +4,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { pickupPin } from '@/shared/lib/handover';
-import { AppText, Screen } from '@/shared/ui';
+import { AppText, PrepTicket, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import {
@@ -220,6 +220,11 @@ function OrderCard({
 }) {
   const options = merchantActions(order.status, order.fulfilment);
   const tone = toneOf(order.status);
+  const colors = useColors();
+  const [ticketOpen, setTicketOpen] = useState(false);
+  // Le ticket sort dès que la commande est payée, jusqu'à ce qu'elle soit prête (CDC V1.1).
+  const hasTicket =
+    order.status === 'payee' || order.status === 'acceptee' || order.status === 'preparation';
 
   return (
     <View
@@ -256,6 +261,42 @@ function OrderCard({
           </View>
         ))}
       </View>
+
+      {hasTicket ? (
+        <View className="mt-3 gap-2">
+          <Pressable
+            testID={`merchant-order-${order.id}-ticket-toggle`}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: ticketOpen }}
+            accessibilityLabel="Ticket de préparation"
+            onPress={() => setTicketOpen((v) => !v)}
+            className="flex-row items-center gap-2 self-start rounded-control border border-line px-3 py-2"
+          >
+            <Feather
+              name="printer"
+              size={14}
+              color={ticketOpen ? colors.brand500 : colors.inkMuted}
+            />
+            <AppText className="font-sans-semibold text-ink-muted" style={{ fontSize: 12.5 }}>
+              {ticketOpen ? 'Masquer le ticket' : 'Ticket de préparation'}
+            </AppText>
+          </Pressable>
+          {ticketOpen ? (
+            <PrepTicket
+              testID={`merchant-order-${order.id}-ticket`}
+              reference={`Commande ${order.id.slice(0, 6).toUpperCase()}`}
+              subtitle={FULFILMENT_LABEL[order.fulfilment]}
+              lines={order.items.map((l) => ({ label: l.title, qty: l.qty }))}
+              qrValue={JSON.stringify({
+                v: 1,
+                id: order.id,
+                t: order.total,
+                n: order.items.length,
+              })}
+            />
+          ) : null}
+        </View>
+      ) : null}
 
       {/* Remise au livreur : le code que le livreur saisit au comptoir (V1.1,
           « scan QR ou code PIN »). */}

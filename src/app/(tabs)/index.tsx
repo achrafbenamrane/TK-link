@@ -219,6 +219,7 @@ function WholesalerHome() {
         const href = {
           new: '/flash',
           offers: '/flash',
+          stats: '/statistiques',
           catalog: '/catalogue',
           orders: '/commandes',
           documents: '/factures',

@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 
 import { CATEGORY_INFO } from '@/shared/lib/categories';
@@ -16,6 +16,7 @@ import {
   netCents,
   operationsLeft,
 } from '../lib/billing';
+import { RECURRENCE_LABEL } from '../lib/recurrence';
 import { discountPct, secondsLeft, soldCents, STATE_LABEL, stateOf } from '../lib/offers';
 import { selectOffers, selectPurchased, selectUsed, useMerchantStore } from '../model/store';
 import type { Audience, OfferDraft, PublishedOffer } from '../model/schema';
@@ -93,6 +94,12 @@ export function MerchantOffersScreen({
   const purchased = useMerchantStore(selectPurchased);
   const publish = useMerchantStore((s) => s.publish);
   const takeOffline = useMerchantStore((s) => s.takeOffline);
+  const republishDue = useMerchantStore((s) => s.republishDue);
+
+  // Les offres B2B récurrentes se republient toutes seules : on rattrape à l'ouverture de l'écran.
+  useEffect(() => {
+    republishDue();
+  }, [republishDue]);
 
   const wholesale = audience === 'commercants';
   const left = operationsLeft(used, purchased);
@@ -330,7 +337,7 @@ function OfferCard({
           </AppText>
           <AppText variant="caption" className="mt-0.5 text-ink-faint">
             {offer.audience === 'commercants'
-              ? `Lot${offer.minQty > 1 ? ` · min. ${offer.minQty}` : ''}`
+              ? `Lot${offer.minQty > 1 ? ` · min. ${offer.minQty}` : ''}${offer.recurrence !== 'aucune' ? ` · ${RECURRENCE_LABEL[offer.recurrence].toLowerCase()}` : ''}`
               : `${CATEGORY_INFO[offer.category].emoji} ${CATEGORY_INFO[offer.category].short}`}
             {state === 'en-ligne' ? ` · ${timeLabel(secondsLeft(offer, now))}` : ''}
           </AppText>

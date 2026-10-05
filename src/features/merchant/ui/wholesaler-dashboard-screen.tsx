@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import type { ComponentProps, ReactNode } from 'react';
+import { useEffect, type ComponentProps, type ReactNode } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { AppText, Screen, ThemeToggle } from '@/shared/ui';
@@ -17,7 +17,7 @@ import {
 } from '../model/store';
 
 export type WholesalerTarget =
-  'new' | 'orders' | 'catalog' | 'offers' | 'documents' | 'payouts' | 'account' | 'setup';
+  'new' | 'orders' | 'catalog' | 'offers' | 'stats' | 'documents' | 'payouts' | 'account' | 'setup';
 
 type Props = {
   /** Le nom de l'entreprise, vérifiée. */
@@ -35,8 +35,11 @@ const TILES: {
   { key: 'new', label: 'Nouvelle offre', icon: 'tag' },
   { key: 'orders', label: 'Commandes', icon: 'truck' },
   { key: 'catalog', label: 'Catalogue', icon: 'package' },
+  { key: 'stats', label: 'Statistiques', icon: 'bar-chart-2' },
+  { key: 'offers', label: 'Mes lots', icon: 'layers' },
   { key: 'documents', label: 'Factures', icon: 'file-text' },
   { key: 'payouts', label: 'Versements', icon: 'credit-card' },
+  { key: 'setup', label: 'Dossier pro', icon: 'shield' },
   { key: 'account', label: 'Paramètres', icon: 'settings' },
 ];
 
@@ -53,6 +56,12 @@ export function WholesalerDashboardScreen({ companyName, area, renderAvatar, onO
   const offers = useMerchantStore(selectOffers).filter((o) => o.audience === 'commercants');
   const orders = useMerchantStore(selectWholesaleOrders);
   const supplier = useMerchantStore(selectSupplier);
+  const republishDue = useMerchantStore((s) => s.republishDue);
+
+  // Les offres récurrentes se republient toutes seules (CDC V1.1) : on rattrape à l'ouverture.
+  useEffect(() => {
+    republishDue();
+  }, [republishDue]);
   const validated = canSupplierPublish(supplier.status);
 
   const active = offers.filter((o) => o.state === 'publiee' && !o.offline && o.stockLeft > 0);

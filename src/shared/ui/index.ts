@@ -3,6 +3,7 @@ export { Button, type ButtonProps } from './button';
 export { Checkbox, type CheckboxProps } from './checkbox';
 export { Card, type CardProps } from './card';
 export { EmptyState, type EmptyStateProps } from './empty-state';
+export { PrepTicket, type PrepTicketProps } from './prep-ticket';
 export { PushButton, type PushButtonProps } from './push-button';
 export { Screen, type ScreenProps } from './screen';
 export { Skeleton, type SkeletonProps } from './skeleton';

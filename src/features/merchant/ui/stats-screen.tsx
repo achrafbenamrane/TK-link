@@ -24,7 +24,8 @@ type Props = {
  * pilote son commerce.
  */
 export function MerchantStatsScreen({ honouredTotalsCents, ordersCount }: Props) {
-  const offers = useMerchantStore(selectOffers);
+  // Le B2C seul : les offres pro d'un grossiste ont leurs propres statistiques (CDC V1.1).
+  const offers = useMerchantStore(selectOffers).filter((o) => o.audience === 'clients');
   // Instant figé au montage : pas d'horloge pendant le rendu.
   const [now] = useState(() => Date.now());
 

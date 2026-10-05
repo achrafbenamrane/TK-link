@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { CATEGORIES } from '@/shared/lib/categories';
 
+import { RECURRENCES } from '../lib/recurrence';
 import { SUPPLIER_STATUSES } from '../lib/supplier';
 import { WHOLESALE_STATUSES } from '../lib/wholesale-orders';
 import { defaultHours, MAX_PHOTOS, MAX_PRESENTATION, MAX_VIDEOS } from '../lib/shop-profile';
@@ -63,6 +64,8 @@ export const OfferDraftSchema = z
     description: z.string().trim().max(240).default(''),
     /** Quantité minimale de commande — offres B2B (CDC V1.1). 1 = pas de minimum. */
     minQty: z.number().int().positive().default(1),
+    /** Offre B2B ponctuelle ou récurrente — CDC V1.1, Grossiste. Un Flash de commerçant est ponctuel. */
+    recurrence: z.enum(RECURRENCES).default('aucune'),
     audience: z.enum(AUDIENCES).default('clients'),
     /** Étape 1 de la création : la photo du produit (adresse locale ou distante). Facultative. */
     photoUri: z.string().default(''),
@@ -167,6 +170,8 @@ export const PublishedOfferSchema = z.object({
    * et c'est ce que valent les lots enregistrés avant ce champ.
    */
   minQty: z.number().int().positive().default(1),
+  /** Republication automatique selon ce rythme (offre B2B) ; `aucune` = ponctuelle. */
+  recurrence: z.enum(RECURRENCES).default('aucune'),
 });
 
 export type PublishedOffer = z.infer<typeof PublishedOfferSchema>;

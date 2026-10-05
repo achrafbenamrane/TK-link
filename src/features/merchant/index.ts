@@ -19,6 +19,7 @@ export { ShopSettingsScreen } from './ui/shop-settings-screen';
 export { ProLocked } from './ui/pro-locked';
 export { ProStatusBanner } from './ui/pro-status-banner';
 export { ProSetupScreen } from './ui/pro-setup-screen';
+export { WholesalerStatsScreen } from './ui/wholesaler-stats-screen';
 export { WholesalerCatalogScreen } from './ui/wholesaler-catalog-screen';
 export { WholesalerOrdersScreen } from './ui/wholesaler-orders-screen';
 export { WholesalerDashboardScreen, type WholesalerTarget } from './ui/wholesaler-dashboard-screen';

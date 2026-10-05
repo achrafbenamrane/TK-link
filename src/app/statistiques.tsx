@@ -1,6 +1,12 @@
 import { useMemo } from 'react';
 
-import { MerchantStatsScreen, selectOffers, useMerchantStore } from '@/features/merchant';
+import {
+  MerchantStatsScreen,
+  selectOffers,
+  useMerchantStore,
+  WholesalerStatsScreen,
+} from '@/features/merchant';
+import { selectRole, useOnboardingStore } from '@/features/onboarding';
 import {
   isHonoured,
   isMerchantOrder,
@@ -16,6 +22,7 @@ import {
 export default function StatsRoute() {
   const orders = useShopStore(selectOrders);
   const published = useMerchantStore(selectOffers);
+  const role = useOnboardingStore(selectRole);
 
   const { honoured, count } = useMemo(() => {
     const own = new Set([...published.map((o) => `pub_${o.id}`), ...LOCAL_MERCHANT_DEAL_IDS]);
@@ -25,6 +32,9 @@ export default function StatsRoute() {
       count: mine.length,
     };
   }, [orders, published]);
+
+  // Statistiques B2B tenues séparément des statistiques B2C (CDC V1.1, Grossiste).
+  if (role === 'grossiste') return <WholesalerStatsScreen />;
 
   return <MerchantStatsScreen honouredTotalsCents={honoured} ordersCount={count} />;
 }
