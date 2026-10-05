@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import type * as ExpoCamera from 'expo-camera';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 
 import { useColors } from '@/shared/theme/theme-provider';
@@ -86,6 +86,11 @@ function NativeScanner({
   const colors = useColors();
   const { CameraView, useCameraPermissions } = camera;
   const [permission, requestPermission] = useCameraPermissions();
+
+  // Première ouverture : on demande tout de suite, au lieu d'annoncer un refus qui n'a pas eu lieu.
+  useEffect(() => {
+    if (permission && permission.status === 'undetermined') void requestPermission();
+  }, [permission, requestPermission]);
   const last = useRef<{ value: string; at: number } | null>(null);
 
   const handleScan = useCallback(
@@ -100,7 +105,8 @@ function NativeScanner({
     [onScan],
   );
 
-  const denied = permission !== null && !permission.granted;
+  // « Jamais demandée » n'est pas « refusée » : on demande, et on ne montre le refus qu'après.
+  const denied = permission !== null && !permission.granted && permission.status !== 'undetermined';
   const granted = permission?.granted === true;
 
   return (

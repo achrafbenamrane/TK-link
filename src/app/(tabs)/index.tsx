@@ -3,8 +3,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import {
+  availableMissions,
   CourierHomeScreen,
-  DEMO_MISSIONS,
   useCourierStore,
   type CourierTarget,
 } from '@/features/courier';
@@ -194,12 +194,16 @@ function CourierHome() {
   const firstName = useOnboardingStore(selectFirstName);
   const missions = useMissionOffers();
   const declined = useCourierStore((s) => s.declined);
+  const activeOrderId = useCourierStore((s) => s.active?.mission.orderId);
   const ensureConversation = useMessagesStore((s) => s.ensureConversation);
 
   // Les missions proposées, d'exemple tant qu'aucune vraie course n'existe (démonstration).
-  const pending = [...missions, ...DEMO_MISSIONS].filter(
-    (m) => !declined.includes(m.orderId),
-  ).length;
+  const pending = availableMissions({
+    missions,
+    showExamples: true,
+    declined,
+    activeOrderId: activeOrderId ?? undefined,
+  }).length;
 
   const open = (target: CourierTarget) => {
     switch (target) {

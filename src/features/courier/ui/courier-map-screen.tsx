@@ -4,7 +4,7 @@ import { ScrollView, View } from 'react-native';
 import { AppText, Button, RouteMap, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
-import { DEMO_MISSIONS } from '../lib/demo';
+import { availableMissions } from '../lib/available';
 import { useCourierStore, type Mission } from '../model/store';
 import { CourierHeader } from './parts';
 
@@ -27,9 +27,12 @@ export function CourierMapScreen({ missions, showExamples = false, onOpenMission
   const declined = useCourierStore((s) => s.declined);
   const online = useCourierStore((s) => s.online);
 
-  const offers = (showExamples ? [...missions, ...DEMO_MISSIONS] : missions).filter(
-    (m) => !declined.includes(m.orderId),
-  );
+  const offers = availableMissions({
+    missions,
+    showExamples,
+    declined,
+    activeOrderId: active?.mission.orderId,
+  });
   // La carte a besoin d'adresses géolocalisées : on montre la première mission qui en a.
   const mission =
     active?.mission ??

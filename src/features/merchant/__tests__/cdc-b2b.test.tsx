@@ -65,7 +65,7 @@ describe('offre B2B récurrente — CDC V1.1, Grossiste (EXIGENCE)', () => {
 
   it('republie à neuf (stock plein) et garde une seule chaîne vivante', () => {
     useMerchantStore.setState({ offers: [lot({ recurrence: 'hebdomadaire' })] });
-    const now = T0 + 8 * DAY;
+    const now = T0 + 7 * DAY + 3600_000;
 
     expect(useMerchantStore.getState().republishDue(now)).toBe(1);
     const offers = useMerchantStore.getState().offers;
@@ -191,5 +191,21 @@ describe('statistiques B2B séparées des statistiques B2C — CDC V1.1 (EXIGENC
     });
     render(<MerchantStatsScreen honouredTotalsCents={[]} ordersCount={0} />);
     expect(screen.getByTestId('stats-flash-published')).toHaveTextContent(/^1/);
+  });
+});
+
+describe('republication — jamais une offre déjà terminée', () => {
+  it('un créneau dû mais entièrement passé est reprogrammé au créneau suivant, à venir', () => {
+    // Offre quotidienne de 2 h ; le téléphone est rouvert 5 h après le créneau du jour 2.
+    useMerchantStore.setState({
+      offers: [lot({ recurrence: 'quotidienne', durationMinutes: 120 })],
+    });
+    const now = T0 + DAY + 5 * 3600 * 1000;
+    expect(useMerchantStore.getState().republishDue(now)).toBe(1);
+
+    const fresh = useMerchantStore.getState().offers.find((o) => o.id !== 'l1')!;
+    // Programmée au créneau suivant (le jour 3), pas née terminée.
+    expect(fresh.startsAt).toBe(T0 + 2 * DAY);
+    expect(fresh.startsAt).toBeGreaterThan(now);
   });
 });

@@ -76,7 +76,7 @@ export function ProSetupScreen({
         : 'infos',
   );
   const [addr, setAddr] = useState(address);
-  const [iban, setIban] = useState(supplier.iban || initialIban);
+  const [iban, setIban] = useState(initialIban);
   const [idUri, setIdUri] = useState(supplier.idUri);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [secureNote, setSecureNote] = useState<string | null>(null);

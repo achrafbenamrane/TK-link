@@ -40,6 +40,20 @@ or deletes stale ones. Newest first; keep entries one line each:
 - `assets/videos/*.mp4` sont des diaporamas de démonstration (`scripts/make-demo-videos.mjs`),
   dont l'un tiré de photos non libres : à retirer avant toute publication (voir CREDITS.md).
 
+## Dette connue (revue du 05/10/2026) — à régler avec le serveur ou avant publication
+
+- **Codes de remise dérivés de l'identifiant de commande** (`handover.ts`) : le livreur pourrait
+  recalculer le code client sans rencontrer le client. Acceptable en démonstration (documenté), pas en
+  production : le serveur doit émettre et vérifier les deux codes (4 et 6 chiffres).
+- **Pièces d'identité et selfie** : le magasin du livreur ne garde que des adresses de fichiers ; en
+  production, ces images sont envoyées au serveur puis supprimées de l'appareil. L'IBAN, lui, est
+  déjà dans le coffre sécurisé (seul un repère masqué reste dans l'état).
+- **Récompense partagée** (`shareReward`) : elle quitte l'inventaire du donneur, mais il n'existe pas
+  encore de chemin pour la récupérer chez le destinataire (il faut un compte et un serveur).
+- **Démonstration dans les routes de production** : l'inscription s'ouvre pré-remplie et l'IBAN du
+  dossier pro aussi (`sign-up.tsx`, `dossier-pro.tsx`, `role.tsx`). À retirer, ou à placer derrière un
+  drapeau « démo », avant toute vraie publication.
+
 ## Wishlist (pull when convenient)
 
 - FlashList adoption for long lists (when a real long list exists).

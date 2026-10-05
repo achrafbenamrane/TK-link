@@ -5,7 +5,7 @@ import { QrScanner } from '@/shared/ui';
 
 type ScanHandler = (event: { data: string }) => void;
 
-let mockPermission: { granted: boolean } | null = { granted: true };
+let mockPermission: { granted: boolean; status?: string } | null = { granted: true };
 const mockRequestPermission = jest.fn();
 let mockOnScan: ScanHandler | undefined;
 let mockSettings: unknown;
@@ -114,5 +114,21 @@ describe('<QrScanner />', () => {
 
     fireEvent.press(screen.getByTestId('qr-scanner-close'));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('<QrScanner /> — première ouverture', () => {
+  it('demande la caméra au lieu d’annoncer un refus qui n’a pas eu lieu', () => {
+    mockPermission = { granted: false, status: 'undetermined' };
+    mockRequestPermission.mockClear();
+    render(<QrScanner onScan={jest.fn()} onClose={jest.fn()} />);
+    expect(mockRequestPermission).toHaveBeenCalled();
+    expect(screen.queryByTestId('qr-scanner-denied')).not.toBeOnTheScreen();
+  });
+
+  it('un vrai refus montre le message', () => {
+    mockPermission = { granted: false, status: 'denied' };
+    render(<QrScanner onScan={jest.fn()} onClose={jest.fn()} />);
+    expect(screen.getByTestId('qr-scanner-denied')).toBeOnTheScreen();
   });
 });

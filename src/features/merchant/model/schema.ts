@@ -256,7 +256,11 @@ export const EMPTY_PROFILE: ShopProfile = {
  */
 export const SupplierSchema = z.object({
   status: z.enum(SUPPLIER_STATUSES).default('brouillon'),
-  iban: z.string().default(''),
+  /**
+   * Un repère masqué de l'IBAN (« FR76 •••• 9189 »). L'IBAN entier est une donnée bancaire : il
+   * vit dans le coffre sécurisé (Keychain / Keystore), jamais dans le stockage en clair.
+   */
+  ibanHint: z.string().default(''),
   idUri: z.string().default(''),
   /** L'appareil est-il enregistré avec une authentification locale ? Un drapeau, jamais l'empreinte. */
   deviceEnrolled: z.boolean().default(false),
@@ -264,7 +268,7 @@ export const SupplierSchema = z.object({
 export type Supplier = z.infer<typeof SupplierSchema>;
 export const EMPTY_SUPPLIER: Supplier = {
   status: 'brouillon',
-  iban: '',
+  ibanHint: '',
   idUri: '',
   deviceEnrolled: false,
 };

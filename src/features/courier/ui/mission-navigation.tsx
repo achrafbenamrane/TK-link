@@ -4,7 +4,7 @@ import { Linking, Pressable, View } from 'react-native';
 import { AppText, Button, RouteMap } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
-import type { Mission } from '../model/store';
+import { useCourierStore, type Mission } from '../model/store';
 import { CourierHeader, Panel } from './parts';
 
 type Props = {
@@ -24,13 +24,17 @@ type Props = {
  */
 export function MissionNavigation({ mission, onArrive, onMessage, onIncident }: Props) {
   const colors = useColors();
+  const vehicle = useCourierStore((s) => s.vehicle);
   const km =
     mission.distanceKm !== null ? `${mission.distanceKm.toFixed(1).replace('.', ',')} km` : '—';
 
   const openMaps = () => {
+    if (!mission.dropoff) return;
     const destination = encodeURIComponent(mission.dropoff);
+    // Vélo : à vélo ; scooter et voiture : en voiture.
+    const mode = vehicle === 'velo' ? 'bicycling' : 'driving';
     void Linking.openURL(
-      `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=bicycling`,
+      `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=${mode}`,
     ).catch(() => undefined);
   };
 
@@ -70,6 +74,8 @@ export function MissionNavigation({ mission, onArrive, onMessage, onIncident }: 
           </View>
           <Pressable
             testID="courier-open-maps"
+            disabled={!mission.dropoff}
+            accessibilityState={{ disabled: !mission.dropoff }}
             accessibilityRole="button"
             accessibilityLabel="Ouvrir l’itinéraire dans l’application de cartes"
             hitSlop={8}

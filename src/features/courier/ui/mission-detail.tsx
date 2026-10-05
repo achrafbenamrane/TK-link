@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { isImportantParcel, pickupPin } from '@/shared/lib/handover';
+import { isImportantParcel, isValidPickupPin, pickupPin } from '@/shared/lib/handover';
 import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
 import { AppText, Button, FingerprintScanner, QrScanner, type ScanState } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
@@ -84,9 +84,10 @@ function PickupValidation({ active, authenticate }: Omit<Props, 'onPickedUp'>) {
   const onScanned = (value: string) => {
     setQrOpen(false);
     try {
-      const parsed = JSON.parse(value) as { id?: string };
-      if (parsed.id === orderId) {
-        setPin(pickupPin(orderId));
+      const parsed = JSON.parse(value) as { id?: string; p?: string };
+      // Le code vient de l'étiquette elle-même : le livreur ne le calcule pas.
+      if (parsed.id === orderId && parsed.p && isValidPickupPin(orderId, parsed.p)) {
+        setPin(parsed.p);
         setMessage('QR reconnu : code rempli.');
         return;
       }

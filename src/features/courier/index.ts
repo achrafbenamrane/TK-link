@@ -11,6 +11,7 @@ export { CourierHomeScreen, type CourierTarget } from './ui/courier-home-screen'
 export { CourierMissionsScreen, type MessageTarget } from './ui/courier-missions-screen';
 export { CourierMapScreen } from './ui/courier-map-screen';
 export { daySummary, deltaLabel } from './lib/summary';
+export { availableMissions } from './lib/available';
 export type { BiometricResult } from './ui/parts';
 export { CourierEarningsScreen } from './ui/courier-earnings-screen';
 export { CourierAccountScreen } from './ui/courier-account-screen';

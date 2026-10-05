@@ -7,7 +7,8 @@ import { AppText, Button, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { canReceiveMissions, courierGain, formatEur } from '../lib/courier';
-import { DEMO_MISSIONS, isDemoMission } from '../lib/demo';
+import { availableMissions } from '../lib/available';
+import { isDemoMission } from '../lib/demo';
 import { useCourierStore, type Mission } from '../model/store';
 import { FinalValidation } from './final-validation';
 import { MissionDetail } from './mission-detail';
@@ -78,9 +79,12 @@ export function CourierMissionsScreen({
   const ready = status === 'valide';
   // En démonstration, les missions d'exemple s'ajoutent aux vraies : elles montrent tout le détail
   // (client, téléphones, itinéraire) qu'une commande locale n'a pas.
-  const offers = (showExamples ? [...missions, ...DEMO_MISSIONS] : missions).filter(
-    (m) => !declined.includes(m.orderId),
-  );
+  const offers = availableMissions({
+    missions,
+    showExamples,
+    declined,
+    activeOrderId: active?.mission.orderId,
+  });
 
   if (done) {
     return (

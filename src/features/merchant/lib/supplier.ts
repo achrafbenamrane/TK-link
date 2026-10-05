@@ -55,6 +55,16 @@ export function normalizeIban(raw: string): string {
   return raw.replace(/\s+/g, '').toUpperCase();
 }
 
+/**
+ * Un repère affichable : le pays, la clé et les quatre derniers caractères (« FR76 •••• 9189 »).
+ * C'est tout ce que le magasin d'état garde ; l'IBAN entier va dans le coffre sécurisé.
+ */
+export function maskIban(raw: string): string {
+  const iban = normalizeIban(raw);
+  if (iban.length < 8) return '';
+  return `${iban.slice(0, 4)} •••• ${iban.slice(-4)}`;
+}
+
 /** Regroupe par quatre, comme sur un RIB. */
 export function formatIban(raw: string): string {
   return normalizeIban(raw)

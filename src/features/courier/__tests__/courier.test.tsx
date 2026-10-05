@@ -15,6 +15,7 @@ import {
   nextStep,
   type ProfileDraft,
 } from '../lib/courier';
+import { availableMissions } from '../lib/available';
 import { daySummary, deltaLabel } from '../lib/summary';
 import { timelineState } from '../lib/courier';
 import { useCourierStore, type Mission } from '../model/store';
@@ -560,5 +561,58 @@ describe('<CourierEarningsScreen />', () => {
     render(<CourierEarningsScreen />);
     expect(screen.getByTestId('courier-total')).toHaveTextContent('6,00 €');
     expect(screen.getByTestId('courier-partial-note')).toBeTruthy();
+  });
+});
+
+describe('missions disponibles — une seule définition', () => {
+  const other: Mission = { ...mission, orderId: 'autre' };
+
+  it('retire les refusées et la mission déjà acceptée', () => {
+    const list = availableMissions({
+      missions: [mission, other],
+      showExamples: false,
+      declined: ['autre'],
+      activeOrderId: undefined,
+    });
+    expect(list.map((m) => m.orderId)).toEqual([mission.orderId]);
+
+    const withActive = availableMissions({
+      missions: [mission, other],
+      showExamples: false,
+      declined: [],
+      activeOrderId: mission.orderId,
+    });
+    expect(withActive.map((m) => m.orderId)).toEqual(['autre']);
+  });
+
+  it('ajoute les missions d’exemple seulement en démonstration', () => {
+    const base = { missions: [mission], declined: [] as string[] };
+    expect(availableMissions({ ...base, showExamples: false })).toHaveLength(1);
+    const withExamples = availableMissions({ ...base, showExamples: true });
+    expect(withExamples.some((m) => m.orderId === 'demo_8892')).toBe(true);
+  });
+
+  it('l’accueil compte la mission acceptée une seule fois', () => {
+    ready();
+    state().setOnline(true);
+    state().acceptMission(mission);
+    // La route a déjà retiré la mission acceptée des missions en attente.
+    render(<CourierHomeScreen name="Alex" pendingCount={2} onOpen={jest.fn()} />);
+    expect(screen.getByTestId('courier-shortcut-missions')).toHaveTextContent(/3 en cours/);
+  });
+});
+
+describe('<CourierSetupScreen /> — reprise du dossier', () => {
+  it('compte validé mais appareil non enrôlé : on reprend à la sécurisation', () => {
+    ready();
+    render(<CourierSetupScreen authenticate={jest.fn()} onDone={jest.fn()} />);
+    expect(screen.getByTestId('courier-enrol')).toBeTruthy();
+  });
+
+  it('compte validé et appareil enrôlé : « Compte validé »', () => {
+    ready();
+    state().setDeviceEnrolled(true);
+    render(<CourierSetupScreen authenticate={jest.fn()} onDone={jest.fn()} />);
+    expect(screen.getByTestId('courier-done')).toBeTruthy();
   });
 });

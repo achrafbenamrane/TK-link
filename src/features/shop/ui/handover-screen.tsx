@@ -71,12 +71,13 @@ export function HandoverScreen({ orderId, courier, courierValidatedAt, onBack }:
   const merchant = deal ? getMerchant(deal.merchantId) : undefined;
   const articles = order.items.reduce((n, l) => n + l.qty, 0);
   const done = handedAt !== null || order.status === 'en_livraison' || order.status === 'livree';
-  const step = done ? 3 : validated ? 2 : 2;
+  const step = done ? 3 : 2;
 
   const hand = () => {
     if (!validated) return;
-    setOrderStatus(order.id, 'en_livraison');
-    setHandedAt(Date.now());
+    const res = setOrderStatus(order.id, 'en_livraison');
+    // La machine à états peut refuser (commande pas « prête ») : on n'affiche « remis » que si c'est acté.
+    if (res.ok) setHandedAt(Date.now());
   };
 
   const steps = [

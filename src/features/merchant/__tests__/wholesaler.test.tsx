@@ -209,7 +209,10 @@ describe('dossier fournisseur — étapes 3 à 6 du schéma', () => {
 
     expect(submitSupplier(VALID).ok).toBe(true);
     expect(useMerchantStore.getState().supplier.status).toBe('en_verification');
-    expect(useMerchantStore.getState().supplier.iban).toBe('FR7630006000011234567890189');
+    // L'IBAN entier n'est pas dans l'état persisté en clair : seulement un repère masqué.
+    expect(useMerchantStore.getState().supplier.ibanHint).toBe('FR76 •••• 0189');
+    expect(JSON.stringify(useMerchantStore.getState().supplier)).not.toContain('3000 6000');
+    expect(JSON.stringify(useMerchantStore.getState().supplier)).not.toContain('30006000');
 
     validateSupplier();
     expect(useMerchantStore.getState().supplier.status).toBe('valide');

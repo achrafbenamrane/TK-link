@@ -292,6 +292,8 @@ function OrderCard({
                 id: order.id,
                 t: order.total,
                 n: order.items.length,
+                // Le code de remise au livreur : celui qui scanne l'étiquette le reçoit avec.
+                p: pickupPin(order.id),
               })}
             />
           ) : null}

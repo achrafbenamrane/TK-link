@@ -2,12 +2,12 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { makeId } from '@/shared/lib/id';
-import { asyncStorageBackend } from '@/shared/lib/storage';
+import { asyncStorageBackend, secureStorage } from '@/shared/lib/storage';
 
 import { canPublish } from '../lib/billing';
-import { dueOccurrence } from '../lib/recurrence';
+import { dueOccurrence, recurrencePeriodMs } from '../lib/recurrence';
 import { startOf } from '../lib/offers';
-import { missingSupplierFields, normalizeIban } from '../lib/supplier';
+import { maskIban, missingSupplierFields, normalizeIban } from '../lib/supplier';
 import { PREP_STEPS, nextWholesaleStatus, type PrepStep } from '../lib/wholesale-orders';
 import { seedWholesaleLots } from './seed';
 import {
@@ -32,6 +32,9 @@ import {
  * en revenant sur la page, et le CDC §9 en fait une règle commerciale, pas une
  * suggestion d'interface.
  */
+
+/** La clé du coffre sécurisé où se range l'IBAN du fournisseur. */
+const SUPPLIER_IBAN_KEY = 'tklink-supplier-iban';
 
 type PublishResult = { ok: true; offer: PublishedOffer } | { ok: false; reason: 'quota' };
 
@@ -110,10 +113,15 @@ export const useMerchantStore = create<MerchantState>()(
       submitSupplier: (draft) => {
         const errors = missingSupplierFields(draft);
         if (Object.keys(errors).length > 0) return { ok: false as const, errors };
+        // L'IBAN entier part dans le coffre sécurisé (échec silencieux sous Jest et sur le web, où
+        // il n'y a pas de coffre) ; l'état n'en garde qu'un repère masqué.
+        void secureStorage
+          .set(SUPPLIER_IBAN_KEY, normalizeIban(draft.iban), { deviceOnly: true })
+          .catch(() => undefined);
         set((s) => ({
           supplier: {
             ...s.supplier,
-            iban: normalizeIban(draft.iban),
+            ibanHint: maskIban(draft.iban),
             idUri: draft.idUri,
             status: 'en_verification',
           },
@@ -178,8 +186,12 @@ export const useMerchantStore = create<MerchantState>()(
         const created: PublishedOffer[] = [];
         const offers = get().offers.map((o) => {
           if (o.state !== 'publiee' || o.offline || o.recurrence === 'aucune') return o;
-          const at = dueOccurrence(startOf(o), o.recurrence, nowMs);
+          let at = dueOccurrence(startOf(o), o.recurrence, nowMs);
           if (at === null) return o;
+          // Un téléphone resté fermé : si la créneau dû est déjà passé en entier, la republier la
+          // ferait naître terminée. On programme alors le créneau suivant, à venir.
+          const period = recurrencePeriodMs(o.recurrence) ?? 0;
+          if (at + o.durationMinutes * 60_000 <= nowMs) at += period;
           // La nouvelle occurrence reprend l'offre à neuf (stock plein) et porte la récurrence ;
           // l'ancienne reste dans l'historique, ponctuelle : une seule chaîne vivante.
           created.push({

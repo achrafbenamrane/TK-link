@@ -82,7 +82,7 @@ export function WelcomeScreen({ onDone }: Props) {
         <Animated.View
           pointerEvents="none"
           className="absolute h-72 w-72 rounded-pill bg-brand-500"
-          style={[glowStyle, { opacity: 0.2 }]}
+          style={glowStyle}
         />
 
         <Animated.View testID="welcome-logo" style={logoStyle}>

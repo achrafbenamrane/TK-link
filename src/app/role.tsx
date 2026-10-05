@@ -398,7 +398,7 @@ function seedDemo(role: Role) {
     // Démonstration : le dossier fournisseur est déjà validé (étapes 3 à 6 du schéma faites).
     supplier: {
       status: 'valide',
-      iban: 'FR7630006000011234567890189',
+      ibanHint: 'FR76 •••• 0189',
       idUri: 'demo',
       deviceEnrolled: true,
     },

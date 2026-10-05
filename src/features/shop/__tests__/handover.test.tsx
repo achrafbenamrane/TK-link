@@ -69,3 +69,21 @@ describe('<HandoverScreen /> — validation livreur', () => {
     expect(useShopStore.getState().orders[0]?.status).toBe('en_livraison');
   });
 });
+
+describe('<HandoverScreen /> — remise refusée par la machine à états', () => {
+  it('n’annonce pas « Colis remis » si la commande n’est pas prête', () => {
+    useShopStore.setState({ orders: [{ ...order, status: 'preparation' }] });
+    render(
+      <HandoverScreen
+        orderId={order.id}
+        courier={courier}
+        courierValidatedAt={Date.now()}
+        onBack={jest.fn()}
+      />,
+    );
+    fireEvent.press(screen.getByTestId('handover-confirm'));
+    expect(useShopStore.getState().orders[0]?.status).toBe('preparation');
+    // Le bouton n'a pas basculé sur « Colis remis » : la remise n'est pas actée.
+    expect(screen.getByTestId('handover-confirm')).toHaveTextContent(/Remettre\s+le\s+colis/);
+  });
+});

@@ -45,27 +45,39 @@ const STEP_TITLE: Record<Step, string> = {
  */
 export function CourierSetupScreen({ authenticate, onDone }: Props) {
   const colors = useColors();
-  const store = useCourierStore();
+  // Des sélecteurs, pas le magasin entier : saisir un champ ne refait pas tout l'écran.
+  const status = useCourierStore((s) => s.status);
+  const savedVehicle = useCourierStore((s) => s.vehicle);
+  const savedZone = useCourierStore((s) => s.zone);
+  const savedIdUri = useCourierStore((s) => s.idUri);
+  const savedSelfieUri = useCourierStore((s) => s.selfieUri);
+  const deviceEnrolled = useCourierStore((s) => s.deviceEnrolled);
+  const submitProfile = useCourierStore((s) => s.submitProfile);
+  const validateAccount = useCourierStore((s) => s.validateAccount);
+  const setDeviceEnrolled = useCourierStore((s) => s.setDeviceEnrolled);
 
   // On reprend là où le dossier en est : un livreur qui rouvre l'app ne
   // ressaisit pas ses justificatifs.
   const initial: Step =
-    store.status === 'valide'
-      ? 'valide'
-      : store.status === 'en_verification'
+    status === 'valide'
+      ? // Compte validé mais appareil pas encore enrôlé : l'étape de sécurisation reste à faire.
+        deviceEnrolled
+        ? 'valide'
+        : 'securite'
+      : status === 'en_verification'
         ? 'verification'
         : 'infos';
   const [step, setStep] = useState<Step>(initial);
 
-  const [vehicle, setVehicle] = useState<Vehicle | null>(store.vehicle);
-  const [zone, setZone] = useState(store.zone);
-  const [idUri, setIdUri] = useState(store.idUri);
-  const [selfieUri, setSelfieUri] = useState(store.selfieUri);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(savedVehicle);
+  const [zone, setZone] = useState(savedZone);
+  const [idUri, setIdUri] = useState(savedIdUri);
+  const [selfieUri, setSelfieUri] = useState(savedSelfieUri);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [secureNote, setSecureNote] = useState<string | null>(null);
 
   const submit = () => {
-    const res = store.submitProfile({ vehicle, zone, idUri, selfieUri });
+    const res = submitProfile({ vehicle, zone, idUri, selfieUri });
     if (res.ok) {
       setErrors({});
       setStep('verification');
@@ -77,7 +89,7 @@ export function CourierSetupScreen({ authenticate, onDone }: Props) {
   const enrol = async () => {
     const ok = await authenticate('Enregistrer cet appareil pour TK Deliver');
     if (ok) {
-      store.setDeviceEnrolled(true);
+      setDeviceEnrolled(true);
       setSecureNote(null);
       setStep('valide');
     } else {
@@ -261,13 +273,13 @@ export function CourierSetupScreen({ authenticate, onDone }: Props) {
             <View className="items-center gap-3 rounded-card border border-line bg-surface p-6">
               <View className="h-16 w-16 items-center justify-center rounded-pill bg-brand-50">
                 <Feather
-                  name={store.status === 'valide' ? 'check' : 'shield'}
+                  name={status === 'valide' ? 'check' : 'shield'}
                   size={28}
                   color={colors.brand500}
                 />
               </View>
               <AppText testID="courier-verification-status" className="text-center font-sans-bold">
-                {store.status === 'valide'
+                {status === 'valide'
                   ? 'Votre profil est vérifié'
                   : 'Votre dossier est en cours de contrôle'}
               </AppText>
@@ -277,7 +289,7 @@ export function CourierSetupScreen({ authenticate, onDone }: Props) {
               </AppText>
             </View>
 
-            {store.status === 'valide' ? (
+            {status === 'valide' ? (
               <Button
                 testID="courier-to-security"
                 label="Continuer"
@@ -289,7 +301,7 @@ export function CourierSetupScreen({ authenticate, onDone }: Props) {
               <Pressable
                 testID="courier-demo-validate"
                 accessibilityRole="button"
-                onPress={() => store.validateAccount()}
+                onPress={() => validateAccount()}
                 className="items-center rounded-control border border-dashed border-line py-3.5"
               >
                 <AppText className="font-sans-semibold text-ink-muted" style={{ fontSize: 13 }}>
