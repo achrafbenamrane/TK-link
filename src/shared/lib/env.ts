@@ -68,3 +68,13 @@ const PLACEHOLDER_KEY = 'public-anon-key-placeholder';
 export const isSupabaseConfigured: boolean =
   env.EXPO_PUBLIC_SUPABASE_URL !== PLACEHOLDER_URL &&
   env.EXPO_PUBLIC_SUPABASE_ANON_KEY !== PLACEHOLDER_KEY;
+
+/**
+ * Cette build est-elle une DÉMONSTRATION ? Vrai partout sauf en production.
+ *
+ * Tout ce qui sert à montrer l'app au client (inscription pré-remplie, bouton « Démo » du choix de
+ * profil, missions d'exemple, vitrine d'exemple, boutons « simuler la validation ») passe par ce
+ * drapeau, posé par les ROUTES : une build de production n'en montre aucun, et un vrai commerçant ne
+ * peut pas valider par erreur un IBAN d'exemple.
+ */
+export const isDemoBuild: boolean = env.EXPO_PUBLIC_APP_ENV !== 'production';

@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { SignUpScreen, type SignUpProfile } from '@/features/auth';
 import { AvatarPicker, selectRole, useOnboardingStore } from '@/features/onboarding';
 import { useShopStore } from '@/features/shop';
+import { isDemoBuild } from '@/shared/lib/env';
 
 /**
  * INSCRIPTION — CDC V1.0 §2.2.
@@ -93,14 +94,18 @@ export default function SignUpRoute() {
   return (
     <SignUpScreen
       role={role}
-      initialDraft={
-        role === 'grossiste'
-          ? { ...DEMO_DRAFT, ...DEMO_WHOLESALER }
-          : role === 'commercant'
-            ? { ...DEMO_DRAFT, ...DEMO_SHOP }
-            : DEMO_DRAFT
-      }
-      initialAccepted
+      // L'inscription pré-remplie (et le consentement pré-coché) n'existent qu'en démonstration.
+      {...(isDemoBuild
+        ? {
+            initialDraft:
+              role === 'grossiste'
+                ? { ...DEMO_DRAFT, ...DEMO_WHOLESALER }
+                : role === 'commercant'
+                  ? { ...DEMO_DRAFT, ...DEMO_SHOP }
+                  : DEMO_DRAFT,
+            initialAccepted: true,
+          }
+        : {})}
       renderAvatar={() => <AvatarPicker size={48} />}
       onProfile={onProfile}
       onSignedUp={toOnboarding}

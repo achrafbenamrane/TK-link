@@ -12,6 +12,8 @@ import { VEHICLES, VEHICLE_LABEL, type Vehicle } from '../lib/courier';
 import { useCourierStore } from '../model/store';
 
 type Props = {
+  /** Build de démonstration : propose de simuler le contrôle de TK LINK. Absent en production. */
+  demo?: boolean;
   /**
    * Demande la biométrie LOCALE de l'appareil. Fournie par la route : la
    * biométrie vit dans `shop`, que le livreur n'importe pas. Renvoie `true` si la
@@ -43,7 +45,7 @@ const STEP_TITLE: Record<Step, string> = {
  * validé par l'app : la vérification d'identité est l'affaire de TK LINK. Tant
  * qu'il n'y a pas de serveur, un bouton « démo » la simule — et le dit.
  */
-export function CourierSetupScreen({ authenticate, onDone }: Props) {
+export function CourierSetupScreen({ authenticate, onDone, demo = false }: Props) {
   const colors = useColors();
   // Des sélecteurs, pas le magasin entier : saisir un champ ne refait pas tout l'écran.
   const status = useCourierStore((s) => s.status);
@@ -295,9 +297,7 @@ export function CourierSetupScreen({ authenticate, onDone }: Props) {
                 label="Continuer"
                 onPress={() => setStep('securite')}
               />
-            ) : (
-              // Aucun serveur ne contrôle encore l'identité : on simule ce
-              // contrôle, et on le dit. En production, ce bouton disparaît.
+            ) : demo ? (
               <Pressable
                 testID="courier-demo-validate"
                 accessibilityRole="button"
@@ -308,7 +308,7 @@ export function CourierSetupScreen({ authenticate, onDone }: Props) {
                   Démo — simuler la validation par TK LINK
                 </AppText>
               </Pressable>
-            )}
+            ) : null}
           </View>
         ) : null}
 

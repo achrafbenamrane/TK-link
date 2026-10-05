@@ -13,6 +13,8 @@ import { PRO_COPY, type ProRole } from '../lib/supplier';
 import { selectSupplier, useMerchantStore } from '../model/store';
 
 type Props = {
+  /** Build de démonstration : propose de simuler le contrôle de TK LINK. Absent en production. */
+  demo?: boolean;
   /** Le profil qui dépose son dossier : change les mots, pas les étapes. */
   role?: ProRole;
   /** Le SIRET et l'adresse saisis à l'inscription : on ne les redemande pas. */
@@ -58,6 +60,7 @@ export function ProSetupScreen({
   initialIban = '',
   authenticate,
   onDone,
+  demo = false,
 }: Props) {
   const colors = useColors();
   const supplier = useMerchantStore(selectSupplier);
@@ -284,9 +287,7 @@ export function ProSetupScreen({
                 label="Continuer"
                 onPress={() => setStep('securite')}
               />
-            ) : (
-              // Aucun serveur ne contrôle encore l'entreprise : on simule ce contrôle, et on le
-              // dit. En production, ce bouton disparaît.
+            ) : demo ? (
               <Pressable
                 testID="supplier-demo-validate"
                 accessibilityRole="button"
@@ -297,7 +298,7 @@ export function ProSetupScreen({
                   Démo — simuler la validation par TK LINK
                 </AppText>
               </Pressable>
-            )}
+            ) : null}
           </View>
         ) : null}
 

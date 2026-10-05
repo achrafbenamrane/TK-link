@@ -26,6 +26,8 @@ type Props = {
    * la route. Absent : le commerçant attend, ou simule le geste en démonstration.
    */
   courierValidatedAt?: number | null | undefined;
+  /** Build de démonstration : un geste simule la pose du doigt du livreur. Absent en production. */
+  demo?: boolean;
   onBack: () => void;
 };
 
@@ -44,7 +46,13 @@ const clock = (ms: number) => {
  * Le commerçant ne manipule aucune empreinte : il voit le résultat. Ici, sans
  * serveur ni second téléphone, un geste simule la pose du doigt du livreur.
  */
-export function HandoverScreen({ orderId, courier, courierValidatedAt, onBack }: Props) {
+export function HandoverScreen({
+  orderId,
+  courier,
+  courierValidatedAt,
+  demo = false,
+  onBack,
+}: Props) {
   const colors = useColors();
   const order = useShopStore((s) => s.orders.find((o) => o.id === orderId));
   const setOrderStatus = useShopStore((s) => s.setOrderStatus);
@@ -209,7 +217,8 @@ export function HandoverScreen({ orderId, courier, courierValidatedAt, onBack }:
           testID="handover-biometric"
           accessibilityRole="button"
           accessibilityLabel="Simuler la pose du doigt du livreur"
-          disabled={validated !== null || done}
+          // Sans démonstration, seule l'empreinte posée sur le téléphone du livreur valide.
+          disabled={validated !== null || done || !demo}
           onPress={() => setSimulatedAt(Date.now())}
           className="items-center gap-3 rounded-card border border-brand-500 bg-surface-muted px-4 py-5"
         >
@@ -225,7 +234,7 @@ export function HandoverScreen({ orderId, courier, courierValidatedAt, onBack }:
             Le livreur pose son doigt sur son appareil. Si l’identité est confirmée, la remise du
             colis est validée automatiquement.
           </AppText>
-          {validated === null && !done ? (
+          {validated === null && !done && demo ? (
             <AppText variant="caption" className="text-brand-600" style={{ fontSize: 11.5 }}>
               Démo — touchez pour simuler la pose du doigt
             </AppText>

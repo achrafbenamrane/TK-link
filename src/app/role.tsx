@@ -7,6 +7,7 @@ import { defaultHours, useMerchantStore } from '@/features/merchant';
 import { RoleScreen, useOnboardingStore } from '@/features/onboarding';
 import { useReferralStore } from '@/features/referral';
 import { LOCAL_MERCHANT_DEAL_IDS, productImageUri, useShopStore } from '@/features/shop';
+import { isDemoBuild } from '@/shared/lib/env';
 import type { Role } from '@/shared/lib/roles';
 
 /**
@@ -509,10 +510,15 @@ export default function RoleRoute() {
         setRole(role);
         router.replace('/sign-up');
       }}
-      onDemo={(role) => {
-        seedDemo(role);
-        router.replace('/');
-      }}
+      // Le bouton « Démo » n'existe que dans les builds de démonstration.
+      {...(isDemoBuild
+        ? {
+            onDemo: (role: Role) => {
+              seedDemo(role);
+              router.replace('/');
+            },
+          }
+        : {})}
       onSignIn={() => router.replace('/sign-in')}
     />
   );

@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { ProSetupScreen } from '@/features/merchant';
 import { selectRole, selectSiret, useOnboardingStore } from '@/features/onboarding';
 import { authenticateBiometric, useShopStore } from '@/features/shop';
+import { isDemoBuild } from '@/shared/lib/env';
 
 /**
  * DÉMONSTRATION : l'IBAN s'affiche déjà rempli (un numéro d'exemple, clé valide), comme
@@ -27,7 +28,8 @@ export default function ProDossierRoute() {
       role={role === 'commercant' ? 'commercant' : 'grossiste'}
       siret={siret}
       address={application?.address ?? ''}
-      initialIban={DEMO_IBAN}
+      initialIban={isDemoBuild ? DEMO_IBAN : ''}
+      demo={isDemoBuild}
       authenticate={async (reason) => (await authenticateBiometric(reason)).ok}
       onDone={() => {
         // Le compte est prêt : la porte du premier lancement s'ouvre.

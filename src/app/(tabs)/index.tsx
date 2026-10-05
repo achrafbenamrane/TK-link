@@ -39,6 +39,7 @@ import {
 } from '@/features/shop';
 import { CATEGORY_INFO } from '@/shared/lib/categories';
 import { AppText } from '@/shared/ui';
+import { isDemoBuild } from '@/shared/lib/env';
 
 /**
  * ACCUEIL — ce que l'utilisateur voit dépend de CE QU'IL EST (CDC §3.1, §3.2).
@@ -200,7 +201,7 @@ function CourierHome() {
   // Les missions proposées, d'exemple tant qu'aucune vraie course n'existe (démonstration).
   const pending = availableMissions({
     missions,
-    showExamples: true,
+    showExamples: isDemoBuild,
     declined,
     activeOrderId: activeOrderId ?? undefined,
   }).length;
@@ -237,7 +238,7 @@ function CourierHome() {
       pendingCount={pending}
       onOpen={open}
       // Démonstration au client : un compte d'exemple activable en un geste.
-      showExamples
+      showExamples={isDemoBuild}
     />
   );
 }

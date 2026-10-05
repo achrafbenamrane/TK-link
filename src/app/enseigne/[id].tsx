@@ -10,6 +10,7 @@ import {
   useMerchantLoyaltyStore,
 } from '@/features/loyalty';
 import { openStatus, selectProfile, useMerchantStore } from '@/features/merchant';
+import { isDemoBuild } from '@/shared/lib/env';
 import {
   demoShowcase,
   LOCAL_MERCHANT_ID,
@@ -42,7 +43,8 @@ export default function EnseigneRoute() {
   // Seule l'enseigne de CET appareil a une vitrine réglée ; les autres viennent du catalogue —
   // sauf les vitrines d'exemple de la démonstration (vidéo, portfolio).
   const local = merchantId === LOCAL_MERCHANT_ID;
-  const showcase = local ? undefined : demoShowcase(merchantId);
+  // La vitrine d'exemple (vidéo, portfolio) n'existe qu'en démonstration.
+  const showcase = local || !isDemoBuild ? undefined : demoShowcase(merchantId);
   const profile = local
     ? {
         presentation: shop.presentation,

@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useCourierStore, VEHICLE_LABEL } from '@/features/courier';
 import { HandoverScreen } from '@/features/shop';
+import { isDemoBuild } from '@/shared/lib/env';
 
 /**
  * La validation de la remise au livreur, côté commerçant. La route met en
@@ -29,6 +30,7 @@ export default function HandoverRoute() {
       }}
       // L'empreinte posée par le livreur sur son téléphone : elle s'affiche ici sans autre geste.
       courierValidatedAt={active?.mission.orderId === id ? (active.identityAt ?? null) : null}
+      demo={isDemoBuild}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/commandes'))}
     />
   );

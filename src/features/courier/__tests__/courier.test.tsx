@@ -212,7 +212,7 @@ describe('<CourierSetupScreen />', () => {
     state().submitProfile({ vehicle: 'velo', zone: 'Toulouse', idUri: 'a', selfieUri: 'b' });
     const authenticate = jest.fn().mockResolvedValue(true);
     const onDone = jest.fn();
-    render(<CourierSetupScreen authenticate={authenticate} onDone={onDone} />);
+    render(<CourierSetupScreen demo authenticate={authenticate} onDone={onDone} />);
 
     fireEvent.press(screen.getByTestId('courier-demo-validate'));
     fireEvent.press(screen.getByTestId('courier-to-security'));
@@ -614,5 +614,14 @@ describe('<CourierSetupScreen /> — reprise du dossier', () => {
     state().setDeviceEnrolled(true);
     render(<CourierSetupScreen authenticate={jest.fn()} onDone={jest.fn()} />);
     expect(screen.getByTestId('courier-done')).toBeTruthy();
+  });
+});
+
+describe('<CourierSetupScreen /> — en production', () => {
+  it('ne propose pas de simuler le contrôle de TK LINK', () => {
+    state().submitProfile({ vehicle: 'velo', zone: 'Toulouse', idUri: 'a', selfieUri: 'b' });
+    render(<CourierSetupScreen authenticate={jest.fn()} onDone={jest.fn()} />);
+    expect(screen.getByTestId('courier-verification-status')).toBeTruthy();
+    expect(screen.queryByTestId('courier-demo-validate')).toBeNull();
   });
 });

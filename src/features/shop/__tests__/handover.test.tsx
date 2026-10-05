@@ -45,7 +45,7 @@ describe('<HandoverScreen /> — validation livreur', () => {
   });
 
   it('une fois l’identité validée, remettre le colis passe la commande en livraison', () => {
-    render(<HandoverScreen orderId={order.id} courier={courier} onBack={jest.fn()} />);
+    render(<HandoverScreen demo orderId={order.id} courier={courier} onBack={jest.fn()} />);
     fireEvent.press(screen.getByTestId('handover-biometric'));
     expect(screen.getByTestId('handover-validated')).toBeTruthy();
 
@@ -85,5 +85,15 @@ describe('<HandoverScreen /> — remise refusée par la machine à états', () =
     expect(useShopStore.getState().orders[0]?.status).toBe('preparation');
     // Le bouton n'a pas basculé sur « Colis remis » : la remise n'est pas actée.
     expect(screen.getByTestId('handover-confirm')).toHaveTextContent(/Remettre\s+le\s+colis/);
+  });
+});
+
+describe('<HandoverScreen /> — en production', () => {
+  it('ne se valide pas d’un simple geste : seule l’empreinte du livreur le fait', () => {
+    useShopStore.setState({ orders: [order] });
+    render(<HandoverScreen orderId={order.id} courier={courier} onBack={jest.fn()} />);
+    fireEvent.press(screen.getByTestId('handover-biometric'));
+    expect(screen.queryByTestId('handover-validated')).toBeNull();
+    expect(screen.queryByText(/touchez pour simuler/)).toBeNull();
   });
 });

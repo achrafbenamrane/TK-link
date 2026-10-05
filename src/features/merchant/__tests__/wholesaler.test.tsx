@@ -223,6 +223,7 @@ describe('dossier fournisseur — étapes 3 à 6 du schéma', () => {
     const onDone = jest.fn();
     render(
       <ProSetupScreen
+        demo
         siret="44306184100047"
         address="8 rue des Carmes, 31000 Toulouse"
         authenticate={authenticate}
@@ -389,5 +390,21 @@ describe('le grossiste n’est pas un commerçant', () => {
     expect(screen.getByTestId('wholesaler-catalog-saved')).toBeTruthy();
     expect(useMerchantStore.getState().profile.zone).toBe('Occitanie');
     expect(useMerchantStore.getState().profile.modes).toEqual(['livraison']);
+  });
+});
+
+describe('dossier pro — en production', () => {
+  it('ne propose pas de simuler le contrôle de TK LINK', () => {
+    useMerchantStore.setState({ supplier: { ...EMPTY_SUPPLIER, status: 'en_verification' } });
+    render(
+      <ProSetupScreen
+        siret="44306184100047"
+        address="8 rue des Carmes, 31000 Toulouse"
+        authenticate={jest.fn()}
+        onDone={jest.fn()}
+      />,
+    );
+    expect(screen.getByTestId('supplier-verification-status')).toBeTruthy();
+    expect(screen.queryByTestId('supplier-demo-validate')).toBeNull();
   });
 });

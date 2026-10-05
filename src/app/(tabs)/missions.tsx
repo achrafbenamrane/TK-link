@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { CourierMissionsScreen, type MessageTarget, type Mission } from '@/features/courier';
 import { missionConversation, useMessagesStore } from '@/features/messages';
 import { authenticateBiometric, useMissionOffers, useShopStore } from '@/features/shop';
+import { isDemoBuild } from '@/shared/lib/env';
 
 /**
  * L'onglet « Missions » du livreur : missions proposées, mission active, navigation et
@@ -28,8 +29,8 @@ export default function MissionsRoute() {
       onPickedUp={(orderId) => setOrderStatus(orderId, 'en_livraison')}
       onDelivered={(orderId) => setOrderStatus(orderId, 'livree')}
       onMessage={openMessage}
-      // Démonstration au client : des missions d'exemple tant qu'aucune vraie course n'existe.
-      showExamples
+      // Démonstration au client : des missions d'exemple (builds de démonstration seulement).
+      showExamples={isDemoBuild}
     />
   );
 }

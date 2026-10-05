@@ -50,9 +50,10 @@ or deletes stale ones. Newest first; keep entries one line each:
   déjà dans le coffre sécurisé (seul un repère masqué reste dans l'état).
 - **Récompense partagée** (`shareReward`) : elle quitte l'inventaire du donneur, mais il n'existe pas
   encore de chemin pour la récupérer chez le destinataire (il faut un compte et un serveur).
-- **Démonstration dans les routes de production** : l'inscription s'ouvre pré-remplie et l'IBAN du
-  dossier pro aussi (`sign-up.tsx`, `dossier-pro.tsx`, `role.tsx`). À retirer, ou à placer derrière un
-  drapeau « démo », avant toute vraie publication.
+- **Démonstration** : réglée. `isDemoBuild` (`src/shared/lib/env.ts`, faux seulement quand
+  `EXPO_PUBLIC_APP_ENV=production`, posé par le profil EAS) commande, depuis les routes, le bouton « Démo »,
+  l'inscription pré-remplie, l'IBAN d'exemple, les missions et la vitrine d'exemple et les boutons
+  « simuler la validation ». Vérifié : un Metro lancé en production n'en montre aucun.
 
 ## Wishlist (pull when convenient)
 

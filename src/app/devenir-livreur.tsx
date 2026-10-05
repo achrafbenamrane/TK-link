@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { CourierSetupScreen } from '@/features/courier';
 import { useOnboardingStore } from '@/features/onboarding';
 import { authenticateBiometric } from '@/features/shop';
+import { isDemoBuild } from '@/shared/lib/env';
 
 /**
  * Le dépôt des justificatifs, la vérification et la sécurisation du livreur —
@@ -15,6 +16,7 @@ export default function BecomeCourierRoute() {
 
   return (
     <CourierSetupScreen
+      demo={isDemoBuild}
       authenticate={async (reason) => (await authenticateBiometric(reason)).ok}
       onDone={() => {
         // Le compte est prêt : la porte du premier lancement s'ouvre.
