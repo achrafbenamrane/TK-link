@@ -151,7 +151,11 @@ export function FingerprintScanner({ state, onPress, size = 132, testID, idleCap
           style={{ width: size * 1.22, height: size * 1.22 }}
         >
           {/* glyphe au repos */}
-          <Ionicons name="finger-print" size={size} color={colors.inkFaint} />
+          {/* Une fois identifié, la coche verte remplace le glyphe : sans cela, ses bords gris
+              dépassent derrière le rond vert. */}
+          <View style={{ opacity: state === 'ok' ? 0 : 1 }}>
+            <Ionicons name="finger-print" size={size} color={colors.inkFaint} />
+          </View>
 
           {/* glyphe coloré, révélé de bas en haut */}
           <Animated.View
