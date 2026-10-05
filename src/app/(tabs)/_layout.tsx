@@ -52,27 +52,6 @@ function FlashTabIcon({ focused }: { focused: boolean }) {
   );
 }
 
-/** L'onglet central du grossiste : ses offres pro (un colis, pas un éclair). */
-function OfferTabIcon({ focused }: { focused: boolean }) {
-  const colors = useColors();
-  return (
-    <View
-      className="h-12 w-12 items-center justify-center rounded-pill bg-brand-500"
-      style={{
-        marginTop: -18,
-        opacity: focused ? 1 : 0.9,
-        shadowColor: colors.brand500,
-        shadowOpacity: 0.5,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 8,
-      }}
-    >
-      <Feather name="package" size={22} color={colors.inkInverse} />
-    </View>
-  );
-}
-
 export default function TabsLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -145,8 +124,13 @@ export default function TabsLayout() {
         options={{
           href: pro || wholesaler ? undefined : null,
           title: wholesaler ? 'Offres' : 'Flash',
-          tabBarIcon: ({ focused }) =>
-            wholesaler ? <OfferTabIcon focused={focused} /> : <FlashTabIcon focused={focused} />,
+          // Le grossiste a un onglet comme les autres : seule la maquette du commerçant surélève « Flash ».
+          tabBarIcon: ({ focused, color }) =>
+            wholesaler ? (
+              <Feather name="package" size={22} color={color} />
+            ) : (
+              <FlashTabIcon focused={focused} />
+            ),
         }}
       />
       <Tabs.Screen
