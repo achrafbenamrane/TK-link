@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { selectUnreadTotal, useMessagesStore } from '@/features/messages';
 import { selectRole, useOnboardingStore } from '@/features/onboarding';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -12,7 +13,7 @@ import { useColors } from '@/shared/theme/theme-provider';
  *
  *   Consommateur : Accueil · Favoris · Commandes · Compte
  *   Commerçant   : Accueil · Commandes · [ FLASH ] · Fidélité · Compte
- *   Livreur      : Missions · Revenus · Compte
+ *   Livreur      : Accueil · Missions · Carte · Messages · Compte
  *   Grossiste    : Accueil · Commandes · [ OFFRES ] · Compte
  *
  * Chez le consommateur, l'accueil, ce sont les ventes Flash (CDC §3.1). « La
@@ -80,6 +81,7 @@ export default function TabsLayout() {
   const pro = role === 'commercant';
   const courier = role === 'livreur';
   const wholesaler = role === 'grossiste';
+  const unread = useMessagesStore(selectUnreadTotal);
 
   // L'appareil du commerçant s'ouvre sur les commandes en cours (V1.1), pas sur
   // le tableau de bord. Une seule fois par lancement : cette disposition reste
@@ -117,10 +119,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: courier ? 'Missions' : 'Accueil',
-          tabBarIcon: ({ color }) => (
-            <Feather name={courier ? 'navigation' : 'home'} size={22} color={color} />
-          ),
+          title: 'Accueil',
+          tabBarIcon: ({ color }) => <Feather name="home" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -134,10 +134,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="commandes"
         options={{
-          title: courier ? 'Revenus' : 'Commandes',
-          tabBarIcon: ({ color }) => (
-            <Feather name={courier ? 'credit-card' : 'clipboard'} size={22} color={color} />
-          ),
+          // Chez le livreur, l'historique des livraisons s'ouvre depuis l'accueil.
+          href: courier ? null : undefined,
+          title: 'Commandes',
+          tabBarIcon: ({ color }) => <Feather name="clipboard" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -155,6 +155,31 @@ export default function TabsLayout() {
           href: pro ? undefined : null,
           title: 'Fidélité',
           tabBarIcon: ({ color }) => <Feather name="award" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="missions"
+        options={{
+          href: courier ? undefined : null,
+          title: 'Missions',
+          tabBarIcon: ({ color }) => <Feather name="clipboard" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="carte"
+        options={{
+          href: courier ? undefined : null,
+          title: 'Carte',
+          tabBarIcon: ({ color }) => <Feather name="map-pin" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          href: courier ? undefined : null,
+          title: 'Messages',
+          tabBarBadge: courier && unread > 0 ? unread : undefined,
+          tabBarIcon: ({ color }) => <Feather name="message-square" size={22} color={color} />,
         }}
       />
       <Tabs.Screen

@@ -8,7 +8,7 @@ import { useColors } from '@/shared/theme/theme-provider';
 
 import { authenticate, getBiometricSupport, type BiometricSupport } from '../lib/biometrics';
 import { useShopStore } from '../model/store';
-import { FingerprintScanner, type ScanState } from './components/fingerprint-scanner';
+import { FingerprintScanner, type ScanState } from '@/shared/ui';
 
 export function BiometricsScreen() {
   const colors = useColors();

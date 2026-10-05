@@ -1,3 +1,4 @@
+import { deliveryCode } from '@/shared/lib/handover';
 import { fireEvent, render, screen } from '@/shared/testing/render';
 
 import { routeIssue } from '../lib/issues';
@@ -153,5 +154,26 @@ describe('<OrderDetailScreen /> — retours client', () => {
     useShopStore.setState({ orders: [order({ status: 'preparation' })] });
     render(<OrderDetailScreen />);
     expect(screen.queryByTestId('order-rating')).toBeNull();
+  });
+});
+
+describe('<OrderDetailScreen /> — le code de remise du client', () => {
+  it('une livraison en route montre au client le code à six chiffres à donner au livreur', () => {
+    useShopStore.setState({ orders: [order({ fulfilment: 'livraison', status: 'en_livraison' })] });
+    render(<OrderDetailScreen />);
+    expect(screen.getByTestId('order-delivery-code-value')).toHaveTextContent(
+      new RegExp(`^${deliveryCode('o1')}$`),
+    );
+  });
+
+  it('pas de code pour un Touch & Collect, ni avant que la commande soit prête', () => {
+    useShopStore.setState({ orders: [order({ fulfilment: 'touch-collect', status: 'prete' })] });
+    const { unmount } = render(<OrderDetailScreen />);
+    expect(screen.queryByTestId('order-delivery-code')).toBeNull();
+    unmount();
+
+    useShopStore.setState({ orders: [order({ fulfilment: 'livraison', status: 'preparation' })] });
+    render(<OrderDetailScreen />);
+    expect(screen.queryByTestId('order-delivery-code')).toBeNull();
   });
 });

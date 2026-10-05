@@ -15,6 +15,7 @@ export default function HandoverRoute() {
   const router = useRouter();
   const vehicle = useCourierStore((s) => s.vehicle);
   const status = useCourierStore((s) => s.status);
+  const active = useCourierStore((s) => s.active);
 
   const real = status === 'valide' && vehicle;
   return (
@@ -26,6 +27,8 @@ export default function HandoverRoute() {
         verified: true,
         present: true,
       }}
+      // L'empreinte posée par le livreur sur son téléphone : elle s'affiche ici sans autre geste.
+      courierValidatedAt={active?.mission.orderId === id ? (active.identityAt ?? null) : null}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/commandes'))}
     />
   );

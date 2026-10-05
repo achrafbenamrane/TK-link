@@ -2,7 +2,13 @@ import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { CourierHomeScreen } from '@/features/courier';
+import {
+  CourierHomeScreen,
+  DEMO_MISSIONS,
+  useCourierStore,
+  type CourierTarget,
+} from '@/features/courier';
+import { missionConversation, useMessagesStore } from '@/features/messages';
 import { programOf, useMerchantLoyaltyStore } from '@/features/loyalty';
 import {
   liveOffers,
@@ -22,13 +28,12 @@ import {
   useOnboardingStore,
 } from '@/features/onboarding';
 import {
-  authenticateBiometric,
   HomeScreen,
   isMerchantOrder,
-  missionOffers,
   LOCAL_MERCHANT_ID,
   selectOrders,
   summarizeOrder,
+  useMissionOffers,
   useShopStore,
   type Deal,
 } from '@/features/shop';
@@ -182,22 +187,52 @@ function MerchantHome() {
   );
 }
 
-/** L'accueil du livreur : disponibilité et missions (les commandes prêtes en livraison). */
+/** L'accueil du livreur : son tableau de bord — résumé du jour, raccourcis, disponibilité. */
 function CourierHome() {
   const router = useRouter();
-  const orders = useShopStore(selectOrders);
-  const addresses = useShopStore((s) => s.addresses);
-  const setOrderStatus = useShopStore((s) => s.setOrderStatus);
-  const missions = useMemo(() => missionOffers(orders, addresses), [orders, addresses]);
+  const avatar = useOnboardingStore(selectAvatar);
+  const firstName = useOnboardingStore(selectFirstName);
+  const missions = useMissionOffers();
+  const declined = useCourierStore((s) => s.declined);
+  const ensureConversation = useMessagesStore((s) => s.ensureConversation);
+
+  // Les missions proposées, d'exemple tant qu'aucune vraie course n'existe (démonstration).
+  const pending = [...missions, ...DEMO_MISSIONS].filter(
+    (m) => !declined.includes(m.orderId),
+  ).length;
+
+  const open = (target: CourierTarget) => {
+    switch (target) {
+      case 'missions':
+        router.push('/missions');
+        return;
+      case 'history':
+        router.push('/commandes');
+        return;
+      case 'support': {
+        const seed = missionConversation('support', null);
+        ensureConversation(seed);
+        router.push({ pathname: '/conversation/[id]', params: { id: seed.id } });
+        return;
+      }
+      case 'account':
+        router.push('/profil');
+        return;
+      case 'security':
+        router.push('/empreinte');
+        return;
+      case 'setup':
+        router.push('/devenir-livreur');
+    }
+  };
 
   return (
     <CourierHomeScreen
-      missions={missions}
-      authenticate={async (reason) => (await authenticateBiometric(reason)).ok}
-      onPickedUp={(orderId) => setOrderStatus(orderId, 'en_livraison')}
-      onDelivered={(orderId) => setOrderStatus(orderId, 'livree')}
-      onOpenSetup={() => router.push('/devenir-livreur')}
-      // Démonstration au client : des missions d'exemple tant qu'aucune vraie course n'existe.
+      name={firstName || 'Livreur'}
+      renderAvatar={() => <AvatarView avatar={avatar} size={52} />}
+      pendingCount={pending}
+      onOpen={open}
+      // Démonstration au client : un compte d'exemple activable en un geste.
       showExamples
     />
   );

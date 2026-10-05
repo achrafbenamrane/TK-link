@@ -15,6 +15,7 @@ export { orderToTransaction, producesReceipt, type Transaction } from './lib/tra
 export { selectOrders } from './model/store';
 export { pointsByMerchant } from './lib/points';
 export { missionOffers, type MissionOffer } from './lib/missions';
+export { useMissionOffers } from './model/use-mission-offers';
 export {
   isHonoured,
   isMerchantOrder,

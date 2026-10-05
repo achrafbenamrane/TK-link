@@ -2,8 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { z } from 'zod';
 
-import { isImportantParcel, isValidPickupPin } from '@/shared/lib/handover';
-import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
+import { isValidDeliveryCode, isValidPickupPin } from '@/shared/lib/handover';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
 import {
@@ -38,7 +37,21 @@ export type Mission = {
   distanceKm: number | null;
   /** Délai estimé en minutes — renseigné seulement par les missions d'exemple. */
   etaMin?: number;
+  /** Le détail que montre l'écran Mission active. Absent = on ne l'affiche pas, on ne l'invente pas. */
+  ref?: string;
+  clientName?: string;
+  clientPhone?: string;
+  merchantPhone?: string;
+  instructions?: string;
+  bags?: number;
+  /** Heure cible de livraison, « 12:45 ». */
+  targetTime?: string;
+  pickupGeo?: GeoPoint;
+  dropoffGeo?: GeoPoint;
 };
+
+export type GeoPoint = { lat: number; lng: number };
+const GeoSchema = z.object({ lat: z.number(), lng: z.number() });
 
 const MissionSchema = z.object({
   orderId: z.string(),
@@ -49,6 +62,15 @@ const MissionSchema = z.object({
   totalEur: z.number().nonnegative().default(0),
   distanceKm: z.number().nonnegative().nullable().default(null),
   etaMin: z.number().nonnegative().optional(),
+  ref: z.string().optional(),
+  clientName: z.string().optional(),
+  clientPhone: z.string().optional(),
+  merchantPhone: z.string().optional(),
+  instructions: z.string().optional(),
+  bags: z.number().int().nonnegative().optional(),
+  targetTime: z.string().optional(),
+  pickupGeo: GeoSchema.optional(),
+  dropoffGeo: GeoSchema.optional(),
 });
 
 const DeliveredSchema = z.object({
@@ -82,6 +104,13 @@ const PersistedSchema = z.object({
         'en_livraison',
         'livree',
       ]),
+      /** Quand chaque étape a été franchie (ms) : la frise affiche les heures. */
+      at: z.record(z.string(), z.number()).default({}),
+      /**
+       * Quand le livreur a confirmé son identité par empreinte (biométrie LOCALE : on ne garde
+       * que l'heure, jamais l'empreinte). Le commerçant le lit sur son écran de remise.
+       */
+      identityAt: z.number().optional(),
     })
     .nullable()
     .default(null),
@@ -89,7 +118,12 @@ const PersistedSchema = z.object({
   history: z.array(DeliveredSchema).default([]),
 });
 
-export type CourierActive = { mission: Mission; step: MissionStep };
+export type CourierActive = {
+  mission: Mission;
+  step: MissionStep;
+  at: Record<string, number>;
+  identityAt?: number | undefined;
+};
 
 type State = z.infer<typeof PersistedSchema> & {
   /** Dépose le dossier (étape 3) : il part en vérification. */
@@ -105,19 +139,26 @@ type State = z.infer<typeof PersistedSchema> & {
   /** « Je pars chez le commerçant ». */
   startRoute: () => void;
   /**
-   * Prise en charge chez le commerçant : le code (ou QR) doit être celui de la
-   * commande. Un colis « important » exige en plus la biométrie — `biometricOk`.
+   * Le livreur a confirmé son identité par l'empreinte de SON téléphone (biométrie locale).
+   * On ne retient que l'heure : le commerçant la voit s'afficher sur son écran de remise.
+   */
+  confirmIdentity: () => boolean;
+  /**
+   * Prise en charge chez le commerçant : l'identité doit être confirmée par empreinte, puis le
+   * code (ou le QR) doit être celui de la commande.
    */
   confirmPickup: (
     pin: string,
-    biometricOk: boolean,
   ) => { ok: true } | { ok: false; reason: 'pas_de_mission' | 'code' | 'biometrie' };
   /** Départ chez le client : la commande passe « en livraison ». */
   startDelivery: () => void;
-  /** Remise au client, avec preuve — termine la mission et l'inscrit au portefeuille. */
+  /**
+   * Remise au client — le code de validation du client (ou son QR) est la preuve de remise ;
+   * la mission se termine et s'inscrit au portefeuille.
+   */
   confirmDelivery: (
-    proofUri: string,
-  ) => { ok: true } | { ok: false; reason: 'pas_de_mission' | 'preuve' };
+    code: string,
+  ) => { ok: true } | { ok: false; reason: 'pas_de_mission' | 'code' };
   reset: () => void;
 };
 
@@ -169,7 +210,7 @@ export const useCourierStore = create<State>()(
       acceptMission: (mission) => {
         const s = get();
         if (!canReceiveMissions(s.status, s.online) || s.active) return false;
-        set({ active: { mission, step: 'acceptee' } });
+        set({ active: { mission, step: 'acceptee', at: { acceptee: Date.now() } } });
         return true;
       },
 
@@ -178,39 +219,58 @@ export const useCourierStore = create<State>()(
 
       startRoute: () => {
         const a = get().active;
-        if (a?.step === 'acceptee') set({ active: { ...a, step: 'en_route_commercant' } });
+        if (a?.step === 'acceptee') {
+          set({
+            active: {
+              ...a,
+              step: 'en_route_commercant',
+              at: { ...a.at, en_route_commercant: Date.now() },
+            },
+          });
+        }
       },
 
-      confirmPickup: (pin, biometricOk) => {
+      confirmIdentity: () => {
+        const a = get().active;
+        if (!a) return false;
+        set({ active: { ...a, identityAt: Date.now() } });
+        return true;
+      },
+
+      confirmPickup: (pin) => {
         const a = get().active;
         if (!a || a.step !== 'en_route_commercant') {
           return { ok: false as const, reason: 'pas_de_mission' as const };
         }
+        // L'empreinte d'abord : on ne remet pas un colis à quelqu'un dont l'identité n'est pas confirmée.
+        if (!a.identityAt) return { ok: false as const, reason: 'biometrie' as const };
         if (!isValidPickupPin(a.mission.orderId, pin)) {
           return { ok: false as const, reason: 'code' as const };
         }
-        if (
-          isImportantParcel(a.mission.totalEur, PLATFORM_SETTINGS.importantParcelMinEur) &&
-          !biometricOk
-        ) {
-          return { ok: false as const, reason: 'biometrie' as const };
-        }
-        set({ active: { ...a, step: 'prise_en_charge' } });
+        set({
+          active: { ...a, step: 'prise_en_charge', at: { ...a.at, prise_en_charge: Date.now() } },
+        });
         return { ok: true as const };
       },
 
       startDelivery: () => {
         const a = get().active;
-        if (a?.step === 'prise_en_charge') set({ active: { ...a, step: 'en_livraison' } });
+        if (a?.step === 'prise_en_charge') {
+          set({
+            active: { ...a, step: 'en_livraison', at: { ...a.at, en_livraison: Date.now() } },
+          });
+        }
       },
 
-      confirmDelivery: (proofUri) => {
+      confirmDelivery: (code) => {
         const a = get().active;
         if (!a || a.step !== 'en_livraison') {
           return { ok: false as const, reason: 'pas_de_mission' as const };
         }
-        // Pas de remise sans preuve (V1.1 : « remise avec preuve »).
-        if (!proofUri) return { ok: false as const, reason: 'preuve' as const };
+        // Pas de remise sans preuve (V1.1 : « remise avec preuve ») : le code du client en est une.
+        if (!isValidDeliveryCode(a.mission.orderId, code)) {
+          return { ok: false as const, reason: 'code' as const };
+        }
         const gain = courierGain(a.mission.distanceKm);
         set((s) => ({
           active: null,
@@ -222,7 +282,7 @@ export const useCourierStore = create<State>()(
               distanceKm: a.mission.distanceKm,
               gainEur: gain.eur,
               gainComplet: gain.complet,
-              proofUri,
+              proofUri: `code:${code.trim()}`,
             },
             ...s.history,
           ],

@@ -1,92 +1,92 @@
 import { Feather } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
+import { useState, type ComponentProps, type ReactNode } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { isImportantParcel, pickupPin } from '@/shared/lib/handover';
-import { pickImage } from '@/shared/lib/image-picker';
-import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
-import { AppText, Button, Screen, Wordmark } from '@/shared/ui';
+import { AppText, Button, Screen, ThemeToggle } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
-import {
-  canReceiveMissions,
-  courierGain,
-  formatEur,
-  MISSION_STEPS,
-  STEP_LABEL,
-  VEHICLE_LABEL,
-} from '../lib/courier';
-import { DEMO_MISSIONS, isDemoMission } from '../lib/demo';
-import { useCourierStore, type Mission } from '../model/store';
+import { formatEur } from '../lib/courier';
+import { daySummary, deltaLabel } from '../lib/summary';
+import { useCourierStore } from '../model/store';
+
+export type CourierTarget = 'missions' | 'history' | 'support' | 'account' | 'security' | 'setup';
 
 type Props = {
-  /** Les missions proposées — fabriquées par la route à partir des commandes prêtes. */
-  missions: Mission[];
-  /** Biométrie locale (colis important). Fournie par la route. */
-  authenticate: (reason: string) => Promise<boolean>;
-  /** La commande est prise chez le commerçant : elle passe « en livraison ». */
-  onPickedUp: (orderId: string) => void;
-  /** La commande est remise : elle passe « livrée ». */
-  onDelivered: (orderId: string) => void;
-  /** Reprendre l'inscription (compte pas encore validé). */
-  onOpenSetup: () => void;
+  /** « Alex Martin » — le nom affiché en haut. */
+  name: string;
+  /** La photo de profil — fournie par la route (la galerie vit dans `onboarding`). */
+  renderAvatar?: () => ReactNode;
+  /** Missions proposées en ce moment (« en attente », « à prendre »). */
+  pendingCount: number;
+  /** Une conversation non lue, ou une mission en attente : l'écran s'ouvre là. */
+  onOpen: (target: CourierTarget) => void;
   /**
-   * Montrer des missions d'EXEMPLE quand il n'y en a aucune — pour la démonstration
-   * au client. Elles sont signalées comme telles.
+   * Démo : activer un compte livreur d'exemple en un geste, quand le compte n'est pas encore
+   * validé. Absent en production.
    */
   showExamples?: boolean;
 };
 
-function GainLine({ mission }: { mission: Mission }) {
-  const colors = useColors();
-  const gain = courierGain(mission.distanceKm);
-  return (
-    <View className="flex-row items-center gap-1.5">
-      <Feather name="credit-card" size={13} color={colors.inkFaint} />
-      <AppText className="font-sans-bold text-ink" style={{ fontSize: 13 }}>
-        {gain.complet ? formatEur(gain.eur) : `dès ${formatEur(gain.eur)}`}
-      </AppText>
-    </View>
-  );
-}
+const SHORTCUTS: {
+  key: Exclude<CourierTarget, 'setup'>;
+  label: string;
+  icon: ComponentProps<typeof Feather>['name'];
+}[] = [
+  { key: 'missions', label: 'Mes missions', icon: 'clipboard' },
+  { key: 'history', label: 'Historique', icon: 'clock' },
+  { key: 'support', label: 'Support', icon: 'headphones' },
+  { key: 'account', label: 'Compte', icon: 'user' },
+  { key: 'security', label: 'Sécurité', icon: 'shield' },
+];
+
+const DAY_LABEL = (ms: number) =>
+  new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
 
 /**
- * LE TABLEAU DE BORD LIVREUR — étapes 7 à 12 du schéma du client :
- * disponibilité → réception → acceptation → retrait chez le commerçant (QR/PIN,
- * biométrie si colis important) → livraison → confirmation avec preuve.
+ * L'ACCUEIL DU LIVREUR — la première maquette du client : qui je suis et si je suis disponible,
+ * le résumé du jour (gains, missions en attente, livraisons terminées), les raccourcis, et le
+ * bouton pour passer disponible.
+ *
+ * Les chiffres viennent de l'historique de l'appareil : « +12,5 % vs hier » n'apparaît que
+ * si hier a quelque chose à comparer.
  */
 export function CourierHomeScreen({
-  missions,
-  authenticate,
-  onPickedUp,
-  onDelivered,
-  onOpenSetup,
+  name,
+  renderAvatar,
+  pendingCount,
+  onOpen,
   showExamples = false,
 }: Props) {
   const colors = useColors();
   const status = useCourierStore((s) => s.status);
-  const vehicle = useCourierStore((s) => s.vehicle);
   const online = useCourierStore((s) => s.online);
   const active = useCourierStore((s) => s.active);
-  const declined = useCourierStore((s) => s.declined);
+  const history = useCourierStore((s) => s.history);
   const setOnline = useCourierStore((s) => s.setOnline);
-  const acceptMission = useCourierStore((s) => s.acceptMission);
-  const declineMission = useCourierStore((s) => s.declineMission);
-  const startRoute = useCourierStore((s) => s.startRoute);
-  const confirmPickup = useCourierStore((s) => s.confirmPickup);
-  const startDelivery = useCourierStore((s) => s.startDelivery);
-  const confirmDelivery = useCourierStore((s) => s.confirmDelivery);
-
-  const [pin, setPin] = useState('');
-  const [message, setMessage] = useState<string | null>(null);
-
-  const ready = status === 'valide';
-  const examples = showExamples && missions.length === 0;
-  const offers = (examples ? DEMO_MISSIONS : missions).filter((m) => !declined.includes(m.orderId));
   const submitProfile = useCourierStore((s) => s.submitProfile);
   const validateAccount = useCourierStore((s) => s.validateAccount);
   const setDeviceEnrolled = useCourierStore((s) => s.setDeviceEnrolled);
+
+  // Instant figé au montage : pas d'horloge pendant le rendu.
+  const [now] = useState(() => Date.now());
+  const [message, setMessage] = useState<string | null>(null);
+
+  const ready = status === 'valide';
+  const summary = daySummary(history, now);
+  const inProgress = pendingCount + (active ? 1 : 0);
+
+  const toggle = () => {
+    if (!setOnline(!online)) {
+      setMessage(
+        online
+          ? 'Terminez la mission en cours avant de passer hors ligne.'
+          : 'Votre compte doit être validé pour recevoir des missions.',
+      );
+    } else {
+      setMessage(null);
+    }
+  };
 
   // Démo : un compte prêt à livrer en un geste, sans passer par les justificatifs.
   const activateDemo = () => {
@@ -96,78 +96,81 @@ export function CourierHomeScreen({
     setOnline(true);
   };
 
-  const pickup = async () => {
-    if (!active) return;
-    const important = isImportantParcel(
-      active.mission.totalEur,
-      PLATFORM_SETTINGS.importantParcelMinEur,
-    );
-    // La biométrie se demande AVANT de valider : un colis important ne passe pas
-    // sans elle (V1.1).
-    const biometricOk = important
-      ? await authenticate('Confirmer la prise en charge d’un colis important')
-      : true;
-    const res = confirmPickup(pin, biometricOk);
-    if (res.ok) {
-      setPin('');
-      setMessage(null);
-    } else if (res.reason === 'code') {
-      setMessage('Ce code n’est pas celui de la commande.');
-    } else if (res.reason === 'biometrie') {
-      setMessage('La biométrie est requise pour un colis important.');
-    }
-  };
-
-  const deliver = async () => {
-    if (!active) return;
-    const proof = await pickImage('camera', { aspect: [4, 3] });
-    if (!proof) {
-      setMessage('Une preuve de remise est nécessaire : prenez la photo du colis remis.');
-      return;
-    }
-    const orderId = active.mission.orderId;
-    const res = confirmDelivery(proof);
-    if (res.ok) {
-      setMessage(null);
-      onDelivered(orderId);
-    }
-  };
+  const tiles: { id: string; label: string; value: string; sub: string; accent?: boolean }[] = [
+    {
+      id: 'gains',
+      label: 'Gains du jour',
+      value: formatEur(summary.gainsEur),
+      sub: deltaLabel(summary.gainsDeltaPct) ?? ' ',
+      accent: true,
+    },
+    {
+      id: 'pending',
+      label: 'Missions en attente',
+      value: String(pendingCount),
+      sub: 'À prendre',
+    },
+    {
+      id: 'done',
+      label: 'Livraisons terminées',
+      value: String(summary.deliveries),
+      sub: deltaLabel(summary.deliveriesDeltaPct) ?? ' ',
+      accent: true,
+    },
+  ];
 
   return (
     <Screen testID="courier-home-screen" padded={false}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="gap-4 px-5 pb-10">
-        <View className="flex-row items-center justify-between pt-3">
-          <Wordmark size={22} />
-          <AppText variant="caption" className="text-ink-faint">
-            TK Deliver{vehicle ? ` · ${VEHICLE_LABEL[vehicle]}` : ''}
-          </AppText>
-        </View>
-
-        {/* Disponibilité — étape 7 */}
-        <View className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-4">
-          <View className="flex-1">
-            <AppText className="font-sans-bold text-ink">
-              {online ? 'Vous êtes en ligne' : 'Vous êtes hors ligne'}
-            </AppText>
-            <AppText variant="caption" className="text-ink-faint">
-              {ready
-                ? online
-                  ? 'Les missions près de vous arrivent ici.'
-                  : 'Passez en ligne pour recevoir des missions.'
-                : 'Votre compte doit être validé pour recevoir des missions.'}
-            </AppText>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="gap-4 px-5 pb-28">
+        {/* Qui je suis, et suis-je disponible */}
+        <View className="flex-row items-center gap-3 pt-3">
+          <View className="h-14 w-14 items-center justify-center overflow-hidden rounded-pill border-2 border-brand-500 bg-surface-muted">
+            {renderAvatar ? (
+              renderAvatar()
+            ) : (
+              <Feather name="user" size={24} color={colors.brand500} />
+            )}
           </View>
-          <Switch
-            testID="courier-online-toggle"
-            accessibilityLabel="Disponibilité"
-            value={online}
-            disabled={!ready}
-            onValueChange={(v) => {
-              if (!setOnline(v))
-                setMessage('Terminez la mission en cours avant de passer hors ligne.');
-            }}
-            trackColor={{ true: colors.brand500, false: colors.line }}
-          />
+          <View className="flex-1">
+            <AppText testID="courier-name" variant="title" className="text-lg" numberOfLines={1}>
+              {name}
+            </AppText>
+            <View className="flex-row items-center gap-1.5">
+              <View
+                className={cn('h-2 w-2 rounded-pill', online ? 'bg-success' : 'bg-ink-faint')}
+              />
+              <AppText
+                testID="courier-availability"
+                variant="caption"
+                className={online ? 'text-success' : 'text-ink-faint'}
+              >
+                {online ? 'Disponible' : 'Hors ligne'}
+              </AppText>
+            </View>
+          </View>
+          <View className="items-end gap-2">
+            <Pressable
+              testID="courier-bell"
+              accessibilityRole="button"
+              accessibilityLabel={
+                pendingCount > 0
+                  ? `${pendingCount} mission${pendingCount > 1 ? 's' : ''} en attente`
+                  : 'Missions'
+              }
+              hitSlop={8}
+              onPress={() => onOpen('missions')}
+            >
+              <Feather name="bell" size={20} color={colors.ink} />
+              {pendingCount > 0 ? (
+                <View className="absolute -right-1.5 -top-1.5 h-4 min-w-[16px] items-center justify-center rounded-pill bg-brand-500 px-1">
+                  <AppText className="font-sans-bold text-white" style={{ fontSize: 9 }}>
+                    {pendingCount}
+                  </AppText>
+                </View>
+              ) : null}
+            </Pressable>
+            <ThemeToggle />
+          </View>
         </View>
 
         {!ready && showExamples ? (
@@ -187,7 +190,7 @@ export function CourierHomeScreen({
           <Pressable
             testID="courier-open-setup"
             accessibilityRole="button"
-            onPress={onOpenSetup}
+            onPress={() => onOpen('setup')}
             className="flex-row items-center gap-3 rounded-card bg-brand-50 p-4"
           >
             <Feather name="shield" size={18} color={colors.brand600} />
@@ -201,211 +204,113 @@ export function CourierHomeScreen({
           </Pressable>
         ) : null}
 
+        {/* Résumé du jour */}
+        <View className="gap-3 rounded-card border border-line bg-surface p-4">
+          <View>
+            <AppText className="font-sans-bold text-ink">Résumé du jour</AppText>
+            <AppText variant="caption" className="text-ink-faint">
+              Aujourd’hui, {DAY_LABEL(now)}
+            </AppText>
+          </View>
+          <View className="flex-row gap-2">
+            {tiles.map((t) => (
+              <View
+                key={t.id}
+                testID={`courier-tile-${t.id}`}
+                className="flex-1 gap-0.5 rounded-card border border-brand-500 bg-surface-muted px-2 py-3"
+              >
+                <AppText
+                  variant="caption"
+                  className="text-center text-ink-muted"
+                  style={{ fontSize: 10.5 }}
+                  numberOfLines={2}
+                >
+                  {t.label}
+                </AppText>
+                <AppText
+                  testID={`courier-tile-${t.id}-value`}
+                  className="text-center font-display text-ink"
+                  style={{ fontSize: 22 }}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {t.value}
+                </AppText>
+                <AppText
+                  variant="caption"
+                  className={cn('text-center', t.accent ? 'text-success' : 'text-ink-faint')}
+                  style={{ fontSize: 10 }}
+                  numberOfLines={1}
+                >
+                  {t.sub}
+                </AppText>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Raccourcis */}
+        <View className="gap-3 rounded-card border border-line bg-surface p-4">
+          <AppText className="font-sans-bold text-ink">Raccourcis</AppText>
+          <View className="flex-row flex-wrap gap-2">
+            {SHORTCUTS.map((s) => {
+              const sub =
+                s.key === 'missions'
+                  ? `${inProgress} en cours`
+                  : s.key === 'history'
+                    ? 'Voir mes livraisons'
+                    : s.key === 'support'
+                      ? 'Aide & contact'
+                      : s.key === 'account'
+                        ? 'Mon profil'
+                        : 'Paramètres & accès';
+              return (
+                <Pressable
+                  key={s.key}
+                  testID={`courier-shortcut-${s.key}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={s.label}
+                  onPress={() => onOpen(s.key)}
+                  className={cn(
+                    'flex-row items-center gap-3 rounded-card border border-line bg-surface-muted px-3 py-3 active:opacity-70',
+                    s.key === 'security' ? 'w-full' : 'w-[48.5%]',
+                  )}
+                >
+                  <View className="h-10 w-10 items-center justify-center rounded-control border border-brand-500">
+                    <Feather name={s.icon} size={18} color={colors.brand500} />
+                  </View>
+                  <View className="flex-1">
+                    <AppText className="font-sans-semibold text-ink" style={{ fontSize: 13 }}>
+                      {s.label}
+                    </AppText>
+                    <AppText
+                      variant="caption"
+                      className="text-ink-faint"
+                      style={{ fontSize: 10.5 }}
+                      numberOfLines={1}
+                    >
+                      {sub}
+                    </AppText>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
         {message ? (
           <AppText testID="courier-message" variant="caption" className="text-danger">
             {message}
           </AppText>
         ) : null}
 
-        {/* Mission en cours — étapes 9 à 12 */}
-        {active ? (
-          <View
-            testID="courier-active"
-            className="gap-3 rounded-card border border-brand-500 bg-surface p-4"
-          >
-            <View className="flex-row items-center justify-between">
-              <AppText className="font-sans-bold text-ink">Mission en cours</AppText>
-              <AppText
-                testID="courier-active-step"
-                variant="caption"
-                className="font-sans-semibold text-brand-600"
-              >
-                {STEP_LABEL[active.step]}
-              </AppText>
-            </View>
-            <View className="flex-row gap-1">
-              {MISSION_STEPS.map((s, i) => (
-                <View
-                  key={s}
-                  className={cn(
-                    'h-1 flex-1 rounded-pill',
-                    i <= MISSION_STEPS.indexOf(active.step) ? 'bg-brand-500' : 'bg-line',
-                  )}
-                />
-              ))}
-            </View>
-            <View className="gap-0.5">
-              <AppText className="font-sans-semibold text-ink">
-                {active.mission.merchantName}
-              </AppText>
-              <AppText variant="caption" className="text-ink-faint">
-                Retrait : {active.mission.merchantArea || 'chez le commerçant'}
-              </AppText>
-              <AppText variant="caption" className="text-ink-faint">
-                Livraison : {active.mission.dropoff || 'adresse du client'}
-              </AppText>
-            </View>
-
-            {active.step === 'acceptee' ? (
-              <Button
-                testID="courier-start-route"
-                label="Je pars chez le commerçant"
-                onPress={startRoute}
-              />
-            ) : null}
-
-            {active.step === 'en_route_commercant' ? (
-              <View className="gap-2">
-                <AppText variant="caption" className="text-ink-faint">
-                  Au comptoir : scannez le QR de l’étiquette ou saisissez le code de remise donné
-                  par le commerçant.
-                </AppText>
-                {isDemoMission(active.mission.orderId) ? (
-                  <AppText testID="courier-demo-pin" variant="caption" className="text-brand-600">
-                    Démo — code de remise : {pickupPin(active.mission.orderId)}
-                  </AppText>
-                ) : null}
-                <TextInput
-                  testID="courier-pin"
-                  value={pin}
-                  onChangeText={(v) => setPin(v.replace(/\D/g, '').slice(0, 4))}
-                  keyboardType="number-pad"
-                  placeholder="Code à 4 chiffres"
-                  placeholderTextColor={colors.inkFaint}
-                  accessibilityLabel="Code de remise"
-                  className="rounded-control border border-line bg-surface px-3.5 py-3 font-sans text-ink"
-                  style={{ fontSize: 18, letterSpacing: 6 }}
-                />
-                <Button
-                  testID="courier-confirm-pickup"
-                  label="Confirmer la prise en charge"
-                  disabled={pin.length !== 4}
-                  onPress={pickup}
-                />
-              </View>
-            ) : null}
-
-            {active.step === 'prise_en_charge' ? (
-              <Button
-                testID="courier-start-delivery"
-                label="Partir chez le client"
-                onPress={() => {
-                  startDelivery();
-                  onPickedUp(active.mission.orderId);
-                }}
-              />
-            ) : null}
-
-            {active.step === 'en_livraison' ? (
-              <Button
-                testID="courier-confirm-delivery"
-                label="Remise au client — prendre la preuve"
-                onPress={deliver}
-              />
-            ) : null}
-          </View>
-        ) : null}
-
-        {/* Offres — étapes 8 et 9 */}
-        {!active && ready && online ? (
-          <View className="gap-3">
-            <View className="flex-row items-center justify-between">
-              <AppText variant="label">Missions disponibles</AppText>
-              {examples ? (
-                <View
-                  testID="courier-examples-badge"
-                  className="rounded-pill bg-brand-50 px-2.5 py-1"
-                >
-                  <AppText className="font-sans-semibold text-brand-600" style={{ fontSize: 11 }}>
-                    Exemples
-                  </AppText>
-                </View>
-              ) : null}
-            </View>
-            {offers.length === 0 ? (
-              <View testID="courier-no-missions" className="items-center gap-2 py-10">
-                <Feather name="navigation" size={28} color={colors.inkFaint} />
-                <AppText variant="caption" className="text-center">
-                  Aucune mission pour le moment. Elles apparaissent dès qu’une commande en livraison
-                  est prête chez un commerçant.
-                </AppText>
-              </View>
-            ) : (
-              offers.map((m) => (
-                <View
-                  key={m.orderId}
-                  testID={`courier-offer-${m.orderId}`}
-                  className="gap-3 rounded-card border border-line bg-surface p-4"
-                >
-                  <View className="flex-row items-start justify-between gap-2">
-                    <View className="flex-1">
-                      <AppText className="font-sans-bold text-ink" numberOfLines={1}>
-                        {m.merchantName}
-                      </AppText>
-                      <AppText variant="caption" className="text-ink-faint" numberOfLines={2}>
-                        {m.merchantArea ? `${m.merchantArea} → ` : ''}
-                        {m.dropoff || 'adresse du client'}
-                      </AppText>
-                    </View>
-                    <GainLine mission={m} />
-                  </View>
-                  <View className="flex-row justify-between rounded-control bg-surface-muted px-3 py-2.5">
-                    {[
-                      { icon: 'package', label: 'Articles', value: String(m.itemCount) },
-                      {
-                        icon: 'map-pin',
-                        label: 'Distance',
-                        value:
-                          m.distanceKm !== null
-                            ? `${m.distanceKm.toFixed(1).replace('.', ',')} km`
-                            : '—',
-                      },
-                      { icon: 'clock', label: 'Délai', value: m.etaMin ? `${m.etaMin} min` : '—' },
-                    ].map((c) => (
-                      <View key={c.label} className="flex-1 items-center gap-0.5">
-                        <Feather name={c.icon as 'clock'} size={14} color={colors.brand500} />
-                        <AppText className="font-sans-bold text-ink" style={{ fontSize: 13 }}>
-                          {c.value}
-                        </AppText>
-                        <AppText
-                          variant="caption"
-                          className="text-ink-faint"
-                          style={{ fontSize: 10.5 }}
-                        >
-                          {c.label}
-                        </AppText>
-                      </View>
-                    ))}
-                  </View>
-                  <View className="flex-row gap-2">
-                    <View className="flex-1">
-                      <Button
-                        testID={`courier-decline-${m.orderId}`}
-                        label="Refuser"
-                        variant="ghost"
-                        onPress={() => declineMission(m.orderId)}
-                      />
-                    </View>
-                    <View className="flex-1">
-                      <Button
-                        testID={`courier-accept-${m.orderId}`}
-                        label="Accepter"
-                        disabled={!canReceiveMissions(status, online)}
-                        onPress={() => acceptMission(m)}
-                      />
-                    </View>
-                  </View>
-                </View>
-              ))
-            )}
-          </View>
-        ) : null}
-
-        {/* La règle de rémunération, dite telle que le CDC la pose. */}
-        <AppText variant="caption" className="text-center text-ink-faint">
-          Rémunération : {formatEur(PLATFORM_SETTINGS.courierBaseFeeEur)} par commande, puis{' '}
-          {formatEur(PLATFORM_SETTINGS.courierPerKmEur)}/km au-delà de la zone de base.
-        </AppText>
+        <Button
+          testID="courier-online-toggle"
+          label={online ? 'Passer hors ligne' : 'Passer disponible'}
+          variant={online ? 'secondary' : 'primary'}
+          disabled={!ready}
+          onPress={toggle}
+        />
       </ScrollView>
     </Screen>
   );

@@ -40,6 +40,29 @@ export const STEP_LABEL: Record<MissionStep, string> = {
   livree: 'Livrée',
 };
 
+/**
+ * La frise « Progression de la mission » de l'écran Mission active : cinq lignes. « Récupérée »
+ * est la prise en charge, « Validation finale » la remise au client.
+ */
+export const TIMELINE: { step: MissionStep; label: string }[] = [
+  { step: 'acceptee', label: 'Acceptée' },
+  { step: 'en_route_commercant', label: 'En route vers le commerce' },
+  { step: 'prise_en_charge', label: 'Récupérée' },
+  { step: 'en_livraison', label: 'En route vers le client' },
+  { step: 'livree', label: 'Validation finale' },
+];
+
+export type TimelineState = 'fait' | 'en_cours' | 'a_venir';
+
+/** Où en est chaque ligne de la frise quand la mission est à l'étape `current`. */
+export function timelineState(line: MissionStep, current: MissionStep): TimelineState {
+  const l = MISSION_STEPS.indexOf(line);
+  const c = MISSION_STEPS.indexOf(current);
+  // « Validation finale » n'est jamais « faite » tant que la mission est active : elle finit la mission.
+  if (l < c) return 'fait';
+  return l === c ? 'en_cours' : 'a_venir';
+}
+
 export function nextStep(step: MissionStep): MissionStep | null {
   const i = MISSION_STEPS.indexOf(step);
   return MISSION_STEPS[i + 1] ?? null;

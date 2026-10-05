@@ -18,6 +18,24 @@ export function isValidPickupPin(orderId: string, entered: string): boolean {
 }
 
 /**
+ * LE CODE DE VALIDATION CLIENT — la remise au client, tout au bout de la course. Le client le
+ * lit (ou montre son QR) ; le livreur le saisit (ou le scanne) pour valider la remise :
+ * c'est la preuve que le colis est arrivé dans les bonnes mains.
+ *
+ * Six chiffres, dérivés de l'identifiant de commande, comme le code de retrait : les deux
+ * téléphones s'accordent sans serveur. En production, c'est le serveur qui l'émet.
+ */
+export function deliveryCode(orderId: string): string {
+  let h = 7;
+  for (let i = 0; i < orderId.length; i++) h = (h * 37 + orderId.charCodeAt(i)) % 1_000_000;
+  return String(h).padStart(6, '0');
+}
+
+export function isValidDeliveryCode(orderId: string, entered: string): boolean {
+  return entered.trim() === deliveryCode(orderId);
+}
+
+/**
  * « Colis important » : celui dont la remise exige une confirmation biométrique
  * du livreur (V1.1). Le CDC ne dit pas à partir de quand un colis l'est : le
  * seuil est un paramètre `null` tant que Farid ne l'a pas arrêté, et aucun colis

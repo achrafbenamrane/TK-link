@@ -14,8 +14,9 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { AppText } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
+
+import { AppText } from './text';
 
 export type ScanState = 'repos' | 'scan' | 'ok' | 'echec';
 
@@ -24,6 +25,8 @@ type Props = {
   onPress: () => void;
   size?: number;
   testID?: string;
+  /** Remplace la légende sous le glyphe (par défaut : « Touchez pour tester »). */
+  idleCaption?: string;
 };
 
 const RIPPLES = [0, 1, 2];
@@ -78,7 +81,7 @@ function Ripple({
  * `lib/biometrics.ts`). Rien ici ne lit une empreinte — c'est impossible — donc
  * on ne mime jamais une « capture » : on accompagne l'invite système.
  */
-export function FingerprintScanner({ state, onPress, size = 132, testID }: Props) {
+export function FingerprintScanner({ state, onPress, size = 132, testID, idleCaption }: Props) {
   const colors = useColors();
   const fill = useSharedValue(0); // 0 → 1 : hauteur révélée du glyphe rouge
   const pulse = useSharedValue(0); // ondes concentriques
@@ -176,7 +179,7 @@ export function FingerprintScanner({ state, onPress, size = 132, testID }: Props
             ? 'Identifié'
             : state === 'echec'
               ? 'Non reconnu — réessayez'
-              : 'Touchez pour tester'}
+              : (idleCaption ?? 'Touchez pour tester')}
       </AppText>
     </Animated.View>
   );

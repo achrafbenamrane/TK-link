@@ -7,11 +7,22 @@
  * et signalées comme telles.
  */
 export { CourierSetupScreen } from './ui/courier-setup-screen';
-export { CourierHomeScreen } from './ui/courier-home-screen';
+export { CourierHomeScreen, type CourierTarget } from './ui/courier-home-screen';
+export { CourierMissionsScreen, type MessageTarget } from './ui/courier-missions-screen';
+export { CourierMapScreen } from './ui/courier-map-screen';
+export { daySummary, deltaLabel } from './lib/summary';
+export type { BiometricResult } from './ui/parts';
 export { CourierEarningsScreen } from './ui/courier-earnings-screen';
 export { CourierAccountScreen } from './ui/courier-account-screen';
 export { DEMO_MISSIONS, isDemoMission } from './lib/demo';
-export { useCourierStore, selectActive, selectHistory, type Mission } from './model/store';
+export {
+  useCourierStore,
+  selectActive,
+  selectHistory,
+  type CourierActive,
+  type Delivered,
+  type Mission,
+} from './model/store';
 export {
   VEHICLES,
   VEHICLE_LABEL,

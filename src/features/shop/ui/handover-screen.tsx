@@ -21,6 +21,11 @@ type Props = {
   orderId: string;
   /** Le livreur qui se présente — fourni par la route (feature `courier`). */
   courier: HandoverCourier;
+  /**
+   * Quand le livreur a confirmé son identité par empreinte sur son téléphone (ms) — fourni par
+   * la route. Absent : le commerçant attend, ou simule le geste en démonstration.
+   */
+  courierValidatedAt?: number | null | undefined;
   onBack: () => void;
 };
 
@@ -39,15 +44,17 @@ const clock = (ms: number) => {
  * Le commerçant ne manipule aucune empreinte : il voit le résultat. Ici, sans
  * serveur ni second téléphone, un geste simule la pose du doigt du livreur.
  */
-export function HandoverScreen({ orderId, courier, onBack }: Props) {
+export function HandoverScreen({ orderId, courier, courierValidatedAt, onBack }: Props) {
   const colors = useColors();
   const order = useShopStore((s) => s.orders.find((o) => o.id === orderId));
   const setOrderStatus = useShopStore((s) => s.setOrderStatus);
   const reportIssue = useShopStore((s) => s.reportIssue);
 
   const [arrivedAt] = useState(() => Date.now());
-  const [validatedAt, setValidatedAt] = useState<number | null>(null);
+  const [simulatedAt, setSimulatedAt] = useState<number | null>(null);
   const [handedAt, setHandedAt] = useState<number | null>(null);
+  // Le livreur a posé son doigt sur SON téléphone (même appareil en démo), ou on simule le geste.
+  const validated = simulatedAt ?? courierValidatedAt ?? null;
 
   if (!order) {
     return (
@@ -64,10 +71,10 @@ export function HandoverScreen({ orderId, courier, onBack }: Props) {
   const merchant = deal ? getMerchant(deal.merchantId) : undefined;
   const articles = order.items.reduce((n, l) => n + l.qty, 0);
   const done = handedAt !== null || order.status === 'en_livraison' || order.status === 'livree';
-  const step = done ? 3 : validatedAt ? 2 : 2;
+  const step = done ? 3 : validated ? 2 : 2;
 
   const hand = () => {
-    if (!validatedAt) return;
+    if (!validated) return;
     setOrderStatus(order.id, 'en_livraison');
     setHandedAt(Date.now());
   };
@@ -201,8 +208,8 @@ export function HandoverScreen({ orderId, courier, onBack }: Props) {
           testID="handover-biometric"
           accessibilityRole="button"
           accessibilityLabel="Simuler la pose du doigt du livreur"
-          disabled={validatedAt !== null || done}
-          onPress={() => setValidatedAt(Date.now())}
+          disabled={validated !== null || done}
+          onPress={() => setSimulatedAt(Date.now())}
           className="items-center gap-3 rounded-card border border-brand-500 bg-surface-muted px-4 py-5"
         >
           <View className="h-36 w-36 items-center justify-center rounded-pill border border-brand-200 bg-brand-50">
@@ -217,14 +224,14 @@ export function HandoverScreen({ orderId, courier, onBack }: Props) {
             Le livreur pose son doigt sur son appareil. Si l’identité est confirmée, la remise du
             colis est validée automatiquement.
           </AppText>
-          {validatedAt === null && !done ? (
+          {validated === null && !done ? (
             <AppText variant="caption" className="text-brand-600" style={{ fontSize: 11.5 }}>
               Démo — touchez pour simuler la pose du doigt
             </AppText>
           ) : null}
         </Pressable>
 
-        {validatedAt !== null || done ? (
+        {validated !== null || done ? (
           <View
             testID="handover-validated"
             className="flex-row items-center gap-3 rounded-card border border-success bg-surface-muted p-3.5"
@@ -239,7 +246,7 @@ export function HandoverScreen({ orderId, courier, onBack }: Props) {
               </AppText>
             </View>
             <AppText variant="caption" className="text-ink-muted">
-              {validatedAt ? clock(validatedAt) : ''}
+              {validated ? clock(validated) : ''}
             </AppText>
           </View>
         ) : null}
@@ -247,12 +254,12 @@ export function HandoverScreen({ orderId, courier, onBack }: Props) {
         <Pressable
           testID="handover-confirm"
           accessibilityRole="button"
-          accessibilityState={{ disabled: validatedAt === null || done }}
-          disabled={validatedAt === null || done}
+          accessibilityState={{ disabled: validated === null || done }}
+          disabled={validated === null || done}
           onPress={hand}
           className={cn(
             'flex-row items-center justify-center gap-2.5 rounded-control bg-brand-500 py-4',
-            (validatedAt === null || done) && 'opacity-40',
+            (validated === null || done) && 'opacity-40',
           )}
         >
           <Feather name="box" size={18} color="#FFFFFF" />
@@ -265,7 +272,7 @@ export function HandoverScreen({ orderId, courier, onBack }: Props) {
         <View className="flex-row items-center justify-between rounded-card border border-line bg-surface p-3.5">
           {[
             { label: 'Livreur arrivé', at: arrivedAt, ok: true },
-            { label: 'ID vérifiée', at: validatedAt, ok: validatedAt !== null },
+            { label: 'ID vérifiée', at: validated, ok: validated !== null },
             { label: 'Colis remis', at: handedAt, ok: handedAt !== null || done },
           ].map((t) => (
             <View key={t.label} className="flex-1 items-center gap-1">

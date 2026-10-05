@@ -146,6 +146,29 @@ Non construits, car ils dépendent d’un serveur, de matériel ou d’un point 
 sur imprimante thermique ; filtre véhicule du moteur d’attribution ; Flash national (Chronopost,
 Colissimo) ; panier multi-commerçants ; paiement atomique côté serveur ; Stripe Connect.
 
+## Livreur — maquettes « Livraison / Livreur » (05/10/2026)
+
+L'app suit les quatre écrans du client et la validation côté commerçant :
+
+| Maquette              | Dans l'app                                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------- |
+| 1. Accueil livreur    | Onglet Accueil : résumé du jour (gains, missions en attente, livraisons), raccourcis, « Passer disponible » |
+| 2. Mission active     | Onglet Missions : commerce, client, type / heure cible / distance, détails, instructions, frise horodatée   |
+| 3. Navigation / suivi | Itinéraire, ETA, distance, temps restant, carte, Appeler / Message / Incident, « J'arrive chez le client »  |
+| 4. Validation finale  | QR du client ou code à 6 chiffres, « Valider la remise », « Livraison confirmée »                           |
+| Validation livreur    | Côté commerçant : l'identité du livreur s'affiche dès qu'il a posé son doigt sur son téléphone              |
+
+Barre du bas : Accueil · Missions · Carte · Messages · Compte. Les messages (commerce, client,
+support) sont locaux : envoyer ne simule jamais de réponse.
+
+**Empreinte.** Elle est demandée au retrait, pour **tout** colis (le CDC ne chiffre pas le seuil
+du « colis important » : on applique la règle la plus stricte). La biométrie reste locale ; seule
+l'heure de validation est gardée. Sans empreinte enregistrée sur le téléphone, une vraie course est
+bloquée ; une mission d'exemple propose un contournement « Démo ».
+
+**Preuve de remise.** Le code à 6 chiffres du client (ou son QR) remplace la photo : c'est ce que
+montre la maquette. `expo-camera` sert au scan du QR (retrait et remise).
+
 ## Ce que les affiches ajoutent
 
 Les quatre affiches commerciales montrent la carte Flash telle que le client la voit :

@@ -152,6 +152,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     [
+      // Scan du QR code d’une remise de colis (app livreur). Le texte dit pourquoi,
+      // précisément — un texte générique est refusé par l’App Store. Pas de micro :
+      // on ne filme pas, on lit un code.
+      'expo-camera',
+      {
+        cameraPermission:
+          'TK LINK utilise la caméra pour scanner le QR code d’une remise de colis.',
+        microphonePermission: false,
+        recordAudioAndroid: false,
+      },
+    ],
+    [
       // Déverrouillage biométrique. L’empreinte elle-même ne quitte JAMAIS le
       // matériel sécurisé du téléphone : l’OS renvoie seulement « c’est bien le
       // propriétaire » — aucune app ne peut lire une empreinte.

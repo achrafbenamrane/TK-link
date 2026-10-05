@@ -53,4 +53,19 @@ describe('<HandoverScreen /> — validation livreur', () => {
     expect(useShopStore.getState().orders[0]?.status).toBe('en_livraison');
     expect(screen.getAllByText('Colis remis').length).toBeGreaterThan(0);
   });
+
+  it('l’empreinte posée par le livreur sur SON téléphone valide la remise, sans autre geste', () => {
+    render(
+      <HandoverScreen
+        orderId={order.id}
+        courier={courier}
+        courierValidatedAt={Date.now()}
+        onBack={jest.fn()}
+      />,
+    );
+    expect(screen.getByTestId('handover-validated')).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId('handover-confirm'));
+    expect(useShopStore.getState().orders[0]?.status).toBe('en_livraison');
+  });
 });
