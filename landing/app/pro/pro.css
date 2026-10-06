@@ -2,8 +2,8 @@
  * Espace professionnel TK LINK — styles portés par la classe `.tkpro`, pour ne
  * pas se mêler à ceux du site vitrine (même `globals.css` hérité du layout).
  *
- * Palette alignée sur l'app mobile : vert forêt du logo, vert vif pour l'action,
- * citron en accent, surfaces papier très légèrement vertes.
+ * Palette alignée sur l'app mobile : noir et rose TK LINK (les variables `--forest` et
+ * `--lime` gardent leur ancien nom, mais portent le noir et le rose), surfaces claires.
  */
 
 .tkpro {
