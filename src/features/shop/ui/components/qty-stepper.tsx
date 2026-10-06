@@ -21,6 +21,7 @@ export function QtyStepper({ qty, onInc, onDec, testID }: Props) {
       <Pressable
         onPress={onDec}
         hitSlop={6}
+        accessibilityRole="button"
         accessibilityLabel="Diminuer la quantité"
         className="h-7 w-7 items-center justify-center rounded-pill bg-surface-muted active:bg-surface-sunken"
       >
@@ -30,6 +31,7 @@ export function QtyStepper({ qty, onInc, onDec, testID }: Props) {
       <Pressable
         onPress={onInc}
         hitSlop={6}
+        accessibilityRole="button"
         accessibilityLabel="Augmenter la quantité"
         className="h-7 w-7 items-center justify-center rounded-pill bg-surface-inverse active:bg-ink-muted"
       >

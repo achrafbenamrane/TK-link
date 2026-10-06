@@ -87,6 +87,8 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
     <View className="flex-row items-center gap-3 px-5 pb-3" style={{ paddingTop: insets.top + 6 }}>
       <Pressable
         testID="cart-back"
+        accessibilityRole="button"
+        accessibilityLabel="Retour"
         onPress={() => (router.canGoBack() ? router.back() : router.push('/'))}
         className="h-10 w-10 items-center justify-center rounded-pill bg-surface-muted"
       >
@@ -142,6 +144,7 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
                   {line.deal.title}
                 </AppText>
                 <Pressable
+                  accessibilityRole="button"
                   onPress={() => removeFromCart(line.deal.id)}
                   hitSlop={6}
                   accessibilityLabel="Retirer du panier"
@@ -307,6 +310,7 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
 
         <Pressable
           testID="cart-checkout"
+          accessibilityRole="button"
           onPress={handleCheckout}
           className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-4 active:bg-brand-600"
         >

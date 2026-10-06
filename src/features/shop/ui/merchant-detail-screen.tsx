@@ -60,6 +60,7 @@ function FlashTile({ deal, onOpen, onAdd }: { deal: Deal; onOpen: () => void; on
   return (
     <Pressable
       testID={`merchant-deal-${deal.id}`}
+      accessibilityRole="button"
       accessibilityLabel={deal.title}
       onPress={onOpen}
       className="flex-1 gap-1.5 rounded-card border border-brand-500 bg-surface-muted p-3 active:opacity-80"

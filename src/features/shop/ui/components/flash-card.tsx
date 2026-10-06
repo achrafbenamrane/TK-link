@@ -70,6 +70,7 @@ export function FlashCard({ deal }: Props) {
   return (
     <Pressable
       testID={`deal-${deal.id}`}
+      accessibilityRole="button"
       accessibilityLabel={`${deal.title}${
         // Sans le film et l'heure, la carte est inutilisable sans les yeux :
         // c'est la séance qui décide de l'achat, pas le mot « place ».
@@ -103,7 +104,9 @@ export function FlashCard({ deal }: Props) {
         <Pressable
           testID={`fav-${deal.id}`}
           hitSlop={8}
-          accessibilityLabel="Ajouter aux favoris"
+          accessibilityRole="button"
+          accessibilityState={{ selected: isFav }}
+          accessibilityLabel={isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
           onPress={() => toggleFavorite(deal.id)}
           className="absolute right-3 top-3 h-10 w-10 items-center justify-center rounded-pill bg-surface/90"
         >

@@ -45,6 +45,7 @@ export function ProductScreen({ dealId }: Props) {
       <View className="flex-1 items-center justify-center gap-3 bg-surface px-8">
         <AppText variant="title">Offre introuvable</AppText>
         <Pressable
+          accessibilityRole="button"
           onPress={() => router.push('/')}
           className="rounded-control bg-surface-inverse px-5 py-3"
         >
@@ -300,6 +301,7 @@ export function ProductScreen({ dealId }: Props) {
         />
         <Pressable
           testID="product-add"
+          accessibilityRole="button"
           onPress={addAndGo}
           className="flex-1 flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-4 active:bg-brand-600"
         >

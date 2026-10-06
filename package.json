@@ -21,9 +21,10 @@
     "doctor": "npx expo-doctor",
     "docs:lint": "node scripts/docs-lint.mjs",
     "secrets:check": "node scripts/check-secrets.mjs",
+    "a11y:check": "node scripts/check-a11y.mjs",
     "store:check": "node scripts/check-store-readiness.mjs",
     "secrets:scan": "gitleaks dir --no-banner --redact || echo 'gitleaks not installed — skipping deep scan (brew install gitleaks). check-secrets still ran.'",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run docs:lint && npm run secrets:check",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run docs:lint && npm run secrets:check && npm run a11y:check",
     "new:feature": "node scripts/new-feature.mjs",
     "images:import": "node scripts/import-product-images.mjs",
     "prepare": "husky"

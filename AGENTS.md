@@ -49,7 +49,7 @@ Notably, `expo-router` no longer sits on react-navigation — never import
 ## Commands
 
 ```bash
-npm run verify        # format:check + lint + typecheck + test + docs:lint — the local gate
+npm run verify        # format:check + lint + typecheck + test + docs:lint + secrets + a11y — the local gate
 npm test              # Jest (watch: npm run test:watch)
 npm run lint:fix      # ESLint with autofix
 npm run typecheck     # tsc --noEmit
@@ -142,6 +142,8 @@ import from `packs/` in app code — install the pack instead.
   `AppText`/`Button`/`Screen`/`TextField` primitives; extend `shared/ui`
   rather than one-off styling. Animations use Reanimated, respect
   reduced-motion, target 60fps (no JS-thread loops).
+- **Every `<Pressable>` has an `accessibilityRole`** (`npm run a11y:check`, part of `verify`):
+  a button without one does not exist for a screen reader.
 - **Every interactive or assertable element gets a `testID`** (kebab-case,
   feature-prefixed: `tasks-add-button`).
 - **Tests:** colocated in `__tests__/`; never inside `src/app/` (router treats

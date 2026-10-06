@@ -20,6 +20,8 @@ import { receiptForOrder, useReceiptsStore } from '@/features/receipts';
 import { orderToTransaction, producesReceipt, selectOrders, useShopStore } from '@/features/shop';
 import { useWelcomeStore } from '@/features/welcome';
 import '@/shared/lib/env'; // fail fast on invalid environment (has safe defaults)
+import { logger } from '@/shared/lib/logger';
+import { ErrorScreen } from '@/shared/ui';
 import { ThemeProvider, useColors, useScheme } from '@/shared/theme/theme-provider';
 
 /**
@@ -113,6 +115,22 @@ function ReceiptBridge() {
   }, [orders, receipts, addReceipt]);
 
   return null;
+}
+
+/**
+ * L'écran d'erreur de toute l'app : expo-router l'affiche quand un écran plante, à la place d'un écran
+ * blanc. Il remplace aussi la disposition, donc il apporte son propre thème.
+ */
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  // Le journal masque les secrets (voir `logger`) ; le message n'est montré qu'en développement.
+  logger.error('Écran en erreur', { message: error.message });
+  return (
+    <ThemeProvider>
+      <SafeAreaProvider>
+        <ErrorScreen onRetry={() => void retry()} detail={__DEV__ ? error.message : undefined} />
+      </SafeAreaProvider>
+    </ThemeProvider>
+  );
 }
 
 SplashScreen.preventAutoHideAsync();

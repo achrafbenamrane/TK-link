@@ -3,6 +3,7 @@ export { Button, type ButtonProps } from './button';
 export { Checkbox, type CheckboxProps } from './checkbox';
 export { Card, type CardProps } from './card';
 export { EmptyState, type EmptyStateProps } from './empty-state';
+export { ErrorScreen, type ErrorScreenProps } from './error-screen';
 export { FingerprintScanner, type ScanState } from './fingerprint-scanner';
 export { PrepTicket, type PrepTicketProps } from './prep-ticket';
 export { PushButton, type PushButtonProps } from './push-button';
