@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { deliveryCode } from '@/shared/lib/handover';
+import { haptic } from '@/shared/lib/haptics';
 import { AppText, Button, QrScanner } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -32,8 +33,13 @@ export function FinalValidation({ mission, doneAt, onValidate, onClose }: Props)
 
   const submit = (value: string) => {
     const res = onValidate(value);
-    if (res.ok) setMessage(null);
-    else setMessage('Ce code n’est pas celui du client. Vérifiez-le avec lui.');
+    if (res.ok) {
+      setMessage(null);
+      haptic.success();
+    } else {
+      setMessage('Ce code n’est pas celui du client. Vérifiez-le avec lui.');
+      haptic.error();
+    }
   };
 
   const onScanned = (value: string) => {

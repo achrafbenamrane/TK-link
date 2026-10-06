@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
+import { haptic } from '@/shared/lib/haptics';
 import { isImportantParcel, isValidPickupPin, pickupPin } from '@/shared/lib/handover';
 import { usePlatformSettings } from '@/shared/lib/platform-overrides';
 import { AppText, Button, FingerprintScanner, QrScanner, type ScanState } from '@/shared/ui';
@@ -56,9 +57,11 @@ function PickupValidation({ active, authenticate }: Omit<Props, 'onPickedUp'>) {
     if (res.ok) {
       confirmIdentity();
       setScan('ok');
+      haptic.success();
       return;
     }
     setScan('echec');
+    haptic.error();
     if (res.reason === 'indisponible') {
       setNoBiometrics(true);
       setMessage(
@@ -76,6 +79,7 @@ function PickupValidation({ active, authenticate }: Omit<Props, 'onPickedUp'>) {
     if (res.ok) {
       setMessage(null);
       setPin('');
+      haptic.success();
     } else if (res.reason === 'biometrie') {
       setMessage('Confirmez d’abord votre identité avec votre empreinte.');
     } else if (res.reason === 'code') {

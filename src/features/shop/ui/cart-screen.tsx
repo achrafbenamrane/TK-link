@@ -5,6 +5,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cn } from '@/shared/lib/cn';
+import { haptic } from '@/shared/lib/haptics';
 import { usePlatformSettings } from '@/shared/lib/platform-overrides';
 import { AppText, Button } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
@@ -78,6 +79,7 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
 
     const res = checkout(address?.id ?? null, fulfilment, discount);
     if (res.ok) {
+      haptic.success();
       onOrdered?.(res.orderId);
       router.replace('/commandes');
     }
