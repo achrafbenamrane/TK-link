@@ -88,12 +88,15 @@ type ProfileScreenProps = {
    * nouvel utilisateur. Absent : la ligne mène à l'écran de connexion.
    */
   onSignOut?: () => void;
+  /** Build de démonstration : ouvre les réglages à essayer devant le client. */
+  onOpenDemoSettings?: () => void;
 };
 
 export function ProfileScreen({
   canPublishOffers = false,
   wholesaler = false,
   onSignOut,
+  onOpenDemoSettings,
   onOpenTiers,
   renderAvatar,
   name,
@@ -227,6 +230,14 @@ export function ProfileScreen({
               icon={<Feather name="map-pin" size={17} color={colors.ink} />}
               label="Adresses de livraison"
               onPress={() => router.push('/adresses')}
+            />
+          ) : null}
+          {onOpenDemoSettings ? (
+            <Row
+              testID="profile-demo-settings"
+              icon={<Feather name="sliders" size={17} color={colors.ink} />}
+              label="Réglages de démonstration"
+              onPress={onOpenDemoSettings}
             />
           ) : null}
           <Row

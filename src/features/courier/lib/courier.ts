@@ -1,4 +1,6 @@
-import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
+import { isImportantParcel } from '@/shared/lib/handover';
+import { currentSettings } from '@/shared/lib/platform-overrides';
+import type { PlatformSettings } from '@/shared/lib/platform-settings';
 
 /**
  * TK DELIVER — le livreur. CDC V1.1 §4 et schéma « Process livreur » du client.
@@ -109,9 +111,9 @@ export type Gain = { eur: number; complet: boolean };
 export function courierGain(
   distanceKm: number | null,
   settings: Pick<
-    typeof PLATFORM_SETTINGS,
+    PlatformSettings,
     'courierBaseFeeEur' | 'courierPerKmEur' | 'courierBaseZoneKm'
-  > = PLATFORM_SETTINGS,
+  > = currentSettings(),
 ): Gain {
   const base = settings.courierBaseFeeEur;
   if (settings.courierBaseZoneKm === null || distanceKm === null) {
@@ -122,6 +124,20 @@ export function courierGain(
     eur: Math.round((base + extraKm * settings.courierPerKmEur) * 100) / 100,
     complet: true,
   };
+}
+
+/**
+ * L'empreinte du livreur est-elle exigée au retrait de ce colis ?
+ *
+ * Tant que le seuil du « colis important » n'est pas arrêté (`null`), oui pour TOUS : on prend la
+ * règle la plus stricte plutôt que d'en inventer une plus souple. Une fois le seuil posé, seuls les
+ * colis qui l'atteignent l'exigent.
+ */
+export function identityRequired(
+  totalEur: number,
+  minEur: number | null = currentSettings().importantParcelMinEur,
+): boolean {
+  return minEur === null || isImportantParcel(totalEur, minEur);
 }
 
 export function formatEur(v: number): string {

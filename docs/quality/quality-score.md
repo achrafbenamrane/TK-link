@@ -55,6 +55,15 @@ or deletes stale ones. Newest first; keep entries one line each:
   l'inscription pré-remplie, l'IBAN d'exemple, les missions et la vitrine d'exemple et les boutons
   « simuler la validation ». Vérifié : un Metro lancé en production n'en montre aucun.
 
+## Réglages de démonstration
+
+Trois valeurs que le CDC ne chiffre pas (frais de livraison du client, zone de base du livreur, montant
+d'un « colis important ») se règlent en direct depuis Compte, dans les builds de démonstration
+(`src/features/demo`, `src/shared/lib/platform-overrides.ts`). Ce n'est pas une décision : sans
+valeur, l'app garde son comportement prudent (livraison offerte, gain « dès 3,00 € », empreinte exigée
+pour tous les colis). Quand le client tranche, la valeur va dans `PLATFORM_SETTINGS` et l'écran peut
+disparaître. Une build de production ignore tout ajustement.
+
 ## Wishlist (pull when convenient)
 
 - FlashList adoption for long lists (when a real long list exists).

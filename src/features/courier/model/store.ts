@@ -8,6 +8,7 @@ import { asyncStorageBackend } from '@/shared/lib/storage';
 import {
   canReceiveMissions,
   courierGain,
+  identityRequired,
   missingProfileFields,
   nextStep,
   VEHICLES,
@@ -243,7 +244,9 @@ export const useCourierStore = create<State>()(
           return { ok: false as const, reason: 'pas_de_mission' as const };
         }
         // L'empreinte d'abord : on ne remet pas un colis à quelqu'un dont l'identité n'est pas confirmée.
-        if (!a.identityAt) return { ok: false as const, reason: 'biometrie' as const };
+        if (!a.identityAt && identityRequired(a.mission.totalEur)) {
+          return { ok: false as const, reason: 'biometrie' as const };
+        }
         if (!isValidPickupPin(a.mission.orderId, pin)) {
           return { ok: false as const, reason: 'code' as const };
         }

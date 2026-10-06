@@ -5,12 +5,13 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cn } from '@/shared/lib/cn';
+import { usePlatformSettings } from '@/shared/lib/platform-overrides';
 import { AppText, Button } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { authenticate } from '../lib/biometrics';
 import { FULFILMENTS, FULFILMENT_LABEL, type Fulfilment } from '../lib/order-status';
-import { cartLines, DELIVERY_FEE_EUR, selectCart, useShopStore } from '../model/store';
+import { cartLines, selectCart, useShopStore } from '../model/store';
 import { QtyStepper } from './components/qty-stepper';
 
 type Props = {
@@ -39,6 +40,7 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
   const cart = useShopStore(selectCart);
   const lines = useMemo(() => cartLines(cart), [cart]);
   const subtotal = useMemo(() => lines.reduce((sum, l) => sum + l.lineTotal, 0), [lines]);
+  const settings = usePlatformSettings();
   const addToCart = useShopStore((s) => s.addToCart);
   const decrement = useShopStore((s) => s.decrement);
   const removeFromCart = useShopStore((s) => s.removeFromCart);
@@ -48,7 +50,7 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
 
   // Le coût de la livraison est dans le total AVANT le paiement — CDC V1.1 : jamais
   // de frais révélé après coup. Le Touch & Collect est gratuit.
-  const deliveryFee = fulfilment === 'touch-collect' ? 0 : DELIVERY_FEE_EUR;
+  const deliveryFee = fulfilment === 'touch-collect' ? 0 : settings.deliveryFeeEur;
   // Le crédit se déduit AVANT le paiement, borné aux articles.
   const discount = Math.round(Math.min(Math.max(0, credit), subtotal) * 100) / 100;
   const total = subtotal + deliveryFee - discount;

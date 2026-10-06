@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { makeId } from '@/shared/lib/id';
-import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
+import { currentSettings } from '@/shared/lib/platform-overrides';
 // Cart/favorites/orders hold no secrets → the plaintext tier is correct.
 import { routeIssue, type IssueKind } from '../lib/issues';
 import { canTransition, isActive, type Fulfilment, type OrderStatus } from '../lib/order-status';
@@ -22,9 +22,6 @@ import {
   type MerchantApplication,
   type Order,
 } from './schema';
-
-// Réglable (platform-settings) : le CDC ne dit pas ce que paie le client.
-const DELIVERY_FEE = PLATFORM_SETTINGS.deliveryFeeEur;
 
 // La règle des points (1 € TTC = 1 point) vit dans model/loyalty.ts.
 export { POINTS_PER_EURO } from './loyalty';
@@ -291,7 +288,7 @@ export const useShopStore = create<ShopState>()(
           total,
           discount,
           // Pas de frais de livraison quand le client vient chercher — CDC §12.
-          deliveryFee: fulfilment === 'touch-collect' ? 0 : DELIVERY_FEE,
+          deliveryFee: fulfilment === 'touch-collect' ? 0 : currentSettings().deliveryFeeEur,
           fulfilment,
           status: 'creee',
           pointsEarned,
@@ -385,5 +382,3 @@ export const selectCartCount = (s: ShopState) => s.cart.reduce((n, i) => n + i.q
 export const selectCartLines = (s: ShopState) => cartLines(s.cart);
 export const selectCartSubtotal = (s: ShopState) =>
   cartLines(s.cart).reduce((sum, l) => sum + l.lineTotal, 0);
-
-export const DELIVERY_FEE_EUR: number = DELIVERY_FEE;

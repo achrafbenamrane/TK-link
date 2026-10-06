@@ -13,6 +13,8 @@ type Props = {
   onOpenSetup: () => void;
   /** Démo : repasser côté consommateur (en production, c'est le compte qui décide). */
   onSignOut?: () => void;
+  /** Build de démonstration : ouvre les réglages à essayer devant le client. */
+  onOpenDemoSettings?: () => void;
 };
 
 const STATUS_TEXT = {
@@ -22,7 +24,7 @@ const STATUS_TEXT = {
 } as const;
 
 /** LE COMPTE LIVREUR — identité, véhicule, sécurité. */
-export function CourierAccountScreen({ name, onOpenSetup, onSignOut }: Props) {
+export function CourierAccountScreen({ name, onOpenSetup, onSignOut, onOpenDemoSettings }: Props) {
   const colors = useColors();
   const status = useCourierStore((s) => s.status);
   const vehicle = useCourierStore((s) => s.vehicle);
@@ -87,6 +89,20 @@ export function CourierAccountScreen({ name, onOpenSetup, onSignOut }: Props) {
             className="items-center rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
           >
             <AppText className="font-sans-bold text-ink-inverse">Terminer mon inscription</AppText>
+          </Pressable>
+        ) : null}
+
+        {onOpenDemoSettings ? (
+          <Pressable
+            testID="courier-demo-settings"
+            accessibilityRole="button"
+            onPress={onOpenDemoSettings}
+            className="flex-row items-center justify-center gap-2 rounded-control border border-dashed border-line py-3"
+          >
+            <Feather name="sliders" size={16} color={colors.inkMuted} />
+            <AppText className="font-sans-semibold text-ink-muted">
+              Réglages de démonstration
+            </AppText>
           </Pressable>
         ) : null}
 

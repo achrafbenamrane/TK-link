@@ -15,6 +15,7 @@ import { useReceiptsStore } from '@/features/receipts';
 import { useReferralStore } from '@/features/referral';
 import { ProfileScreen, useShopStore } from '@/features/shop';
 import { useWelcomeStore } from '@/features/welcome';
+import { isDemoBuild } from '@/shared/lib/env';
 import { canPublishOffers, ROLE_LABEL } from '@/shared/lib/roles';
 
 /**
@@ -73,6 +74,7 @@ function CourierAccountRoute() {
       name={firstName}
       onOpenSetup={() => router.push('/devenir-livreur')}
       onSignOut={signOut}
+      {...(isDemoBuild ? { onOpenDemoSettings: () => router.push('/reglages-demo') } : {})}
     />
   );
 }
@@ -92,6 +94,7 @@ function DefaultProfil() {
       name={firstName}
       subtitle={ROLE_LABEL[role]}
       onSignOut={signOut}
+      {...(isDemoBuild ? { onOpenDemoSettings: () => router.push('/reglages-demo') } : {})}
       // Les paliers de fidélité sont ceux d'un COMMERÇANT ; un grossiste vend des lots, pas des points.
       {...(role === 'commercant' ? { onOpenTiers: () => router.push('/paliers') } : {})}
     />

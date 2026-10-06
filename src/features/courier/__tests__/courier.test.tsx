@@ -11,10 +11,13 @@ import {
 import {
   canReceiveMissions,
   courierGain,
+  identityRequired,
   missingProfileFields,
   nextStep,
   type ProfileDraft,
 } from '../lib/courier';
+import { usePlatformOverrides } from '@/shared/lib/platform-overrides';
+
 import { availableMissions } from '../lib/available';
 import { daySummary, deltaLabel } from '../lib/summary';
 import { timelineState } from '../lib/courier';
@@ -42,6 +45,7 @@ const mission: Mission = {
 const state = () => useCourierStore.getState();
 
 beforeEach(() => {
+  usePlatformOverrides.getState().reset();
   state().reset();
   pick.mockReset();
 });
@@ -623,5 +627,39 @@ describe('<CourierSetupScreen /> — en production', () => {
     render(<CourierSetupScreen authenticate={jest.fn()} onDone={jest.fn()} />);
     expect(screen.getByTestId('courier-verification-status')).toBeTruthy();
     expect(screen.queryByTestId('courier-demo-validate')).toBeNull();
+  });
+});
+
+describe('l’empreinte selon le seuil du colis important', () => {
+  const pin = () => pickupPin(mission.orderId);
+  const toPickup = () => {
+    ready();
+    state().setOnline(true);
+    state().acceptMission(mission);
+    state().startRoute();
+  };
+
+  it('sans seuil arrêté : exigée pour tous les colis', () => {
+    toPickup();
+    expect(identityRequired(1)).toBe(true);
+    expect(state().confirmPickup(pin())).toEqual({ ok: false, reason: 'biometrie' });
+  });
+
+  it('avec un seuil : seuls les colis qui l’atteignent exigent l’empreinte', () => {
+    expect(identityRequired(18, 50)).toBe(false);
+    expect(identityRequired(80, 50)).toBe(true);
+
+    usePlatformOverrides.getState().setOverride('importantParcelMinEur', 50);
+    toPickup();
+    // Le colis fait 18 € : sous le seuil, le bon code suffit.
+    expect(state().confirmPickup(pin())).toEqual({ ok: true });
+  });
+});
+
+describe('gain du livreur selon la zone de base', () => {
+  it('suit la zone posée dans les réglages, et reste « dès 3 € » sans zone', () => {
+    expect(courierGain(5)).toEqual({ eur: 3, complet: false });
+    usePlatformOverrides.getState().setOverride('courierBaseZoneKm', 2);
+    expect(courierGain(5)).toEqual({ eur: 5.4, complet: true });
   });
 });

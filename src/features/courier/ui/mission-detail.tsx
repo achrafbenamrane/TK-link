@@ -4,11 +4,11 @@ import { Pressable, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { isImportantParcel, isValidPickupPin, pickupPin } from '@/shared/lib/handover';
-import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
+import { usePlatformSettings } from '@/shared/lib/platform-overrides';
 import { AppText, Button, FingerprintScanner, QrScanner, type ScanState } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
-import { courierGain, formatEur, timelineState, TIMELINE } from '../lib/courier';
+import { courierGain, formatEur, identityRequired, timelineState, TIMELINE } from '../lib/courier';
 import { isDemoMission } from '../lib/demo';
 import { useCourierStore, type CourierActive } from '../model/store';
 import { clock, CodeBoxes, CourierHeader, Panel, PhoneButton, type BiometricResult } from './parts';
@@ -29,6 +29,7 @@ type Props = {
  */
 function PickupValidation({ active, authenticate }: Omit<Props, 'onPickedUp'>) {
   const colors = useColors();
+  const settings = usePlatformSettings();
   const confirmIdentity = useCourierStore((s) => s.confirmIdentity);
   const confirmPickup = useCourierStore((s) => s.confirmPickup);
 
@@ -41,13 +42,14 @@ function PickupValidation({ active, authenticate }: Omit<Props, 'onPickedUp'>) {
   const [noBiometrics, setNoBiometrics] = useState(false);
 
   const identified = Boolean(active.identityAt);
+  const required = identityRequired(active.mission.totalEur, settings.importantParcelMinEur);
 
   const verify = async () => {
     if (identified || scan === 'scan') return;
     setScan('scan');
     setMessage(null);
     const res = await authenticate(
-      isImportantParcel(active.mission.totalEur, PLATFORM_SETTINGS.importantParcelMinEur)
+      isImportantParcel(active.mission.totalEur, settings.importantParcelMinEur)
         ? 'Confirmer la prise en charge d’un colis important'
         : 'Confirmer votre identité pour récupérer la commande',
     );
@@ -112,6 +114,15 @@ function PickupValidation({ active, authenticate }: Omit<Props, 'onPickedUp'>) {
       <AppText variant="caption" className="text-center">
         Votre empreinte reste sur ce téléphone : TK LINK n’en garde jamais.
       </AppText>
+      {!required ? (
+        <AppText
+          testID="courier-identity-optional"
+          variant="caption"
+          className="text-center text-ink-faint"
+        >
+          Colis courant : l’empreinte n’est pas exigée pour ce retrait.
+        </AppText>
+      ) : null}
 
       {identified ? (
         <View
@@ -190,7 +201,7 @@ function PickupValidation({ active, authenticate }: Omit<Props, 'onPickedUp'>) {
       <Button
         testID="courier-confirm-pickup"
         label="Confirmer la prise en charge"
-        disabled={!identified || pin.length !== 4}
+        disabled={(required && !identified) || pin.length !== 4}
         onPress={confirm}
       />
     </Panel>
