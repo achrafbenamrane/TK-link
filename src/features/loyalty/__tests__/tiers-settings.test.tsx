@@ -4,6 +4,7 @@ import {
   DEFAULT_TIERS,
   programOf,
   selectPrograms,
+  TierSchema as TierShape,
   useMerchantLoyaltyStore,
 } from '../model/merchant-store';
 import { TiersSettingsScreen } from '../ui/tiers-settings-screen';
@@ -102,5 +103,83 @@ describe('unité de calcul — CDC V1.1', () => {
 
     render(<TiersSettingsScreen merchantId={MID} />);
     expect(screen.getByTestId('program-unit-note')).toHaveTextContent(/ne peut plus être modifiée/);
+  });
+});
+
+describe('récompense choisie parmi les produits du commerçant', () => {
+  const PRODUCTS = [
+    { id: 'p_casque', title: 'Casque audio sans fil offert' },
+    { id: 'p_cable', title: 'Câble USB-C offert' },
+  ];
+
+  beforeEach(() => {
+    useMerchantLoyaltyStore.setState({ programs: {} });
+  });
+
+  it('un palier ancien, sans productId, se relit', () => {
+    const parsed = TierShape.safeParse({ rank: 1, cost: 20, reward: '1 boisson' });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('choisir un produit remplit le libellé et mémorise son identifiant', () => {
+    render(<TiersSettingsScreen merchantId={MID} products={PRODUCTS} />);
+
+    fireEvent.press(screen.getByTestId('loyalty-reward-product-open-1'));
+    fireEvent.press(screen.getByTestId('loyalty-reward-product-p_casque'));
+
+    expect(screen.getByTestId('tier-reward-1').props.value).toBe('Casque audio sans fil offert');
+    fireEvent.press(screen.getByTestId('tiers-save'));
+    expect(programNow().tiers[0]).toMatchObject({
+      reward: 'Casque audio sans fil offert',
+      productId: 'p_casque',
+    });
+  });
+
+  it('la saisie libre reste possible et défait le lien avec le produit', () => {
+    render(<TiersSettingsScreen merchantId={MID} products={PRODUCTS} />);
+
+    fireEvent.press(screen.getByTestId('loyalty-reward-product-open-1'));
+    fireEvent.press(screen.getByTestId('loyalty-reward-product-p_cable'));
+    fireEvent.changeText(screen.getByTestId('tier-reward-1'), 'Un café offert');
+    fireEvent.press(screen.getByTestId('tiers-save'));
+
+    const tier = programNow().tiers[0];
+    expect(tier?.reward).toBe('Un café offert');
+    expect(tier?.productId).toBeUndefined();
+  });
+
+  it('« Autre récompense » détache le produit mais garde le texte', () => {
+    render(<TiersSettingsScreen merchantId={MID} products={PRODUCTS} />);
+
+    fireEvent.press(screen.getByTestId('loyalty-reward-product-open-1'));
+    fireEvent.press(screen.getByTestId('loyalty-reward-product-p_cable'));
+    fireEvent.press(screen.getByTestId('loyalty-reward-product-open-1'));
+    fireEvent.press(screen.getByTestId('loyalty-reward-product-other'));
+    fireEvent.press(screen.getByTestId('tiers-save'));
+
+    expect(programNow().tiers[0]).toMatchObject({ reward: 'Câble USB-C offert' });
+    expect(programNow().tiers[0]?.productId).toBeUndefined();
+  });
+
+  it('sans produit publié, la liste est remplacée par un message clair', () => {
+    render(<TiersSettingsScreen merchantId={MID} products={[]} />);
+
+    expect(screen.queryByTestId('loyalty-reward-product-open-1')).toBeNull();
+    expect(screen.getByTestId('loyalty-reward-product-empty-1')).toHaveTextContent(
+      'Aucun produit publié pour l’instant',
+    );
+    // Le texte libre, lui, fonctionne toujours.
+    fireEvent.changeText(screen.getByTestId('tier-reward-1'), 'Un croissant offert');
+    fireEvent.press(screen.getByTestId('tiers-save'));
+    expect(programNow().tiers[0]?.reward).toBe('Un croissant offert');
+  });
+
+  it('un produit enregistré réapparaît sélectionné à la réouverture', () => {
+    useMerchantLoyaltyStore.getState().saveProgram(MID, {
+      unit: 'euros',
+      tiers: [{ rank: 1, cost: 10, reward: PRODUCTS[0]!.title, productId: 'p_casque' }],
+    });
+    render(<TiersSettingsScreen merchantId={MID} products={PRODUCTS} />);
+    expect(screen.getByText('Casque audio sans fil offert')).toBeTruthy();
   });
 });

@@ -8,6 +8,7 @@ import { AppText, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
 import { useColors } from '@/shared/theme/theme-provider';
 
+import { rewardTicket } from '../lib/tiers';
 import { selectRewards, useMerchantLoyaltyStore, type Reward } from '../model/merchant-store';
 
 const STATUS_LABEL: Record<Reward['status'], string> = {
@@ -95,6 +96,13 @@ export function RewardsScreen() {
                 <AppText variant="caption" className="text-ink-faint">
                   {r.merchantName || 'Commerçant'} · palier {r.rank}
                 </AppText>
+                <AppText
+                  testID={`reward-ticket-${r.id}`}
+                  variant="caption"
+                  className="font-sans-semibold text-ink-muted"
+                >
+                  Ticket {rewardTicket(r.id)}
+                </AppText>
               </View>
             </View>
             {/* Fond blanc : un QR sur fond sombre perd son contraste. */}
@@ -142,7 +150,7 @@ export function RewardsScreen() {
                     {r.label}
                   </AppText>
                   <AppText variant="caption" className="text-ink-faint">
-                    {r.merchantName || 'Commerçant'}
+                    {r.merchantName || 'Commerçant'} · {rewardTicket(r.id)}
                   </AppText>
                 </View>
                 <AppText

@@ -29,6 +29,7 @@ export {
   tierProgress,
   reachedCount,
   earnedPoints,
+  rewardTicket,
   PROGRAM_UNITS,
   UNIT_LABEL,
   MAX_TIERS,
@@ -36,4 +37,4 @@ export {
   type Tier,
   type TierState,
 } from './lib/tiers';
-export { TiersSettingsScreen } from './ui/tiers-settings-screen';
+export { TiersSettingsScreen, type RewardProduct } from './ui/tiers-settings-screen';

@@ -10,13 +10,24 @@ import { useColors } from '@/shared/theme/theme-provider';
 import { PROGRAM_UNITS, UNIT_LABEL, type ProgramUnit, type Tier } from '../lib/tiers';
 import { programOf, selectPrograms, useMerchantLoyaltyStore } from '../model/merchant-store';
 
+/** Un produit du commerçant, proposé comme récompense. */
+export type RewardProduct = { id: string; title: string };
+
 type Props = {
   /** Le commerçant dont on règle le programme — passé par la route (composition). */
   merchantId: string;
+  /**
+   * Les produits du commerçant, passés par la route : cette tranche n'importe ni
+   * le catalogue ni l'espace commerçant. Absent ou vide : seule la saisie libre
+   * reste possible.
+   */
+  products?: RewardProduct[];
 };
 
 /** Un palier en cours de saisie : les nombres y sont du texte, comme au clavier. */
-type Draft = { cost: string; reward: string };
+type Draft = { cost: string; reward: string; productId?: string };
+
+const REWARD_MAX = 60;
 
 /**
  * LES QUATRE PALIERS, RÉGLÉS PAR LE COMMERÇANT — CDC §8.3.
@@ -37,7 +48,7 @@ type Draft = { cost: string; reward: string };
  * Les avantages DÉJÀ RÉCLAMÉS ne sont pas repris : un client qui a obtenu sa
  * boisson ne la rend pas parce que le barème a changé.
  */
-export function TiersSettingsScreen({ merchantId }: Props) {
+export function TiersSettingsScreen({ merchantId, products = [] }: Props) {
   const colors = useColors();
   const programs = useMerchantLoyaltyStore(selectPrograms);
   const saveProgram = useMerchantLoyaltyStore((s) => s.saveProgram);
@@ -48,8 +59,10 @@ export function TiersSettingsScreen({ merchantId }: Props) {
   const [unit, setUnit] = useState<ProgramUnit>(program.unit);
 
   const [drafts, setDrafts] = useState<Draft[]>(() =>
-    tiers.map((t) => ({ cost: String(t.cost), reward: t.reward })),
+    tiers.map((t) => ({ cost: String(t.cost), reward: t.reward, productId: t.productId })),
   );
+  // Le palier dont la liste de produits est ouverte (un seul à la fois).
+  const [pickerOpen, setPickerOpen] = useState<number | null>(null);
   const [errors, setErrors] = useState<(string | undefined)[]>([]);
   const redeemReward = useMerchantLoyaltyStore((s) => s.redeemReward);
   const [code, setCode] = useState('');
@@ -71,11 +84,33 @@ export function TiersSettingsScreen({ merchantId }: Props) {
     if (res.ok) setCode('');
   };
 
-  const set = (index: number, key: keyof Draft, value: string) => {
-    setDrafts((list) => list.map((d, i) => (i === index ? { ...d, [key]: value } : d)));
+  const set = (index: number, key: 'cost' | 'reward', value: string) => {
+    // Retoucher le texte à la main, c'est choisir « Autre récompense » : le lien
+    // avec le produit se défait.
+    setDrafts((list) =>
+      list.map((d, i) =>
+        i === index
+          ? { ...d, [key]: value, ...(key === 'reward' ? { productId: undefined } : {}) }
+          : d,
+      ),
+    );
     // L'erreur part dès qu'on retouche la ligne : la laisser affichée pendant la
     // correction donne l'impression que la saisie ne sert à rien.
     setErrors((list) => (list[index] ? list.map((e, i) => (i === index ? undefined : e)) : list));
+  };
+
+  const pickProduct = (index: number, product: RewardProduct | null) => {
+    setDrafts((list) =>
+      list.map((d, i) =>
+        i === index
+          ? product
+            ? { ...d, reward: product.title.slice(0, REWARD_MAX), productId: product.id }
+            : { ...d, productId: undefined }
+          : d,
+      ),
+    );
+    setErrors((list) => (list[index] ? list.map((e, i) => (i === index ? undefined : e)) : list));
+    setPickerOpen(null);
   };
 
   const save = () => {
@@ -99,6 +134,7 @@ export function TiersSettingsScreen({ merchantId }: Props) {
       rank: i + 1,
       cost: Number.parseInt(d.cost, 10),
       reward: d.reward.trim(),
+      ...(d.productId ? { productId: d.productId } : {}),
     }));
 
     saveProgram(merchantId, { unit, tiers: next });
@@ -210,13 +246,91 @@ export function TiersSettingsScreen({ merchantId }: Props) {
               <AppText variant="caption" className="font-sans-semibold text-ink-muted">
                 Avantage obtenu
               </AppText>
+
+              {/* Choisir l'un de ses produits… */}
+              {products.length > 0 ? (
+                <View className="gap-1.5">
+                  <Pressable
+                    testID={`loyalty-reward-product-open-${i + 1}`}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: pickerOpen === i }}
+                    accessibilityLabel={`Choisir un de mes produits pour le palier ${i + 1}`}
+                    onPress={() => setPickerOpen((o) => (o === i ? null : i))}
+                    className="flex-row items-center justify-between rounded-control border border-line bg-surface-muted px-3.5 py-3"
+                  >
+                    <AppText
+                      className="flex-1 font-sans-medium text-ink-muted"
+                      style={{ fontSize: 14 }}
+                      numberOfLines={1}
+                    >
+                      {products.find((p) => p.id === d.productId)?.title ??
+                        'Choisir un de mes produits'}
+                    </AppText>
+                    <Feather
+                      name={pickerOpen === i ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                      color={colors.inkMuted}
+                    />
+                  </Pressable>
+                  {pickerOpen === i ? (
+                    <View
+                      testID={`loyalty-reward-product-list-${i + 1}`}
+                      className="overflow-hidden rounded-control border border-line bg-surface"
+                    >
+                      {products.map((p) => (
+                        <Pressable
+                          key={p.id}
+                          testID={`loyalty-reward-product-${p.id}`}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: d.productId === p.id }}
+                          accessibilityLabel={p.title}
+                          onPress={() => pickProduct(i, p)}
+                          className={cn(
+                            'px-3.5 py-3 active:bg-surface-muted',
+                            d.productId === p.id && 'bg-brand-50',
+                          )}
+                        >
+                          <AppText className="text-ink" style={{ fontSize: 14 }} numberOfLines={2}>
+                            {p.title}
+                          </AppText>
+                        </Pressable>
+                      ))}
+                      <Pressable
+                        testID="loyalty-reward-product-other"
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: !d.productId }}
+                        accessibilityLabel="Autre récompense"
+                        onPress={() => pickProduct(i, null)}
+                        className="border-t border-line px-3.5 py-3 active:bg-surface-muted"
+                      >
+                        <AppText
+                          className="font-sans-medium text-ink-muted"
+                          style={{ fontSize: 14 }}
+                        >
+                          Autre récompense
+                        </AppText>
+                      </Pressable>
+                    </View>
+                  ) : null}
+                </View>
+              ) : (
+                <AppText
+                  testID={`loyalty-reward-product-empty-${i + 1}`}
+                  variant="caption"
+                  className="text-ink-faint"
+                >
+                  Aucun produit publié pour l’instant
+                </AppText>
+              )}
+
+              {/* …ou écrire une autre récompense. */}
               <TextInput
                 testID={`tier-reward-${i + 1}`}
                 value={d.reward}
                 onChangeText={(v) => set(i, 'reward', v)}
                 placeholder="Ex. 1 boisson offerte"
                 placeholderTextColor={colors.inkFaint}
-                maxLength={60}
+                maxLength={REWARD_MAX}
                 accessibilityLabel={`Avantage du palier ${i + 1}`}
                 className={cn(
                   'rounded-control border bg-surface px-3.5 py-3 font-sans text-ink',

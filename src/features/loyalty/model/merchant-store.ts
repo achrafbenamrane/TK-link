@@ -35,10 +35,12 @@ export type MerchantCard = z.infer<typeof CardSchema>;
  * récompense, c'est une carotte hors d'atteinte, et le §8.3 parle d'avantages
  * que le client doit pouvoir obtenir.
  */
-const TierSchema = z.object({
+export const TierSchema = z.object({
   rank: z.number().int().positive(),
   cost: z.number().int().positive().max(100_000),
   reward: z.string().trim().min(1).max(60),
+  /** Le produit choisi comme récompense. Facultatif : les anciens paliers n'en ont pas. */
+  productId: z.string().optional(),
 });
 
 /**

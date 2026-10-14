@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@/shared/testing/render';
 
+import { rewardTicket } from '../lib/tiers';
 import { useMerchantLoyaltyStore } from '../model/merchant-store';
 import { RewardsScreen } from '../ui/rewards-screen';
 import { TiersSettingsScreen } from '../ui/tiers-settings-screen';
@@ -95,5 +96,23 @@ describe('validation côté commerçant', () => {
     fireEvent.changeText(screen.getByTestId('reward-redeem-code'), code);
     fireEvent.press(screen.getByTestId('reward-redeem-submit'));
     expect(screen.getByTestId('reward-redeem-result')).toHaveTextContent(/déjà été utilisée/);
+  });
+});
+
+describe('numéro de ticket d’une récompense', () => {
+  it('est court, stable et dérivé de l’identifiant', () => {
+    expect(rewardTicket('rw_1700000000000_1')).toMatch(/^#R-[A-Z2-9]{4}$/);
+    expect(rewardTicket('rw_1700000000000_1')).toBe(rewardTicket('rw_1700000000000_1'));
+    expect(rewardTicket('rw_1700000000000_1')).not.toBe(rewardTicket('rw_1700000000000_2'));
+  });
+
+  it('s’affiche avec l’avantage sur la récompense à utiliser', () => {
+    state().claim(MID, 1, 'Pizzeria Napoli');
+    const reward = state().rewards[0]!;
+    render(<RewardsScreen />);
+    expect(screen.getByTestId(`reward-ticket-${reward.id}`)).toHaveTextContent(
+      `Ticket ${rewardTicket(reward.id)}`,
+    );
+    expect(screen.getByText(reward.label)).toBeTruthy();
   });
 });

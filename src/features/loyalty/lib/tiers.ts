@@ -18,6 +18,11 @@ export type Tier = {
   cost: number;
   /** Ce qu'on obtient. */
   reward: string;
+  /**
+   * Le produit du commerçant choisi comme récompense, s'il y en a un. Facultatif :
+   * une récompense peut rester un texte libre (« Autre récompense »).
+   */
+  productId?: string;
 };
 
 /**
@@ -78,4 +83,24 @@ export function tierProgress(tier: Tier, points: number): number {
  */
 export function reachedCount(tiers: Tier[], points: number): number {
   return tiers.filter((t) => points >= t.cost).length;
+}
+
+/**
+ * Le numéro de ticket d'une récompense — `#R-AB12`, court et lisible à voix
+ * haute au comptoir. Dérivé de l'identifiant (toujours le même pour la même
+ * récompense), sans caractères qui se confondent (0/O, 1/I).
+ */
+export function rewardTicket(rewardId: string): string {
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let h = 2166136261;
+  for (let i = 0; i < rewardId.length; i++) {
+    h ^= rewardId.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  let out = '';
+  for (let i = 0; i < 4; i++) {
+    out += alphabet[h % alphabet.length];
+    h = Math.floor(h / alphabet.length);
+  }
+  return `#R-${out}`;
 }
