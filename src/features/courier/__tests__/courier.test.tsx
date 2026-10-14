@@ -1,4 +1,10 @@
 import { pickImage } from '@/shared/lib/image-picker';
+import {
+  displayName,
+  franceConnectProvider,
+  simulatedFranceConnect,
+  unavailableFranceConnect,
+} from '@/shared/lib/france-connect';
 import { fireEvent, render, screen, waitFor } from '@/shared/testing/render';
 import {
   deliveryCode,
@@ -22,6 +28,7 @@ import { availableMissions } from '../lib/available';
 import { daySummary, deltaLabel } from '../lib/summary';
 import { timelineState } from '../lib/courier';
 import { useCourierStore, type Mission } from '../model/store';
+import { CourierAccountScreen } from '../ui/courier-account-screen';
 import { CourierEarningsScreen } from '../ui/courier-earnings-screen';
 import { CourierHomeScreen } from '../ui/courier-home-screen';
 import { CourierMissionsScreen } from '../ui/courier-missions-screen';
@@ -42,6 +49,8 @@ const mission: Mission = {
   distanceKm: null,
 };
 
+const ID = { givenName: 'Alex', familyName: 'Martin', verifiedAt: 1_760_000_000_000 };
+
 const state = () => useCourierStore.getState();
 
 beforeEach(() => {
@@ -51,16 +60,16 @@ beforeEach(() => {
 });
 
 describe('règles du livreur — CDC V1.1', () => {
-  it('exige véhicule, zone, pièce d’identité et selfie pour partir en vérification', () => {
-    const draft: ProfileDraft = { vehicle: null, zone: '', idUri: '', selfieUri: '' };
+  it('exige véhicule, zone, identité FranceConnect et selfie pour partir en vérification', () => {
+    const draft: ProfileDraft = { vehicle: null, zone: '', identity: null, selfieUri: '' };
     expect(Object.keys(missingProfileFields(draft)).sort()).toEqual([
-      'idUri',
+      'identity',
       'selfieUri',
       'vehicle',
       'zone',
     ]);
     expect(
-      missingProfileFields({ vehicle: 'velo', zone: 'Toulouse', idUri: 'a', selfieUri: 'b' }),
+      missingProfileFields({ vehicle: 'velo', zone: 'Toulouse', identity: ID, selfieUri: 'b' }),
     ).toEqual({});
   });
 
@@ -119,13 +128,13 @@ describe('règles du livreur — CDC V1.1', () => {
 
 describe('store livreur', () => {
   const validated = () => {
-    state().submitProfile({ vehicle: 'scooter', zone: 'Toulouse', idUri: 'a', selfieUri: 'b' });
+    state().submitProfile({ vehicle: 'scooter', zone: 'Toulouse', identity: ID, selfieUri: 'b' });
     state().validateAccount();
     state().setOnline(true);
   };
 
   it('un dossier incomplet ne part pas en vérification', () => {
-    const res = state().submitProfile({ vehicle: null, zone: '', idUri: '', selfieUri: '' });
+    const res = state().submitProfile({ vehicle: null, zone: '', identity: null, selfieUri: '' });
     expect(res.ok).toBe(false);
     expect(state().status).toBe('brouillon');
   });
@@ -191,29 +200,95 @@ describe('store livreur', () => {
 });
 
 describe('<CourierSetupScreen />', () => {
+  const connected = jest.fn().mockResolvedValue({ ok: true, identity: ID });
+
   it('refuse un dossier vide, puis l’envoie quand tout est là', async () => {
     pick.mockResolvedValue('file:///x.jpg');
-    render(<CourierSetupScreen authenticate={jest.fn()} onDone={jest.fn()} />);
+    render(
+      <CourierSetupScreen franceConnect={connected} authenticate={jest.fn()} onDone={jest.fn()} />,
+    );
 
     fireEvent.press(screen.getByTestId('courier-submit'));
     expect(state().status).toBe('brouillon');
 
     fireEvent.press(screen.getByTestId('courier-vehicle-velo'));
     fireEvent.changeText(screen.getByTestId('courier-zone'), 'Toulouse centre');
-    fireEvent.press(screen.getByTestId('courier-idUri-add'));
-    await waitFor(() => expect(screen.getByTestId('courier-idUri-preview')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('courier-franceconnect'));
+    await waitFor(() => expect(screen.getByTestId('courier-fc-verified')).toBeTruthy());
     fireEvent.press(screen.getByTestId('courier-selfieUri-add'));
     await waitFor(() => expect(screen.getByTestId('courier-selfieUri-preview')).toBeTruthy());
     fireEvent.press(screen.getByTestId('courier-submit'));
 
     expect(state().status).toBe('en_verification');
+    expect(state().identity).toEqual(ID);
     expect(screen.getByTestId('courier-verification-status')).toHaveTextContent(
       /en cours de contrôle/,
     );
   });
 
+  it('ne demande plus de pièce d’identité : seulement FranceConnect et le selfie', () => {
+    render(<CourierSetupScreen authenticate={jest.fn()} onDone={jest.fn()} />);
+    expect(screen.queryByTestId('courier-idUri-add')).toBeNull();
+    expect(screen.getByTestId('courier-franceconnect')).toBeTruthy();
+    expect(screen.getByTestId('courier-selfieUri-add')).toBeTruthy();
+  });
+
+  it('sans identité vérifiée, le dossier ne part pas, et le dit', () => {
+    render(<CourierSetupScreen authenticate={jest.fn()} onDone={jest.fn()} />);
+    fireEvent.press(screen.getByTestId('courier-submit'));
+    expect(screen.getByText('Vérifiez votre identité avec FranceConnect.')).toBeTruthy();
+    expect(state().status).toBe('brouillon');
+  });
+
+  it('affiche l’identité confirmée sans l’étaler : prénom et initiale du nom', async () => {
+    render(
+      <CourierSetupScreen franceConnect={connected} authenticate={jest.fn()} onDone={jest.fn()} />,
+    );
+    fireEvent.press(screen.getByTestId('courier-franceconnect'));
+    await waitFor(() => expect(screen.getByTestId('courier-fc-verified')).toBeTruthy());
+    expect(screen.getByTestId('courier-fc-verified')).toHaveTextContent(/Alex M\./);
+    expect(screen.getByTestId('courier-fc-verified')).not.toHaveTextContent(/Martin/);
+    expect(displayName(ID)).toBe('Alex M.');
+  });
+
+  it('FranceConnect pas encore branché : le dit clairement, sans valider l’identité', async () => {
+    render(<CourierSetupScreen authenticate={jest.fn()} onDone={jest.fn()} />);
+    fireEvent.press(screen.getByTestId('courier-franceconnect'));
+    await waitFor(() => expect(screen.getByTestId('courier-fc-error')).toBeTruthy());
+    expect(screen.getByTestId('courier-fc-error')).toHaveTextContent(/pas encore disponible/);
+    expect(screen.queryByTestId('courier-fc-verified')).toBeNull();
+  });
+
+  it('une vérification annulée ou en échec se lit, et on peut recommencer', async () => {
+    const refused = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: false, reason: 'annule' })
+      .mockResolvedValueOnce({ ok: false, reason: 'echec' })
+      .mockResolvedValueOnce({ ok: true, identity: ID });
+    render(
+      <CourierSetupScreen franceConnect={refused} authenticate={jest.fn()} onDone={jest.fn()} />,
+    );
+
+    fireEvent.press(screen.getByTestId('courier-franceconnect'));
+    await waitFor(() =>
+      expect(screen.getByTestId('courier-fc-error')).toHaveTextContent(/annulée/),
+    );
+    fireEvent.press(screen.getByTestId('courier-franceconnect'));
+    await waitFor(() =>
+      expect(screen.getByTestId('courier-fc-error')).toHaveTextContent(/n’a pas pu être vérifiée/),
+    );
+    fireEvent.press(screen.getByTestId('courier-franceconnect'));
+    await waitFor(() => expect(screen.getByTestId('courier-fc-verified')).toBeTruthy());
+    expect(screen.queryByTestId('courier-fc-error')).toBeNull();
+  });
+
+  it('en démonstration, l’identité simulée est signalée comme telle', () => {
+    render(<CourierSetupScreen demo authenticate={jest.fn()} onDone={jest.fn()} />);
+    expect(screen.getByTestId('courier-fc-demo')).toHaveTextContent(/identité simulée/);
+  });
+
   it('la démo simule la validation, puis la biométrie ouvre l’accès', async () => {
-    state().submitProfile({ vehicle: 'velo', zone: 'Toulouse', idUri: 'a', selfieUri: 'b' });
+    state().submitProfile({ vehicle: 'velo', zone: 'Toulouse', identity: ID, selfieUri: 'b' });
     const authenticate = jest.fn().mockResolvedValue(true);
     const onDone = jest.fn();
     render(<CourierSetupScreen demo authenticate={authenticate} onDone={onDone} />);
@@ -231,7 +306,7 @@ describe('<CourierSetupScreen />', () => {
 });
 
 const ready = () => {
-  state().submitProfile({ vehicle: 'velo', zone: 'Toulouse', idUri: 'a', selfieUri: 'b' });
+  state().submitProfile({ vehicle: 'velo', zone: 'Toulouse', identity: ID, selfieUri: 'b' });
   state().validateAccount();
 };
 
@@ -539,7 +614,7 @@ describe('<CourierEarningsScreen />', () => {
   });
 
   it('cumule les gains et dit que la majoration kilométrique n’est pas comptée', () => {
-    state().submitProfile({ vehicle: 'velo', zone: 'T', idUri: 'a', selfieUri: 'b' });
+    state().submitProfile({ vehicle: 'velo', zone: 'T', identity: ID, selfieUri: 'b' });
     useCourierStore.setState({
       history: [
         {
@@ -623,7 +698,7 @@ describe('<CourierSetupScreen /> — reprise du dossier', () => {
 
 describe('<CourierSetupScreen /> — en production', () => {
   it('ne propose pas de simuler le contrôle de TK LINK', () => {
-    state().submitProfile({ vehicle: 'velo', zone: 'Toulouse', idUri: 'a', selfieUri: 'b' });
+    state().submitProfile({ vehicle: 'velo', zone: 'Toulouse', identity: ID, selfieUri: 'b' });
     render(<CourierSetupScreen authenticate={jest.fn()} onDone={jest.fn()} />);
     expect(screen.getByTestId('courier-verification-status')).toBeTruthy();
     expect(screen.queryByTestId('courier-demo-validate')).toBeNull();
@@ -661,5 +736,28 @@ describe('gain du livreur selon la zone de base', () => {
     expect(courierGain(5)).toEqual({ eur: 3, complet: false });
     usePlatformOverrides.getState().setOverride('courierBaseZoneKm', 2);
     expect(courierGain(5)).toEqual({ eur: 5.4, complet: true });
+  });
+});
+
+describe('FranceConnect — fournisseurs', () => {
+  it('le simulateur rend une identité fictive, l’« indisponible » le dit', async () => {
+    const sim = await simulatedFranceConnect();
+    expect(sim.ok).toBe(true);
+    expect(await unavailableFranceConnect()).toEqual({ ok: false, reason: 'indisponible' });
+  });
+
+  it('le fournisseur d’une build de production n’est jamais le simulateur', () => {
+    // Sous Jest (EXPO_PUBLIC_APP_ENV non défini → développement) c'est une build de démonstration.
+    expect(franceConnectProvider()).toBe(simulatedFranceConnect);
+  });
+
+  it('le compte livreur montre l’identité vérifiée, ou « Non vérifiée »', () => {
+    const { unmount } = render(<CourierAccountScreen onOpenSetup={jest.fn()} />);
+    expect(screen.getByText('Non vérifiée')).toBeTruthy();
+    unmount();
+
+    useCourierStore.setState({ identity: ID });
+    render(<CourierAccountScreen onOpenSetup={jest.fn()} />);
+    expect(screen.getByText(/Alex M\. · FranceConnect/)).toBeTruthy();
   });
 });

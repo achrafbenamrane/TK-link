@@ -4,6 +4,7 @@ import { CourierSetupScreen } from '@/features/courier';
 import { useOnboardingStore } from '@/features/onboarding';
 import { authenticateBiometric } from '@/features/shop';
 import { isDemoBuild } from '@/shared/lib/env';
+import { franceConnectProvider } from '@/shared/lib/france-connect';
 
 /**
  * Le dépôt des justificatifs, la vérification et la sécurisation du livreur —
@@ -17,6 +18,7 @@ export default function BecomeCourierRoute() {
   return (
     <CourierSetupScreen
       demo={isDemoBuild}
+      franceConnect={franceConnectProvider()}
       authenticate={async (reason) => (await authenticateBiometric(reason)).ok}
       onDone={() => {
         // Le compte est prêt : la porte du premier lancement s'ouvre.

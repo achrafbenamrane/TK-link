@@ -98,7 +98,7 @@ enforces).
 
 - **Owner :** squad produit TK LINK
 - **Flow :** aucun — couvert par `courier/__tests__/courier.test.tsx`.
-- **Journey :** « Devenir livreur » → inscription → justificatifs → vérification
+- **Journey :** « Devenir livreur » → inscription → identité par FranceConnect + selfie → vérification
   (simulée en démo) → biométrie → accueil (résumé du jour) → « Passer disponible » →
   onglet Missions : accepter → mission active → « Récupérer la commande » : empreinte,
   puis code à 4 chiffres ou QR de l’étiquette → navigation → « J’arrive chez le client »

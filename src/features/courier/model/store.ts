@@ -90,7 +90,18 @@ const PersistedSchema = z.object({
   status: z.enum(['brouillon', 'en_verification', 'valide']).default('brouillon'),
   vehicle: z.enum(VEHICLES).nullable().default(null),
   zone: z.string().default(''),
-  idUri: z.string().default(''),
+  /**
+   * L'identité confirmée par FranceConnect : prénom, nom et date de vérification — jamais de pièce
+   * d'identité ni de numéro. `null` tant qu'elle n'est pas vérifiée (et pour les comptes d'avant).
+   */
+  identity: z
+    .object({
+      givenName: z.string(),
+      familyName: z.string(),
+      verifiedAt: z.number().int().positive(),
+    })
+    .nullable()
+    .default(null),
   selfieUri: z.string().default(''),
   /** L'appareil est-il enrôlé avec une biométrie locale ? Un drapeau, jamais l'empreinte. */
   deviceEnrolled: z.boolean().default(false),
@@ -167,7 +178,7 @@ const INITIAL = {
   status: 'brouillon' as const,
   vehicle: null,
   zone: '',
-  idUri: '',
+  identity: null,
   selfieUri: '',
   deviceEnrolled: false,
   online: false,
@@ -187,7 +198,7 @@ export const useCourierStore = create<State>()(
         set({
           vehicle: draft.vehicle,
           zone: draft.zone.trim(),
-          idUri: draft.idUri,
+          identity: draft.identity,
           selfieUri: draft.selfieUri,
           status: 'en_verification',
         });
@@ -302,7 +313,7 @@ export const useCourierStore = create<State>()(
         status: s.status,
         vehicle: s.vehicle,
         zone: s.zone,
-        idUri: s.idUri,
+        identity: s.identity,
         selfieUri: s.selfieUri,
         deviceEnrolled: s.deviceEnrolled,
         online: s.online,

@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { displayName } from '@/shared/lib/france-connect';
 import { AppText, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -30,13 +31,19 @@ export function CourierAccountScreen({ name, onOpenSetup, onSignOut, onOpenDemoS
   const vehicle = useCourierStore((s) => s.vehicle);
   const zone = useCourierStore((s) => s.zone);
   const enrolled = useCourierStore((s) => s.deviceEnrolled);
+  const identity = useCourierStore((s) => s.identity);
 
   const rows: {
-    icon: 'shield' | 'navigation' | 'map-pin' | 'lock';
+    icon: 'shield' | 'navigation' | 'map-pin' | 'lock' | 'user-check';
     label: string;
     value: string;
   }[] = [
     { icon: 'shield', label: 'Statut', value: STATUS_TEXT[status] },
+    {
+      icon: 'user-check',
+      label: 'Identité',
+      value: identity ? `${displayName(identity)} · FranceConnect` : 'Non vérifiée',
+    },
     {
       icon: 'navigation',
       label: 'Véhicule',

@@ -84,20 +84,20 @@ Le grossiste expédie, le commerçant remet en main propre : leurs statuts diver
 
 ## Livreur
 
-| #   | Étape                       | Ce qu’elle contient                                               |
-| --- | --------------------------- | ----------------------------------------------------------------- |
-| 1   | Téléchargement              | application mobile                                                |
-| 2   | Création du compte livreur  | nom, téléphone, e-mail, mot de passe                              |
-| 3   | Dépôt des informations      | **pièce d’identité, selfie**, coordonnées, **zone d’activité**    |
-| 4   | Vérification du profil      | contrôle des informations par TKLINK                              |
-| 5   | Sécurisation du compte      | appareil enregistré + **biométrie locale**                        |
-| 6   | Compte validé               | accès au tableau de bord livreur                                  |
-| 7   | Activation de disponibilité | le livreur **se met en ligne**                                    |
-| 8   | Réception d’une mission     | notification avec **point de retrait et destination**             |
-| 9   | Acceptation de la mission   | **estimation, distance, gain, délai**                             |
-| 10  | Retrait chez le commerçant  | navigation, **scan QR ou code PIN**, biométrie si colis important |
-| 11  | Livraison chez le client    | suivi, navigation, remise du colis                                |
-| 12  | Confirmation finale         | **preuve de remise**, validation, mission terminée                |
+| #   | Étape                       | Ce qu’elle contient                                                                              |
+| --- | --------------------------- | ------------------------------------------------------------------------------------------------ |
+| 1   | Téléchargement              | application mobile                                                                               |
+| 2   | Création du compte livreur  | nom, téléphone, e-mail, mot de passe                                                             |
+| 3   | Dépôt des informations      | **identité par FranceConnect** (plus de pièce d’identité), selfie, **zone d’activité**, véhicule |
+| 4   | Vérification du profil      | contrôle des informations par TKLINK                                                             |
+| 5   | Sécurisation du compte      | appareil enregistré + **biométrie locale**                                                       |
+| 6   | Compte validé               | accès au tableau de bord livreur                                                                 |
+| 7   | Activation de disponibilité | le livreur **se met en ligne**                                                                   |
+| 8   | Réception d’une mission     | notification avec **point de retrait et destination**                                            |
+| 9   | Acceptation de la mission   | **estimation, distance, gain, délai**                                                            |
+| 10  | Retrait chez le commerçant  | navigation, **scan QR ou code PIN**, biométrie si colis important                                |
+| 11  | Livraison chez le client    | suivi, navigation, remise du colis                                                               |
+| 12  | Confirmation finale         | **preuve de remise**, validation, mission terminée                                               |
 
 **Statuts :** Disponible → Mission reçue → Acceptée → En route commerçant → Prise en charge → En
 livraison → Livrée
@@ -168,6 +168,30 @@ bloquée ; une mission d'exemple propose un contournement « Démo ».
 
 **Preuve de remise.** Le code à 6 chiffres du client (ou son QR) remplace la photo : c'est ce que
 montre la maquette. `expo-camera` sert au scan du QR (retrait et remise).
+
+## Identité du livreur : FranceConnect (demande du client, 14/10/2026)
+
+Le client ne veut plus que le livreur dépose une pièce d'identité : son identité est vérifiée par
+**FranceConnect**. Dans l'app, l'étape 3 du dossier livreur remplace la photo de la pièce par le
+bouton « S'identifier avec FranceConnect ». TK LINK ne reçoit ni ne garde de pièce : il retient
+seulement le prénom, le nom et la date de vérification, et n'affiche que « Alex M. ».
+
+**Ce qui est fait :** l'écran, le modèle de données, le contrat d'un fournisseur d'identité
+(`src/shared/lib/france-connect.ts`), un simulateur signalé « Démo » dans les builds de démonstration,
+et un message honnête « pas encore disponible » partout ailleurs.
+
+**Ce qui n'est PAS fait, et qui bloque le vrai service :**
+
+1. **L'habilitation** de TK LINK comme fournisseur de service FranceConnect (demande via DataPass, instruite
+   par l'État : délai et conditions à confirmer auprès de la documentation officielle FranceConnect).
+2. **Un serveur** qui garde le secret client, échange le code d'autorisation et vérifie le jeton OpenID
+   Connect. Le secret ne peut pas vivre dans l'app.
+3. **Un lien de retour** dans l'app (`tklink://franceconnect`).
+
+**À trancher avec le client :** FranceConnect ne couvre que les personnes qui ont un compte d'un des
+fournisseurs de l'État (impôts, ameli, La Poste…). Un livreur sans ces comptes, ou non résident, ne
+pourra pas s'inscrire : faut-il une autre voie de vérification pour eux ? Et le selfie reste-t-il, puisque
+FranceConnect confirme qui est la personne mais pas qu'elle tient le téléphone ?
 
 ## Ce que les affiches ajoutent
 

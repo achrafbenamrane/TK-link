@@ -90,7 +90,12 @@ export function CourierHomeScreen({
 
   // Démo : un compte prêt à livrer en un geste, sans passer par les justificatifs.
   const activateDemo = () => {
-    submitProfile({ vehicle: 'velo', zone: 'Toulouse', idUri: 'demo', selfieUri: 'demo' });
+    submitProfile({
+      vehicle: 'velo',
+      zone: 'Toulouse',
+      identity: { givenName: 'Alex', familyName: 'Martin', verifiedAt: Date.now() },
+      selfieUri: 'demo',
+    });
     validateAccount();
     setDeviceEnrolled(true);
     setOnline(true);

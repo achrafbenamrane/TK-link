@@ -4,6 +4,12 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 
 import { cn } from '@/shared/lib/cn';
+import {
+  displayName,
+  unavailableFranceConnect,
+  type FranceConnectIdentity,
+  type FranceConnectProvider,
+} from '@/shared/lib/france-connect';
 import { pickImage } from '@/shared/lib/image-picker';
 import { AppText, Button, Screen, Wordmark } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
@@ -20,6 +26,11 @@ type Props = {
    * personne s'est authentifiée.
    */
   authenticate: (reason: string) => Promise<boolean>;
+  /**
+   * Ouvre FranceConnect et rend l'identité confirmée. Fournie par la route : le flux réel passe
+   * par un serveur. Par défaut, « indisponible » : on le dit au livreur au lieu de faire semblant.
+   */
+  franceConnect?: FranceConnectProvider;
   /** « Accéder au tableau de bord » — la navigation reste à la route. */
   onDone: () => void;
 };
@@ -36,7 +47,7 @@ const STEP_TITLE: Record<Step, string> = {
 /**
  * LE PARCOURS LIVREUR, étapes 3 à 6 du schéma du client :
  *
- *   3. Dépôt des informations (pièce d'identité, selfie, zone d'activité, véhicule)
+ *   3. Dépôt des informations (identité par FranceConnect, selfie, zone d'activité, véhicule)
  *   4. Vérification du profil — contrôle par TK LINK
  *   5. Sécurisation (appareil enregistré + biométrie locale)
  *   6. Compte validé
@@ -45,13 +56,18 @@ const STEP_TITLE: Record<Step, string> = {
  * validé par l'app : la vérification d'identité est l'affaire de TK LINK. Tant
  * qu'il n'y a pas de serveur, un bouton « démo » la simule — et le dit.
  */
-export function CourierSetupScreen({ authenticate, onDone, demo = false }: Props) {
+export function CourierSetupScreen({
+  authenticate,
+  onDone,
+  franceConnect = unavailableFranceConnect,
+  demo = false,
+}: Props) {
   const colors = useColors();
   // Des sélecteurs, pas le magasin entier : saisir un champ ne refait pas tout l'écran.
   const status = useCourierStore((s) => s.status);
   const savedVehicle = useCourierStore((s) => s.vehicle);
   const savedZone = useCourierStore((s) => s.zone);
-  const savedIdUri = useCourierStore((s) => s.idUri);
+  const savedIdentity = useCourierStore((s) => s.identity);
   const savedSelfieUri = useCourierStore((s) => s.selfieUri);
   const deviceEnrolled = useCourierStore((s) => s.deviceEnrolled);
   const submitProfile = useCourierStore((s) => s.submitProfile);
@@ -73,13 +89,15 @@ export function CourierSetupScreen({ authenticate, onDone, demo = false }: Props
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(savedVehicle);
   const [zone, setZone] = useState(savedZone);
-  const [idUri, setIdUri] = useState(savedIdUri);
+  const [identity, setIdentity] = useState<FranceConnectIdentity | null>(savedIdentity);
+  const [fcBusy, setFcBusy] = useState(false);
+  const [fcError, setFcError] = useState<string | null>(null);
   const [selfieUri, setSelfieUri] = useState(savedSelfieUri);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [secureNote, setSecureNote] = useState<string | null>(null);
 
   const submit = () => {
-    const res = submitProfile({ vehicle, zone, idUri, selfieUri });
+    const res = submitProfile({ vehicle, zone, identity, selfieUri });
     if (res.ok) {
       setErrors({});
       setStep('verification');
@@ -99,10 +117,30 @@ export function CourierSetupScreen({ authenticate, onDone, demo = false }: Props
     }
   };
 
+  const verifyIdentity = async () => {
+    if (fcBusy) return;
+    setFcBusy(true);
+    setFcError(null);
+    const res = await franceConnect();
+    setFcBusy(false);
+    if (res.ok) {
+      setIdentity(res.identity);
+      setErrors((e) => ({ ...e, identity: '' }));
+    } else {
+      setFcError(
+        res.reason === 'indisponible'
+          ? 'FranceConnect n’est pas encore disponible dans cette version : il ouvrira avec le service.'
+          : res.reason === 'annule'
+            ? 'Vérification annulée. Vous pouvez recommencer.'
+            : 'Votre identité n’a pas pu être vérifiée. Réessayez.',
+      );
+    }
+  };
+
   const index = STEPS.indexOf(step);
 
   const photo = (
-    key: 'idUri' | 'selfieUri',
+    key: 'selfieUri',
     uri: string,
     set: (u: string) => void,
     label: string,
@@ -137,8 +175,8 @@ export function CourierSetupScreen({ authenticate, onDone, demo = false }: Props
           accessibilityLabel={label}
           onPress={async () => {
             const picked = await pickImage(source, {
-              aspect: key === 'selfieUri' ? [1, 1] : [4, 3],
-              front: key === 'selfieUri',
+              aspect: [1, 1],
+              front: true,
             });
             if (picked) set(picked);
           }}
@@ -195,8 +233,8 @@ export function CourierSetupScreen({ authenticate, onDone, demo = false }: Props
         {step === 'infos' ? (
           <View className="gap-4">
             <AppText variant="caption">
-              Pièce d’identité, selfie, zone d’activité et véhicule : TK LINK contrôle votre dossier
-              avant toute mission.
+              Identité (FranceConnect), selfie, zone d’activité et véhicule : TK LINK contrôle votre
+              dossier avant toute mission.
             </AppText>
 
             <View className="gap-1.5">
@@ -263,7 +301,69 @@ export function CourierSetupScreen({ authenticate, onDone, demo = false }: Props
               ) : null}
             </View>
 
-            {photo('idUri', idUri, setIdUri, 'Pièce d’identité', 'galerie')}
+            <View
+              testID="courier-identity"
+              className="gap-2 rounded-card border border-line bg-surface p-3.5"
+            >
+              <AppText variant="caption" className="font-sans-semibold text-ink-muted">
+                Votre identité
+              </AppText>
+              {identity ? (
+                <View
+                  testID="courier-fc-verified"
+                  className="flex-row items-center gap-3 rounded-control border border-success bg-surface-muted p-3"
+                >
+                  <View className="h-9 w-9 items-center justify-center rounded-pill bg-success">
+                    <Feather name="check" size={18} color="#FFFFFF" />
+                  </View>
+                  <View className="flex-1">
+                    <AppText className="font-sans-bold text-success">Identité vérifiée</AppText>
+                    <AppText variant="caption" className="text-ink-faint">
+                      {displayName(identity)} · FranceConnect
+                    </AppText>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  <AppText variant="caption" className="text-ink-faint">
+                    Connectez-vous avec un compte que vous avez déjà (impots.gouv, ameli, La Poste…)
+                    : aucune pièce d’identité à envoyer, TK LINK n’en garde aucune.
+                  </AppText>
+                  <Pressable
+                    testID="courier-franceconnect"
+                    accessibilityRole="button"
+                    accessibilityLabel="S’identifier avec FranceConnect"
+                    accessibilityState={{ busy: fcBusy }}
+                    disabled={fcBusy}
+                    onPress={() => void verifyIdentity()}
+                    className={cn(
+                      'flex-row items-center justify-center gap-2 rounded-control border bg-surface-muted py-3.5',
+                      errors.identity ? 'border-danger' : 'border-brand-500',
+                    )}
+                  >
+                    <Feather name="shield" size={17} color={colors.brand500} />
+                    <AppText className="font-sans-bold text-ink" style={{ fontSize: 14 }}>
+                      {fcBusy ? 'Vérification…' : 'S’identifier avec FranceConnect'}
+                    </AppText>
+                  </Pressable>
+                  {demo ? (
+                    <AppText testID="courier-fc-demo" variant="caption" className="text-brand-600">
+                      Démo — identité simulée : FranceConnect n’est pas encore branché.
+                    </AppText>
+                  ) : null}
+                </>
+              )}
+              {fcError ? (
+                <AppText testID="courier-fc-error" variant="caption" className="text-danger">
+                  {fcError}
+                </AppText>
+              ) : null}
+              {errors.identity ? (
+                <AppText variant="caption" className="text-danger">
+                  {errors.identity}
+                </AppText>
+              ) : null}
+            </View>
             {photo('selfieUri', selfieUri, setSelfieUri, 'Selfie', 'camera')}
 
             <Button testID="courier-submit" label="Envoyer mon dossier" onPress={submit} />

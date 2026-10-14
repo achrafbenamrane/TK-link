@@ -490,7 +490,7 @@ function seedDemo(role: Role) {
     status: 'valide',
     vehicle: 'scooter',
     zone: 'Toulouse centre',
-    idUri: 'demo',
+    identity: { givenName: 'Alex', familyName: 'Martin', verifiedAt: now },
     selfieUri: 'demo',
     deviceEnrolled: true,
     online: role === 'livreur',

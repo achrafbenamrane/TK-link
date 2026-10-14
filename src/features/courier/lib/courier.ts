@@ -1,3 +1,4 @@
+import type { FranceConnectIdentity } from '@/shared/lib/france-connect';
 import { isImportantParcel } from '@/shared/lib/handover';
 import { currentSettings } from '@/shared/lib/platform-overrides';
 import type { PlatformSettings } from '@/shared/lib/platform-settings';
@@ -84,7 +85,8 @@ export function canReceiveMissions(status: AccountStatus, online: boolean): bool
 export type ProfileDraft = {
   vehicle: Vehicle | null;
   zone: string;
-  idUri: string;
+  /** L'identité confirmée par FranceConnect — plus de pièce d'identité à déposer. */
+  identity: FranceConnectIdentity | null;
   selfieUri: string;
 };
 
@@ -92,7 +94,7 @@ export function missingProfileFields(p: ProfileDraft): Record<string, string> {
   const out: Record<string, string> = {};
   if (!p.vehicle) out.vehicle = 'Choisissez votre véhicule.';
   if (p.zone.trim().length < 2) out.zone = 'Indiquez votre zone d’activité.';
-  if (!p.idUri) out.idUri = 'Ajoutez une photo de votre pièce d’identité.';
+  if (!p.identity) out.identity = 'Vérifiez votre identité avec FranceConnect.';
   if (!p.selfieUri) out.selfieUri = 'Ajoutez un selfie.';
   return out;
 }

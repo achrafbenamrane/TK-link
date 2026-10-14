@@ -55,6 +55,13 @@ or deletes stale ones. Newest first; keep entries one line each:
   l'inscription pré-remplie, l'IBAN d'exemple, les missions et la vitrine d'exemple et les boutons
   « simuler la validation ». Vérifié : un Metro lancé en production n'en montre aucun.
 
+## FranceConnect (identité du livreur)
+
+Branché côté écran et données, **pas côté service** : il faut l'habilitation de l'État, un serveur OpenID
+Connect et un lien de retour (détail dans `docs/product/parcours-clients.md`). Le simulateur n'existe
+qu'en build de démonstration ; ailleurs l'app dit « pas encore disponible ». Les anciens comptes livreur
+(avec une pièce déposée) n'ont pas d'identité FranceConnect : le compte les affiche « Non vérifiée ».
+
 ## Réglages de démonstration
 
 Trois valeurs que le CDC ne chiffre pas (frais de livraison du client, zone de base du livreur, montant
