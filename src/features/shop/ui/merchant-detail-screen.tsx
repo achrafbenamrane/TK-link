@@ -9,12 +9,14 @@ import { ShopVideo } from '@/shared/ui/shop-video';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { FULFILMENT_LABEL, FULFILMENTS } from '../lib/order-status';
+import { STOCK_CLASSES, stockAccessibilityLabel, stockTone } from '../lib/stock';
 import { videoSource } from '../lib/showcase';
 import { DEALS, getMerchant } from '../model/catalog';
 import { productImageUri } from '../model/product-images';
 import type { Deal } from '../model/schema';
 import { useShopStore } from '../model/store';
 import { Countdown } from './components/countdown';
+import { PriceTag } from './components/price-tag';
 import { ProductImage } from './components/product-image';
 
 type Props = {
@@ -57,6 +59,8 @@ const initials = (name: string) =>
 function FlashTile({ deal, onOpen, onAdd }: { deal: Deal; onOpen: () => void; onAdd: () => void }) {
   const colors = useColors();
   const modes = deal.fulfilments ?? [...FULFILMENTS];
+  // La jauge d'essence : vert, jaune, rouge (`lib/stock.ts`).
+  const toneClass = STOCK_CLASSES[stockTone(deal.stockLeft, deal.stockTotal)];
   return (
     <Pressable
       testID={`merchant-deal-${deal.id}`}
@@ -65,7 +69,12 @@ function FlashTile({ deal, onOpen, onAdd }: { deal: Deal; onOpen: () => void; on
       onPress={onOpen}
       className="flex-1 gap-1.5 rounded-card border border-brand-500 bg-surface-muted p-3 active:opacity-80"
     >
-      <View className="flex-row items-center gap-1 self-start rounded-pill border border-brand-500 px-2 py-0.5">
+      {/* flexShrink 0 : la pastille ne rétrécit pas, même pour « 24:00:00 ». */}
+      <View
+        testID={`merchant-deal-${deal.id}-countdown`}
+        className="flex-row items-center gap-1 self-start rounded-pill border border-brand-500 px-2 py-0.5"
+        style={{ flexShrink: 0 }}
+      >
         <Feather name="clock" size={10} color={colors.brand500} />
         <Countdown seconds={deal.endsInSeconds} className="text-ink" />
       </View>
@@ -86,19 +95,23 @@ function FlashTile({ deal, onOpen, onAdd }: { deal: Deal; onOpen: () => void; on
       >
         <ProductImage deal={deal} emojiSize={36} />
       </View>
-      <View className="flex-row items-baseline gap-1.5">
-        <AppText className="font-sans-bold text-brand-500" style={{ fontSize: 14 }}>
-          {deal.price.toFixed(2).replace('.', ',')} €
-        </AppText>
-        {deal.oldPrice ? (
-          <AppText className="text-ink-faint line-through" style={{ fontSize: 11 }}>
-            {deal.oldPrice.toFixed(2).replace('.', ',')} €
-          </AppText>
-        ) : null}
-      </View>
+      {/* Le prix en vert, l'ancien en rouge barré, la remise au-dessus : un seul
+          composant pour tous les écrans. */}
+      <PriceTag
+        testID={`merchant-deal-${deal.id}-price`}
+        price={deal.price}
+        oldPrice={deal.oldPrice}
+        size={15}
+        comma
+      />
       <View className="flex-row items-center justify-between">
-        <View className="rounded-control border border-warning px-2 py-0.5">
-          <AppText className="font-sans-semibold text-warning" style={{ fontSize: 10.5 }}>
+        <View
+          testID={`merchant-deal-${deal.id}-stock`}
+          accessible
+          accessibilityLabel={stockAccessibilityLabel(deal.stockLeft, deal.stockTotal)}
+          className={cn('rounded-control border px-2 py-0.5', toneClass.border)}
+        >
+          <AppText className={cn('font-sans-semibold', toneClass.text)} style={{ fontSize: 10.5 }}>
             Stock : {deal.stockLeft}
           </AppText>
         </View>

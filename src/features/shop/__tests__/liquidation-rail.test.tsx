@@ -21,7 +21,7 @@ describe('<LiquidationRail />', () => {
   it('met en tête ce qui va disparaître en premier', () => {
     render(<LiquidationRail limit={3} />);
     expect(screen.getByTestId(`liquidation-${mostUrgent.id}`)).toBeTruthy();
-    expect(screen.getAllByTestId(/^liquidation-d_/)).toHaveLength(3);
+    expect(screen.getAllByTestId(/^liquidation-d_\w+$/)).toHaveLength(3);
   });
 
   it('« Attraper » met l’offre au panier', () => {

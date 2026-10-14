@@ -4,13 +4,16 @@ import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { distanceKm } from '../lib/geo';
+import { STOCK_CLASSES, stockAccessibilityLabel, stockBarPct, stockTone } from '../lib/stock';
 import { getDeal, getMerchant } from '../model/catalog';
 import { useShopStore } from '../model/store';
 import { CountdownBlocks } from './components/countdown';
+import { PriceTag } from './components/price-tag';
 import { ProductImage } from './components/product-image';
 import { QtyStepper } from './components/qty-stepper';
 import { ScreeningStrip } from './components/screening-strip';
@@ -55,9 +58,8 @@ export function ProductScreen({ dealId }: Props) {
     );
   }
 
-  const discount = deal.oldPrice ? Math.round((1 - deal.price / deal.oldPrice) * 100) : null;
-  const stockPct = Math.round((deal.stockLeft / deal.stockTotal) * 100);
-  const low = deal.stockLeft <= deal.stockTotal * 0.25;
+  // La jauge d'essence : vert, jaune, rouge — la teinte vient de `lib/stock.ts`.
+  const toneClass = STOCK_CLASSES[stockTone(deal.stockLeft, deal.stockTotal)];
   const total = deal.price * qty;
 
   const addAndGo = () => {
@@ -119,13 +121,6 @@ export function ProductScreen({ dealId }: Props) {
             style={{ backgroundColor: deal.tint }}
           >
             <ProductImage deal={deal} emojiSize={110} />
-            {discount ? (
-              <View className="absolute left-3 top-3 h-16 w-16 items-center justify-center rounded-pill bg-brand-500">
-                <AppText className="font-display text-white" style={{ fontSize: 19 }}>
-                  -{discount}%
-                </AppText>
-              </View>
-            ) : null}
           </View>
 
           <View className="flex-row items-end justify-between gap-3 px-4 pb-1 pt-3">
@@ -142,18 +137,17 @@ export function ProductScreen({ dealId }: Props) {
                   {deal.unit}
                 </AppText>
               ) : null}
-              {deal.oldPrice ? (
-                <AppText className="mt-0.5 text-ink-faint line-through" style={{ fontSize: 15 }}>
-                  {deal.oldPrice.toFixed(2).replace('.', ',')}€
-                </AppText>
-              ) : null}
             </View>
-            <AppText className="font-display text-brand-500" style={{ fontSize: 34 }}>
-              {deal.price.toFixed(2).split('.')[0]}
-              <AppText className="font-display text-brand-500" style={{ fontSize: 20 }}>
-                ,{deal.price.toFixed(2).split('.')[1]}€
-              </AppText>
-            </AppText>
+            {/* La remise (au-dessus), le prix en vert, l'ancien en rouge barré :
+                tout vient du composant partagé, comme sur les autres écrans. */}
+            <PriceTag
+              testID="product-price"
+              price={deal.price}
+              oldPrice={deal.oldPrice}
+              size={34}
+              align="end"
+              comma
+            />
           </View>
 
           <View className="items-center gap-1.5 px-4 pb-3 pt-3">
@@ -171,15 +165,22 @@ export function ProductScreen({ dealId }: Props) {
               <AppText className="text-ink-muted" style={{ fontSize: 13 }}>
                 Stock restant
               </AppText>
-              <View className="h-2 flex-1 overflow-hidden rounded-pill bg-surface-sunken">
+              <View
+                testID="product-stock-gauge"
+                accessible
+                accessibilityRole="progressbar"
+                accessibilityLabel={stockAccessibilityLabel(deal.stockLeft, deal.stockTotal)}
+                className="h-2 flex-1 overflow-hidden rounded-pill bg-surface-sunken"
+              >
                 <View
-                  className="h-full rounded-pill bg-brand-500"
-                  style={{ width: `${Math.max(6, stockPct)}%` }}
+                  testID="product-stock-gauge-fill"
+                  className={cn('h-full rounded-pill', toneClass.bar)}
+                  style={{ width: `${stockBarPct(deal.stockLeft, deal.stockTotal)}%` }}
                 />
               </View>
               <AppText
                 testID="product-stock"
-                className={low ? 'font-sans-bold text-brand-500' : 'font-sans-bold text-ink'}
+                className={cn('font-sans-bold', toneClass.text)}
                 style={{ fontSize: 13 }}
               >
                 {deal.stockLeft} / {deal.stockTotal}
@@ -236,6 +237,26 @@ export function ProductScreen({ dealId }: Props) {
               ) : null}
               <Feather name="chevron-right" size={16} color={colors.inkFaint} />
             </View>
+          </Pressable>
+
+          {/* Le chemin vers les AUTRES offres du commerçant : sa vitrine les liste
+              toutes (« Nos Flash du moment »). Sous le nom, aligné dessus. */}
+          <Pressable
+            testID="product-view-shop"
+            accessibilityRole="button"
+            accessibilityLabel={`Voir la boutique${
+              merchant ? ` ${merchant.name} et ses autres offres` : ''
+            }`}
+            onPress={() =>
+              merchant && router.push({ pathname: '/enseigne/[id]', params: { id: merchant.id } })
+            }
+            className="-mt-2 ml-11 flex-row items-center gap-1 self-start rounded-pill border border-brand-500 px-3 py-1.5 active:opacity-70"
+          >
+            <Feather name="shopping-bag" size={13} color={colors.brand500} />
+            <AppText className="font-sans-semibold text-brand-600" style={{ fontSize: 12.5 }}>
+              Voir la boutique
+            </AppText>
+            <Feather name="chevron-right" size={14} color={colors.brand500} />
           </Pressable>
 
           {/* Title + tags */}

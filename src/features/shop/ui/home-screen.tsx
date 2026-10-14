@@ -16,6 +16,7 @@ import { CartButton } from './components/cart-button';
 import { CategoryBar } from './components/category-bar';
 import { Countdown } from './components/countdown';
 import { FlashCard } from './components/flash-card';
+import { PriceTag } from './components/price-tag';
 import { ProductImage } from './components/product-image';
 import { ViewSwitch, type HomeView } from './components/view-switch';
 import { DealsMap } from './map-view';
@@ -105,14 +106,13 @@ function FeaturedBanner({ deal }: { deal: Deal }) {
           </View>
         </View>
         <View className="flex-row items-center justify-end gap-1.5">
-          <AppText className="font-display text-brand-500" style={{ fontSize: 18 }}>
-            {deal.price.toFixed(2)}€
-          </AppText>
-          {deal.oldPrice ? (
-            <AppText className="text-ink-faint line-through" style={{ fontSize: 11 }}>
-              {deal.oldPrice.toFixed(2)}€
-            </AppText>
-          ) : null}
+          <PriceTag
+            testID="featured-deal-price"
+            price={deal.price}
+            oldPrice={deal.oldPrice}
+            size={18}
+            align="end"
+          />
           <View className="h-6 w-6 items-center justify-center rounded-pill border border-brand-500">
             <Feather name="chevron-right" size={14} color={colors.brand500} />
           </View>

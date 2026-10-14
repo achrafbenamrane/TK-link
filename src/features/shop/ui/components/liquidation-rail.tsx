@@ -8,7 +8,8 @@ import { AppText } from '@/shared/ui';
 import type { Palette } from '@/shared/theme/colors';
 import { useColors } from '@/shared/theme/theme-provider';
 
-import { discountPct, liquidationLabel, sortByUrgency, urgencyOf } from '../../lib/urgency';
+import { STOCK_CLASSES, stockAccessibilityLabel, stockBarPct, stockTone } from '../../lib/stock';
+import { liquidationLabel, sortByUrgency, urgencyOf } from '../../lib/urgency';
 import { DEALS, getMerchant } from '../../model/catalog';
 import type { Deal } from '../../model/schema';
 import { useShopStore } from '../../model/store';
@@ -63,9 +64,9 @@ export function LiquidationRail({ limit = 8 }: Props) {
     >
       {deals.map((deal) => {
         const merchant = getMerchant(deal.merchantId);
-        const pct = discountPct(deal);
-        const stockPct = deal.stockTotal > 0 ? (deal.stockLeft / deal.stockTotal) * 100 : 0;
-        const low = deal.stockLeft <= deal.stockTotal * 0.25;
+        // La jauge d'essence : la teinte vient de `lib/stock.ts`, pas d'ici.
+        const tone = stockTone(deal.stockLeft, deal.stockTotal);
+        const toneClass = STOCK_CLASSES[tone];
 
         return (
           <Pressable
@@ -110,14 +111,6 @@ export function LiquidationRail({ limit = 8 }: Props) {
                   <Countdown seconds={deal.endsInSeconds} className="text-xs text-ink-inverse" />
                 </View>
               </View>
-
-              {pct ? (
-                <View className="absolute bottom-2 left-2 rounded-control bg-brand-500 px-2 py-0.5">
-                  <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 11 }}>
-                    -{pct}%
-                  </AppText>
-                </View>
-              ) : null}
             </View>
 
             <View className="gap-1.5 p-3">
@@ -133,15 +126,23 @@ export function LiquidationRail({ limit = 8 }: Props) {
               </AppText>
 
               <View className="mt-0.5 gap-1">
-                <View className="h-1 overflow-hidden rounded-pill bg-surface-sunken">
+                <View
+                  testID={`liquidation-${deal.id}-gauge`}
+                  accessible
+                  accessibilityRole="progressbar"
+                  accessibilityLabel={stockAccessibilityLabel(deal.stockLeft, deal.stockTotal)}
+                  className="h-1 overflow-hidden rounded-pill bg-surface-sunken"
+                >
                   <View
-                    className={cn('h-full rounded-pill', low ? 'bg-danger' : 'bg-surface-inverse')}
-                    style={{ width: `${Math.max(6, Math.round(stockPct))}%` }}
+                    testID={`liquidation-${deal.id}-gauge-fill`}
+                    className={cn('h-full rounded-pill', toneClass.bar)}
+                    style={{ width: `${stockBarPct(deal.stockLeft, deal.stockTotal)}%` }}
                   />
                 </View>
                 <AppText
+                  testID={`liquidation-${deal.id}-stock`}
                   variant="caption"
-                  className={cn(low ? 'font-sans-semibold text-danger' : 'text-ink-faint')}
+                  className={cn('font-sans-semibold', toneClass.text)}
                   style={{ fontSize: 10.5 }}
                 >
                   {deal.stockLeft > 0 ? `${deal.stockLeft} / ${deal.stockTotal}` : 'Épuisé'}
@@ -158,7 +159,12 @@ export function LiquidationRail({ limit = 8 }: Props) {
                   décrit dans docs/architecture/styling.md. */}
               <View className="mt-0.5 flex-row items-center justify-between gap-2">
                 <View style={{ flexShrink: 1 }}>
-                  <PriceTag price={deal.price} oldPrice={deal.oldPrice} size={17} />
+                  <PriceTag
+                    testID={`liquidation-${deal.id}-price`}
+                    price={deal.price}
+                    oldPrice={deal.oldPrice}
+                    size={17}
+                  />
                 </View>
 
                 <Pressable

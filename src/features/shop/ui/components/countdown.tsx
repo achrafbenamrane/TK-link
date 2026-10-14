@@ -54,14 +54,23 @@ type Props = {
   className?: string;
 };
 
-/** Compte à rebours compact — une seule ligne, pour les pastilles de carte. */
+/**
+ * Compte à rebours compact — une seule ligne, pour les pastilles de carte.
+ *
+ * Il ne se tronque JAMAIS. Une offre de 24 h affiche « 24:00:00 » (et « 100:00:00 »
+ * au-delà de quatre jours) : plus large que « 00:28:45 ». Dans une pastille ou
+ * une rangée flex serrée, le moteur de mise en page rogne alors le texte le plus
+ * « compressible » — celui-ci, par défaut. `flexShrink: 0` l'en empêche : c'est
+ * le voisin (titre, prix) qui cède. En `style` et non en classe `shrink-0` : la
+ * classe n'existe nulle part ailleurs dans le projet (cf. docs/architecture/styling.md).
+ */
 export function Countdown({ seconds, className }: Props) {
   const left = useCountdown(seconds);
 
   return (
     <AppText
       className={cn('font-sans-semibold', className)}
-      style={{ fontVariant: ['tabular-nums'] }}
+      style={{ fontVariant: ['tabular-nums'], flexShrink: 0 }}
     >
       {formatCountdown(left)}
     </AppText>

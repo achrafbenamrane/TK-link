@@ -10,7 +10,14 @@ import { getMerchant } from '../../model/catalog';
 import { distanceKm, formatDistance } from '../../lib/geo';
 import { fulfilmentIcon, fulfilmentLabel } from '../../lib/fulfilment';
 import { screeningLabel } from '../../lib/screening';
-import { discountPct, liquidationLabel, urgencyOf } from '../../lib/urgency';
+import {
+  STOCK_CLASSES,
+  STOCK_COLOR_KEY,
+  stockAccessibilityLabel,
+  stockBarPct,
+  stockTone,
+} from '../../lib/stock';
+import { liquidationLabel, urgencyOf } from '../../lib/urgency';
 import type { Deal } from '../../model/schema';
 import { useShopStore } from '../../model/store';
 import { Countdown } from './countdown';
@@ -61,11 +68,11 @@ export function FlashCard({ deal }: Props) {
   const userCoord = useShopStore((s) => s.userCoord);
   const distance = userCoord && merchant ? distanceKm(userCoord, merchant.coord) : null;
 
-  const discount = discountPct(deal);
   const urgency = urgencyOf(deal);
   const critical = urgency === 'critique';
-  const stockPct = deal.stockTotal > 0 ? (deal.stockLeft / deal.stockTotal) * 100 : 0;
-  const low = deal.stockLeft <= deal.stockTotal * 0.25;
+  // La jauge d'essence : vert, jaune, rouge — la teinte vient d'un seul endroit.
+  const tone = stockTone(deal.stockLeft, deal.stockTotal);
+  const toneClass = STOCK_CLASSES[tone];
 
   return (
     <Pressable
@@ -117,26 +124,19 @@ export function FlashCard({ deal }: Props) {
           />
         </Pressable>
 
-        {/* La remise, en gros : c'est elle qui fait s'arrêter le pouce. */}
-        {discount ? (
-          <View className="absolute bottom-3 left-3 rounded-control bg-brand-500 px-3 py-1.5">
-            <AppText className="font-display text-ink-inverse" style={{ fontSize: 19 }}>
-              -{discount}%
-            </AppText>
-          </View>
-        ) : null}
-
-        {/* Ce qu'il reste, sur l'image et non en légende. */}
+        {/* Ce qu'il reste, sur l'image et non en légende. La teinte suit la
+            jauge d'essence ; la pastille de remise, elle, a quitté l'image :
+            elle se lit au-dessus du prix (demande du client). */}
         <View
           testID={`deal-${deal.id}-stock`}
-          className="absolute bottom-3 right-3 flex-row items-center gap-1.5 rounded-pill px-3 py-1.5"
-          style={{ backgroundColor: low ? colors.warning : 'rgba(10,10,13,0.82)' }}
+          className={cn(
+            'absolute bottom-3 right-3 flex-row items-center gap-1.5 rounded-pill border px-3 py-1.5',
+            toneClass.border,
+          )}
+          style={{ backgroundColor: 'rgba(10,10,13,0.82)' }}
         >
-          <Feather name="package" size={12} color={low ? colors.surface : colors.inkInverse} />
-          <AppText
-            className={cn('font-sans-bold', low ? 'text-surface' : 'text-ink-inverse')}
-            style={{ fontSize: 12.5 }}
-          >
+          <Feather name="package" size={12} color={colors[STOCK_COLOR_KEY[tone]]} />
+          <AppText className={cn('font-sans-bold', toneClass.text)} style={{ fontSize: 12.5 }}>
             {deal.stockLeft > 0
               ? `${deal.stockLeft} restant${deal.stockLeft > 1 ? 's' : ''}`
               : 'Épuisé'}
@@ -219,7 +219,13 @@ export function FlashCard({ deal }: Props) {
 
         <View className="mt-1 flex-row items-end">
           <View className="flex-1">
-            <PriceTag price={deal.price} oldPrice={deal.oldPrice} size={34} />
+            {/* La pastille de remise vit DANS le prix, au-dessus de lui. */}
+            <PriceTag
+              testID={`deal-${deal.id}-price`}
+              price={deal.price}
+              oldPrice={deal.oldPrice}
+              size={34}
+            />
           </View>
 
           <PushButton
@@ -234,13 +240,17 @@ export function FlashCard({ deal }: Props) {
 
         {/* La jauge redit le stock — l'œil la lit sans lire les chiffres. */}
         <View className="mt-0.5 gap-1">
-          <View className="h-2 overflow-hidden rounded-pill bg-surface-sunken">
+          <View
+            testID={`deal-${deal.id}-gauge`}
+            accessible
+            accessibilityRole="progressbar"
+            accessibilityLabel={stockAccessibilityLabel(deal.stockLeft, deal.stockTotal)}
+            className="h-2 overflow-hidden rounded-pill bg-surface-sunken"
+          >
             <View
-              className="h-full rounded-pill"
-              style={{
-                width: `${Math.max(6, Math.round(stockPct))}%`,
-                backgroundColor: low ? colors.warning : colors.brand500,
-              }}
+              testID={`deal-${deal.id}-gauge-fill`}
+              className={cn('h-full rounded-pill', toneClass.bar)}
+              style={{ width: `${stockBarPct(deal.stockLeft, deal.stockTotal)}%` }}
             />
           </View>
           <AppText
