@@ -30,7 +30,7 @@ function PriceBubble({ deal, active }: { deal: Deal; active: boolean }) {
     <View className="items-center">
       <View
         className={cn(
-          'flex-row items-center gap-1 rounded-pill border px-2.5 py-1.5',
+          'flex-row items-center gap-1.5 rounded-pill border px-3 py-1.5',
           active ? 'border-brand-600 bg-brand-500' : 'border-line bg-surface',
         )}
         style={{
@@ -41,7 +41,10 @@ function PriceBubble({ deal, active }: { deal: Deal; active: boolean }) {
           elevation: 4,
         }}
       >
-        <AppText style={{ fontSize: 11 }}>{deal.emoji}</AppText>
+        {/* L'icône de la catégorie, bien lisible de loin (demande du client) : 22 au lieu de 11. */}
+        <AppText testID={`map-pin-emoji-${deal.id}`} style={{ fontSize: 22 }}>
+          {deal.emoji}
+        </AppText>
         <AppText
           className={cn('font-sans-bold', active ? 'text-ink-inverse' : 'text-ink')}
           style={{ fontSize: 12 }}

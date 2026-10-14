@@ -1,4 +1,4 @@
-import { pickImage } from '@/shared/lib/image-picker';
+import { pickImage, pickVideo } from '@/shared/lib/image-picker';
 import { fireEvent, render, screen, waitFor } from '@/shared/testing/render';
 
 import { defaultHours, normaliseTime, openStatus, validateHours } from '../lib/shop-profile';
@@ -7,14 +7,20 @@ import { useMerchantStore } from '../model/store';
 import { ShopSettingsScreen } from '../ui/shop-settings-screen';
 import { MerchantStatsScreen } from '../ui/stats-screen';
 
-jest.mock('@/shared/lib/image-picker', () => ({ pickImage: jest.fn() }));
+jest.mock('@/shared/lib/image-picker', () => ({
+  ...jest.requireActual('@/shared/lib/image-picker'),
+  pickImage: jest.fn(),
+  pickVideo: jest.fn(),
+}));
 jest.mock('expo-image', () => ({ Image: () => null }));
 
 const pick = pickImage as jest.MockedFunction<typeof pickImage>;
+const pickV = pickVideo as jest.MockedFunction<typeof pickVideo>;
 
 beforeEach(() => {
   useMerchantStore.getState().resetDemo();
   pick.mockReset();
+  pickV.mockReset();
 });
 
 describe('horaires — étape 7 du parcours', () => {
@@ -103,11 +109,11 @@ describe('<ShopSettingsScreen />', () => {
   });
 
   it('plafonne les vidéos à deux', async () => {
-    pick.mockResolvedValue('file:///v.mp4');
+    pickV.mockResolvedValue({ ok: true, uri: 'file:///v.mp4' });
     render(<ShopSettingsScreen />);
     fireEvent.press(screen.getByTestId('shop-videos-add-galerie'));
     await waitFor(() => expect(screen.getAllByTestId('shop-videos-item')).toHaveLength(1));
-    pick.mockResolvedValue('file:///v2.mp4');
+    pickV.mockResolvedValue({ ok: true, uri: 'file:///v2.mp4' });
     fireEvent.press(screen.getByTestId('shop-videos-add-galerie'));
     await waitFor(() => expect(screen.getAllByTestId('shop-videos-item')).toHaveLength(2));
     expect(screen.queryByTestId('shop-videos-add-galerie')).toBeNull();
@@ -126,5 +132,41 @@ describe('<MerchantStatsScreen />', () => {
   it('n’affiche aucun chiffre qu’il ne connaît pas', () => {
     render(<MerchantStatsScreen honouredTotalsCents={[]} ordersCount={0} />);
     expect(screen.queryByText(/clients fidélisés/i)).toBeNull();
+  });
+});
+
+describe('vidéo du magasin — format standard', () => {
+  it('refuse une vidéo trop longue ou trop lourde, en disant pourquoi', async () => {
+    render(<ShopSettingsScreen />);
+
+    pickV.mockResolvedValue({ ok: false, reason: 'trop_longue' });
+    fireEvent.press(screen.getByTestId('shop-videos-add-galerie'));
+    await waitFor(() =>
+      expect(screen.getByTestId('shop-video-error')).toHaveTextContent(/trop longue/),
+    );
+    expect(screen.queryByTestId('shop-videos-item')).toBeNull();
+
+    pickV.mockResolvedValue({ ok: false, reason: 'trop_lourde' });
+    fireEvent.press(screen.getByTestId('shop-videos-add-galerie'));
+    await waitFor(() =>
+      expect(screen.getByTestId('shop-video-error')).toHaveTextContent(/trop lourde/),
+    );
+  });
+
+  it('une annulation ne fait pas de bruit, et une vidéo valide efface l’erreur', async () => {
+    render(<ShopSettingsScreen />);
+    pickV.mockResolvedValue({ ok: false, reason: 'trop_lourde' });
+    fireEvent.press(screen.getByTestId('shop-videos-add-galerie'));
+    await waitFor(() => expect(screen.getByTestId('shop-video-error')).toBeTruthy());
+
+    pickV.mockResolvedValue({ ok: true, uri: 'file:///ok.mp4' });
+    fireEvent.press(screen.getByTestId('shop-videos-add-galerie'));
+    await waitFor(() => expect(screen.getAllByTestId('shop-videos-item')).toHaveLength(1));
+    expect(screen.queryByTestId('shop-video-error')).toBeNull();
+
+    pickV.mockResolvedValue({ ok: false, reason: 'annule' });
+    fireEvent.press(screen.getByTestId('shop-videos-add-galerie'));
+    await waitFor(() => expect(pickV).toHaveBeenCalledTimes(3));
+    expect(screen.queryByTestId('shop-video-error')).toBeNull();
   });
 });

@@ -8,16 +8,14 @@ import { useColors } from '@/shared/theme/theme-provider';
 
 import { activeFilterCount, filterDeals } from '../lib/preferences';
 import { splitByInterests } from '../lib/urgency';
-import { dealsByCategory, getDeal, getMerchant, FEATURED_DEAL_ID } from '../model/catalog';
+import { dealsByCategory, getMerchant } from '../model/catalog';
 import type { Category, Deal } from '../model/schema';
 import { getUserCoord } from '../lib/location';
 import { useShopStore } from '../model/store';
 import { CartButton } from './components/cart-button';
 import { CategoryBar } from './components/category-bar';
-import { Countdown } from './components/countdown';
+import { CommunicationSlides } from './components/communication-slides';
 import { FlashCard } from './components/flash-card';
-import { PriceTag } from './components/price-tag';
-import { ProductImage } from './components/product-image';
 import { ViewSwitch, type HomeView } from './components/view-switch';
 import { DealsMap } from './map-view';
 
@@ -69,55 +67,6 @@ function RadiusNotice({ km }: { km: number }) {
         Rien à moins de {km} km d’ici — voici tout ce qui se déstocke.
       </AppText>
       <Feather name="chevron-right" size={16} color={colors.inkFaint} />
-    </Pressable>
-  );
-}
-
-function FeaturedBanner({ deal }: { deal: Deal }) {
-  const colors = useColors();
-  const router = useRouter();
-  return (
-    <Pressable
-      testID="featured-deal"
-      accessibilityRole="button"
-      accessibilityLabel={`Vente flash : ${deal.title}`}
-      onPress={() => router.push({ pathname: '/produit/[id]', params: { id: deal.id } })}
-      className="mx-5 mb-4 flex-row items-center gap-3 rounded-card border border-brand-500 bg-surface-muted p-2.5"
-    >
-      <View
-        className="h-[88px] w-[88px] items-center justify-center overflow-hidden rounded-control"
-        style={{ backgroundColor: deal.tint }}
-      >
-        <ProductImage deal={deal} emojiSize={42} />
-      </View>
-      <View className="flex-1 gap-1">
-        <View className="flex-row items-center gap-1 self-start rounded-pill border border-brand-500 bg-brand-50 px-2 py-0.5">
-          <Feather name="zap" size={10} color={colors.brand500} />
-          <AppText className="font-sans-bold text-brand-600" style={{ fontSize: 9 }}>
-            VENTE FLASH
-          </AppText>
-        </View>
-        <View className="flex-row items-center gap-2.5">
-          <Countdown seconds={deal.endsInSeconds} className="font-display text-brand-500" />
-          <View className="flex-1">
-            <AppText className="font-sans-bold text-ink" style={{ fontSize: 13 }} numberOfLines={2}>
-              {deal.title}
-            </AppText>
-          </View>
-        </View>
-        <View className="flex-row items-center justify-end gap-1.5">
-          <PriceTag
-            testID="featured-deal-price"
-            price={deal.price}
-            oldPrice={deal.oldPrice}
-            size={18}
-            align="end"
-          />
-          <View className="h-6 w-6 items-center justify-center rounded-pill border border-brand-500">
-            <Feather name="chevron-right" size={14} color={colors.brand500} />
-          </View>
-        </View>
-      </View>
     </Pressable>
   );
 }
@@ -203,8 +152,6 @@ export function HomeScreen({
     };
   }, [category, query, preferences, userCoord, interests, extraDeals]);
 
-  const featured = getDeal(FEATURED_DEAL_ID);
-
   return (
     <Screen padded={false} testID="home-screen">
       {/* L'en-tête de la maquette B, sur UNE ligne : identité (avatar + prénom), logo et
@@ -282,9 +229,10 @@ export function HomeScreen({
                 <ThemeToggle />
               </View>
 
-              {/* Ad card sits above the filter and stays visible whatever the
-                selected category — it advertises the deal, it isn't a result. */}
-              {featured ? <FeaturedBanner deal={featured} /> : null}
+              {/* L'espace de communication TK LINK : visible quelle que soit la catégorie choisie —
+                il présente l'app, ce n'est pas un résultat. Il remplace la vente flash mise en
+                avant (demande du client) ; l'offre reste dans le fil juste dessous. */}
+              <CommunicationSlides />
 
               <CategoryBar value={category} onChange={setCategory} />
 

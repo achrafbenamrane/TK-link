@@ -36,21 +36,32 @@ beforeEach(() => {
 });
 
 describe('<HomeScreen />', () => {
-  it('affiche la vente flash à la une, le titre du fil et le compteur d’invendus', async () => {
+  it('affiche l’espace TK LINK, le titre du fil et le compteur d’invendus', async () => {
     render(<HomeScreen />);
     await waitFor(() => expect(screen.getByTestId('home-screen')).toBeOnTheScreen());
 
-    expect(screen.getByTestId('featured-deal')).toBeOnTheScreen();
-    expect(screen.getByText('VENTE FLASH')).toBeOnTheScreen();
+    // L'espace de communication remplace la vente flash mise en avant.
+    expect(screen.getByTestId('home-slides')).toBeOnTheScreen();
+    expect(screen.queryByTestId('featured-deal')).toBeNull();
     expect(screen.getByText('Ça part maintenant')).toBeOnTheScreen();
     expect(screen.getByText(/invendus à sauver/)).toBeOnTheScreen();
     expect(screen.getByText('Toulouse Centre')).toBeOnTheScreen();
+  });
 
-    fireEvent.press(screen.getByTestId('featured-deal'));
-    expect(mockPush).toHaveBeenCalledWith({
-      pathname: '/produit/[id]',
-      params: { id: 'd_cote' },
-    });
+  it('l’espace TK LINK présente l’app, et la diapositive du parrainage y mène', () => {
+    render(<HomeScreen />);
+    expect(screen.getByTestId('home-slide-flash')).toHaveTextContent(/offres flash/);
+    expect(screen.getByTestId('home-slide-touch-collect')).toHaveTextContent(/gratuit/);
+    expect(screen.getByTestId('home-slide-parrainage')).toHaveTextContent(/5 €/);
+
+    fireEvent.press(screen.getByTestId('home-slide-parrainage'));
+    expect(mockPush).toHaveBeenCalledWith('/parrainage');
+  });
+
+  it('la côte de bœuf n’est plus mise en avant, mais reste dans le fil', () => {
+    render(<HomeScreen />);
+    expect(screen.queryByTestId('featured-deal')).toBeNull();
+    expect(screen.getByTestId('deal-d_cote')).toBeOnTheScreen();
   });
 
   it('filtre par catégorie : les offres d’une autre catégorie disparaissent', () => {

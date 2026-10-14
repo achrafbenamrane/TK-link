@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { pickImage } from '@/shared/lib/image-picker';
+import { pickImage, pickVideo, VIDEO_REFUSAL } from '@/shared/lib/image-picker';
 import { AppText, Button, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
 import { useColors } from '@/shared/theme/theme-provider';
@@ -44,6 +44,7 @@ export function ShopSettingsScreen({ onPreview }: { onPreview?: () => void } = {
   const [draft, setDraft] = useState<ShopProfile>(saved);
   const [errors, setErrors] = useState<Partial<Record<Day | 'modes', string>>>({});
   const [done, setDone] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
 
   const patch = (next: Partial<ShopProfile>) => {
     setDraft((d) => ({ ...d, ...next }));
@@ -55,11 +56,19 @@ export function ShopSettingsScreen({ onPreview }: { onPreview?: () => void } = {
   };
 
   const addMedia = async (kind: 'photos' | 'videos', source: 'galerie' | 'camera') => {
-    const uri = await pickImage(source, {
-      aspect: [4, 3],
-      ...(kind === 'videos' ? { media: 'videos' as const } : {}),
-    });
-    if (uri) patch({ [kind]: [...draft[kind], uri] } as Partial<ShopProfile>);
+    if (kind === 'videos') {
+      // Format standard : une vidéo trop longue ou trop lourde est refusée, et on dit pourquoi.
+      const video = await pickVideo(source);
+      if (video.ok) {
+        setVideoError(null);
+        patch({ videos: [...draft.videos, video.uri] });
+      } else if (video.reason !== 'annule') {
+        setVideoError(VIDEO_REFUSAL[video.reason]);
+      }
+      return;
+    }
+    const uri = await pickImage(source, { aspect: [4, 3] });
+    if (uri) patch({ photos: [...draft.photos, uri] });
   };
   const removeMedia = (kind: 'photos' | 'videos', uri: string) =>
     patch({ [kind]: draft[kind].filter((u) => u !== uri) } as Partial<ShopProfile>);
@@ -142,6 +151,18 @@ export function ShopSettingsScreen({ onPreview }: { onPreview?: () => void } = {
           </>
         ) : null}
       </View>
+      {kind === 'videos' ? (
+        <>
+          <AppText variant="caption" className="text-ink-faint">
+            30 secondes et 50 Mo au maximum.
+          </AppText>
+          {videoError ? (
+            <AppText testID="shop-video-error" variant="caption" className="text-danger">
+              {videoError}
+            </AppText>
+          ) : null}
+        </>
+      ) : null}
     </View>
   );
 
