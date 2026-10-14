@@ -1,5 +1,6 @@
 import { getDeal, getMerchant } from '../model/catalog';
 import type { Address, Order } from '../model/schema';
+import { POSITION_ADDRESS_ID, POSITION_LABEL } from './destination';
 
 /**
  * Une offre de mission pour un livreur — fabriquée à partir d'une commande en
@@ -30,11 +31,20 @@ export function missionOffers(orders: Order[], addresses: Address[]): MissionOff
       const first = o.items[0] ? getDeal(o.items[0].dealId) : undefined;
       const merchant = first ? getMerchant(first.merchantId) : undefined;
       const address = addresses.find((a) => a.id === o.addressId);
+      // Livraison à la position du client : on affiche le libellé, jamais les
+      // coordonnées brutes. La distance reste inconnue (une ligne droite
+      // sous-estimerait le trajet, donc le gain du livreur).
+      const dropoff =
+        o.addressId === POSITION_ADDRESS_ID
+          ? POSITION_LABEL
+          : address
+            ? `${address.street}, ${address.zip} ${address.city}`
+            : '';
       return {
         orderId: o.id,
         merchantName: merchant?.name ?? 'Commerçant',
         merchantArea: merchant?.area ?? '',
-        dropoff: address ? `${address.street}, ${address.zip} ${address.city}` : '',
+        dropoff,
         itemCount: o.items.reduce((n, l) => n + l.qty, 0),
         totalEur: o.total,
         distanceKm: null,

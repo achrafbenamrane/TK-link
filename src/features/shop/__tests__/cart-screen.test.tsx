@@ -1,9 +1,13 @@
 // La route et la biométrie sont hors sujet ici : on les neutralise pour tester
 // le seul cœur « argent » : le total et le mode de retrait.
-import { fireEvent, render, screen } from '@/shared/testing/render';
+import { fireEvent, render, screen, waitFor } from '@/shared/testing/render';
 
+import { getUserCoord } from '../lib/location';
 import { CartScreen } from '../ui/cart-screen';
 import { useShopStore } from '../model/store';
+
+jest.mock('../lib/location', () => ({ getUserCoord: jest.fn() }));
+const mockedCoord = getUserCoord as jest.MockedFunction<typeof getUserCoord>;
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({
@@ -95,5 +99,129 @@ describe('<CartScreen /> — crédit de parrainage (CDC V1.1)', () => {
   it('sans crédit, aucune ligne de réduction', () => {
     render(<CartScreen />);
     expect(screen.queryByTestId('cart-credit')).not.toBeOnTheScreen();
+  });
+});
+
+describe('<CartScreen /> — livraison : chez moi ou position actuelle', () => {
+  const home = {
+    id: 'a1',
+    label: 'Maison',
+    street: '12 rue des Fleurs',
+    zip: '31000',
+    city: 'Toulouse',
+    isDefault: true,
+  };
+
+  beforeEach(() => {
+    mockedCoord.mockReset();
+    useShopStore.setState({
+      cart: [{ dealId: 'd_pizza', qty: 1 }],
+      addresses: [home],
+      orders: [],
+    });
+  });
+
+  it('présélectionne « Chez moi » quand une adresse existe', () => {
+    render(<CartScreen />);
+    expect(screen.getByTestId('cart-delivery-home').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    expect(screen.getByTestId('cart-delivery-here').props.accessibilityState).toMatchObject({
+      selected: false,
+    });
+    expect(screen.getByTestId('cart-address')).toBeOnTheScreen();
+    expect(mockedCoord).not.toHaveBeenCalled();
+  });
+
+  it('ne propose pas ce choix en Touch & Collect', () => {
+    render(<CartScreen />);
+    fireEvent.press(screen.getByTestId('cart-fulfilment-touch-collect'));
+    expect(screen.queryByTestId('cart-delivery-here')).not.toBeOnTheScreen();
+  });
+
+  it('position accordée : la commande porte la position, sans toucher au carnet', async () => {
+    mockedCoord.mockResolvedValue({ lat: 43.61, lng: 1.45 });
+    render(<CartScreen />);
+    fireEvent.press(screen.getByTestId('cart-delivery-here'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('cart-delivery-here').props.accessibilityState).toMatchObject({
+        selected: true,
+      }),
+    );
+    expect(screen.getByTestId('cart-delivery-home').props.accessibilityState).toMatchObject({
+      selected: false,
+    });
+    expect(screen.getByTestId('cart-position')).toHaveTextContent(/Ma position actuelle/);
+    // Jamais de coordonnées brutes à l'écran.
+    expect(screen.queryByText(/43\.61|1\.45/)).not.toBeOnTheScreen();
+
+    fireEvent.press(screen.getByTestId('cart-checkout'));
+    await waitFor(() => expect(useShopStore.getState().orders).toHaveLength(1));
+
+    const order = useShopStore.getState().orders[0];
+    expect(order?.addressId).toBe('position');
+    expect(order?.position).toEqual({ lat: 43.61, lng: 1.45 });
+    expect(useShopStore.getState().addresses).toEqual([home]);
+  });
+
+  it('position accordée sans aucune adresse : on peut payer', async () => {
+    useShopStore.setState({ addresses: [] });
+    mockedCoord.mockResolvedValue({ lat: 43.61, lng: 1.45 });
+    render(<CartScreen />);
+    expect(screen.getByTestId('cart-checkout')).toHaveTextContent(/Choisir une adresse/);
+
+    fireEvent.press(screen.getByTestId('cart-delivery-here'));
+    await waitFor(() => expect(screen.getByTestId('cart-checkout')).toHaveTextContent(/Payer/));
+
+    fireEvent.press(screen.getByTestId('cart-checkout'));
+    await waitFor(() => expect(useShopStore.getState().orders).toHaveLength(1));
+    expect(useShopStore.getState().orders[0]?.addressId).toBe('position');
+  });
+
+  it('permission refusée : message clair, repli sur l’adresse, paiement possible', async () => {
+    mockedCoord.mockResolvedValue(null);
+    render(<CartScreen />);
+    fireEvent.press(screen.getByTestId('cart-delivery-here'));
+
+    expect(await screen.findByTestId('cart-delivery-notice')).toHaveTextContent(
+      'Position indisponible : choisissez une adresse.',
+    );
+    expect(screen.getByTestId('cart-delivery-home').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    expect(screen.getByTestId('cart-address')).toBeOnTheScreen();
+
+    fireEvent.press(screen.getByTestId('cart-checkout'));
+    await waitFor(() => expect(useShopStore.getState().orders).toHaveLength(1));
+    const order = useShopStore.getState().orders[0];
+    expect(order?.addressId).toBe('a1');
+    expect(order?.position).toBeUndefined();
+  });
+
+  it('refusée et aucune adresse : « Choisir une adresse » reste le comportement', async () => {
+    useShopStore.setState({ addresses: [] });
+    mockedCoord.mockResolvedValue(null);
+    render(<CartScreen />);
+    fireEvent.press(screen.getByTestId('cart-delivery-here'));
+
+    await screen.findByTestId('cart-delivery-notice');
+    expect(screen.getByTestId('cart-checkout')).toHaveTextContent(/Choisir une adresse/);
+    fireEvent.press(screen.getByTestId('cart-checkout'));
+    expect(useShopStore.getState().orders).toHaveLength(0);
+  });
+
+  it('revenir à « Chez moi » oublie la position', async () => {
+    mockedCoord.mockResolvedValue({ lat: 43.61, lng: 1.45 });
+    render(<CartScreen />);
+    fireEvent.press(screen.getByTestId('cart-delivery-here'));
+    await screen.findByTestId('cart-position');
+
+    fireEvent.press(screen.getByTestId('cart-delivery-home'));
+    expect(screen.queryByTestId('cart-position')).not.toBeOnTheScreen();
+
+    fireEvent.press(screen.getByTestId('cart-checkout'));
+    await waitFor(() => expect(useShopStore.getState().orders).toHaveLength(1));
+    expect(useShopStore.getState().orders[0]?.addressId).toBe('a1');
   });
 });

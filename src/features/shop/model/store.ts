@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { makeId } from '@/shared/lib/id';
 import { currentSettings } from '@/shared/lib/platform-overrides';
 // Cart/favorites/orders hold no secrets → the plaintext tier is correct.
+import { POSITION_ADDRESS_ID } from '../lib/destination';
 import { routeIssue, type IssueKind } from '../lib/issues';
 import { canTransition, isActive, type Fulfilment, type OrderStatus } from '../lib/order-status';
 import { canRate, clampStars, type RatingTag } from '../lib/rating';
@@ -103,6 +104,13 @@ type ShopState = {
      * Bornée au sous-total : on ne rembourse jamais plus que les articles.
      */
     discountEur?: number,
+    /**
+     * Livraison à la position actuelle (« Ma position actuelle »). Remplace
+     * l'adresse : la commande porte alors `addressId: 'position'` et les
+     * coordonnées, et RIEN n'est ajouté au carnet d'adresses. Ignoré en
+     * Touch & Collect.
+     */
+    position?: Coord | null,
   ) => { ok: false } | { ok: true; orderId: string };
 };
 
@@ -261,7 +269,7 @@ export const useShopStore = create<ShopState>()(
             : [dealId, ...state.favorites],
         })),
 
-      checkout: (addressId = null, fulfilment = 'livraison', discountEur = 0) => {
+      checkout: (addressId = null, fulfilment = 'livraison', discountEur = 0, position = null) => {
         const { cart } = get();
         const lines = cartLines(cart);
         if (lines.length === 0) return { ok: false as const };
@@ -274,10 +282,14 @@ export const useShopStore = create<ShopState>()(
         const total = roundEur(subtotal - discount);
         // Les points récompensent ce qui est réellement payé (1 € TTC = 1 point).
         const pointsEarned = Math.round(total * POINTS_PER_EURO);
+        // La position ne vaut que pour une livraison, et la commande est son seul
+        // lieu de conservation.
+        const here = fulfilment === 'livraison' && position ? position : null;
         const order: Order = {
           id: makeId(),
           createdAt: Date.now(),
-          addressId,
+          addressId: here ? POSITION_ADDRESS_ID : addressId,
+          ...(here ? { position: { lat: here.lat, lng: here.lng } } : {}),
           items: lines.map((l) => ({
             dealId: l.deal.id,
             title: l.deal.title,

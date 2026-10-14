@@ -68,3 +68,46 @@ describe('relecture d’un état enregistré AVANT le retrait des coupons et du 
     expect(parsed).not.toHaveProperty('messages');
   });
 });
+
+describe('commandes livrées à la position actuelle', () => {
+  const base = {
+    cart: [],
+    favorites: [],
+    orders: [
+      {
+        id: 'o_pos',
+        createdAt: 1_700_000_000_000,
+        addressId: 'position',
+        position: { lat: 43.6, lng: 1.44 },
+        items: [],
+        total: 6.5,
+        deliveryFee: 0,
+        status: 'creee',
+        pointsEarned: 7,
+      },
+    ],
+  };
+
+  it('relit la position de la commande et des adresses sans coordonnées', () => {
+    const parsed = PersistedShopSchema.parse({
+      ...base,
+      addresses: [
+        {
+          id: 'a1',
+          label: 'Maison',
+          street: '12 rue X',
+          zip: '31000',
+          city: 'Toulouse',
+          isDefault: true,
+        },
+      ],
+    });
+    expect(parsed.orders[0]?.position).toEqual({ lat: 43.6, lng: 1.44 });
+    expect(parsed.addresses[0]?.lat).toBeUndefined();
+  });
+
+  it('rejette des coordonnées hors du globe plutôt que de les stocker', () => {
+    const bad = { ...base, orders: [{ ...base.orders[0], position: { lat: 120, lng: 1 } }] };
+    expect(PersistedShopSchema.safeParse(bad).success).toBe(false);
+  });
+});

@@ -206,6 +206,15 @@ export const OrderSchema = z.object({
    * validation — donc effacerait tout l'historique au prochain lancement.
    */
   addressId: z.string().nullable().default(null),
+  /**
+   * Point de livraison quand le client a choisi « Ma position actuelle »
+   * (`addressId` vaut alors 'position'). Conservé sur la commande seulement :
+   * le livreur en a besoin, mais la position n’est jamais gardée ailleurs.
+   * `.optional()` : les commandes déjà stockées n’ont pas ce champ.
+   */
+  position: z
+    .object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) })
+    .optional(),
   items: z.array(OrderLineSchema),
   /** Ce qui est facturé pour les articles : sous-total MOINS la réduction. */
   total: z.number(),
@@ -274,6 +283,13 @@ export const AddressSchema = z.object({
   /** Étage, digicode, instructions livreur. */
   notes: z.string().optional(),
   isDefault: z.boolean(),
+  /**
+   * Coordonnées — uniquement pour la destination « Ma position actuelle »
+   * (éphémère, jamais ajoutée au carnet). Optionnelles : les adresses déjà
+   * stockées n’en ont pas, et un champ requis effacerait tout à la réhydratation.
+   */
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
 });
 export type Address = z.infer<typeof AddressSchema>;
 

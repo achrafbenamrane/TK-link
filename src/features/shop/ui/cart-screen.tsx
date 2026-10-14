@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,6 +11,9 @@ import { AppText, Button } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { authenticate } from '../lib/biometrics';
+import { POSITION_LABEL, POSITION_UNAVAILABLE_MESSAGE } from '../lib/destination';
+import { getUserCoord } from '../lib/location';
+import type { Coord } from '../model/schema';
 import { FULFILMENTS, FULFILMENT_LABEL, type Fulfilment } from '../lib/order-status';
 import { cartLines, selectCart, useShopStore } from '../model/store';
 import { QtyStepper } from './components/qty-stepper';
@@ -37,6 +40,48 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
   // c'est le mode que l'app proposait déjà, on ne change pas l'habitude sans
   // que l'utilisateur le demande.
   const [fulfilment, setFulfilment] = useState<Fulfilment>('livraison');
+  // Où livrer : chez le client (adresse enregistrée) ou là où il se trouve.
+  // La position reste dans l'état de cet écran : jamais dans le store, jamais
+  // persistée — seule la commande l'emporte, et seulement si elle est passée.
+  const [destination, setDestination] = useState<'home' | 'here'>('home');
+  const [position, setPosition] = useState<Coord | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const chooseHome = () => {
+    setDestination('home');
+    setPosition(null);
+    setNotice(null);
+  };
+
+  const chooseHere = async () => {
+    if (locating) return;
+    setNotice(null);
+    if (position) {
+      setDestination('here');
+      return;
+    }
+    setLocating(true);
+    // getUserCoord ne lève jamais : permission refusée ou GPS absent → null.
+    const coord = await getUserCoord();
+    if (!mounted.current) return;
+    setLocating(false);
+    if (coord) {
+      setPosition(coord);
+      setDestination('here');
+    } else {
+      // Repli sur l'adresse enregistrée : on ne bloque jamais la commande.
+      setDestination('home');
+      setNotice(POSITION_UNAVAILABLE_MESSAGE);
+    }
+  };
 
   const cart = useShopStore(selectCart);
   const lines = useMemo(() => cartLines(cart), [cart]);
@@ -61,11 +106,14 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
   // L'adresse par défaut est la cible de livraison ; sans adresse, on ne peut
   // pas commander — une app de livraison doit savoir où aller.
   const address = addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
+  const usingPosition = destination === 'here' && position !== null;
+  // Une destination existe : la position choisie, ou l'adresse enregistrée.
+  const hasDestination = usingPosition || address !== null;
 
   const handleCheckout = async () => {
     // L'adresse n'est indispensable qu'en livraison : exiger une adresse pour
     // venir chercher en boutique bloquerait le Touch & Collect sans raison.
-    if (fulfilment === 'livraison' && !address) {
+    if (fulfilment === 'livraison' && !hasDestination) {
       router.push('/adresses');
       return;
     }
@@ -77,7 +125,12 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
       if (!auth.ok && auth.reason !== 'indisponible') return;
     }
 
-    const res = checkout(address?.id ?? null, fulfilment, discount);
+    const res = checkout(
+      usingPosition ? null : (address?.id ?? null),
+      fulfilment,
+      discount,
+      usingPosition ? position : null,
+    );
     if (res.ok) {
       haptic.success();
       onOrdered?.(res.orderId);
@@ -236,41 +289,129 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
             </View>
           </View>
         ) : (
-          <Pressable
-            testID="cart-address"
-            accessibilityRole="button"
-            accessibilityLabel={
-              address ? `Livrer à ${address.label}, modifier` : 'Ajouter une adresse de livraison'
-            }
-            onPress={() => router.push('/adresses')}
-            className="flex-row items-center gap-3 rounded-control border border-line bg-surface-muted px-3 py-2.5"
-          >
-            <Feather name="map-pin" size={15} color={address ? colors.brand500 : colors.inkFaint} />
-            <View className="flex-1">
-              {address ? (
-                <>
+          <View className="gap-2">
+            {/* Où livrer — chez soi ou là où l'on se trouve. */}
+            <View accessibilityRole="radiogroup" className="flex-row gap-2">
+              {(
+                [
+                  { key: 'home', testID: 'cart-delivery-home', label: 'Chez moi', icon: 'home' },
+                  {
+                    key: 'here',
+                    testID: 'cart-delivery-here',
+                    label: 'Ma position actuelle',
+                    icon: 'navigation',
+                  },
+                ] as const
+              ).map((opt) => {
+                const active = destination === opt.key;
+                return (
+                  <Pressable
+                    key={opt.key}
+                    testID={opt.testID}
+                    accessibilityRole="radio"
+                    accessibilityLabel={opt.label}
+                    accessibilityState={{ selected: active, checked: active, busy: locating }}
+                    onPress={opt.key === 'home' ? chooseHome : chooseHere}
+                    className={cn(
+                      'flex-1 flex-row items-center justify-center gap-2 rounded-control border py-2',
+                      active ? 'border-brand-500 bg-surface-muted' : 'border-line bg-surface',
+                    )}
+                  >
+                    <Feather
+                      name={opt.icon}
+                      size={14}
+                      color={active ? colors.brand500 : colors.inkMuted}
+                    />
+                    <AppText
+                      className={cn('font-sans-semibold', active ? 'text-ink' : 'text-ink-muted')}
+                      style={{ fontSize: 12.5 }}
+                    >
+                      {opt.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {locating ? (
+              <AppText variant="caption" className="text-xs text-ink-faint" testID="cart-locating">
+                Recherche de votre position…
+              </AppText>
+            ) : null}
+            {notice ? (
+              <AppText
+                variant="caption"
+                className="text-xs text-brand-600"
+                testID="cart-delivery-notice"
+                accessibilityRole="alert"
+              >
+                {notice}
+              </AppText>
+            ) : null}
+
+            {usingPosition ? (
+              <View
+                testID="cart-position"
+                className="flex-row items-center gap-3 rounded-control border border-line bg-surface-muted px-3 py-2.5"
+              >
+                <Feather name="navigation" size={15} color={colors.brand500} />
+                <View className="flex-1">
                   <AppText className="font-sans-bold text-xs text-ink">
-                    Livrer à {address.label}
-                  </AppText>
-                  <AppText variant="caption" className="text-xs text-ink-faint" numberOfLines={1}>
-                    {address.street}, {address.zip} {address.city}
-                  </AppText>
-                </>
-              ) : (
-                <>
-                  <AppText className="font-sans-bold text-xs text-brand-600">
-                    Adresse de livraison manquante
+                    Livrer à {POSITION_LABEL}
                   </AppText>
                   <AppText variant="caption" className="text-xs text-ink-faint">
-                    Ajoutez une adresse pour être livré.
+                    Le livreur vous retrouvera là où vous êtes.
                   </AppText>
-                </>
-              )}
-            </View>
-            <AppText variant="caption" className="font-sans-semibold text-xs text-ink-muted">
-              {address ? 'Changer' : 'Ajouter'}
-            </AppText>
-          </Pressable>
+                </View>
+              </View>
+            ) : (
+              <Pressable
+                testID="cart-address"
+                accessibilityRole="button"
+                accessibilityLabel={
+                  address
+                    ? `Livrer à ${address.label}, modifier`
+                    : 'Ajouter une adresse de livraison'
+                }
+                onPress={() => router.push('/adresses')}
+                className="flex-row items-center gap-3 rounded-control border border-line bg-surface-muted px-3 py-2.5"
+              >
+                <Feather
+                  name="map-pin"
+                  size={15}
+                  color={address ? colors.brand500 : colors.inkFaint}
+                />
+                <View className="flex-1">
+                  {address ? (
+                    <>
+                      <AppText className="font-sans-bold text-xs text-ink">
+                        Livrer à {address.label}
+                      </AppText>
+                      <AppText
+                        variant="caption"
+                        className="text-xs text-ink-faint"
+                        numberOfLines={1}
+                      >
+                        {address.street}, {address.zip} {address.city}
+                      </AppText>
+                    </>
+                  ) : (
+                    <>
+                      <AppText className="font-sans-bold text-xs text-brand-600">
+                        Adresse de livraison manquante
+                      </AppText>
+                      <AppText variant="caption" className="text-xs text-ink-faint">
+                        Ajoutez une adresse pour être livré.
+                      </AppText>
+                    </>
+                  )}
+                </View>
+                <AppText variant="caption" className="font-sans-semibold text-xs text-ink-muted">
+                  {address ? 'Changer' : 'Ajouter'}
+                </AppText>
+              </Pressable>
+            )}
+          </View>
         )}
 
         <View className="gap-1.5">
@@ -318,7 +459,7 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
         >
           <Feather name="lock" size={16} color={colors.inkInverse} />
           <AppText className="font-sans-bold text-ink-inverse">
-            {fulfilment === 'touch-collect' || address
+            {fulfilment === 'touch-collect' || hasDestination
               ? `Payer · ${total.toFixed(2)}€`
               : 'Choisir une adresse'}
           </AppText>
