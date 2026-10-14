@@ -12,6 +12,13 @@ import { commissionCents, formatCents, netCents, parseEurosToCents } from '../li
 import { pickFlashPhoto } from '../lib/photo';
 import { RECURRENCE_LABEL, RECURRENCES, type Recurrence } from '../lib/recurrence';
 import {
+  DEFAULT_TOMORROW_HOUR,
+  currentTime,
+  TOMORROW_HOURS,
+  formatHour,
+  minutesUntilTomorrowAt,
+} from '../lib/schedule';
+import {
   DURATIONS,
   OFFER_MODES,
   OfferDraftSchema,
@@ -58,11 +65,12 @@ function Label({ children }: { children: string }) {
  * Des délais RELATIFS et non un calendrier. Un commerçant programme « ce soir »
  * ou « demain matin », il ne cherche pas une date dans un mois.
  */
+const TOMORROW = 1440; // « Demain » : repère de l’option, l’heure exacte se choisit dessous.
 const STARTS = [
   { minutes: 0, label: 'Maintenant' },
   { minutes: 60, label: 'Dans 1 h' },
   { minutes: 180, label: 'Dans 3 h' },
-  { minutes: 1440, label: 'Demain' },
+  { minutes: TOMORROW, label: 'Demain' },
 ] as const;
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -112,7 +120,9 @@ export function PublishForm({
   const [recurrence, setRecurrence] = useState<Recurrence>('aucune');
   const [photoUri, setPhotoUri] = useState('');
   const [modes, setModes] = useState<OfferMode[]>([...OFFER_MODES]);
+  // Option choisie ; pour « Demain » (TOMORROW), l'heure se règle séparément.
   const [startIn, setStartIn] = useState<number>(0);
+  const [tomorrowHour, setTomorrowHour] = useState(DEFAULT_TOMORROW_HOUR);
   const [description, setDescription] = useState('');
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
@@ -131,7 +141,12 @@ export function PublishForm({
   const configured = created && qty > 0 && modes.length > 0;
   const step = configured ? 3 : created ? 2 : 1;
 
-  const endsAt = new Date(mountedAt + (startIn + duration) * 60_000);
+  const isTomorrow = startIn === TOMORROW;
+  // Délai avant le début : « Demain » = jusqu'à l'heure choisie demain, pas 24 h pile.
+  const startDelay = isTomorrow
+    ? minutesUntilTomorrowAt(tomorrowHour, new Date(mountedAt))
+    : startIn;
+  const endsAt = new Date(mountedAt + (startDelay + duration) * 60_000);
   const endsDay =
     endsAt.getDate() === new Date(mountedAt).getDate()
       ? "Aujourd'hui"
@@ -156,7 +171,9 @@ export function PublishForm({
       minQty: Number.parseInt(minQty, 10) || 1,
       recurrence: wholesale ? recurrence : 'aucune',
       // Une intention, pas une date : c'est le store qui horodate.
-      startInMinutes: startIn,
+      // « Demain » se recalcule à l'instant de la publication (le store horodate à ce
+      // moment-là) ; l'horloge est lue ici, dans un gestionnaire, jamais au rendu.
+      startInMinutes: isTomorrow ? minutesUntilTomorrowAt(tomorrowHour, currentTime()) : startIn,
       state,
     });
 
@@ -472,9 +489,14 @@ export function PublishForm({
       <View className="flex-row gap-2">
         <View className="gap-1" style={{ flex: 1.1 }}>
           <Label>{wholesale ? 'Durée de l’offre' : 'Durée du Flash'}</Label>
-          <View className="h-10 flex-row items-center gap-1.5 rounded-control border border-line bg-surface-muted px-2.5">
+          {/* min-h et non h-10 : « 24 heures » ou « 2 jours » passent à la ligne au lieu d'être coupés. */}
+          <View className="min-h-10 flex-row items-center gap-1.5 rounded-control border border-line bg-surface-muted px-2.5 py-1">
             <Feather name="zap" size={13} color={colors.brand500} />
-            <AppText className="text-ink" style={{ fontSize: 13 }}>
+            <AppText
+              testID="publish-duration-label"
+              className="shrink text-ink"
+              style={{ fontSize: 13 }}
+            >
               {duration < 60
                 ? `${duration} minutes`
                 : duration === 60
@@ -487,14 +509,9 @@ export function PublishForm({
         </View>
         <View className="gap-1" style={{ flex: 1.8 }}>
           <Label>{wholesale ? 'Fin de l’offre' : 'Fin du Flash'}</Label>
-          <View className="h-10 flex-row items-center gap-1.5 rounded-control border border-line bg-surface-muted px-2.5">
+          <View className="min-h-10 flex-row items-center gap-1.5 rounded-control border border-line bg-surface-muted px-2.5 py-1">
             <Feather name="calendar" size={13} color={colors.inkMuted} />
-            <AppText
-              testID="publish-ends"
-              className="text-ink"
-              style={{ fontSize: 12.5 }}
-              numberOfLines={1}
-            >
+            <AppText testID="publish-ends" className="shrink text-ink" style={{ fontSize: 12.5 }}>
               {endsDay}, {pad(endsAt.getHours())}:{pad(endsAt.getMinutes())}
             </AppText>
           </View>
@@ -770,6 +787,51 @@ export function PublishForm({
             </Pressable>
           ))}
         </View>
+
+        {/* « Demain » : à quelle heure ? Des heures rondes, de 08:00 à 20:00. */}
+        {isTomorrow ? (
+          <View testID="publish-tomorrow" className="gap-1.5">
+            <AppText
+              testID="publish-tomorrow-label"
+              className="font-sans-semibold text-ink"
+              style={{ fontSize: 12.5 }}
+            >
+              Demain à {formatHour(tomorrowHour)}
+            </AppText>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerClassName="gap-1.5"
+            >
+              {TOMORROW_HOURS.map((h) => {
+                const on = tomorrowHour === h;
+                const hh = String(h).padStart(2, '0');
+                return (
+                  <Pressable
+                    key={h}
+                    testID={`publish-tomorrow-time-${hh}`}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: on }}
+                    accessibilityLabel={`Demain à ${formatHour(h)}`}
+                    onPress={() => setTomorrowHour(h)}
+                    className={cn(
+                      'items-center rounded-pill border px-3 py-1.5',
+                      on ? 'border-brand-500 bg-brand-500' : 'border-line bg-surface-muted',
+                    )}
+                  >
+                    <AppText
+                      className={cn('font-sans-semibold', on ? 'text-white' : 'text-ink-muted')}
+                      style={{ fontSize: 11.5, fontVariant: ['tabular-nums'] }}
+                    >
+                      {formatHour(h)}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : null}
       </View>
 
       <View className="gap-2">
