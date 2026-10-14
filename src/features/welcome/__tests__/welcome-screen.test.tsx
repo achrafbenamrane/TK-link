@@ -1,7 +1,7 @@
 import { act, render, screen } from '@/shared/testing/render';
 
 import { useWelcomeStore } from '../model/store';
-import { SPLASH_MS, WelcomeScreen } from '../ui/welcome-screen';
+import { BOLT_LEAD_MS, SPLASH_MS, WelcomeScreen } from '../ui/welcome-screen';
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -31,5 +31,13 @@ describe('<WelcomeScreen /> — le logo animé', () => {
   it('marque l’accueil comme vu', () => {
     render(<WelcomeScreen onDone={jest.fn()} />);
     expect(useWelcomeStore.getState().seen).toBe(true);
+  });
+
+  it('un éclair frappe avant le logo : il a de l’avance sur le texte', () => {
+    render(<WelcomeScreen onDone={jest.fn()} />);
+    expect(screen.getByTestId('welcome-bolt')).toBeTruthy();
+    // L'éclair est plus bref que son avance : la lumière est passée avant que le logo n'apparaisse.
+    expect(BOLT_LEAD_MS).toBeGreaterThan(0);
+    expect(BOLT_LEAD_MS).toBeLessThan(SPLASH_MS / 2);
   });
 });
