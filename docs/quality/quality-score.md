@@ -71,6 +71,10 @@ valeur, l'app garde son comportement prudent (livraison offerte, gain « dès 3,
 pour tous les colis). Quand le client tranche, la valeur va dans `PLATFORM_SETTINGS` et l'écran peut
 disparaître. Une build de production ignore tout ajustement.
 
+Les modales sortent de la racine du thème **sur le web** (les variables CSS ne les atteignent pas) :
+tout contenu de `Modal` s'enveloppe dans `ThemeScope` (fait pour la galerie et l'éditeur d'avatar).
+Sur téléphone ce n'est pas nécessaire, mais c'est ce qui rend l'aperçu web fidèle.
+
 ## Wishlist (pull when convenient)
 
 - FlashList adoption for long lists (when a real long list exists).

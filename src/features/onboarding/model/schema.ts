@@ -12,6 +12,39 @@ import { ROLES } from '@/shared/lib/roles';
  */
 
 /**
+ * L'avatar PERSONNALISÉ — demande du client (15/10/2026) : un avatar modifiable façon Bitmoji,
+ * avec tenue, détails du visage, casquette… et le logo TK LINK toujours sur les vêtements.
+ *
+ * Chaque champ est l'INDEX d'un choix dans `lib/avatar-parts.ts` (palettes et formes). On stocke
+ * des entiers et non des couleurs ou du SVG : le fichier reste minuscule, et un index hors liste
+ * (une version qui proposait moins de choix) est ramené dans la liste à l'affichage plutôt que de
+ * faire échouer la lecture. Chaque champ a une valeur par défaut : un avatar enregistré avant
+ * l'ajout d'un détail se relit sans erreur.
+ */
+const part = (fallback: number) => z.number().int().nonnegative().default(fallback);
+
+export const CustomAvatarSchema = z.object({
+  skin: part(1),
+  face: part(0),
+  freckles: part(0),
+  eyes: part(0),
+  eyeColor: part(0),
+  brows: part(0),
+  nose: part(0),
+  mouth: part(0),
+  hair: part(1),
+  hairColor: part(1),
+  beard: part(0),
+  glasses: part(0),
+  top: part(0),
+  topColor: part(0),
+  cap: part(0),
+  capColor: part(1),
+  bg: part(0),
+});
+export type CustomAvatar = z.infer<typeof CustomAvatarSchema>;
+
+/**
  * Avatar : un choix dans la galerie d'illustrations (`model/avatars.ts`).
  *
  * L'ancien avatar était composé (teinte + visage + accessoire) et dessiné en
@@ -23,10 +56,18 @@ import { ROLES } from '@/shared/lib/roles';
  * stocké au format `{hue, face, accessory}` se relit en `{preset: 0}` au lieu
  * de faire échouer la réhydratation et de renvoyer l'utilisateur à
  * l'onboarding. Il repart sur la première illustration, et peut en changer.
+ *
+ * Depuis le 15/10/2026 l'utilisateur peut aussi COMPOSER son avatar (`custom`, ci-dessus) : la
+ * galerie reste, c'est un point de départ.
  */
 export const AvatarSchema = z.object({
   /** Index dans la galerie. Borné à l'affichage, jamais ici. */
   preset: z.number().int().nonnegative().default(0),
+  /**
+   * L'avatar composé par l'utilisateur. Présent, il prime sur l'illustration de la galerie ;
+   * absent, on affiche `preset`. `.catch` : un `custom` illisible est écarté, pas fatal.
+   */
+  custom: CustomAvatarSchema.optional().catch(undefined),
 });
 export type Avatar = z.infer<typeof AvatarSchema>;
 

@@ -1,6 +1,5 @@
 import {
-  AvatarView,
-  selectAvatar,
+  AvatarPicker,
   selectFirstName,
   selectRole,
   useOnboardingStore,
@@ -82,7 +81,6 @@ function CourierAccountRoute() {
 function DefaultProfil() {
   const role = useOnboardingStore(selectRole);
   const router = useRouter();
-  const avatar = useOnboardingStore(selectAvatar);
   const firstName = useOnboardingStore(selectFirstName);
   const signOut = useSignOut();
 
@@ -90,7 +88,7 @@ function DefaultProfil() {
     <ProfileScreen
       canPublishOffers={canPublishOffers(role)}
       wholesaler={role === 'grossiste'}
-      renderAvatar={() => <AvatarView avatar={avatar} size={56} />}
+      renderAvatar={() => <AvatarPicker size={56} />}
       name={firstName}
       subtitle={ROLE_LABEL[role]}
       onSignOut={signOut}

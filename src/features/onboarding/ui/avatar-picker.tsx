@@ -4,11 +4,12 @@ import { Modal, Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
-import { useColors } from '@/shared/theme/theme-provider';
+import { ThemeScope, useColors, useScheme } from '@/shared/theme/theme-provider';
 
 import { randomAvatar } from '../lib/avatar';
 import { AVATARS } from '../model/avatars';
 import { selectAvatar, useOnboardingStore } from '../model/store';
+import { AvatarEditor } from './avatar-editor';
 import { AvatarView } from './avatar-view';
 
 /**
@@ -18,12 +19,17 @@ import { AvatarView } from './avatar-view';
  * Un tap ouvre la galerie des dix illustrations livrées par le client, d'un
  * coup d'œil : dix visages se parcourent plus vite avec les yeux qu'avec des
  * flèches. Le choix est enregistré tout de suite (profil local).
+ *
+ * « Créer mon avatar » ouvre l'éditeur (`AvatarEditor`) : tenue, visage, casquette… façon Bitmoji,
+ * avec le logo TK LINK sur les vêtements. Choisir une illustration ensuite remplace l'avatar composé.
  */
 export function AvatarPicker({ size = 92 }: { size?: number }) {
   const colors = useColors();
+  const scheme = useScheme();
   const avatar = useOnboardingStore(selectAvatar);
   const setAvatar = useOnboardingStore((s) => s.setAvatar);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   return (
     <>
@@ -51,76 +57,112 @@ export function AvatarPicker({ size = 92 }: { size?: number }) {
         onRequestClose={() => setOpen(false)}
         statusBarTranslucent
       >
-        <View className="flex-1 justify-end bg-black/60">
-          <View
-            testID="avatar-sheet"
-            className="max-h-[80%] rounded-t-card bg-surface px-5 pb-8 pt-4"
-          >
-            <View className="mb-3 flex-row items-center justify-between">
-              <AppText variant="title">Votre avatar</AppText>
-              <Pressable
-                testID="avatar-close"
-                accessibilityRole="button"
-                accessibilityLabel="Fermer"
-                hitSlop={10}
-                onPress={() => setOpen(false)}
-              >
-                <Feather name="x" size={22} color={colors.ink} />
-              </Pressable>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Pressable
-                testID="avatar-random"
-                accessibilityRole="button"
-                accessibilityLabel="Avatar au hasard"
-                onPress={() => setAvatar(randomAvatar())}
-                className="mb-4 flex-row items-center justify-center gap-2 self-center rounded-pill bg-surface-muted px-4 py-2"
-              >
-                <Feather name="shuffle" size={15} color={colors.ink} />
-                <AppText className="font-sans-semibold text-ink" style={{ fontSize: 13 }}>
-                  Surprenez-moi
-                </AppText>
-              </Pressable>
-
-              <View className="flex-row flex-wrap justify-between gap-y-3">
-                {AVATARS.map((a, i) => {
-                  const selected = avatar.preset === i;
-                  return (
-                    <Pressable
-                      key={a.id}
-                      testID={`avatar-${a.id}`}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected }}
-                      accessibilityLabel={a.label}
-                      onPress={() => {
-                        setAvatar({ preset: i });
-                        setOpen(false);
-                      }}
-                      className={cn(
-                        'w-[22%] items-center gap-1 rounded-card border p-1.5',
-                        selected ? 'border-brand-500 bg-brand-50' : 'border-transparent',
-                      )}
-                    >
-                      <AvatarView avatar={{ preset: i }} size={56} />
-                      <AppText
-                        className={cn(
-                          'text-center',
-                          selected ? 'font-sans-semibold text-brand-600' : 'text-ink-faint',
-                        )}
-                        style={{ fontSize: 9.5, lineHeight: 12 }}
-                        numberOfLines={2}
-                      >
-                        {a.label}
-                      </AppText>
-                    </Pressable>
-                  );
-                })}
+        <ThemeScope scheme={scheme}>
+          <View className="flex-1 justify-end bg-black/60">
+            <View
+              testID="avatar-sheet"
+              className="max-h-[80%] rounded-t-card bg-surface px-5 pb-8 pt-4"
+            >
+              <View className="mb-3 flex-row items-center justify-between">
+                <AppText variant="title">Votre avatar</AppText>
+                <Pressable
+                  testID="avatar-close"
+                  accessibilityRole="button"
+                  accessibilityLabel="Fermer"
+                  hitSlop={10}
+                  onPress={() => setOpen(false)}
+                >
+                  <Feather name="x" size={22} color={colors.ink} />
+                </Pressable>
               </View>
-            </ScrollView>
+
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <Pressable
+                  testID="avatar-create"
+                  accessibilityRole="button"
+                  accessibilityLabel={avatar.custom ? 'Modifier mon avatar' : 'Créer mon avatar'}
+                  onPress={() => {
+                    setOpen(false);
+                    setEditing(true);
+                  }}
+                  className="mb-3 flex-row items-center gap-3 rounded-card border border-brand-500 bg-brand-50 p-3"
+                >
+                  <View className="h-10 w-10 items-center justify-center rounded-pill bg-brand-500">
+                    <Feather name="edit-3" size={18} color={colors.inkInverse} />
+                  </View>
+                  <View className="flex-1">
+                    <AppText className="font-sans-bold text-ink" style={{ fontSize: 14 }}>
+                      {avatar.custom ? 'Modifier mon avatar' : 'Créer mon avatar'}
+                    </AppText>
+                    <AppText variant="caption" className="text-ink-muted">
+                      Visage, coiffure, tenue, casquette… à votre image.
+                    </AppText>
+                  </View>
+                  <Feather name="chevron-right" size={18} color={colors.brand500} />
+                </Pressable>
+
+                <Pressable
+                  testID="avatar-random"
+                  accessibilityRole="button"
+                  accessibilityLabel="Avatar au hasard"
+                  onPress={() => setAvatar(randomAvatar())}
+                  className="mb-4 flex-row items-center justify-center gap-2 self-center rounded-pill bg-surface-muted px-4 py-2"
+                >
+                  <Feather name="shuffle" size={15} color={colors.ink} />
+                  <AppText className="font-sans-semibold text-ink" style={{ fontSize: 13 }}>
+                    Surprenez-moi
+                  </AppText>
+                </Pressable>
+
+                <View className="flex-row flex-wrap justify-between gap-y-3">
+                  {AVATARS.map((a, i) => {
+                    const selected = !avatar.custom && avatar.preset === i;
+                    return (
+                      <Pressable
+                        key={a.id}
+                        testID={`avatar-${a.id}`}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                        accessibilityLabel={a.label}
+                        onPress={() => {
+                          setAvatar({ preset: i });
+                          setOpen(false);
+                        }}
+                        className={cn(
+                          'w-[22%] items-center gap-1 rounded-card border p-1.5',
+                          selected ? 'border-brand-500 bg-brand-50' : 'border-transparent',
+                        )}
+                      >
+                        <AvatarView avatar={{ preset: i }} size={56} />
+                        <AppText
+                          className={cn(
+                            'text-center',
+                            selected ? 'font-sans-semibold text-brand-600' : 'text-ink-faint',
+                          )}
+                          style={{ fontSize: 9.5, lineHeight: 12 }}
+                          numberOfLines={2}
+                        >
+                          {a.label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            </View>
           </View>
-        </View>
+        </ThemeScope>
       </Modal>
+
+      <AvatarEditor
+        visible={editing}
+        initial={avatar}
+        onClose={() => setEditing(false)}
+        onSave={(next) => {
+          setAvatar(next);
+          setEditing(false);
+        }}
+      />
     </>
   );
 }

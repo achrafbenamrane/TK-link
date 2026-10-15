@@ -6,6 +6,7 @@ export { OnboardingScreen, type OnboardingExit } from './ui/onboarding-screen';
 export { AvatarView } from './ui/avatar-view';
 export { RoleScreen } from './ui/role-screen';
 export { AvatarPicker } from './ui/avatar-picker';
+export { AvatarFigure } from './ui/avatar-figure';
 export {
   useOnboardingStore,
   selectCompleted,
@@ -16,6 +17,6 @@ export {
   selectRole,
   selectSiret,
 } from './model/store';
-export type { Avatar, Interest, OnboardingState } from './model/schema';
+export type { Avatar, CustomAvatar, Interest, OnboardingState } from './model/schema';
 export { AVATARS, avatarAt, type AvatarPreset } from './model/avatars';
 export { AVATAR_COUNT, INTERESTS, randomAvatar, toggleInterest } from './lib/avatar';
