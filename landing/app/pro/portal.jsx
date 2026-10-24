@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import './pro.css';
-import { COMMISSION_PCT, RECURRENCES, formatCents, freeLeft } from './billing';
+import { RECURRENCES, formatCents, freeLeft } from './billing';
 import {
   conversionPct,
   discountPct,
@@ -18,7 +18,14 @@ import {
   remaining,
   remainingLabel,
 } from './data';
+import B2bDashboard from './b2b';
+import PrepLabel from './label';
+import LoyaltyPanel from './loyalty';
 import OfferForm from './offer-form';
+import PayoutsPanel from './payouts';
+import { DEFAULT_SETTINGS, readSettings } from './platform';
+import ReviewsCard from './reviews';
+import Showcase from './showcase';
 import {
   ACTION_LABEL,
   merchantActions,
@@ -43,12 +50,19 @@ import {
  * seule la source change.
  */
 /** Les onglets, nommés selon le rôle : un grossiste publie des lots, pas des offres. */
-function tabsFor(voc) {
+function tabsFor(voc, role) {
+  const dashboard = { key: 'dashboard', label: 'Tableau de bord', icon: '▦' };
+  const orders = { key: 'orders', label: 'Commandes', icon: '📦' };
   return [
-    { key: 'dashboard', label: 'Tableau de bord', icon: '▦' },
-    { key: 'orders', label: 'Commandes', icon: '📦' },
+    // CDC V1.1 (Commerçant > Règle) : l'écran par défaut pendant le service est la liste des
+    // commandes en cours — ni réglages ni chiffres — pour qu'un employé marque une commande prête
+    // sans voir le reste. Le grossiste, lui, ouvre sur son tableau de bord.
+    ...(role === 'commercant' ? [orders, dashboard] : [dashboard, orders]),
     { key: 'documents', label: 'Tickets & factures', icon: '🧾' },
     { key: 'offers', label: voc.offersTitle, icon: '％' },
+    // Un grossiste vend des lots, pas des points : la fidélité est celle d'un COMMERÇANT.
+    ...(role === 'commercant' ? [{ key: 'loyalty', label: 'Fidélité', icon: '★' }] : []),
+    { key: 'payouts', label: 'Versements', icon: '€' },
     { key: 'profile', label: voc.profileTab, icon: '🏪' },
     // Le dernier, parce qu'on n'y va qu'en cas de problème — mais TOUJOURS
     // présent : un professionnel bloqué sans interlocuteur abandonne la
@@ -100,8 +114,6 @@ const ROLES = {
     buyerLabel: 'client',
     /** Le commerçant remet en main propre ou confie au livreur. */
     actions: {},
-    /** Commission B2C — CDC §5.4, arbitrée à 5 %. */
-    commissionPct: COMMISSION_PCT,
   },
   grossiste: {
     space: 'Espace grossiste',
@@ -117,20 +129,29 @@ const ROLES = {
      * client / livreur ». Les confondre ferait mentir l'un des deux écrans.
      */
     actions: { en_livraison: 'Expédier', recuperee: 'Remise au transporteur' },
-    /**
-     * Commission B2B — 5 %, alignée sur le B2C : décision du 31/08/2026 (CDC
-     * V1.1, Grossiste > Règle, VALIDÉ), qui remplace la règle de la V1.0
-     * interdisant ce calque. Le grossiste reste le vendeur légal ; TK LINK
-     * facture sa commission au professionnel.
-     */
-    commissionPct: COMMISSION_PCT,
   },
 };
 
 export default function ProPortal({ role = 'commercant' }) {
   const voc = ROLES[role] ?? ROLES.commercant;
-  const TABS = tabsFor(voc);
-  const [tab, setTab] = useState('dashboard');
+  const TABS = tabsFor(voc, role);
+  const [tab, setTab] = useState(role === 'commercant' ? 'orders' : 'dashboard');
+
+  /**
+   * Les réglages de la plateforme, posés par le Super Admin (CDC §12.3) et lus APRÈS le montage :
+   * le stockage du navigateur n'existe pas au prérendu. Commission B2C pour un commerçant, B2B pour
+   * un grossiste — deux taux distincts, même si le CDC les aligne aujourd'hui à 5 %.
+   */
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  useEffect(() => {
+    const id = setTimeout(() => setSettings(readSettings()), 0);
+    return () => clearTimeout(id);
+  }, []);
+  const commissionPct =
+    role === 'grossiste' ? settings.commissionB2bPct : settings.commissionB2cPct;
+
+  /** La commande dont on imprime le ticket de préparation. */
+  const [labelFor, setLabelFor] = useState(null);
   const [selectedId, setSelectedId] = useState(DOCUMENTS[0].id);
   const [query, setQuery] = useState('');
   const [kindFilter, setKindFilter] = useState('all');
@@ -168,8 +189,15 @@ export default function ProPortal({ role = 'commercant' }) {
     return () => clearInterval(id);
   }, []);
 
-  const left = freeLeft(used);
-  const allowed = left > 0;
+  const left = freeLeft(used, settings.freeOperations);
+  /**
+   * CDC V1.1 (EXIGENCE, Grossiste et Commerçant) : « SIRET et informations professionnelles
+   * vérifiés avant toute publication ou commande B2B ». Tant que le justificatif n'est pas validé
+   * par le Super Admin, rien ne se publie — un compte non vérifié n'a pas à vendre au nom d'un
+   * commerce dont personne n'a contrôlé l'existence.
+   */
+  const verified = MERCHANT.kbis.status === 'validé';
+  const allowed = left > 0 && verified;
 
   const selected = useMemo(() => DOCUMENTS.find((d) => d.id === selectedId) ?? null, [selectedId]);
 
@@ -273,7 +301,10 @@ export default function ProPortal({ role = 'commercant' }) {
 
       {/* ----------------------------------------------------------- corps */}
       <main className="tkpro-main">
-        {tab === 'dashboard' ? (
+        {tab === 'dashboard' && role === 'grossiste' ? (
+          <B2bDashboard commissionPct={commissionPct} />
+        ) : null}
+        {tab === 'dashboard' && role !== 'grossiste' ? (
           <>
             <div className="tkpro-head">
               <div>
@@ -361,6 +392,8 @@ export default function ProPortal({ role = 'commercant' }) {
               </p>
             </div>
 
+            {role === 'commercant' ? <ReviewsCard /> : null}
+
             <div className="tkpro-card">
               <div className="tkpro-card-head">
                 <h2>Derniers documents</h2>
@@ -413,7 +446,7 @@ export default function ProPortal({ role = 'commercant' }) {
           <>
             <div className="tkpro-head">
               <div>
-                <h1>Commandes</h1>
+                <h1>Commandes en cours</h1>
                 <p>
                   {waiting > 0
                     ? `${waiting} commande${waiting > 1 ? 's' : ''} à traiter.`
@@ -455,6 +488,16 @@ export default function ProPortal({ role = 'commercant' }) {
                     <div className="foot">
                       <b>{formatMoney(o.totalCents)}</b>
                       <div className="actions">
+                        {/* CDC V1.1 : « commande payée ⇒ ticket de préparation à étiquette QR ».
+                            Ici, on peut le (ré)imprimer à la main. */}
+                        <button
+                          type="button"
+                          className="tkpro-btn"
+                          onClick={() => setLabelFor(o)}
+                          data-testid={'label-' + o.id}
+                        >
+                          Ticket &amp; étiquette
+                        </button>
                         {gestes.map((geste) => (
                           <button
                             key={geste.target}
@@ -693,6 +736,12 @@ export default function ProPortal({ role = 'commercant' }) {
                 des packs » parmi les points volontairement non tranchés, et
                 interdit de leur donner une valeur. Montrer un tarif au client
                 sur son propre espace pro, c'est décider à sa place. */}
+            {!verified ? (
+              <p className="tkpro-error" role="alert" data-testid="verification-required">
+                Votre SIRET est en cours de vérification : vous pourrez publier dès la validation de
+                votre dossier par TK LINK.
+              </p>
+            ) : null}
             <div className={allowed ? 'tkpro-quota' : 'tkpro-quota empty'}>
               <div>
                 <b>
@@ -774,13 +823,21 @@ export default function ProPortal({ role = 'commercant' }) {
 
             <p className="tkpro-note">
               {voc.offersHint} La remise s’applique à chaque vente conclue.{' '}
-              {`TK LINK prélève ${voc.commissionPct} % sur chaque vente (CDC V1.1).`}
+              {`TK LINK prélève ${commissionPct} % sur chaque vente (CDC V1.1).`}
             </p>
           </>
         ) : null}
-        {tab === 'profile' ? <MerchantProfile voc={voc} onSave={notify} /> : null}
+        {tab === 'loyalty' && role === 'commercant' ? <LoyaltyPanel notify={notify} /> : null}
+        {tab === 'payouts' ? (
+          <PayoutsPanel commissionPct={commissionPct} iban={MERCHANT.iban} role={role} />
+        ) : null}
+        {tab === 'profile' ? <MerchantProfile voc={voc} role={role} onSave={notify} /> : null}
         {tab === 'contact' ? <ContactPanel voc={voc} onSend={notify} /> : null}
       </main>
+
+      {labelFor ? (
+        <PrepLabel order={labelFor} role={role} onClose={() => setLabelFor(null)} />
+      ) : null}
 
       {toast ? (
         <div className="tkpro-toast" role="status">
@@ -871,7 +928,7 @@ function OfferCard({ offer, now, onEdit, onToggleLive }) {
  * réécrit pas — remplacer un justificatif d'immatriculation n'est pas une
  * modification de profil, c'est une nouvelle demande de validation.
  */
-function MerchantProfile({ voc, onSave }) {
+function MerchantProfile({ voc, role, onSave }) {
   const [form, setForm] = useState(MERCHANT);
   const set = (key) => (event) => setForm((f) => ({ ...f, [key]: event.target.value }));
 
@@ -966,6 +1023,8 @@ function MerchantProfile({ voc, onSave }) {
             nouvelle vérification : écrivez-nous plutôt que de les corriger ici.
           </p>
         </section>
+
+        {role === 'commercant' ? <Showcase notify={onSave} /> : null}
 
         <div className="tkpro-profile-foot">
           <button type="submit" className="tkpro-btn primary">

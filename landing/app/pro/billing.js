@@ -27,8 +27,12 @@ export const RECURRENCES = [
   { id: 'mensuelle', label: 'Chaque mois' },
 ];
 
-export function freeLeft(used) {
-  return Math.max(0, FREE_OPERATIONS - used);
+/**
+ * Les opérations offertes qui restent. `total` vient du Super Admin (CDC §6.2 : le nombre est un
+ * paramètre, pas une constante) ; `FREE_OPERATIONS` n'est que la valeur d'origine.
+ */
+export function freeLeft(used, total = FREE_OPERATIONS) {
+  return Math.max(0, total - used);
 }
 
 export function operationsLeft(used, purchased) {

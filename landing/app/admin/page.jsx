@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import '../pro/pro.css';
-import { FREE_OPERATIONS } from '../pro/billing';
+import { commissionCents } from '../pro/billing';
+import { DEFAULT_SETTINGS, readSettings } from '../pro/platform';
 import { formatDate } from '../pro/data';
 import './admin.css';
+import SettingsPanel from './settings-panel';
 import {
   APPLICATIONS,
-  COMMISSION_PCT,
   DISPUTES,
   DISPUTE_KINDS,
   DISPUTE_OUTCOMES,
@@ -19,6 +20,8 @@ import {
   TOTALS,
   formatEuros,
   THREADS,
+  IDENTITY_METHOD,
+  VEHICLE_LABEL,
 } from './data';
 
 /**
@@ -45,6 +48,7 @@ const TABS = [
   { key: 'members', label: 'Comptes', icon: '👤' },
   { key: 'disputes', label: 'Litiges', icon: '⚖' },
   { key: 'revenue', label: 'Revenus', icon: '€' },
+  { key: 'settings', label: 'Réglages', icon: '⚙' },
   { key: 'contact', label: 'Messages', icon: '💬' },
 ];
 
@@ -80,6 +84,22 @@ export default function AdminPage() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [suspended, setSuspended] = useState(() => new Set());
   const [toast, setToast] = useState(null);
+  /** Les réglages de la plateforme (§12.3) : lus APRÈS le montage, le stockage n'existe pas au prérendu. */
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  /**
+   * Les revenus se recalculent avec la commission en vigueur : changer le taux dans Réglages doit
+   * se voir dans Revenus, sinon deux onglets donneraient deux chiffres pour la même chose.
+   */
+  const commissionPct = settings.commissionB2cPct;
+  const months = useMemo(
+    () =>
+      MONTHS.map((m) => {
+        const commission = commissionCents(m.gmvCents, commissionPct);
+        return { ...m, commissionCents: commission, revenueCents: commission };
+      }),
+    [commissionPct],
+  );
+  const revenueTotalCents = months.reduce((sum, m) => sum + m.revenueCents, 0);
 
   /**
    * L'issue de chaque dossier : `{ [id]: { decision, reason } }`.
@@ -117,7 +137,10 @@ export default function AdminPage() {
     // l'écran plus juste : un administrateur laisse ce tableau ouvert, et
     // « en attente depuis 23 h » doit devenir « 1 jour » sans qu'il recharge.
     const tick = () => setNow(Date.now());
-    const first = setTimeout(tick, 0);
+    const first = setTimeout(() => {
+      tick();
+      setSettings(readSettings());
+    }, 0);
     const every = setInterval(tick, 60_000);
     return () => {
       clearTimeout(first);
@@ -267,7 +290,7 @@ export default function AdminPage() {
     [],
   );
 
-  const peak = Math.max(...MONTHS.map((m) => m.revenueCents));
+  const peak = Math.max(1, ...months.map((m) => m.revenueCents));
 
   return (
     <div className="tkpro">
@@ -541,8 +564,8 @@ export default function AdminPage() {
               </div>
               <div className="tkpro-stat eco">
                 <div className="k">Revenu TK LINK</div>
-                <div className="v">{formatEuros(TOTALS.revenueCents)}</div>
-                <div className="d">{COMMISSION_PCT} % de commission sur le volume vendu</div>
+                <div className="v">{formatEuros(revenueTotalCents)}</div>
+                <div className="d">{commissionPct} % de commission sur le volume vendu</div>
               </div>
             </div>
 
@@ -579,7 +602,7 @@ export default function AdminPage() {
                 </button>
               </div>
               <div className="tkadmin-bars">
-                {MONTHS.map((m) => (
+                {months.map((m) => (
                   <div className="tkadmin-bar" key={m.label}>
                     <div className="stack" aria-hidden="true">
                       <span
@@ -594,7 +617,7 @@ export default function AdminPage() {
               </div>
               <div className="tkadmin-legend">
                 <span>
-                  <i className="commission" /> Commission {COMMISSION_PCT}&nbsp;%
+                  <i className="commission" /> Commission {commissionPct}&nbsp;%
                 </span>
               </div>
             </div>
@@ -622,7 +645,7 @@ export default function AdminPage() {
                         <td className="num">{m.offers}</td>
                         <td className="num">{formatEuros(m.spentCents)}</td>
                         <td className="num">
-                          {formatEuros(Math.round((m.spentCents * COMMISSION_PCT) / 100))}
+                          {formatEuros(Math.round((m.spentCents * commissionPct) / 100))}
                         </td>
                       </tr>
                     ))}
@@ -639,7 +662,7 @@ export default function AdminPage() {
             <div className="tkpro-head">
               <div>
                 <h1>Comptes</h1>
-                <p>Trois rôles, trois tableaux — CDC §3.</p>
+                <p>Quatre rôles, quatre tableaux — CDC §3 et §11.1.</p>
               </div>
             </div>
 
@@ -685,7 +708,7 @@ export default function AdminPage() {
                           <thead>
                             <tr>
                               <th>{group.who}</th>
-                              <th>SIRET</th>
+                              <th>{group.role === 'livreur' ? 'Identité' : 'SIRET'}</th>
                               <th>Depuis</th>
                               <th className="num">{group.metric}</th>
                               <th />
@@ -706,16 +729,20 @@ export default function AdminPage() {
                                     ) : m.role === 'livreur' ? (
                                       // Un livreur n'a pas de SIRET : ce qui
                                       // l'autorise à porter un colis, c'est sa
-                                      // pièce d'identité (§7, étapes 3 et 4).
+                                      // identité, vérifiée par FranceConnect (§7, étapes 3 et 4).
                                       <>
                                         {m.identite === 'vérifiée' ? (
-                                          <span className="tkadmin-sub">Identité vérifiée</span>
+                                          <span className="tkadmin-sub">
+                                            Identité vérifiée · {IDENTITY_METHOD}
+                                          </span>
                                         ) : (
                                           <span className="tkadmin-missing">
-                                            Identité à vérifier
+                                            Identité à vérifier ({IDENTITY_METHOD})
                                           </span>
                                         )}
-                                        <div className="tkadmin-sub">{m.zone}</div>
+                                        <div className="tkadmin-sub">
+                                          {VEHICLE_LABEL[m.vehicule] ?? '—'} · {m.zone}
+                                        </div>
                                       </>
                                     ) : m.siret ? (
                                       <span className="tkadmin-mono">{m.siret}</span>
@@ -938,12 +965,12 @@ export default function AdminPage() {
             <div className="tkpro-stats">
               <div className="tkpro-stat">
                 <div className="k">Commission</div>
-                <div className="v">{formatEuros(TOTALS.commissionCents)}</div>
-                <div className="d">{COMMISSION_PCT} % du volume vendu</div>
+                <div className="v">{formatEuros(revenueTotalCents)}</div>
+                <div className="d">{commissionPct} % du volume vendu</div>
               </div>
               <div className="tkpro-stat eco">
                 <div className="k">Total</div>
-                <div className="v">{formatEuros(TOTALS.revenueCents)}</div>
+                <div className="v">{formatEuros(revenueTotalCents)}</div>
                 <div className="d">sur six mois</div>
               </div>
             </div>
@@ -963,7 +990,8 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {MONTHS.slice()
+                    {months
+                      .slice()
                       .reverse()
                       .map((m) => (
                         <tr key={m.label}>
@@ -987,21 +1015,27 @@ export default function AdminPage() {
               </div>
               <div className="tkadmin-levers">
                 <div>
-                  <b>{COMMISSION_PCT} %</b>
-                  <span>Commission sur chaque vente — CDC §21</span>
+                  <b>{settings.commissionB2cPct} %</b>
+                  <span>Commission B2C — CDC V1.1</span>
                 </div>
                 <div>
-                  <b>{FREE_OPERATIONS}</b>
-                  <span>Opérations offertes — CDC §9, réglable</span>
+                  <b>{settings.commissionB2bPct} %</b>
+                  <span>Commission B2B — CDC V1.1</span>
+                </div>
+                <div>
+                  <b>{settings.freeOperations}</b>
+                  <span>Opérations offertes — CDC §6.2, réglable dans Réglages</span>
                 </div>
               </div>
               <p className="tkpro-note" style={{ margin: '0 18px 18px' }}>
-                Ces valeurs sont celles proposées par le cahier des charges et marquées « à valider
-                » (§23). Elles sont appliquées partout — app et web — depuis un seul endroit ; les
-                changer se fera ici quand le back-office existera.
+                Ces valeurs se changent dans l’onglet Réglages : elles sont lues depuis un seul
+                endroit, par l’app et par le web.
               </p>
             </div>
           </>
+        ) : null}
+        {tab === 'settings' ? (
+          <SettingsPanel settings={settings} onSaved={setSettings} notify={notify} />
         ) : null}
         {tab === 'contact' ? <SupportInbox onSend={notify} /> : null}
       </main>

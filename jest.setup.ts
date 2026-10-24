@@ -58,3 +58,11 @@ jest.mock('expo-router', () => ({
 
 // Reanimated ships an official Jest integration (v3.6+ / v4).
 require('react-native-reanimated').setUpTests();
+
+/**
+ * `waitFor` / `findBy*` attendent 1 s par défaut. Sur une machine chargée (suite complète en
+ * parallèle), un écran qui enchaîne plusieurs `await` dépasse ce délai et le test échoue sans qu'il
+ * y ait de bug — deux suites (`shop-settings`, `courier`) l'ont montré le 24/10/2026. Un test qui
+ * réussit n'attend jamais plus que nécessaire : relever le plafond ne ralentit que les échecs.
+ */
+require('@testing-library/react-native').configure({ asyncUtilTimeout: 5000 });

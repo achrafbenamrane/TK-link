@@ -33,6 +33,19 @@ export function formatEuros(cents) {
   return `${sign}${whole},${String(abs % 100).padStart(2, '0')} €`;
 }
 
+/**
+ * Le véhicule du livreur — CDC V1.1 (Livreur > Règle) : « type de véhicule (vélo, scooter,
+ * voiture) déclaré à l'inscription ; filtre d'attribution des missions ».
+ */
+export const VEHICLE_LABEL = { velo: 'Vélo', scooter: 'Scooter', voiture: 'Voiture' };
+
+/**
+ * Comment l'identité d'un livreur est vérifiée : par FranceConnect, pas par une pièce d'identité
+ * téléversée (demande du client, 14/10/2026). TK LINK ne conserve donc aucune copie de pièce : il
+ * reçoit seulement le résultat de la vérification.
+ */
+export const IDENTITY_METHOD = 'FranceConnect';
+
 /** Les trois rôles du CDC §3, avec leur libellé et leur couleur de pastille. */
 export const ROLE_INFO = {
   consommateur: { label: 'Consommateur', tone: 'ticket' },
@@ -198,6 +211,7 @@ const RAW_MEMBERS = [
     city: 'Toulouse · Saint-Cyprien',
     daysAgo: 12,
     zone: 'Centre + Saint-Cyprien',
+    vehicule: 'scooter',
     deliveries: 84,
     identite: 'vérifiée',
     biometrie: 'locale',
@@ -210,6 +224,7 @@ const RAW_MEMBERS = [
     city: 'Toulouse · Capitole',
     daysAgo: 5,
     zone: 'Hypercentre',
+    vehicule: 'velo',
     deliveries: 21,
     identite: 'vérifiée',
     biometrie: 'locale',
@@ -222,6 +237,7 @@ const RAW_MEMBERS = [
     city: 'Blagnac',
     daysAgo: 1,
     zone: 'Blagnac + Purpan',
+    vehicule: 'voiture',
     deliveries: 0,
     // Dossier en cours : l'écran doit le montrer AVANT qu'on lui confie un colis.
     identite: 'à vérifier',

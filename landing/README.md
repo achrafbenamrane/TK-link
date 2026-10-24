@@ -37,5 +37,12 @@ app/
   globals.css       # styles
 ```
 
+## Back-offices
+
+`/admin` (Super Admin), `/pro` (commerçant) et `/grossiste` : données simulées, protégées par
+`TKLINK_PRO_PASSWORD` (voir `DEPLOY.md`). Plusieurs fichiers de `app/pro/` sont des **miroirs** de
+l'app mobile (réglages, fidélité, vitrine, avis, statuts de commande) : le test
+`landing/__tests__/backoffice-mirror.test.ts` échoue si une copie dérive.
+
 > Projet autonome (son propre `package.json`). Lancez les commandes npm depuis
 > le dossier `landing/`, pas depuis la racine du repo Expo.

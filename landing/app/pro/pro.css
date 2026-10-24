@@ -993,3 +993,329 @@
   font: inherit;
   resize: vertical;
 }
+
+/* --------------------------------------------------- ticket de préparation
+ *
+ * Une fenêtre modale à l'écran ; à l'impression, SEUL le ticket reste (tout le reste de la page est
+ * masqué), réglé en 80 mm de large comme une imprimante thermique.
+ */
+.tkpro-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 10, 13, 0.55);
+  padding: 16px;
+}
+.tkpro-modal-card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 20px;
+  width: min(360px, 100%);
+  max-height: 100%;
+  overflow: auto;
+}
+.tkpro-label {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+  color: #000;
+}
+.tkpro-label-brand {
+  font-weight: 800;
+  font-size: 15px;
+  color: #000;
+}
+.tkpro-label-brand span {
+  color: var(--brand);
+  margin-left: 2px;
+}
+.tkpro-label-id {
+  font-size: 22px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+.tkpro-label-id.small {
+  font-size: 13px;
+  margin-top: 4px;
+}
+.tkpro-label-meta {
+  font-size: 12.5px;
+  color: #333;
+}
+.tkpro-label ul {
+  margin: 10px 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+  font-weight: 600;
+}
+.tkpro-label li {
+  padding: 3px 0;
+  border-bottom: 1px dashed #bbb;
+}
+.tkpro-label-total {
+  font-weight: 800;
+  text-align: right;
+}
+.tkpro-label-cut {
+  margin: 10px -14px;
+  border-top: 2px dashed #888;
+  padding-top: 4px;
+  font-size: 11px;
+  color: #666;
+  text-align: center;
+}
+.tkpro-label-sticker {
+  display: grid;
+  justify-items: center;
+}
+
+@media print {
+  .tkpro > *:not(.tkpro-modal) {
+    display: none !important;
+  }
+  .tkpro {
+    display: block;
+    background: #fff;
+  }
+  .tkpro-modal {
+    position: static;
+    background: none;
+    padding: 0;
+    display: block;
+  }
+  .tkpro-modal-card {
+    width: 80mm;
+    padding: 0;
+    overflow: visible;
+  }
+  .tkpro-modal-card > *:not(.tkpro-label) {
+    display: none !important;
+  }
+  .tkpro-label {
+    border: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ avis */
+.tkpro-reviews {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px 28px;
+  padding: 18px;
+  align-items: center;
+}
+.tkpro-reviews-avg {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+}
+.tkpro-reviews-avg b {
+  font-size: 40px;
+  line-height: 1;
+}
+.tkpro-reviews-avg span {
+  color: var(--brand);
+  letter-spacing: 2px;
+}
+.tkpro-reviews-avg em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.tkpro-reviews-bars {
+  display: grid;
+  gap: 4px;
+}
+.tkpro-reviews-bars .row {
+  display: grid;
+  grid-template-columns: 32px 1fr 24px;
+  gap: 8px;
+  align-items: center;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+.tkpro-reviews-bars i {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+.tkpro-reviews-bars u {
+  display: block;
+  height: 100%;
+  background: var(--brand);
+  text-decoration: none;
+}
+.tkpro-reviews-tags {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .tkpro-reviews {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* -------------------------------------------------------------- fidélité */
+.tkpro-units {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 18px;
+}
+.tkpro-units .tkpro-chip {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+.tkpro-units .tkpro-chip span {
+  font-size: 12.5px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+.tkpro-units .tkpro-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.tkpro-tiers {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+.tkpro-tier {
+  display: grid;
+  grid-template-columns: 44px 120px 1fr;
+  gap: 12px;
+  align-items: end;
+}
+.tkpro-tier .rank {
+  align-self: center;
+  color: var(--brand-600);
+}
+.tkpro-tier .tkpro-error {
+  grid-column: 2 / -1;
+}
+@media (max-width: 600px) {
+  .tkpro-tier {
+    grid-template-columns: 1fr;
+  }
+  .tkpro-tier .tkpro-error {
+    grid-column: 1;
+  }
+}
+
+.tkpro-error {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+/* ---------------------------------------------------------------- vitrine */
+.tkpro-media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0 18px 4px;
+}
+.tkpro-media figure {
+  position: relative;
+  margin: 0;
+  width: 96px;
+  height: 96px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-sunken);
+}
+.tkpro-media img,
+.tkpro-media video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.tkpro-media figure button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  cursor: pointer;
+}
+.tkpro-media-add {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 12px;
+  border: 1.5px dashed var(--brand);
+  background: var(--brand-50);
+  color: var(--brand-600);
+  font-weight: 700;
+  font-size: 12.5px;
+  text-align: center;
+  cursor: pointer;
+}
+.tkpro-media-add input {
+  display: none;
+}
+.tkpro-hours {
+  display: grid;
+  gap: 8px;
+  padding: 0 18px 18px;
+}
+.tkpro-hours .day {
+  display: grid;
+  grid-template-columns: 110px 70px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.tkpro-hours .day .range {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.tkpro-hours input[type='text'] {
+  width: 84px;
+  text-align: center;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  background: var(--surface-muted);
+  color: var(--ink);
+}
+.tkpro-hours input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+.tkpro-textarea {
+  display: block;
+  width: calc(100% - 36px);
+  margin: 0 18px;
+  min-height: 96px;
+  resize: vertical;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--surface-muted);
+  color: var(--ink);
+}
+@media (max-width: 600px) {
+  .tkpro-hours .day {
+    grid-template-columns: 1fr 70px;
+  }
+  .tkpro-hours .day .range {
+    grid-column: 1 / -1;
+  }
+}

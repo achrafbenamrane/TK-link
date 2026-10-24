@@ -89,7 +89,8 @@ describe('<CartScreen /> — crédit de parrainage (CDC V1.1)', () => {
     render(<CartScreen credit={5} />);
     fireEvent.press(screen.getByTestId('cart-fulfilment-touch-collect'));
     fireEvent.press(screen.getByTestId('cart-checkout'));
-    await screen.findByTestId('cart-checkout').catch(() => undefined);
+    // Le paiement est asynchrone : on attend la commande elle-même, pas un délai.
+    await waitFor(() => expect(useShopStore.getState().orders).toHaveLength(1));
 
     const order = useShopStore.getState().orders[0];
     expect(order?.discount).toBe(5);
