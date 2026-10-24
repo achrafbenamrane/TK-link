@@ -22,10 +22,14 @@ a service_role key.
 
 ## Auth
 
-`src/features/auth` owns sign in / up / out, the session store (`useAuthStore`), and the
-`useProtectedRoute` guard (wired into the root layout — unauthenticated users are sent to
-`/sign-in`). Inputs are Zod-validated (`CredentialsSchema`). The visual design is a later
-phase; the slice is the secure plumbing.
+`src/features/auth` owns sign in / up / out, the session store (`useAuthStore`), e-mail **or**
+phone + password, Google and Apple (native ID-token flows), six-digit codes for confirmation and
+password recovery, and the account screen (sign-out, phone verification, deletion). The session is
+loaded at startup by `AuthBootstrap` in the root layout; there is **no forced login** (App Store
+5.1.1). `useProtectedRoute` remains available for a screen that truly needs an account. Inputs are
+Zod-validated before any network call. Migration `0007_auth_identity` fills `public.profiles` at
+sign-up and locks the server-owned columns. Full guide and console setup:
+[authentication](../security/authentication.md) ([ADR-0009](decisions/0009-authentification.md)).
 
 ## Database — secure-by-default rules
 

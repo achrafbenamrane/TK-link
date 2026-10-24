@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { isCategory } from '@/shared/lib/categories';
 import { isValidSiret, normalizeSiret, type Role } from '@/shared/lib/roles';
 
+import { normalizePhone } from './identifier';
+import { MIN_PASSWORD } from './schema';
+
 /**
  * Le formulaire d'inscription — CDC §5.
  *
@@ -19,9 +22,6 @@ import { isValidSiret, normalizeSiret, type Role } from '@/shared/lib/roles';
 
 /** Numéro français : 0X ou +33X, tolérant aux espaces, points et tirets. */
 const PHONE_RE = /^(?:\+33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/;
-
-/** Longueur minimale du mot de passe, alignée sur l'écran de connexion. */
-export const MIN_PASSWORD = 8;
 
 export const RegistrationSchema = z
   .object({
@@ -139,6 +139,8 @@ export function toProfile(draft: RegistrationDraft) {
     lastName: draft.lastName.trim(),
     email: draft.email.trim().toLowerCase(),
     phone: draft.phone.trim(),
+    /** Le numéro au format E.164 (« +33612345678 »), celui que Supabase et les SMS comprennent. */
+    phoneE164: normalizePhone(draft.phone) ?? '',
     location: draft.location.trim(),
     siret: draft.siret.trim() === '' ? null : normalizeSiret(draft.siret),
     shopName: draft.shopName.trim(),

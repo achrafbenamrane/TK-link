@@ -7,6 +7,13 @@ import { z } from 'zod';
  * Only EXPO_PUBLIC_* variables are inlined into the client bundle.
  * Secrets NEVER belong here — they live on the server or in EAS secrets.
  */
+/** « 123456789012-abc123def456.apps.googleusercontent.com », ou vide quand Google n'est pas branché. */
+const GoogleClientId = z
+  .string()
+  .refine((v) => v === '' || /^\d+-[a-z0-9]+\.apps\.googleusercontent\.com$/i.test(v), {
+    error: 'Un identifiant client Google ressemble à « 1234-abcd.apps.googleusercontent.com ».',
+  });
+
 const EnvSchema = z.object({
   EXPO_PUBLIC_API_URL: z.url({ error: 'EXPO_PUBLIC_API_URL must be a valid URL' }),
   EXPO_PUBLIC_APP_ENV: z.enum(['development', 'preview', 'production']),
@@ -21,6 +28,14 @@ const EnvSchema = z.object({
       error:
         'That looks like a SERVICE ROLE / secret key — never ship it in the app. Use the anon/publishable key; the service key bypasses RLS.',
     }),
+  // Connexion Google — identifiants OAuth de la Google Cloud Console. Ils sont PUBLICS par nature
+  // (ils figurent dans l'app et dans les URL d'autorisation) : le secret du client, lui, ne vit
+  // que dans le tableau de bord Supabase. Vides = Google n'est pas encore branché.
+  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: GoogleClientId,
+  EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: GoogleClientId,
+  // Connexion par numéro de téléphone : « off » la masque tant qu'aucun fournisseur de SMS n'est
+  // branché côté Supabase (sans lui, le code de vérification ne part jamais).
+  EXPO_PUBLIC_AUTH_PHONE: z.enum(['on', 'off']),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -32,6 +47,9 @@ export function parseEnv(raw: Record<string, string | undefined>): Env {
     EXPO_PUBLIC_SUPABASE_URL: raw.EXPO_PUBLIC_SUPABASE_URL ?? 'https://localhost.supabase.co',
     EXPO_PUBLIC_SUPABASE_ANON_KEY:
       raw.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? 'public-anon-key-placeholder',
+    EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: raw.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '',
+    EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: raw.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '',
+    EXPO_PUBLIC_AUTH_PHONE: raw.EXPO_PUBLIC_AUTH_PHONE ?? 'on',
   });
 
   if (!result.success) {
@@ -68,6 +86,16 @@ const PLACEHOLDER_KEY = 'public-anon-key-placeholder';
 export const isSupabaseConfigured: boolean =
   env.EXPO_PUBLIC_SUPABASE_URL !== PLACEHOLDER_URL &&
   env.EXPO_PUBLIC_SUPABASE_ANON_KEY !== PLACEHOLDER_KEY;
+
+/**
+ * Google est-il branché ? Il faut au moins l'identifiant client « web » : c'est lui que Supabase
+ * attend comme destinataire (`aud`) du jeton. Sans lui, le bouton « Continuer avec Google » n'existe
+ * pas (hors démonstration) plutôt que d'échouer au toucher.
+ */
+export const isGoogleConfigured: boolean = env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID !== '';
+
+/** La connexion par numéro de téléphone est-elle proposée ? (voir `EXPO_PUBLIC_AUTH_PHONE`). */
+export const isPhoneAuthEnabled: boolean = env.EXPO_PUBLIC_AUTH_PHONE === 'on';
 
 /**
  * Cette build est-elle une DÉMONSTRATION ? Vrai partout sauf en production.

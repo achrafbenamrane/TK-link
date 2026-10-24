@@ -15,11 +15,13 @@ import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { useAuthStore } from '@/features/auth';
 import { selectCompleted, selectHydrated, useOnboardingStore } from '@/features/onboarding';
 import { receiptForOrder, useReceiptsStore } from '@/features/receipts';
 import { orderToTransaction, producesReceipt, selectOrders, useShopStore } from '@/features/shop';
 import { useWelcomeStore } from '@/features/welcome';
-import '@/shared/lib/env'; // fail fast on invalid environment (has safe defaults)
+import { isSupabaseConfigured } from '@/shared/lib/env'; // fail fast on invalid environment (has safe defaults)
+import { registerSupabaseAutoRefresh } from '@/shared/lib/supabase';
 import { logger } from '@/shared/lib/logger';
 import { ErrorScreen } from '@/shared/ui';
 import { ThemeProvider, useColors, useScheme } from '@/shared/theme/theme-provider';
@@ -37,6 +39,7 @@ const FIRST_RUN_ROUTES = new Set([
   'onboarding',
   'sign-in',
   'sign-up',
+  'forgot-password',
   'devenir-livreur',
   'dossier-pro',
 ]);
@@ -118,6 +121,29 @@ function ReceiptBridge() {
 }
 
 /**
+ * LA SESSION — relue au démarrage, puis suivie (connexion, déconnexion, jeton renouvelé).
+ *
+ * Il n'y a PAS de porte « connexion obligatoire » : l'app se parcourt sans compte (App Store
+ * 5.1.1 : pas de connexion forcée pour ce qui n'en a pas besoin), et l'onboarding reste la porte
+ * du premier lancement. Ce composant se contente de tenir la session à jour ; ce qui exige un
+ * compte le vérifie là où il le faut.
+ *
+ * Le renouvellement automatique du jeton ne tourne que lorsque l'app est au premier plan
+ * (`registerSupabaseAutoRefresh`) : inutile de réveiller le réseau en arrière-plan.
+ */
+function AuthBootstrap() {
+  useEffect(() => {
+    const stopListening = useAuthStore.getState().init();
+    const stopRefresh = isSupabaseConfigured ? registerSupabaseAutoRefresh() : () => {};
+    return () => {
+      stopListening();
+      stopRefresh();
+    };
+  }, []);
+  return null;
+}
+
+/**
  * L'écran d'erreur de toute l'app : expo-router l'affiche quand un écran plante, à la place d'un écran
  * blanc. Il remplace aussi la disposition, donc il apporte son propre thème.
  */
@@ -164,9 +190,8 @@ export default function RootLayout() {
     Manrope_800ExtraBold,
   });
 
-  // NOTE (demo): the auth route-guard + Supabase session are intentionally
-  // disabled here so the client preview boots straight into the app. Re-enable
-  // useProtectedRoute()/useAuthStore().init() from '@/features/auth' for prod.
+  // La session est relue par <AuthBootstrap /> ci-dessous. Pas de porte « connexion obligatoire »
+  // (`useProtectedRoute`) : l'app se parcourt sans compte, voir AuthBootstrap.
 
   const onboardingHydrated = useOnboardingStore(selectHydrated);
   const welcomeHydrated = useWelcomeStore((s) => s.hydrated);
@@ -191,6 +216,7 @@ export default function RootLayout() {
     <GestureHandlerRootView className="flex-1">
       <ThemeProvider>
         <SafeAreaProvider>
+          <AuthBootstrap />
           <FirstRunGate />
           <ReceiptBridge />
           <AppStack />

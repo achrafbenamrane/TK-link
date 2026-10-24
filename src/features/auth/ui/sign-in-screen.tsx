@@ -2,24 +2,30 @@ import { Feather } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
-import { cn } from '@/shared/lib/cn';
+import { isPhoneAuthEnabled } from '@/shared/lib/env';
 import { AppText, Button, Screen, TextField, Wordmark } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { friendlyAuthError } from '../model/auth-errors';
-import { CredentialsSchema } from '../model/schema';
+import { IDENTIFIER_MESSAGE, parseIdentifier } from '../model/identifier';
+import { PasswordSchema } from '../model/schema';
+import type { SocialProvider } from '../model/social/types';
 import { useAuthStore } from '../model/store';
 import { DemoNotice } from './demo-notice';
+import { SocialSection } from './social-buttons';
 
-type FieldErrors = { email?: string; password?: string };
+type FieldErrors = { identifier?: string; password?: string };
 
 /**
- * CONNEXION — CDC §6 (e-mail + mot de passe ; l'empreinte digitale vit dans
- * l'écran dédié une fois le compte ouvert).
+ * CONNEXION — e-mail OU numéro de téléphone + mot de passe, ou Google / Apple. L'empreinte digitale
+ * vit dans l'écran dédié une fois le compte ouvert.
  *
  * L'INSCRIPTION a son propre écran depuis le CDC §5 : elle réclame sept champs
  * et un SIRET conditionnel, ce qui n'entre plus dans un simple basculement de
  * mode sur cet écran.
+ *
+ * Un SEUL champ pour l'identifiant : on devine s'il s'agit d'un e-mail ou d'un numéro (voir
+ * `parseIdentifier`) plutôt que de faire choisir entre deux onglets avant d'avoir tapé.
  *
  * Les erreurs sont affichées SOUS LE CHAMP concerné plutôt qu'en une ligne
  * commune : avec deux champs, un message global oblige à deviner lequel corriger.
@@ -41,18 +47,35 @@ type Props = {
    * cherche : l'écran de connexion.
    */
   onMerchantSignUp?: () => void;
+  /** « Mot de passe oublié ? » — la navigation reste à la route. Absent : pas de lien. */
+  onForgotPassword?: () => void;
+  /**
+   * Google ou Apple ont ouvert la session : le prénom (quand le fournisseur le donne), que la route
+   * range dans le profil local. L'écran ne connaît pas les autres tranches de l'app.
+   */
+  onProfile?: (profile: { firstName: string; lastName: string }) => void;
 };
 
-export function SignInScreen({ onCreateAccount, onSignedIn, onMerchantSignUp }: Props = {}) {
+export function SignInScreen({
+  onCreateAccount,
+  onSignedIn,
+  onMerchantSignUp,
+  onForgotPassword,
+  onProfile,
+}: Props = {}) {
   const colors = useColors();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [busy, setBusy] = useState<SocialProvider | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState(false);
 
   const storeError = useAuthStore((s) => s.error);
   const signIn = useAuthStore((s) => s.signIn);
+  const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
+  const signInWithApple = useAuthStore((s) => s.signInWithApple);
 
   // L'erreur du serveur ne s'affiche qu'après une tentative : sinon une erreur
   // d'une session précédente accueille l'utilisateur à l'ouverture.
@@ -64,13 +87,12 @@ export function SignInScreen({ onCreateAccount, onSignedIn, onMerchantSignUp }: 
   const submit = async () => {
     // Validation locale d'abord : inutile d'aller au réseau pour apprendre
     // qu'il manque un « @ ».
-    const parsed = CredentialsSchema.safeParse({ email: email.trim(), password });
-    if (!parsed.success) {
+    const id = parseIdentifier(identifier, { allowPhone: isPhoneAuthEnabled });
+    const pw = PasswordSchema.safeParse(password);
+    if (!id.ok || !pw.success) {
       const next: FieldErrors = {};
-      for (const issue of parsed.error.issues) {
-        const key = issue.path[0] as keyof FieldErrors | undefined;
-        if (key && !next[key]) next[key] = issue.message;
-      }
+      if (!id.ok) next.identifier = IDENTIFIER_MESSAGE[id.hint];
+      if (!pw.success) next.password = pw.error.issues[0]?.message ?? 'Mot de passe invalide.';
       setFieldErrors(next);
       setTouched(true);
       return;
@@ -79,10 +101,24 @@ export function SignInScreen({ onCreateAccount, onSignedIn, onMerchantSignUp }: 
     setFieldErrors({});
     setTouched(true);
     setSubmitting(true);
-    const result = await signIn(parsed.data.email, parsed.data.password);
+    const result = await signIn(id.identifier.value, password);
     setSubmitting(false);
     if (result.ok) onSignedIn?.();
   };
+
+  const social = async (provider: SocialProvider) => {
+    setTouched(true);
+    setBusy(provider);
+    const result = provider === 'google' ? await signInWithGoogle() : await signInWithApple();
+    setBusy(null);
+    if (!result.ok) return;
+    if (result.firstName || result.lastName) {
+      onProfile?.({ firstName: result.firstName, lastName: result.lastName });
+    }
+    onSignedIn?.();
+  };
+
+  const working = submitting || busy !== null;
 
   return (
     <Screen testID="sign-in-screen">
@@ -107,27 +143,37 @@ export function SignInScreen({ onCreateAccount, onSignedIn, onMerchantSignUp }: 
           <View className="gap-3">
             <View className="gap-1.5">
               <AppText variant="caption" className="font-sans-semibold text-ink-muted">
-                Adresse e-mail
+                {isPhoneAuthEnabled ? 'E-mail ou téléphone' : 'Adresse e-mail'}
               </AppText>
               <View className="flex-row">
                 <TextField
-                  testID="auth-email"
-                  value={email}
+                  testID="auth-identifier"
+                  value={identifier}
                   onChangeText={(v) => {
-                    setEmail(v);
-                    setFieldErrors((e) => ({ ...e, email: undefined }));
+                    setIdentifier(v);
+                    setFieldErrors((e) => ({ ...e, identifier: undefined }));
                   }}
-                  placeholder="vous@exemple.fr"
+                  placeholder={
+                    isPhoneAuthEnabled ? 'vous@exemple.fr ou 06 12 34 56 78' : 'vous@exemple.fr'
+                  }
                   autoCapitalize="none"
-                  autoComplete="email"
-                  keyboardType="email-address"
-                  textContentType="emailAddress"
-                  className={cn(fieldErrors.email && 'border-brand-500')}
+                  autoCorrect={false}
+                  autoComplete="username"
+                  textContentType="username"
+                  accessibilityLabel={
+                    isPhoneAuthEnabled ? 'E-mail ou numéro de téléphone' : 'Adresse e-mail'
+                  }
+                  icon="user"
+                  invalid={!!fieldErrors.identifier}
                 />
               </View>
-              {fieldErrors.email ? (
-                <AppText testID="auth-email-error" variant="caption" className="text-brand-600">
-                  {fieldErrors.email}
+              {fieldErrors.identifier ? (
+                <AppText
+                  testID="auth-identifier-error"
+                  variant="caption"
+                  className="text-brand-600"
+                >
+                  {fieldErrors.identifier}
                 </AppText>
               ) : null}
             </View>
@@ -145,15 +191,50 @@ export function SignInScreen({ onCreateAccount, onSignedIn, onMerchantSignUp }: 
                     setFieldErrors((e) => ({ ...e, password: undefined }));
                   }}
                   placeholder="8 caractères minimum"
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoComplete="current-password"
                   textContentType="password"
-                  className={cn(fieldErrors.password && 'border-brand-500')}
+                  accessibilityLabel="Mot de passe"
+                  icon="lock"
+                  invalid={!!fieldErrors.password}
+                  accessory={
+                    <Pressable
+                      testID="auth-eye"
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
+                      }
+                      hitSlop={10}
+                      onPress={() => setShowPassword((v) => !v)}
+                    >
+                      <Feather
+                        name={showPassword ? 'eye-off' : 'eye'}
+                        size={17}
+                        color={colors.inkFaint}
+                      />
+                    </Pressable>
+                  }
                 />
               </View>
               {fieldErrors.password ? (
                 <AppText testID="auth-password-error" variant="caption" className="text-brand-600">
                   {fieldErrors.password}
                 </AppText>
+              ) : null}
+              {onForgotPassword ? (
+                <Pressable
+                  testID="auth-forgot"
+                  accessibilityRole="button"
+                  accessibilityLabel="Mot de passe oublié"
+                  hitSlop={8}
+                  onPress={onForgotPassword}
+                  className="self-end"
+                >
+                  <AppText variant="caption" className="font-sans-semibold text-brand-600">
+                    Mot de passe oublié ?
+                  </AppText>
+                </Pressable>
               ) : null}
             </View>
 
@@ -171,9 +252,17 @@ export function SignInScreen({ onCreateAccount, onSignedIn, onMerchantSignUp }: 
                 testID="auth-submit"
                 label="Se connecter"
                 loading={submitting}
+                disabled={busy !== null}
                 onPress={submit}
               />
             </View>
+
+            <SocialSection
+              verb="Continuer avec"
+              busy={busy}
+              legal
+              onSelect={(p) => !working && void social(p)}
+            />
 
             {onCreateAccount ? (
               <Pressable

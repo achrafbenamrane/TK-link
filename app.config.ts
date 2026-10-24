@@ -30,6 +30,17 @@ const bundleId = IS_DEV
     ? 'com.progix.tklink.preview'
     : 'com.progix.tklink';
 
+/**
+ * Connexion Google sur iPhone : la fenêtre Google revient dans l'app par un schéma d'URL, l'identifiant
+ * client iOS « retourné » (`com.googleusercontent.apps.<id>`). Le plugin de Google REFUSE de
+ * s'exécuter sans lui : tant qu'aucun identifiant iOS n'est fourni, on ne l'ajoute pas — la build
+ * passe, et le bouton Google n'est simplement pas utilisable sur iPhone. Android n'en a pas besoin.
+ */
+const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '';
+const googleIosUrlScheme = googleIosClientId
+  ? `com.googleusercontent.apps.${googleIosClientId.replace(/\.apps\.googleusercontent\.com$/, '')}`
+  : null;
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name,
@@ -172,6 +183,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         faceIDPermission: 'TK LINK utilise Face ID pour déverrouiller votre compte.',
       },
     ],
+    // Sign in with Apple (iOS) : le plugin ajoute la capacité `com.apple.developer.applesignin`.
+    // EAS la synchronise avec l'identifiant d'app du compte Apple Developer au premier build iOS.
+    'expo-apple-authentication',
+    ...(googleIosUrlScheme
+      ? ([['@react-native-google-signin/google-signin', { iosUrlScheme: googleIosUrlScheme }]] as [
+          string,
+          Record<string, string>,
+        ][])
+      : []),
     [
       // Google Play requires targeting a recent API level (35+ since 2025-08-31;
       // expect 36 ~2026-08). Store-readiness: STORE-GP-TARGETAPI.

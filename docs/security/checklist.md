@@ -28,7 +28,10 @@ SEC-LINK-003 | P2 | External URLs opened only if https + allowlisted host (isAll
 SEC-INPUT-001 | P1 | Every trust-boundary input (user, rehydration, network, link) passes a Zod schema | review schema.ts coverage | review (AGENTS hard rule)
 SEC-NET-001 | P2 | Production blocks cleartext (ATS on iOS, usesCleartextTraffic off Android) | inspect app.config / config plugin | review (Phase 1 backlog)
 SEC-AUTH-001 | P1 | OAuth uses the system browser + PKCE; never an embedded WebView | review auth flow | review (Phase 2)
-SEC-AUTH-002 | P1 | Auth callback rides a verified Universal/App Link, not a bare custom scheme | review redirect URI config | review (Phase 2)
+SEC-AUTH-002 | P1 | Auth callback rides a verified Universal/App Link, not a bare custom scheme | review redirect URI config | review (Phase 2) — tenu sans retour : Google et Apple par jeton natif, codes à 6 chiffres (ADR-0009)
+SEC-AUTH-003 | P1 | No account enumeration: same message for unknown identifier and wrong password; password reset never confirms an account exists | auth-errors + forgot-password tests | jest
+SEC-AUTH-004 | P1 | Sign in with Apple uses a random nonce (SHA-256 to Apple, raw to Supabase); ID tokens never logged | social.test.ts; review | jest + review
+SEC-AUTH-005 | P1 | Client cannot write server-owned profile columns (account_type, contact_phone, phone_verified) | pgTAP rls.test.sql | supabase test db
 SEC-RLS-001 | P1 | RLS enabled + deny-by-default on every table; client never trusted for authz | supabase db lint (lints 0007/0013/0015); pgTAP | gate (Phase 2)
 SEC-SUPPLY-001 | P2 | Lockfile committed; deps added via npx expo install; npm audit clean of highs | npm audit; review package.json diff | review
 SEC-RESIL-001 | P3 | High-value actions verified by server-side attestation (Play Integrity / App Attest) | review sensitive action flow | review (dev build, backlog)

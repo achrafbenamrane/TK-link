@@ -16,6 +16,8 @@ type Props = {
   onSignOut?: () => void;
   /** Build de démonstration : ouvre les réglages à essayer devant le client. */
   onOpenDemoSettings?: () => void;
+  /** « Mon compte » : connexion, numéro, suppression du compte (exigée par les stores). */
+  onOpenAccount?: () => void;
 };
 
 const STATUS_TEXT = {
@@ -25,7 +27,13 @@ const STATUS_TEXT = {
 } as const;
 
 /** LE COMPTE LIVREUR — identité, véhicule, sécurité. */
-export function CourierAccountScreen({ name, onOpenSetup, onSignOut, onOpenDemoSettings }: Props) {
+export function CourierAccountScreen({
+  name,
+  onOpenSetup,
+  onSignOut,
+  onOpenDemoSettings,
+  onOpenAccount,
+}: Props) {
   const colors = useColors();
   const status = useCourierStore((s) => s.status);
   const vehicle = useCourierStore((s) => s.vehicle);
@@ -96,6 +104,19 @@ export function CourierAccountScreen({ name, onOpenSetup, onSignOut, onOpenDemoS
             className="items-center rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
           >
             <AppText className="font-sans-bold text-ink-inverse">Terminer mon inscription</AppText>
+          </Pressable>
+        ) : null}
+
+        {onOpenAccount ? (
+          <Pressable
+            testID="courier-account-open"
+            accessibilityRole="button"
+            accessibilityLabel="Mon compte"
+            onPress={onOpenAccount}
+            className="flex-row items-center justify-center gap-2 rounded-control border border-line py-3"
+          >
+            <Feather name="user" size={16} color={colors.ink} />
+            <AppText className="font-sans-semibold text-ink">Mon compte</AppText>
           </Pressable>
         ) : null}
 

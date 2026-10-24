@@ -36,7 +36,7 @@ import { canPublishOffers, ROLE_LABEL } from '@/shared/lib/roles';
  * repartent de zéro (en démonstration, tout vit sur l'appareil), et l'ouverture
  * rejoue le logo animé avant le choix du profil.
  */
-function useSignOut() {
+export function useSignOut() {
   const router = useRouter();
   return () => {
     void useAuthStore.getState().signOut();
@@ -72,6 +72,7 @@ function CourierAccountRoute() {
     <CourierAccountScreen
       name={firstName}
       onOpenSetup={() => router.push('/devenir-livreur')}
+      onOpenAccount={() => router.push('/account')}
       onSignOut={signOut}
       {...(isDemoBuild ? { onOpenDemoSettings: () => router.push('/reglages-demo') } : {})}
     />
@@ -92,6 +93,7 @@ function DefaultProfil() {
       name={firstName}
       subtitle={ROLE_LABEL[role]}
       onSignOut={signOut}
+      onOpenAccount={() => router.push('/account')}
       {...(isDemoBuild ? { onOpenDemoSettings: () => router.push('/reglages-demo') } : {})}
       // Les paliers de fidélité sont ceux d'un COMMERÇANT ; un grossiste vend des lots, pas des points.
       {...(role === 'commercant' ? { onOpenTiers: () => router.push('/paliers') } : {})}

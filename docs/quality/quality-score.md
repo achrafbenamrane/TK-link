@@ -55,6 +55,16 @@ or deletes stale ones. Newest first; keep entries one line each:
   l'inscription pré-remplie, l'IBAN d'exemple, les missions et la vitrine d'exemple et les boutons
   « simuler la validation ». Vérifié : un Metro lancé en production n'en montre aucun.
 
+## Authentification (24/10/2026)
+
+E-mail ou téléphone + mot de passe, codes à 6 chiffres, Google et Apple natifs : livrés et testés côté
+client (faux client Supabase), SQL vérifié par l’analyseur PostgreSQL. **Jamais exécutés contre un
+vrai projet** : connecteur Supabase non branché, ni Docker ni CLI Supabase sur la machine. Avant de
+déclarer l’authentification terminée : `npm run auth:check` sur le projet réel, `supabase test db`
+(pgTAP), puis CUJ-007 sur téléphone. Restent à faire avant la publication iOS : la révocation du jeton
+Apple à la suppression du compte (clé `.p8` côté serveur). Le téléphone exige un fournisseur de SMS
+(Twilio…) ; sans lui, `EXPO_PUBLIC_AUTH_PHONE=off`. Guide : [authentification](../security/authentication.md).
+
 ## FranceConnect (identité du livreur)
 
 Branché côté écran et données, **pas côté service** : il faut l'habilitation de l'État, un serveur OpenID

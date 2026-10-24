@@ -61,6 +61,7 @@ docs-lint keeps every page linked and every link alive.
 
 - [Threat model](security/threat-model.md) — assets, trust boundaries, attacker classes, data classification
 - [Security checklist](security/checklist.md) — the enforceable rule catalog (`SEC-*` rule IDs)
+- [Authentification](security/authentication.md) — e-mail ou téléphone + mot de passe, Google, Apple : fonctionnement, mise en service des consoles, dépannage
 - Coverage matrix: [SECURITY.md](../SECURITY.md) (repo root)
 
 ## Store compliance

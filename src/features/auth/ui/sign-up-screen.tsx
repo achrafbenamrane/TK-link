@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'rea
 
 import { cn } from '@/shared/lib/cn';
 import { CATEGORIES, CATEGORY_INFO, type Category } from '@/shared/lib/categories';
+import { isPhoneAuthEnabled } from '@/shared/lib/env';
 import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
 import { type Role } from '@/shared/lib/roles';
 import { AppText, Button, Checkbox, Screen, TextField, ThemeToggle, Wordmark } from '@/shared/ui';
@@ -17,7 +18,10 @@ import {
   validateRegistration,
   type RegistrationDraft,
 } from '../model/registration';
-import { useAuthStore } from '../model/store';
+import type { SocialProvider } from '../model/social/types';
+import { selectDemoMode, useAuthStore } from '../model/store';
+import { SocialButton, useSocialAvailability } from './social-buttons';
+import { needsVerification, SignUpVerification } from './sign-up-verification';
 
 /** Les deux façons de livrer — « Sur place » n'existe pas dans le CDC. */
 export type ShopMode = 'touch-collect' | 'livraison';
@@ -122,9 +126,20 @@ export function SignUpScreen({
   const [submitting, setSubmitting] = useState(false);
   const [touched, setTouched] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [socialBusy, setSocialBusy] = useState<SocialProvider | null>(null);
+  /** Après l'inscription : le code à saisir, puis le numéro à vérifier. `null` : on montre le formulaire. */
+  const [verification, setVerification] = useState<{
+    email: string;
+    phone: string;
+    needsEmailCode: boolean;
+  } | null>(null);
 
   const storeError = useAuthStore((s) => s.error);
+  const demoMode = useAuthStore(selectDemoMode);
   const signUp = useAuthStore((s) => s.signUp);
+  const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
+  const signInWithApple = useAuthStore((s) => s.signInWithApple);
+  const available = useSocialAvailability();
 
   const serverError = useMemo(
     () => (touched ? friendlyAuthError(storeError) : null),
@@ -136,7 +151,6 @@ export function SignUpScreen({
   const proCopy = PRO_TITLE[role === 'grossiste' ? 'grossiste' : 'commercant'];
   const modeLabel = role === 'grossiste' ? WHOLESALE_MODE_LABEL : MODE_LABEL;
   const dense = pro;
-  const [notice, setNotice] = useState<string | null>(null);
 
   const set = (key: keyof RegistrationDraft, value: string) => {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -176,9 +190,68 @@ export function SignUpScreen({
     });
 
     setSubmitting(true);
-    const result = await signUp(profile.email, draft.password);
+    const result = await signUp(profile.email, draft.password, {
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      phone: profile.phoneE164,
+      accountType: role,
+    });
     setSubmitting(false);
-    if (result.ok) onSignedUp?.();
+    if (!result.ok) return;
+
+    // Un code à saisir, ou un numéro à vérifier : on enchaîne avant de laisser entrer dans l'app.
+    // En démonstration, aucun SMS ne part : on ne propose pas de vérifier un numéro.
+    const phoneEnabled = isPhoneAuthEnabled && !demoMode;
+    if (
+      needsVerification({
+        needsEmailCode: result.needsCode,
+        phone: profile.phoneE164,
+        phoneEnabled,
+      })
+    ) {
+      setVerification({
+        email: profile.email,
+        phone: profile.phoneE164,
+        needsEmailCode: result.needsCode,
+      });
+      return;
+    }
+    onSignedUp?.();
+  };
+
+  /**
+   * « Continuer avec Google / Apple ». Créer un compte, c'est accepter les CGU : la case reste
+   * obligatoire ici aussi. Le reste du formulaire ne l'est pas — Google et Apple donnent déjà
+   * l'identité, et la personne n'a pas à inventer un mot de passe de plus.
+   */
+  const social = async (provider: SocialProvider) => {
+    if (!accepted) {
+      setErrors((e) => ({ ...e, terms: 'Acceptez les CGU et la politique de confidentialité.' }));
+      return;
+    }
+    setTouched(true);
+    setSocialBusy(provider);
+    const result = provider === 'google' ? await signInWithGoogle() : await signInWithApple();
+    setSocialBusy(null);
+    if (!result.ok) return;
+
+    // Le nom du fournisseur l'emporte ; à défaut, ce que la personne avait déjà tapé dans le formulaire.
+    const firstName = result.firstName || draft.firstName.trim();
+    if (firstName) {
+      onProfile?.({
+        firstName,
+        lastName: result.lastName || draft.lastName.trim(),
+        email: '',
+        phone: '',
+        siret: '',
+        location: draft.location.trim(),
+        shopName: '',
+        category: '',
+        address: '',
+        modes,
+      });
+    }
+    onSignedUp?.();
   };
 
   const eye = (
@@ -305,6 +378,27 @@ export function SignUpScreen({
       textContentType="newPassword"
     />,
   ];
+
+  if (verification) {
+    return (
+      <Screen testID="sign-up-verification">
+        <ScrollView
+          contentContainerClassName="flex-grow justify-center py-8"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <SignUpVerification
+            email={verification.email}
+            phone={verification.phone}
+            needsEmailCode={verification.needsEmailCode}
+            phoneEnabled={isPhoneAuthEnabled && !demoMode}
+            onDone={() => onSignedUp?.()}
+            onBack={() => setVerification(null)}
+          />
+        </ScrollView>
+      </Screen>
+    );
+  }
 
   return (
     <Screen testID="sign-up-screen">
@@ -545,38 +639,39 @@ export function SignUpScreen({
                   <View className="h-px flex-1 bg-line" />
                 </View>
                 <View className="flex-row gap-3">
-                  {(
-                    [
-                      ['mail', 'Continuer avec une adresse e-mail', () => onSignIn?.()],
-                      [
-                        'smartphone',
-                        'Continuer avec un numéro de téléphone',
-                        () => setNotice('La connexion par téléphone arrive bientôt.'),
-                      ],
-                      ['user', 'Continuer sans compte', () => onSkip?.()],
-                    ] as const
-                  ).map(([icon, label, onPress]) => (
-                    <Pressable
-                      key={icon}
-                      testID={icon === 'user' ? 'signup-skip' : `signup-alt-${icon}`}
-                      accessibilityRole="button"
-                      accessibilityLabel={label}
-                      onPress={onPress}
-                      className="h-10 flex-1 items-center justify-center rounded-control border border-line bg-surface-muted active:opacity-70"
-                    >
-                      <Feather name={icon} size={19} color={colors.brand500} />
-                    </Pressable>
-                  ))}
+                  {available.google ? (
+                    <SocialButton
+                      provider="google"
+                      variant="icon"
+                      loading={socialBusy === 'google'}
+                      disabled={socialBusy !== null || submitting}
+                      onPress={() => void social('google')}
+                    />
+                  ) : null}
+                  {available.apple ? (
+                    <SocialButton
+                      provider="apple"
+                      variant="icon"
+                      loading={socialBusy === 'apple'}
+                      disabled={socialBusy !== null || submitting}
+                      onPress={() => void social('apple')}
+                    />
+                  ) : null}
+                  {isPhoneAuthEnabled ? (
+                    <AltButton
+                      testID="signup-alt-smartphone"
+                      icon="smartphone"
+                      label="Se connecter avec un numéro de téléphone"
+                      onPress={() => onSignIn?.()}
+                    />
+                  ) : null}
+                  <AltButton
+                    testID="signup-skip"
+                    icon="user"
+                    label="Continuer sans compte"
+                    onPress={() => onSkip?.()}
+                  />
                 </View>
-                {notice ? (
-                  <AppText
-                    testID="signup-notice"
-                    variant="caption"
-                    className="text-center text-ink-faint"
-                  >
-                    {notice}
-                  </AppText>
-                ) : null}
               </View>
             )}
 
@@ -718,6 +813,32 @@ function CategorySelect({
         </AppText>
       ) : null}
     </View>
+  );
+}
+
+/** Un carré d'icône de la rangée « Continuer autrement ». */
+function AltButton({
+  testID,
+  icon,
+  label,
+  onPress,
+}: {
+  testID: string;
+  icon: 'smartphone' | 'user';
+  label: string;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      className="h-10 flex-1 items-center justify-center rounded-control border border-line bg-surface-muted active:opacity-70"
+    >
+      <Feather name={icon} size={19} color={colors.brand500} />
+    </Pressable>
   );
 }
 

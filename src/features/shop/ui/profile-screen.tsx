@@ -90,6 +90,11 @@ type ProfileScreenProps = {
   onSignOut?: () => void;
   /** Build de démonstration : ouvre les réglages à essayer devant le client. */
   onOpenDemoSettings?: () => void;
+  /**
+   * « Mon compte » : la connexion, la vérification du numéro et la SUPPRESSION du compte — un chemin
+   * que les stores exigent facile à trouver (Apple 5.1.1(v)). Rendu par la route.
+   */
+  onOpenAccount?: () => void;
 };
 
 export function ProfileScreen({
@@ -98,6 +103,7 @@ export function ProfileScreen({
   onSignOut,
   onOpenDemoSettings,
   onOpenTiers,
+  onOpenAccount,
   renderAvatar,
   name,
   subtitle,
@@ -119,7 +125,9 @@ export function ProfileScreen({
           testID="profile-identity"
           className="mb-4 flex-row items-center gap-3 rounded-card border border-line bg-surface p-4"
         >
-          <View className="h-14 w-14 overflow-hidden rounded-pill bg-surface-muted">
+          {/* Pas de rognage ici : l’avatar fourni par la route a son propre cercle, et le « + » qui
+              invite à le modifier déborde volontairement du bord. */}
+          <View className="h-16 w-16 items-center justify-center">
             {renderAvatar ? renderAvatar() : null}
           </View>
           <View className="flex-1">
@@ -204,6 +212,14 @@ export function ProfileScreen({
 
         {/* Menu */}
         <View className="rounded-card border border-line bg-surface px-4">
+          {onOpenAccount ? (
+            <Row
+              testID="profile-account"
+              icon={<Feather name="user" size={17} color={colors.ink} />}
+              label="Mon compte"
+              onPress={onOpenAccount}
+            />
+          ) : null}
           {!canPublishOffers ? (
             <Row
               testID="profile-recompenses"

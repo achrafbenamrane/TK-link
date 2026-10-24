@@ -7,7 +7,7 @@ import type { Session } from '@supabase/supabase-js';
  * ⚠️ CE N'EST PAS UNE AUTHENTIFICATION. Rien n'est vérifié, rien n'est envoyé
  * nulle part, et aucun mot de passe n'est conservé — ni en clair, ni haché :
  * un condensat rangé sur le téléphone sans serveur en face ne protège personne
- * et ne fait qu'ajouter un secret à voler. On garde l'e-mail, c'est tout.
+ * et ne fait qu'ajouter un secret à voler. On garde l'identifiant, c'est tout.
  *
  * Ce mode n'existe que tant que `EXPO_PUBLIC_SUPABASE_URL` et
  * `EXPO_PUBLIC_SUPABASE_ANON_KEY` ne sont pas renseignés. Dès qu'ils le sont,
@@ -19,15 +19,30 @@ import type { Session } from '@supabase/supabase-js';
 export const DEMO_TOKEN = 'demo-session-no-backend';
 
 /**
+ * Le code à six chiffres qu'accepte la démonstration, partout où un vrai serveur en enverrait un
+ * (confirmation de l'e-mail, du numéro, mot de passe oublié). Il est affiché à l'écran : c'est la
+ * démo, personne ne reçoit rien.
+ */
+export const DEMO_CODE = '123456';
+
+/** Le fournisseur d'identité d'une session de démonstration. */
+export type DemoProvider = 'demo' | 'google' | 'apple';
+
+/**
  * Fabrique une session de démonstration à la forme de celle de Supabase.
  *
- * Le cast est assumé : `Session` décrit ce que renvoie un vrai serveur (jetons
- * signés, métadonnées d'app, fournisseur d'identité). En reproduire la totalité
- * n'apporterait rien — seuls `user.email` et l'existence de la session sont lus
- * par l'app.
+ * `identifier` est une adresse e-mail ou un numéro de téléphone : on range l'un ou l'autre au bon
+ * endroit, comme le ferait le serveur. Le cast est assumé : `Session` décrit ce que renvoie un vrai
+ * serveur (jetons signés, métadonnées d'app, fournisseur d'identité). En reproduire la totalité
+ * n'apporterait rien — seuls l'identifiant et l'existence de la session sont lus par l'app.
  */
-export function makeDemoSession(email: string, nowMs: number = Date.now()): Session {
+export function makeDemoSession(
+  identifier: string,
+  nowMs: number = Date.now(),
+  provider: DemoProvider = 'demo',
+): Session {
   const seconds = Math.floor(nowMs / 1000);
+  const isEmail = identifier.includes('@');
   return {
     access_token: DEMO_TOKEN,
     refresh_token: DEMO_TOKEN,
@@ -38,10 +53,10 @@ export function makeDemoSession(email: string, nowMs: number = Date.now()): Sess
     expires_at: seconds + 3600,
     user: {
       id: `demo-${seconds}`,
-      email,
+      ...(isEmail ? { email: identifier } : { phone: identifier.replace(/^\+/, '') }),
       aud: 'authenticated',
       role: 'authenticated',
-      app_metadata: { provider: 'demo', providers: ['demo'] },
+      app_metadata: { provider, providers: [provider] },
       user_metadata: { demo: true },
       created_at: new Date(nowMs).toISOString(),
     },

@@ -113,6 +113,23 @@ enforces).
 - **À vérifier sur téléphone, pas en navigateur :** le scan du QR (caméra), la
   biométrie réelle, la carte Mapbox, la lecture de la vidéo de la vitrine.
 
+## CUJ-007 — Compte : inscription, connexion, mot de passe oublié
+
+- **Owner :** squad produit TK LINK
+- **Flow :** aucun — couvert par `auth/__tests__/` (écrans, store, service) ; à dérouler sur téléphone
+  avec un projet Supabase branché (`npm run auth:check` d’abord).
+- **Journey :** créer un compte par e-mail → saisir le code reçu → « Vérifier mon numéro » → code SMS →
+  se déconnecter → se reconnecter **avec le numéro** → « Mot de passe oublié » → code → nouveau mot de
+  passe → « Continuer avec Google » (Android et iPhone) → « Continuer avec Apple » (iPhone) → Profil →
+  « Mon compte » → « Supprimer mon compte ».
+- **Edge cases agents must try :** mauvais code puis bon code, code expiré, « Renvoyer le code » avant
+  la fin du délai (bloqué), adresse déjà inscrite, numéro inconnu au mot de passe oublié (même
+  message qu’un numéro connu), fenêtre Google ou Apple fermée (aucune erreur), réseau coupé pendant la
+  connexion, fournisseur de SMS absent (« Plus tard » reste possible), Apple qui ne redonne pas le nom à
+  la seconde connexion.
+- **À vérifier sur téléphone, pas en navigateur :** les fenêtres Google et Apple, le remplissage
+  automatique du code SMS, la session qui survit à la fermeture de l’app.
+
 ## Template for new CUJs
 
 ```
