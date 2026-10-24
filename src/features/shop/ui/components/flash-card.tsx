@@ -1,6 +1,6 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, PushButton } from '@/shared/ui';
@@ -77,7 +77,10 @@ export function FlashCard({ deal }: Props) {
   return (
     <Pressable
       testID={`deal-${deal.id}`}
-      accessibilityRole="button"
+      // La carte OUVRE la fiche produit, et contient ses propres boutons (favori, panier). Sur le web,
+      // un bouton dans un bouton est du HTML invalide : la carte y est donc un lien — ce qu'elle est.
+      // Sur téléphone, rien ne change.
+      accessibilityRole={Platform.OS === 'web' ? 'link' : 'button'}
       accessibilityLabel={`${deal.title}${
         // Sans le film et l'heure, la carte est inutilisable sans les yeux :
         // c'est la séance qui décide de l'achat, pas le mot « place ».
