@@ -9,6 +9,8 @@ const session = (user: Record<string, unknown>): Session =>
     user: { id: 'u1', app_metadata: {}, user_metadata: {}, ...user },
   }) as unknown as Session;
 
+const CONFIRMED_AT = '2026-10-24T10:00:00Z';
+
 describe('describeAccount', () => {
   it('ne dit rien sans session', () => {
     expect(describeAccount(null)).toBeNull();
@@ -20,37 +22,64 @@ describe('describeAccount', () => {
     ).toEqual({
       email: 'neo@exemple.fr',
       phone: null,
-      phoneVerified: false,
+      phoneLinked: false,
       provider: 'email',
       firstName: '',
     });
   });
 
-  it('le numéro saisi à l’inscription est un contact : affiché, mais pas vérifié', () => {
+  it('le numéro saisi à l’inscription est un contact : affiché, mais pas encore associé', () => {
     const info = describeAccount(
       session({
         email: 'a@b.fr',
         user_metadata: { contact_phone: '+33612345678', first_name: 'Neo' },
       }),
     );
-    expect(info).toMatchObject({ phone: '+33612345678', phoneVerified: false, firstName: 'Neo' });
+    expect(info).toMatchObject({ phone: '+33612345678', phoneLinked: false, firstName: 'Neo' });
   });
 
-  it('un numéro confirmé par SMS est vérifié ; Supabase le range sans « + », on le rétablit', () => {
+  it('un numéro associé au compte sert à se connecter ; Supabase le range sans « + », on le rétablit', () => {
+    const info = describeAccount(
+      session({ email: 'a@b.fr', phone: '33612345678', phone_confirmed_at: CONFIRMED_AT }),
+    );
+    expect(info).toMatchObject({ phone: '+33612345678', phoneLinked: true });
+  });
+
+  it('un numéro qui porte déjà son « + » n’en reçoit pas un second', () => {
+    const info = describeAccount(
+      session({ phone: '+33612345678', phone_confirmed_at: CONFIRMED_AT }),
+    );
+    expect(info).toMatchObject({ phone: '+33612345678', phoneLinked: true });
+  });
+
+  it('le numéro associé l’emporte sur le contact saisi à l’inscription', () => {
     const info = describeAccount(
       session({
-        email: 'a@b.fr',
-        phone: '33612345678',
-        phone_confirmed_at: '2026-10-24T10:00:00Z',
+        phone: '33711223344',
+        phone_confirmed_at: CONFIRMED_AT,
+        user_metadata: { contact_phone: '+33612345678' },
       }),
     );
-    expect(info).toMatchObject({ phone: '+33612345678', phoneVerified: true });
+    expect(info).toMatchObject({ phone: '+33711223344', phoneLinked: true });
   });
 
-  it('un numéro présent mais non confirmé n’est pas vérifié', () => {
+  it('un numéro présent mais non confirmé n’est pas associé : Supabase refuserait la connexion', () => {
     expect(describeAccount(session({ phone: '33612345678' }))).toMatchObject({
-      phoneVerified: false,
+      phone: '+33612345678',
+      phoneLinked: false,
     });
+  });
+
+  it('une date de confirmation sans numéro ne suffit pas', () => {
+    expect(describeAccount(session({ phone: '', phone_confirmed_at: CONFIRMED_AT }))).toMatchObject(
+      { phone: null, phoneLinked: false },
+    );
+  });
+
+  it('ignore un contact qui n’est pas du texte', () => {
+    expect(
+      describeAccount(session({ user_metadata: { contact_phone: 33612345678 } })),
+    ).toMatchObject({ phone: null, phoneLinked: false });
   });
 
   it('reconnaît Google et Apple, et retombe sur « email » pour un fournisseur inconnu', () => {
@@ -71,16 +100,31 @@ describe('describeAccount', () => {
     );
   });
 
-  it('une session de démonstration est lue comme telle', () => {
+  it('une session de démonstration est décrite comme les autres', () => {
     expect(describeAccount(makeDemoSession('neo@exemple.fr'))).toMatchObject({
       email: 'neo@exemple.fr',
+      phone: null,
+      phoneLinked: false,
       provider: 'demo',
     });
-    // Un identifiant téléphonique de démonstration est « vérifié » : il a servi à se connecter.
+    expect(
+      describeAccount(makeDemoSession('alex.demo@gmail.com', Date.now(), 'google')),
+    ).toMatchObject({ provider: 'google' });
+
+    // Plus de passe-droit : sans date de confirmation, un numéro n'est pas associé, démo ou pas.
     expect(describeAccount(makeDemoSession('+33612345678'))).toMatchObject({
       email: null,
       phone: '+33612345678',
-      phoneVerified: true,
+      phoneLinked: false,
+    });
+
+    // Le store, lui, la pose quand la démonstration associe un numéro (voir `demo-flows.test.ts`).
+    const linked = makeDemoSession('+33612345678');
+    linked.user.phone_confirmed_at = linked.user.created_at;
+    expect(describeAccount(linked)).toMatchObject({
+      phone: '+33612345678',
+      phoneLinked: true,
+      provider: 'demo',
     });
   });
 });

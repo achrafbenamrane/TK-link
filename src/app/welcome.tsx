@@ -1,23 +1,12 @@
-import { useRouter } from 'expo-router';
-
-import { selectCompleted, useOnboardingStore } from '@/features/onboarding';
 import { useWelcomeStore, WelcomeScreen } from '@/features/welcome';
 
 /**
- * L'OUVERTURE : le logo s'anime, puis on passe à la suite sans rien toucher —
- * le choix du profil au premier lancement, l'accueil quand le compte existe déjà.
+ * L'OUVERTURE : le logo s'anime, puis dit qu'il a fini. La suite — le choix du profil, la
+ * connexion, l'accueil — c'est la porte du layout qui la décide (`decideEntry`) : elle seule sait
+ * si une session existe. Si la session n'est pas encore relue, le logo reste affiché le temps qu'elle
+ * le soit.
  */
 export default function WelcomeRoute() {
-  const router = useRouter();
-  const completed = useOnboardingStore(selectCompleted);
   const markSplashDone = useWelcomeStore((s) => s.markSplashDone);
-
-  return (
-    <WelcomeScreen
-      onDone={() => {
-        markSplashDone();
-        router.replace(completed ? '/' : '/role');
-      }}
-    />
-  );
+  return <WelcomeScreen onDone={markSplashDone} />;
 }

@@ -11,24 +11,34 @@ verify_jwt = false
 # Called by a signed-in user — require a valid Supabase JWT (the default).
 verify_jwt = true
 
+[functions.link-phone]
+# Associe un numéro au compte CONNECTÉ (sans code, avant Prelude) : JWT obligatoire.
+verify_jwt = true
+
 # ─────────────────────────────────────────────────────────────── authentification
 #
-# Ce que l'app attend du serveur (voir docs/security/authentication.md) :
-#   - e-mail + mot de passe, avec confirmation par CODE à six chiffres ;
-#   - téléphone + mot de passe, confirmé par SMS (fournisseur à brancher) ;
-#   - Google et Apple par jeton d'identité natif (pas de redirection).
+# Ce que l'app attend du serveur (voir docs/security/authentication.md, ADR-0010) :
+#   - un compte OBLIGATOIRE pour entrer dans l'app ;
+#   - e-mail + mot de passe, avec confirmation par CODE à six chiffres, envoyé par Resend ;
+#   - téléphone + mot de passe, SANS SMS pour l'instant : le numéro est associé par la fonction
+#     Edge `link-phone` (la vérification par SMS viendra avec Prelude) ;
+#   - Google par jeton natif ; Apple par jeton natif sur iPhone, par sa page web (PKCE) sur Android.
 #
-# Ces réglages servent à la base LOCALE (`supabase start`) et peuvent être poussés vers le projet
-# hébergé avec `supabase config push`. Sur le projet hébergé, ils se règlent aussi dans le tableau
-# de bord (Authentication) : c'est le chemin décrit dans la doc. Les secrets ne sont JAMAIS écrits
-# ici : `env(...)` les lit dans l'environnement de la machine qui lance la commande.
+# Ces réglages servent à la base LOCALE (`supabase start`). Le projet HÉBERGÉ se règle dans le
+# tableau de bord (Authentication) — c'est le chemin décrit dans la doc. Ne PAS y pousser la section
+# `[auth]` avec `supabase config push` : la CLI coupe la connexion par téléphone faute de
+# fournisseur de SMS, inverse `enable_confirmations` (voir `[auth.sms]`), et une section SMTP
+# désactivée effacerait celle de Resend. Les secrets ne sont JAMAIS écrits ici : `env(...)` les lit
+# dans l'environnement de la machine qui lance la commande.
 
 [auth]
 enabled = true
 # Adresse du site TK LINK — sert de lien de repli dans les e-mails. À remplacer par le vrai domaine.
 site_url = "https://tklink.fr"
-# Le schéma de l'app : seul retour autorisé si un jour un lien (et non un code) est utilisé.
-additional_redirect_urls = ["tklink://"]
+# Le SEUL retour autorisé : Apple sur Android (page web d'Apple, PKCE) revient ici. Entrée EXACTE —
+# « tklink:// » seul ne couvre pas « tklink://auth/callback », et Supabase renverrait alors sans rien
+# dire vers site_url : l'onglet ne reviendrait jamais à l'app.
+additional_redirect_urls = ["tklink://auth/callback"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
@@ -39,11 +49,29 @@ minimum_password_length = 8
 password_requirements = ""
 
 [auth.rate_limit]
-# Envois d'e-mails et de SMS par heure : protège le budget SMS et la réputation d'envoi.
+# Envois d'e-mails et de SMS par heure : protège le budget et la réputation d'envoi. `email_sent` ne
+# vaut qu'avec un SMTP personnalisé (Resend) : sans lui, Supabase plafonne à 2 e-mails par heure,
+# réservés aux membres de l'équipe. À relever dans le tableau de bord (Authentication → Rate Limits)
+# une fois Resend branché — sans dépasser le quota du forfait Resend (gratuit : 100 par jour).
 email_sent = 30
 sms_sent = 30
 sign_in_sign_ups = 30
 token_verifications = 30
+
+# L'envoi des e-mails passe par Resend (SMTP), réglé dans le tableau de bord du projet HÉBERGÉ
+# (Authentication → Emails → SMTP Settings, ou l'intégration « Connect to Supabase » de Resend). Il
+# n'est volontairement PAS décrit ici : activé, `supabase start` enverrait de vrais e-mails au lieu de
+# Mailpit ; désactivé, un `config push` effacerait le réglage hébergé. Pour le pousser malgré tout,
+# le mettre dans un bloc `[remotes.production]` (project_id = la référence du projet hébergé) :
+#
+#   [remotes.production.auth.email.smtp]
+#   enabled = true
+#   host = "smtp.resend.com"
+#   port = 465
+#   user = "resend"
+#   pass = "env(SUPABASE_AUTH_EMAIL_SMTP_PASS)"   # clé Resend « Sending access »
+#   admin_email = "no-reply@auth.<domaine vérifié>"
+#   sender_name = "TK LINK"
 
 [auth.email]
 enable_signup = true
@@ -64,23 +92,30 @@ subject = "Changer votre mot de passe TK LINK"
 content_path = "./supabase/templates/recovery.html"
 
 [auth.sms]
-# Téléphone + mot de passe, confirmé par SMS.
+# Téléphone + mot de passe, SANS SMS pour l'instant : le numéro est associé (et confirmé côté Auth)
+# par la fonction Edge `link-phone`, puis sert à se connecter avec le même mot de passe.
+#
+# Projet hébergé — dans le tableau de bord, PAS avec `config push` :
+#   1. Authentication → Hooks → « Send SMS » → Postgres → `public.send_sms_disabled` (refuse tout
+#      envoi : plus d'inscription par téléphone, plus de numéro changé sans preuve) ;
+#   2. Authentication → Providers → Phone → activé, « Enable phone confirmations » ACTIVÉ.
+# Pourquoi pas la CLI : sans fournisseur de SMS ici, elle coupe la connexion par téléphone ; et elle
+# envoie `enable_confirmations` tel quel dans `sms_autoconfirm`, c'est-à-dire À L'ENVERS.
+#
+# Pas de numéros de test (`[auth.sms.test_otp]`) : ils contournent le crochet, donc permettraient de
+# créer un compte par téléphone.
+#
+# En LOCAL (`supabase start`), la connexion par numéro est donc coupée par la CLI : pour la tester,
+# ajouter un bloc `[auth.sms.twilio]` factice avec `enabled = true` (le crochet empêche tout envoi).
 enable_signup = true
 enable_confirmations = true
 template = "TK LINK : votre code est {{ .Code }}. Il expire dans 1 heure."
 max_frequency = "60s"
 
-# Fournisseur de SMS : sans lui, aucun code ne part (l'app le dit, et propose l'e-mail).
-# Twilio est le plus courant ; renseigner les identifiants, puis passer `enabled` à true.
-[auth.sms.twilio]
-enabled = false
-account_sid = ""
-message_service_sid = ""
-auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
-
-# Numéros de TEST (développement) : aucun SMS n'est envoyé, le code est fixe.
-[auth.sms.test_otp]
-33600000001 = "123456"
+# Aucun SMS avant Prelude (migration 0008). Avec Prelude, ce crochet pointera vers son adresse HTTPS.
+[auth.hook.send_sms]
+enabled = true
+uri = "pg-functions://postgres/public/send_sms_disabled"
 
 # Google — jeton d'identité natif. `client_id` : l'identifiant « Web » EN PREMIER, puis ceux
 # d'Android et d'iOS, séparés par des virgules. Le secret est celui du client « Web ».
@@ -90,9 +125,13 @@ client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
 skip_nonce_check = false
 
-# Apple — jeton d'identité natif (iOS). `client_id` : les identifiants de bundle de l'app, séparés
-# par des virgules (com.progix.tklink, com.progix.tklink.preview, com.progix.tklink.dev). Pas de
-# secret nécessaire pour le parcours natif seul.
+# Apple — deux parcours, un seul compte (l'identifiant Apple est le même pour toute l'équipe Progix) :
+#   - iPhone : jeton d'identité natif ; tout identifiant de la liste est accepté ;
+#   - Android : la page web d'Apple (OAuth + PKCE, retour sur tklink://auth/callback). Elle utilise le
+#     PREMIER identifiant — le Services ID — et EXIGE le secret : un JWT ES256 signé avec la clé .p8
+#     d'Apple, valable 6 mois au plus. À renouveler avant l'échéance, sinon Apple échoue sur Android.
+# `client_id` : com.progix.tklink.web,com.progix.tklink,com.progix.tklink.preview,com.progix.tklink.dev
+# (le Services ID EN PREMIER). Procédure complète : docs/security/authentication.md.
 [auth.external.apple]
 enabled = true
 client_id = "env(SUPABASE_AUTH_EXTERNAL_APPLE_CLIENT_ID)"

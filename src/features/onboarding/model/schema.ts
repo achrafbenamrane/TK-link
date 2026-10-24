@@ -106,6 +106,12 @@ export const OnboardingSchema = z.object({
    * déclarés : Zod ignore les clés inconnues, un profil qui les contient se
    * relit donc sans erreur (voir le test de rétrocompatibilité).
    */
+  /**
+   * Le compte auquel appartient ce profil local (l'identifiant Supabase). Un AUTRE compte qui se
+   * connecte sur cet appareil (session expirée, sans déconnexion) ne doit pas hériter des données
+   * du précédent : la route racine compare et remet à zéro (ADR-0010). Vide : pas encore connu.
+   */
+  ownerId: z.string().max(64).default(''),
   interests: z
     .array(z.string())
     .default([])

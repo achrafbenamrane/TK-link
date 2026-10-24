@@ -35,27 +35,38 @@ import { canPublishOffers, ROLE_LABEL } from '@/shared/lib/roles';
  * commandes, la fidélité, les offres, la boutique, le livreur et le parrainage
  * repartent de zéro (en démonstration, tout vit sur l'appareil), et l'ouverture
  * rejoue le logo animé avant le choix du profil.
+ *
+ * La navigation revient à la porte du layout : le logo animé se rejoue dès que
+ * `splashDone` repasse à faux, et la suite attend que la session soit fermée — la
+ * session part donc EN PREMIER (son statut passe aussitôt en attente).
  */
 export function useSignOut() {
-  const router = useRouter();
   return () => {
     void useAuthStore.getState().signOut();
-    useOnboardingStore.getState().reset();
-    useShopStore.setState({
-      cart: [],
-      favorites: [],
-      orders: [],
-      addresses: [],
-      merchantApplication: null,
-    });
-    useMerchantStore.getState().resetDemo();
-    useMerchantLoyaltyStore.setState({ cards: {}, programs: {}, rewards: [] });
-    useCourierStore.getState().reset();
-    useReferralStore.setState({ myCode: '', referredBy: null, credit: 'aucun' });
-    useReceiptsStore.setState({ receipts: [] });
+    resetLocalData();
     useWelcomeStore.setState({ splashDone: false });
-    router.replace('/welcome');
   };
+}
+
+/**
+ * Ce que l'appareil garde d'un compte : profil, panier, commandes, fidélité, boutique, livreur,
+ * parrainage, tickets. Remis à zéro à la déconnexion, et quand un AUTRE compte se connecte sur cet
+ * appareil (voir `AccountOwnerGuard` dans le layout racine) : il n'hérite de rien.
+ */
+export function resetLocalData(): void {
+  useOnboardingStore.getState().reset();
+  useShopStore.setState({
+    cart: [],
+    favorites: [],
+    orders: [],
+    addresses: [],
+    merchantApplication: null,
+  });
+  useMerchantStore.getState().resetDemo();
+  useMerchantLoyaltyStore.setState({ cards: {}, programs: {}, rewards: [] });
+  useCourierStore.getState().reset();
+  useReferralStore.setState({ myCode: '', referredBy: null, credit: 'aucun' });
+  useReceiptsStore.setState({ receipts: [] });
 }
 
 export default function ProfilRoute() {

@@ -1,42 +1,45 @@
 # Filet anti-crash : l'app démarre et affiche quelque chose de réel.
 #
-# Premier lancement (parcours du client) : bienvenue → compte (on continue sans
-# compte) → centres d'intérêt → accueil. Un smoke test qui s'arrêterait à la
-# bienvenue ne prouverait rien du reste de l'app.
+# Premier lancement (ADR-0010 : le compte est obligatoire) : logo animé → choix du profil →
+# l'inscription n'a plus de « Continuer sans compte ». Puis la démonstration ouvre une session
+# locale, sans réseau, et entre dans l'app : le test ne dépend d'aucun serveur.
 #
 # Run locally: npm run e2e:ios (requires `maestro` + a booted simulator with a
-# development build installed).
+# development build installed — le bouton « Démo » n'existe pas en production).
 appId: com.progix.tklink.dev
 ---
+# `clearState` n'efface pas le trousseau iOS, où la session de démonstration est rangée : sans
+# `clearKeychain`, une seconde exécution démarrerait déjà connectée.
+- clearKeychain
 - launchApp:
     clearState: true
 
+# Le logo animé, puis le choix du profil : sans compte, rien d'autre ne s'ouvre.
 - assertVisible:
     id: 'welcome-screen'
-- tapOn:
-    id: 'welcome-skip'
+- extendedWaitUntil:
+    visible:
+      id: 'role-screen'
+    timeout: 15000
 
-# Compte : sans compte, on passe directement à la suite.
+# Le compte est obligatoire : l'inscription ne propose plus de continuer sans lui.
+- tapOn:
+    id: 'role-consommateur'
 - assertVisible:
     id: 'sign-up-screen'
-- tapOn:
+- assertNotVisible:
     id: 'signup-skip'
 
-# Centres d'intérêt, localisation, sécurisation : chaque écran se passe d'un geste.
-- assertVisible:
-    id: 'onboarding-screen'
+# La démonstration : une session locale, puis l'accueil et ses ventes Flash.
+- clearKeychain
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'role-screen'
+    timeout: 15000
 - tapOn:
-    id: 'interest-restauration'
-- tapOn:
-    id: 'onboarding-next'
-- tapOn:
-    id: 'onboarding-skip'
-- tapOn:
-    id: 'onboarding-skip'
-- tapOn:
-    id: 'onboarding-next'
-
-# L'accueil : les ventes Flash, avec de vraies offres.
+    id: 'role-demo-consommateur'
 - assertVisible:
     id: 'home-screen'
 - assertVisible:

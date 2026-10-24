@@ -62,8 +62,32 @@ client (faux client Supabase), SQL vérifié par l’analyseur PostgreSQL. **Jam
 vrai projet** : connecteur Supabase non branché, ni Docker ni CLI Supabase sur la machine. Avant de
 déclarer l’authentification terminée : `npm run auth:check` sur le projet réel, `supabase test db`
 (pgTAP), puis CUJ-007 sur téléphone. Restent à faire avant la publication iOS : la révocation du jeton
-Apple à la suppression du compte (clé `.p8` côté serveur). Le téléphone exige un fournisseur de SMS
-(Twilio…) ; sans lui, `EXPO_PUBLIC_AUTH_PHONE=off`. Guide : [authentification](../security/authentication.md).
+Apple à la suppression du compte (clé `.p8` côté serveur). Guide : [authentification](../security/authentication.md).
+
+**Mise à jour (ADR-0010) :** compte obligatoire, numéro associé SANS SMS (fonction Edge `link-phone`),
+e-mails par Resend, Apple sur Android par sa page web. Landmines connues :
+
+- **Le domaine `tklink.fr` n’est pas enregistré** : Resend ne peut rien envoyer tant qu’un domaine à
+  soi n’est pas vérifié — bloquant pour toute inscription réelle par e-mail.
+- **Un numéro associé n’est pas prouvé** (squat possible, borné : un numéro par compte, cinq
+  numéros essayés par jour). Prelude le vérifiera ; `phone_verified` reste faux d’ici là.
+- **Le secret Apple expire tous les 180 jours** (`npm run apple:secret`) : sans rappel, Apple tombe
+  sur Android sans prévenir.
+- **Ne pas pousser `[auth]` avec `supabase config push`** : la CLI inverse la confirmation des SMS et
+  coupe la connexion par numéro. Tout se règle dans le tableau de bord.
+- **Les trois variantes partagent le schéma `tklink`** : avec plusieurs installées, le retour d’Apple
+  peut ouvrir la mauvaise (l’échange échoue alors sans risque). Un schéma par variante : plus tard.
+- **Flows Maestro** : `smoke.yaml` est réécrit pour le compte obligatoire (non exécuté : pas de
+  simulateur sur cette machine) ; `commercant-cuj.yaml` était déjà périmé (lien `tklink://commercant`
+  hors liste, formulaire jamais validé) — à réécrire depuis le choix du profil.
+- **Les données locales appartiennent à un compte** (`ownerId` du profil local, `AccountSync`) :
+  un AUTRE compte qui se connecte remet tout à zéro. Exception assumée : pendant une inscription, rien
+  n’est effacé (ce qui vient d’être saisi est celui du nouveau compte).
+- **Énumération sans compte** : `signUp({ phone })` répond autrement pour un numéro associé et pour
+  un numéro libre — bornée par les limites d’Auth par IP seulement. Prelude ou un CAPTCHA d’Auth.
+- **Lancement hors ligne, jeton expiré** : l’app montre la connexion (supabase-js rend une session
+  vide) ; elle entre seule dès que le jeton est renouvelé. La déconnexion hors ligne efface la session
+  locale elle-même (supabase-js ne le fait pas dans ce cas) et n’attend pas plus de 5 s.
 
 ## FranceConnect (identité du livreur)
 

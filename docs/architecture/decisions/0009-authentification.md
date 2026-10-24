@@ -1,6 +1,6 @@
 # ADR-0009 — Authentification : e-mail ou téléphone + mot de passe, Google et Apple natifs
 
-- **Status:** accepted
+- **Status:** accepted — décisions 1, 3 et 4 remplacées, décision 2 en partie, par [ADR-0010](0010-compte-obligatoire-numero-sans-sms.md) (plus de fournisseur de SMS ; Apple sur Android revient par `tklink://auth/callback`)
 - **Date:** 2026-10-24
 - **Deciders:** Achraf (développement), demande du client TK LINK
 

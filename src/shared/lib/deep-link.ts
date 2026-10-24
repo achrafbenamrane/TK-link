@@ -52,6 +52,22 @@ export function resolveDeepLinkPath(path: string | null | undefined): string {
 }
 
 /**
+ * Le retour de la page de connexion Apple (Android) : `tklink://auth/callback?code=…`.
+ *
+ * L'onglet du navigateur remet ce lien à la connexion EN COURS, qui échange le code contre une session
+ * (`signInWithAppleWeb`). Ce n'est PAS une page de l'app : le routeur ne doit pas naviguer — il
+ * afficherait « introuvable » en pleine connexion. Le code qu'il porte n'est jamais lu ici.
+ *
+ * Reconnu sous ses deux formes (lien complet, ou chemin seul), et seulement celles-là : un autre hôte
+ * (`tklink://evil/auth/callback`, `https://…/auth/callback`) n'est pas un retour de connexion.
+ */
+export function isAuthCallback(path: string | null | undefined): boolean {
+  if (!path) return false;
+  const bare = path.trim().split(/[?#]/)[0] ?? '';
+  return /^(?:[a-z][a-z0-9+.-]*:\/\/)?\/?auth\/callback\/?$/i.test(bare);
+}
+
+/**
  * Guard for following an EXTERNAL url (browser / WebView). Only https on an
  * allowlisted host may be opened — defeats open-redirect via deep-link params.
  */

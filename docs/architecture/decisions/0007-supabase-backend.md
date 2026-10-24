@@ -37,7 +37,8 @@ Adopt Supabase with a **secure-by-default** data layer:
    `autoRefreshToken`, `lock: processLock`, AppState refresh. Only the
    anon/publishable key is bundled (env.ts rejects a service_role key).
 5. **Auth feature slice** (`src/features/auth`): Zod-validated sign in/up/out, a
-   session store, and a `useProtectedRoute` guard wired into the root layout.
+   session store, and a `useProtectedRoute` guard wired into the root layout. _(Note 24/10/2026 :
+   remplacé par la porte d’entrée `decideEntry` / `EntryGate`, ADR-0010.)_
 6. **Verification:** pgTAP RLS tests (`supabase test db`) assert the invariants, and
    `supabase db lint` (Security Advisor) is a release gate — block on ERROR lints
    0007/0013/0015.

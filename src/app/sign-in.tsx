@@ -1,22 +1,48 @@
-import { useRouter } from 'expo-router';
+import { useIsFocused, useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
-import { SignInScreen } from '@/features/auth';
+import { homeFor, SignInScreen, useAuthStore } from '@/features/auth';
 import { useOnboardingStore } from '@/features/onboarding';
 
 /**
- * Routes stay THIN — wire the URL to the feature screen. The root layout's
- * `useProtectedRoute` redirects here when there is no session.
+ * Entrer dans l'app une fois connecté — après la connexion, ou après un nouveau mot de passe.
  *
- * Après une connexion réussie on entre dans l'app. Si le profil local n'a
- * jamais été rempli (nouvelle installation), la porte du layout enchaîne sur
- * l'onboarding : l'avatar et les centres d'intérêt vivent sur le téléphone,
- * pas dans la session.
+ * Le TYPE DE COMPTE vient du serveur : sur un nouvel appareil (ou après une déconnexion, qui remet
+ * l'accueil à zéro), le profil local ne le connaît pas, et un grossiste se verrait proposer l'accueil
+ * d'un client. On l'aligne donc AVANT de partir (`syncProfile`) — l'écran garde son indicateur de
+ * chargement pendant ce temps — puis on va là où la porte du layout l'enverrait (`homeFor`) :
+ * l'accueil, ou les étapes d'accueil de ce profil si cet appareil ne les a pas encore vues.
+ */
+export function useEnterApp() {
+  const router = useRouter();
+  const syncProfile = useAuthStore((s) => s.syncProfile);
+  return useCallback(async () => {
+    // Se connecter ne DÉCLARE rien : un compte dont le type n'a jamais été déclaré (créé par Google
+    // ou Apple depuis cet écran, sans le formulaire) est un compte client. Un professionnel passe par
+    // l'inscription, sa fiche et ses CGU.
+    const profile = await syncProfile(useOnboardingStore.getState().role, { declare: false });
+    const local = useOnboardingStore.getState();
+    if (profile) {
+      local.setRole(profile.declared ? profile.accountType : 'consommateur');
+      // Le prénom choisi sur cet appareil l'emporte ; à défaut, celui du compte.
+      if (profile.firstName && !local.firstName) local.setFirstName(profile.firstName);
+    }
+    const { completed, role } = useOnboardingStore.getState();
+    router.replace(homeFor({ auth: 'authenticated', onboardingCompleted: completed, role }));
+  }, [router, syncProfile]);
+}
+
+/**
+ * LA CONNEXION — e-mail ou numéro + mot de passe, Google, Apple. Un compte est obligatoire : la
+ * porte du layout amène ici quiconque a déjà installé l'app sans session ouverte.
  */
 export default function SignInRoute() {
   const router = useRouter();
+  const enterApp = useEnterApp();
+  // Au premier plan seulement : sous « Mot de passe oublié », la session du code de récupération ne
+  // doit pas faire entrer dans l'app avant le nouveau mot de passe.
+  const focused = useIsFocused();
   const onCreateAccount = useCallback(() => router.replace('/role'), [router]);
-  const onSignedIn = useCallback(() => router.replace('/'), [router]);
   const onForgotPassword = useCallback(() => router.push('/forgot-password'), [router]);
   // Google / Apple donnent le prénom : il rejoint le profil local, comme celui du formulaire.
   const setFirstName = useOnboardingStore((s) => s.setFirstName);
@@ -29,9 +55,10 @@ export default function SignInRoute() {
   return (
     <SignInScreen
       onCreateAccount={onCreateAccount}
-      onSignedIn={onSignedIn}
+      onSignedIn={enterApp}
       onForgotPassword={onForgotPassword}
       onProfile={onProfile}
+      active={focused}
     />
   );
 }

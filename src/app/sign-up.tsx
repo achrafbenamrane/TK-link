@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
-import { SignUpScreen, type SignUpProfile } from '@/features/auth';
+import { firstRunRoute, SignUpScreen, useAuthStore, type SignUpProfile } from '@/features/auth';
 import { AvatarPicker, selectRole, useOnboardingStore } from '@/features/onboarding';
 import { useShopStore } from '@/features/shop';
 import { isDemoBuild } from '@/shared/lib/env';
@@ -13,10 +13,10 @@ import { isDemoBuild } from '@/shared/lib/env';
  * formulaire vit dans `auth`, la demande du commerçant dans `shop`. Les trois
  * features s'ignorent ; c'est ici qu'elles se rencontrent.
  *
- * Le compte ouvre le parcours (étape 2 du parcours du client) ; une fois
- * inscrit — ou en continuant sans compte — on enchaîne sur les centres
- * d'intérêt, la localisation et la sécurisation. La porte du layout laisse
- * passer tant que l'onboarding n'est pas terminé.
+ * Le compte ouvre le parcours (étape 2 du parcours du client) et il est OBLIGATOIRE : plus de
+ * « Continuer sans compte » (décision du client, 24/10/2026). Une fois inscrit — par e-mail, Google
+ * ou Apple, pour TOUS les profils, grossiste compris — on enchaîne sur les étapes d'accueil de ce
+ * profil. La porte du layout laisse l'écran finir ce qu'il affiche (code, numéro) avant.
  */
 /**
  * DÉMONSTRATION : l'inscription s'ouvre déjà REMPLIE, pour que le client puisse tester
@@ -51,13 +51,16 @@ const DEMO_WHOLESALER = {
 export default function SignUpRoute() {
   const router = useRouter();
   const role = useOnboardingStore(selectRole);
+  const setRole = useOnboardingStore((s) => s.setRole);
   const setFirstName = useOnboardingStore((s) => s.setFirstName);
   const setSiret = useOnboardingStore((s) => s.setSiret);
+  const syncProfile = useAuthStore((s) => s.syncProfile);
   const submitMerchantApplication = useShopStore((s) => s.submitMerchantApplication);
 
   const onProfile = useCallback(
     (p: SignUpProfile) => {
-      setFirstName(p.firstName);
+      // Google ou Apple peuvent ne donner aucun nom : on n'efface pas celui qu'on a.
+      if (p.firstName) setFirstName(p.firstName);
       setSiret(p.siret);
       // Un professionnel dépose en même temps la fiche de son commerce.
       if (role !== 'consommateur' && p.category !== '') {
@@ -76,19 +79,17 @@ export default function SignUpRoute() {
     [role, setFirstName, setSiret, submitMerchantApplication],
   );
 
-  // Un livreur, un commerçant et un fournisseur déposent leurs justificatifs ; le client
-  // choisit ses centres d'intérêt.
-  const toOnboarding = useCallback(
-    () =>
-      router.replace(
-        role === 'livreur'
-          ? '/devenir-livreur'
-          : role === 'grossiste' || role === 'commercant'
-            ? '/dossier-pro'
-            : '/onboarding',
-      ),
-    [router, role],
-  );
+  // Le compte existe. Son type fait foi côté serveur : déclaré à l'inscription par e-mail, déclaré
+  // MAINTENANT pour Google et Apple (`syncProfile`) — ou déjà fixé, si ce compte existait. Puis un
+  // livreur, un commerçant et un fournisseur déposent leurs justificatifs ; le client choisit ses
+  // centres d'intérêt.
+  const toOnboarding = useCallback(async () => {
+    const profile = await syncProfile(role);
+    const type = profile?.accountType ?? role;
+    // Toujours : une synchronisation au lancement a pu changer le rôle local entre-temps.
+    setRole(type);
+    router.replace(firstRunRoute(type));
+  }, [router, role, setRole, syncProfile]);
   const toSignIn = useCallback(() => router.replace('/sign-in'), [router]);
 
   return (
@@ -111,7 +112,6 @@ export default function SignUpRoute() {
       onSignedUp={toOnboarding}
       onSignIn={toSignIn}
       onBack={() => router.replace('/role')}
-      {...(role === 'consommateur' ? { onSkip: toOnboarding } : {})}
     />
   );
 }

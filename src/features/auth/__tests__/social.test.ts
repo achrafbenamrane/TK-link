@@ -1,5 +1,6 @@
 import { appleIdentity, isAppleAvailable } from '../model/social/apple';
 import { googleIdentity, googleSignOut } from '../model/social/google';
+import { socialAvailability } from '../ui/social-buttons';
 
 /**
  * Les passerelles Google et Apple, contre des modules natifs SIMULÉS (il n'y en a pas sous Jest).
@@ -218,5 +219,57 @@ describe('Apple', () => {
     expect(await appleIdentity()).toEqual({ ok: false, code: 'unknown' });
     A.signInAsync!.mockRejectedValue({ code: 'ERR_REQUEST_FAILED', message: 'détail interne' });
     expect(await appleIdentity()).toEqual({ ok: false, code: 'unknown' });
+  });
+});
+
+describe('socialAvailability — quels boutons afficher', () => {
+  const real = { demo: false, googleConfigured: true, appleAvailable: true };
+
+  it('en démonstration : Google et Apple partout, Android compris, quel que soit le réglage', () => {
+    for (const os of ['ios', 'android', 'web']) {
+      for (const googleConfigured of [true, false]) {
+        for (const appleAvailable of [true, false]) {
+          expect(socialAvailability({ demo: true, os, googleConfigured, appleAvailable })).toEqual({
+            google: true,
+            apple: true,
+          });
+        }
+      }
+    }
+  });
+
+  it('iPhone : Google s’il est branché, Apple si le système l’offre', () => {
+    expect(socialAvailability({ ...real, os: 'ios' })).toEqual({ google: true, apple: true });
+    expect(socialAvailability({ ...real, os: 'ios', googleConfigured: false })).toEqual({
+      google: false,
+      apple: true,
+    });
+    expect(socialAvailability({ ...real, os: 'ios', appleAvailable: false })).toEqual({
+      google: true,
+      apple: false,
+    });
+  });
+
+  it('Android : Apple TOUJOURS (sa page web), même sans fenêtre native', () => {
+    expect(socialAvailability({ ...real, os: 'android', appleAvailable: false })).toEqual({
+      google: true,
+      apple: true,
+    });
+    expect(
+      socialAvailability({
+        ...real,
+        os: 'android',
+        googleConfigured: false,
+        appleAvailable: false,
+      }),
+    ).toEqual({ google: false, apple: true });
+  });
+
+  it('web : jamais Google, même branché ; Apple seulement si le système l’offre', () => {
+    expect(socialAvailability({ ...real, os: 'web', appleAvailable: false })).toEqual({
+      google: false,
+      apple: false,
+    });
+    expect(socialAvailability({ ...real, os: 'web' })).toEqual({ google: false, apple: true });
   });
 });

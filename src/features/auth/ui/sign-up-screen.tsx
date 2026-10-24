@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
@@ -21,7 +21,7 @@ import {
 import type { SocialProvider } from '../model/social/types';
 import { selectDemoMode, useAuthStore } from '../model/store';
 import { SocialButton, useSocialAvailability } from './social-buttons';
-import { needsVerification, SignUpVerification } from './sign-up-verification';
+import { needsFollowUp, SignUpVerification } from './sign-up-verification';
 
 /** Les deux façons de livrer — « Sur place » n'existe pas dans le CDC. */
 export type ShopMode = 'touch-collect' | 'livraison';
@@ -51,11 +51,13 @@ type Props = {
   renderAvatar?: () => ReactNode;
   /** Ce que l'inscription apprend de la personne — à ranger côté profil local. */
   onProfile?: (profile: SignUpProfile) => void;
-  onSignedUp?: () => void;
+  /**
+   * Le compte existe (et son numéro est associé) : la route aligne le type de compte avec le serveur,
+   * puis enchaîne sur l'accueil. Le bouton garde son indicateur de chargement jusqu'au bout.
+   */
+  onSignedUp?: () => void | Promise<void>;
   /** « J'ai déjà un compte » — la navigation reste à la route. */
   onSignIn?: () => void;
-  /** « Continuer sans compte » — idem (consommateurs seulement). */
-  onSkip?: () => void;
   /** Flèche retour (maquette professionnelle) — vers le choix du profil. */
   onBack?: () => void;
   /**
@@ -110,7 +112,6 @@ export function SignUpScreen({
   onProfile,
   onSignedUp,
   onSignIn,
-  onSkip,
   onBack,
   initialDraft,
   initialAccepted = false,
@@ -139,7 +140,12 @@ export function SignUpScreen({
   const signUp = useAuthStore((s) => s.signUp);
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
   const signInWithApple = useAuthStore((s) => s.signInWithApple);
+  const linkPhone = useAuthStore((s) => s.linkPhone);
+  const saveContactPhone = useAuthStore((s) => s.saveContactPhone);
   const available = useSocialAvailability();
+  // Une seule création de compte à la fois : « Créer mon compte » pendant que Google est ouvert (ou
+  // deux appuis dans la même image) lancerait deux inscriptions en parallèle.
+  const creating = useRef(false);
 
   const serverError = useMemo(
     () => (touched ? friendlyAuthError(storeError) : null),
@@ -165,6 +171,7 @@ export function SignUpScreen({
     );
 
   const submit = async () => {
+    if (creating.current) return;
     const found = validateRegistration(draft, role);
     setTouched(true);
     if (pro && modes.length === 0) found.modes = 'Choisissez au moins un mode de remise.';
@@ -176,6 +183,22 @@ export function SignUpScreen({
     setErrors({});
 
     const profile = toProfile(draft);
+    creating.current = true;
+    setSubmitting(true);
+    const result = await signUp(profile.email, draft.password, {
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      phone: profile.phoneE164,
+      accountType: role,
+    });
+    if (!result.ok) {
+      creating.current = false;
+      setSubmitting(false);
+      return;
+    }
+
+    // Le profil local (et, pour un professionnel, la fiche du commerce) n'est rangé qu'une fois le
+    // compte CRÉÉ : un échec (adresse déjà inscrite…) ne doit rien laisser derrière lui.
     onProfile?.({
       firstName: profile.firstName,
       lastName: profile.lastName,
@@ -188,70 +211,85 @@ export function SignUpScreen({
       address: profile.address,
       modes,
     });
-
-    setSubmitting(true);
-    const result = await signUp(profile.email, draft.password, {
-      firstName: profile.firstName,
-      lastName: profile.lastName,
-      phone: profile.phoneE164,
-      accountType: role,
-    });
+    await continueAfterAccount(profile.email, profile.phoneE164, result.needsCode);
+    creating.current = false;
     setSubmitting(false);
-    if (!result.ok) return;
+  };
 
-    // Un code à saisir, ou un numéro à vérifier : on enchaîne avant de laisser entrer dans l'app.
-    // En démonstration, aucun SMS ne part : on ne propose pas de vérifier un numéro.
+  /**
+   * Après la création du compte : le code e-mail s'il est exigé, puis l'association du numéro.
+   * En démonstration, le numéro est déjà rangé dans la session (par l'inscription, ou juste après
+   * Google et Apple) : rien à associer.
+   */
+  const continueAfterAccount = async (email: string, phone: string, needsEmailCode: boolean) => {
     const phoneEnabled = isPhoneAuthEnabled && !demoMode;
-    if (
-      needsVerification({
-        needsEmailCode: result.needsCode,
-        phone: profile.phoneE164,
-        phoneEnabled,
-      })
-    ) {
-      setVerification({
-        email: profile.email,
-        phone: profile.phoneE164,
-        needsEmailCode: result.needsCode,
-      });
+    if (needsFollowUp({ needsEmailCode, phone, phoneEnabled })) {
+      setVerification({ email, phone, needsEmailCode });
       return;
     }
-    onSignedUp?.();
+    await onSignedUp?.();
   };
 
   /**
    * « Continuer avec Google / Apple ». Créer un compte, c'est accepter les CGU : la case reste
-   * obligatoire ici aussi. Le reste du formulaire ne l'est pas — Google et Apple donnent déjà
-   * l'identité, et la personne n'a pas à inventer un mot de passe de plus.
+   * obligatoire ici aussi. Un PROFESSIONNEL (grossiste, commerçant) remplit aussi la fiche de son
+   * entreprise et son numéro de contact, comme par e-mail : Google et Apple donnent l'identité de la
+   * personne, pas celle du commerce. Le reste du formulaire (nom, e-mail, mot de passe) n'est pas
+   * exigé — le fournisseur donne déjà l'identité, et la personne n'a pas à inventer un mot de passe
+   * de plus. Un numéro tapé par un particulier doit seulement être valide.
    */
   const social = async (provider: SocialProvider) => {
-    if (!accepted) {
-      setErrors((e) => ({ ...e, terms: 'Acceptez les CGU et la politique de confidentialité.' }));
+    if (creating.current) return;
+    const found: Record<string, string> = {};
+    if (!accepted) found.terms = 'Acceptez les CGU et la politique de confidentialité.';
+    const all = validateRegistration(draft, role);
+    if (pro) {
+      for (const key of ['shopName', 'category', 'address', 'siret', 'phone'] as const) {
+        if (all[key]) found[key] = all[key];
+      }
+      if (modes.length === 0) found.modes = 'Choisissez au moins un mode de remise.';
+    } else if (draft.phone.trim() && all.phone) {
+      found.phone = all.phone;
+    }
+    if (Object.keys(found).length > 0) {
+      setErrors((e) => ({ ...e, ...found }));
       return;
     }
+
     setTouched(true);
+    creating.current = true;
     setSocialBusy(provider);
     const result = provider === 'google' ? await signInWithGoogle() : await signInWithApple();
-    setSocialBusy(null);
-    if (!result.ok) return;
+    if (!result.ok) {
+      creating.current = false;
+      setSocialBusy(null);
+      return;
+    }
 
     // Le nom du fournisseur l'emporte ; à défaut, ce que la personne avait déjà tapé dans le formulaire.
-    const firstName = result.firstName || draft.firstName.trim();
-    if (firstName) {
-      onProfile?.({
-        firstName,
-        lastName: result.lastName || draft.lastName.trim(),
-        email: '',
-        phone: '',
-        siret: '',
-        location: draft.location.trim(),
-        shopName: '',
-        category: '',
-        address: '',
-        modes,
-      });
-    }
-    onSignedUp?.();
+    const profile = toProfile(draft);
+    // En démonstration, la session vient d'être ouverte SANS numéro (Google et Apple n'en donnent
+    // pas) : on l'y range tout de suite, sans réseau. En vrai, l'écran de suite l'associe.
+    if (demoMode && isPhoneAuthEnabled && profile.phoneE164) await linkPhone(profile.phoneE164);
+    // Avec un serveur, le numéro devient d'abord un CONTACT du compte (comme par e-mail) : si
+    // l'association échoue maintenant, elle sera retentée à la connexion suivante.
+    if (!demoMode && profile.phoneE164) await saveContactPhone(profile.phoneE164);
+    onProfile?.({
+      firstName: result.firstName || profile.firstName,
+      lastName: result.lastName || profile.lastName,
+      email: result.email || profile.email,
+      phone: profile.phone,
+      siret: pro ? (profile.siret ?? '') : '',
+      location: profile.location,
+      shopName: pro ? profile.shopName : '',
+      category: pro ? (profile.category as Category | '') : '',
+      address: pro ? profile.address : '',
+      modes,
+    });
+    // Un numéro tapé dans le formulaire s'associe aussi, comme pour une inscription par e-mail.
+    await continueAfterAccount(result.email, profile.phoneE164, false);
+    creating.current = false;
+    setSocialBusy(null);
   };
 
   const eye = (
@@ -602,6 +640,7 @@ export function SignUpScreen({
                 testID="signup-submit"
                 label={pro ? proCopy.title : 'Créer mon compte'}
                 loading={submitting}
+                disabled={socialBusy !== null}
                 onPress={submit}
                 className={pro ? 'h-10' : undefined}
               />
@@ -665,12 +704,6 @@ export function SignUpScreen({
                       onPress={() => onSignIn?.()}
                     />
                   ) : null}
-                  <AltButton
-                    testID="signup-skip"
-                    icon="user"
-                    label="Continuer sans compte"
-                    onPress={() => onSkip?.()}
-                  />
                 </View>
               </View>
             )}
@@ -824,7 +857,7 @@ function AltButton({
   onPress,
 }: {
   testID: string;
-  icon: 'smartphone' | 'user';
+  icon: 'smartphone';
   label: string;
   onPress: () => void;
 }) {

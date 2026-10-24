@@ -2,7 +2,9 @@
 
 - **Date:** 2026-10-24
 - **Author:** agent + Achraf
-- **Intent:** demande du client — « e-mail ou numéro avec mot de passe, Google, Apple »
+- **Intent:** demande du client — « e-mail ou numéro avec mot de passe, Google, Apple », puis (même
+  jour) compte obligatoire, Resend, numéro sans SMS en attendant Prelude, grossiste avec toutes les
+  options, Apple aussi sur Android ([ADR-0010](../decisions/0010-compte-obligatoire-numero-sans-sms.md))
 - **Status:** in-progress (code livré ; mise en service des consoles et test sur téléphone à faire)
 
 ## Goal & non-goals
@@ -35,6 +37,22 @@ fidélité…), révocation du jeton Apple (suivi ci-dessous).
 - [ ] T11 — build de test Android + iOS, CUJ-007 sur téléphone
 - [ ] T12 — révocation du jeton Apple à la suppression du compte (clé `.p8`, fonction Edge)
 
+### Second temps — demande du client du 24/10/2026 (ADR-0010)
+
+- [x] T13 — compte obligatoire : porte d’entrée pure `decideEntry` (+ tests), `EntryGate` dans le layout,
+      « Continuer sans compte » retiré, démo avec session conservée
+- [x] T14 — numéro associé sans SMS : fonction Edge `link-phone`, migration `0008` (`phone_verified`
+      jamais déduit d’Auth, compteur de tentatives, `phone_is_taken`, crochet `send_sms_disabled`) + pgTAP
+- [x] T15 — mot de passe oublié par e-mail seulement ; e-mails par Resend (guide, `email_unavailable`)
+- [x] T16 — Apple sur Android : page web + PKCE S256 (`digest` par expo-crypto), retour
+      `tklink://auth/callback` sans navigation (`+native-intent`), `npm run apple:secret`
+- [x] T17 — inscription pro avec Google/Apple (fiche obligatoire), type de compte déclaré une fois
+      (`declare_account_type`), relu à la connexion (`syncProfile`)
+- [x] T18 — `auth:check` : confirmations SMS, migration 0008, `link-phone` déployée
+- [ ] T19 — consoles : domaine + Resend, crochet « Send SMS », Phone, Services ID + secret Apple,
+      Redirect URL exacte (guide : `docs/security/authentication.md`)
+- [ ] T20 — Prelude : vérification du numéro (`phone_verified`), SMS de mot de passe oublié
+
 ## Risks & landmines
 
 - **Rien n’a pu être testé contre un vrai projet** : le connecteur Supabase n’était pas branché et il
@@ -42,6 +60,10 @@ fidélité…), révocation du jeton Apple (suivi ci-dessous).
   Supabase), le SQL par l’analyseur PostgreSQL (syntaxe) — `supabase test db` reste à lancer.
 - Nouveaux modules natifs : les builds existants ne les contiennent pas (nouveau build obligatoire).
 - `String.replace` avec `$$` dans les scripts d’édition : utiliser une fonction de remplacement.
+- Lignes de commande `node -e` avec des accents graves ou des `\\` : le shell les mange ; écrire un
+  script dans un fichier.
+- La CLI Supabase inverse `enable_confirmations` des SMS au `config push` : régler le projet hébergé
+  dans le tableau de bord.
 
 ## Verification
 

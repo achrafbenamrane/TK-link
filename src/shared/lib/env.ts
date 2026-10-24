@@ -33,8 +33,8 @@ const EnvSchema = z.object({
   // que dans le tableau de bord Supabase. Vides = Google n'est pas encore branché.
   EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: GoogleClientId,
   EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: GoogleClientId,
-  // Connexion par numéro de téléphone : « off » la masque tant qu'aucun fournisseur de SMS n'est
-  // branché côté Supabase (sans lui, le code de vérification ne part jamais).
+  // Connexion par numéro de téléphone : « off » la masque tant que le fournisseur « Phone » n'est pas
+  // activé côté Supabase (le numéro s'associe sans SMS : ADR-0010).
   EXPO_PUBLIC_AUTH_PHONE: z.enum(['on', 'off']),
 });
 

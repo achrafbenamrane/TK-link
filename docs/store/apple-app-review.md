@@ -38,6 +38,9 @@ The enforceable checklist is [`checklist.md`](checklist.md); the steps are
   offer a privacy-preserving equivalent (Sign in with Apple).
 - **5.1.1(v) Account Sign-In** — no forced login for non-account features; **in-app account
   deletion is mandatory** if accounts exist. (Skeleton: `/account` + `delete-account` Edge Function.)
+  TK LINK requires an account by the client’s decision ([ADR-0010](../architecture/decisions/0010-compte-obligatoire-numero-sans-sms.md)):
+  explain in the review notes why (orders, payments, loyalty, pro files are account features) and
+  provide a working demo account.
 - **5.1.1(i)/(ii)** — privacy policy linked in-app + on the product page; **tailored**
   `NSxxxUsageDescription` strings (generic boilerplate is rejected; an unused permission too).
 - **5.1.2(i) ATT** — permission required before tracking/IDFA; can't gate functionality on it or

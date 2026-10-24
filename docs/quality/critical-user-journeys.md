@@ -9,16 +9,18 @@ enforces).
 
 - **Owner :** squad produit TK LINK
 - **Flow :** `.maestro/flows/smoke.yaml`
-- **Journey :** ouvrir l’app → écran de bienvenue → « Passer » → onboarding :
-  l’accroche, puis **la proposition de compte**, puis la personnalisation
-  (rôle, avatar, prénom, centres d’intérêt) → l’accueil affiche le déstockage
+- **Journey :** ouvrir l’app → logo animé → choix du profil → **inscription
+  (le compte est obligatoire, ADR-0010)** → étapes d’accueil du profil (centres
+  d’intérêt, dossier pro ou dossier livreur) → l’accueil affiche le déstockage
   et sa recherche.
-- **Edge cases agents must try :** relancer après avoir terminé l’onboarding
-  (on ne doit PAS le revoir), tuer l’app entre deux étapes puis relancer,
-  « Se connecter » depuis la bienvenue, refuser la géolocalisation, mode
-  « réduire les animations » (les scènes doivent se figer, pas disparaître),
-  **créer un compte puis revenir** (le prénom ne doit PAS être redemandé à
-  l’étape des centres d’intérêt).
+- **Edge cases agents must try :** aucun écran de l’app n’est joignable sans
+  compte (ni par le bouton retour, ni par un lien) ; relancer connecté (logo
+  puis accueil directement, sans revoir le choix du profil) ; tuer l’app entre
+  deux étapes puis relancer (on reprend l’étape d’accueil, pas l’inscription) ;
+  « J’ai déjà un compte » depuis l’inscription ; se déconnecter (logo, puis
+  choix du profil) ; refuser la géolocalisation ; mode « réduire les
+  animations » (les scènes doivent se figer, pas disparaître) ; **créer un
+  compte puis revenir** (le prénom ne doit PAS être redemandé).
 - **Performance budget :** premier rendu visible < 2 s après l’écran de
   démarrage, sur un Android milieu de gamme.
 
@@ -118,17 +120,20 @@ enforces).
 - **Owner :** squad produit TK LINK
 - **Flow :** aucun — couvert par `auth/__tests__/` (écrans, store, service) ; à dérouler sur téléphone
   avec un projet Supabase branché (`npm run auth:check` d’abord).
-- **Journey :** créer un compte par e-mail → saisir le code reçu → « Vérifier mon numéro » → code SMS →
-  se déconnecter → se reconnecter **avec le numéro** → « Mot de passe oublié » → code → nouveau mot de
-  passe → « Continuer avec Google » (Android et iPhone) → « Continuer avec Apple » (iPhone) → Profil →
-  « Mon compte » → « Supprimer mon compte ».
+- **Journey :** créer un compte par e-mail avec un numéro → saisir le code reçu (envoyé par Resend) →
+  le numéro s’associe tout seul → se déconnecter → se reconnecter **avec le numéro** et le même mot de
+  passe → « Mot de passe oublié » (e-mail) → code → nouveau mot de passe → « Continuer avec Google »
+  (Android et iPhone) → « Continuer avec Apple » (iPhone : feuille native ; Android : page d’Apple) →
+  inscription **grossiste** avec Google ou Apple (fiche pro remplie) → réinstaller l’app, se
+  reconnecter : on retrouve l’espace grossiste → Profil → « Mon compte » → « Supprimer mon compte ».
 - **Edge cases agents must try :** mauvais code puis bon code, code expiré, « Renvoyer le code » avant
-  la fin du délai (bloqué), adresse déjà inscrite, numéro inconnu au mot de passe oublié (même
-  message qu’un numéro connu), fenêtre Google ou Apple fermée (aucune erreur), réseau coupé pendant la
-  connexion, fournisseur de SMS absent (« Plus tard » reste possible), Apple qui ne redonne pas le nom à
-  la seconde connexion.
-- **À vérifier sur téléphone, pas en navigateur :** les fenêtres Google et Apple, le remplissage
-  automatique du code SMS, la session qui survit à la fermeture de l’app.
+  la fin du délai (bloqué), adresse déjà inscrite, numéro déjà associé à un autre compte (message
+  clair, on entre quand même avec l’e-mail), six numéros différents essayés dans la journée (le sixième
+  est refusé), un numéro tapé au mot de passe oublié (« par SMS, bientôt »), fenêtre Google ou page
+  Apple fermée (aucune erreur), réseau coupé pendant la connexion, Apple qui ne redonne pas le nom à
+  la seconde connexion, grossiste avec Google sans SIRET (refusé avant d’ouvrir Google).
+- **À vérifier sur téléphone, pas en navigateur :** les fenêtres Google et Apple, le retour de la page
+  Apple vers l’app (Android), la session qui survit à la fermeture de l’app.
 
 ## Template for new CUJs
 

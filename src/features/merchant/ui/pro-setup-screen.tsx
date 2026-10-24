@@ -17,7 +17,10 @@ type Props = {
   demo?: boolean;
   /** Le profil qui dépose son dossier : change les mots, pas les étapes. */
   role?: ProRole;
-  /** Le SIRET et l'adresse saisis à l'inscription : on ne les redemande pas. */
+  /**
+   * Le SIRET et l'adresse saisis à l'inscription : on ne les redemande pas. Sans SIRET (nouvel
+   * appareil, ou après une déconnexion qui a remis le profil local à zéro), le champ se saisit ici.
+   */
   siret: string;
   address: string;
   /** IBAN proposé d'avance (démonstration) ; vide en production. */
@@ -79,6 +82,10 @@ export function ProSetupScreen({
         : 'infos',
   );
   const [addr, setAddr] = useState(address);
+  // Connu à l'inscription : affiché, verrouillé. Inconnu sur cet appareil : à saisir, sinon le dossier
+  // ne pourrait jamais partir.
+  const siretLocked = siret !== '';
+  const [siretValue, setSiretValue] = useState(siret);
   const [iban, setIban] = useState(initialIban);
   const [idUri, setIdUri] = useState(supplier.idUri);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -87,7 +94,7 @@ export function ProSetupScreen({
   const index = STEPS.indexOf(step);
 
   const send = () => {
-    const res = submit({ siret, address: addr, iban, idUri });
+    const res = submit({ siret: siretValue.replace(/s/g, ''), address: addr, iban, idUri });
     if (res.ok) {
       setErrors({});
       setStep('verification');
@@ -179,18 +186,35 @@ export function ProSetupScreen({
               <AppText variant="caption" className="font-sans-semibold text-ink-muted">
                 SIRET
               </AppText>
-              <View
-                testID="supplier-siret"
-                className={cn(
-                  'flex-row items-center justify-between rounded-control border bg-surface-muted px-3.5 py-3',
-                  errors.siret ? 'border-danger' : 'border-line',
-                )}
-              >
-                <AppText className="text-ink" style={{ fontSize: 15 }}>
-                  {siret ? formatSiret(siret) : 'Non renseigné'}
-                </AppText>
-                <Feather name="lock" size={14} color={colors.inkFaint} />
-              </View>
+              {siretLocked ? (
+                <View
+                  testID="supplier-siret"
+                  className={cn(
+                    'flex-row items-center justify-between rounded-control border bg-surface-muted px-3.5 py-3',
+                    errors.siret ? 'border-danger' : 'border-line',
+                  )}
+                >
+                  <AppText className="text-ink" style={{ fontSize: 15 }}>
+                    {formatSiret(siret)}
+                  </AppText>
+                  <Feather name="lock" size={14} color={colors.inkFaint} />
+                </View>
+              ) : (
+                <TextInput
+                  testID="supplier-siret-input"
+                  value={siretValue}
+                  onChangeText={setSiretValue}
+                  placeholder="14 chiffres"
+                  placeholderTextColor={colors.inkFaint}
+                  keyboardType="number-pad"
+                  maxLength={17}
+                  accessibilityLabel="SIRET"
+                  className={cn(
+                    'rounded-control border bg-surface px-3.5 py-3 font-sans text-ink',
+                    errors.siret ? 'border-danger' : 'border-line',
+                  )}
+                />
+              )}
               {errors.siret ? (
                 <AppText variant="caption" className="text-danger">
                   {errors.siret}

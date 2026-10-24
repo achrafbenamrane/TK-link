@@ -5,10 +5,8 @@ import type { SocialResult } from './types';
 /**
  * CONNEXION APPLE — la feuille native « Se connecter avec Apple », via `expo-apple-authentication`.
  *
- * iOS seulement. Sur Android, Apple n'a pas de fenêtre native : il faudrait un parcours web avec
- * retour par lien, ce que la règle de sécurité du projet (SEC-AUTH-002) réserve aux liens vérifiés.
- * Le bouton est donc masqué hors iOS ; la règle 4.8 de l'App Store (offrir Apple dès qu'on offre
- * Google) ne concerne d'ailleurs que les builds iOS.
+ * iOS seulement. Sur Android, Apple n'a pas de fenêtre native : l'app passe par la page web d'Apple,
+ * dans le navigateur du système, avec PKCE (`service.signInWithAppleWeb`, ADR-0010).
  *
  * Le NONCE : l'app en tire un au hasard, donne son empreinte SHA-256 à Apple, et le nonce brut à
  * Supabase. Le jeton d'identité d'Apple porte l'empreinte ; Supabase recalcule celle du nonce reçu

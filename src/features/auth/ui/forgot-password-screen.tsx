@@ -2,27 +2,18 @@ import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
-import { isPhoneAuthEnabled } from '@/shared/lib/env';
 import { AppText, Button, Screen, TextField, Wordmark } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { friendlyAuthError } from '../model/auth-errors';
-import {
-  IDENTIFIER_MESSAGE,
-  maskIdentifier,
-  parseIdentifier,
-  type Identifier,
-} from '../model/identifier';
+import { IDENTIFIER_MESSAGE, maskEmail, parseIdentifier } from '../model/identifier';
 import { PasswordSchema } from '../model/schema';
 import { selectDemoMode, useAuthStore } from '../model/store';
 import { CodeStep } from './code-step';
 import { DemoNotice } from './demo-notice';
 
 type Step =
-  | { name: 'request' }
-  | { name: 'code'; identifier: Identifier }
-  | { name: 'password' }
-  | { name: 'done' };
+  { name: 'request' } | { name: 'code'; email: string } | { name: 'password' } | { name: 'done' };
 
 type Props = {
   /** Mot de passe changé : la personne est connectée, la route l'emmène dans l'app. */
@@ -34,7 +25,8 @@ type Props = {
 /**
  * MOT DE PASSE OUBLIÉ — trois étapes, toutes par code, sans lien à ouvrir :
  *
- * 1. **L'identifiant** (e-mail ou téléphone) → un code est envoyé.
+ * 1. **L'adresse e-mail** → un code est envoyé (par Resend). Par SMS, pas encore : il n'y a pas de
+ *    vérification de numéro avant Prelude. Un numéro saisi ici reçoit donc un message qui le dit.
  * 2. **Le code** à six chiffres → il ouvre une session (c'est elle qui autorise le changement).
  * 3. **Le nouveau mot de passe** → la personne est connectée.
  *
@@ -66,9 +58,18 @@ export function ForgotPasswordScreen({ onDone, onBack }: Props) {
   const [saving, setSaving] = useState(false);
 
   const request = async () => {
-    const id = parseIdentifier(raw, { allowPhone: isPhoneAuthEnabled });
+    const id = parseIdentifier(raw);
     if (!id.ok) {
-      setIdentifierError(IDENTIFIER_MESSAGE[id.hint]);
+      // Écran « e-mail seulement » : ni le champ vide ni un numéro mal formé ne parlent de téléphone.
+      setIdentifierError(
+        id.hint === 'empty' ? 'Entrez votre adresse e-mail.' : IDENTIFIER_MESSAGE.email,
+      );
+      return;
+    }
+    if (id.identifier.kind === 'phone') {
+      setIdentifierError(
+        'La récupération par SMS arrive bientôt. Entrez l’adresse e-mail de votre compte.',
+      );
       return;
     }
     setIdentifierError(null);
@@ -76,7 +77,7 @@ export function ForgotPasswordScreen({ onDone, onBack }: Props) {
     setSending(true);
     const result = await requestPasswordReset(id.identifier.value);
     setSending(false);
-    if (result.ok) setStep({ name: 'code', identifier: result.identifier });
+    if (result.ok) setStep({ name: 'code', email: result.email });
     else setServerError(friendlyAuthError(result.error));
   };
 
@@ -135,9 +136,8 @@ export function ForgotPasswordScreen({ onDone, onBack }: Props) {
               <View className="gap-1.5">
                 <AppText variant="title">Mot de passe oublié</AppText>
                 <AppText variant="caption" className="text-ink-muted">
-                  {isPhoneAuthEnabled
-                    ? 'Entrez votre e-mail ou votre numéro de téléphone : nous vous envoyons un code pour choisir un nouveau mot de passe.'
-                    : 'Entrez votre adresse e-mail : nous vous envoyons un code pour choisir un nouveau mot de passe.'}
+                  Entrez l’adresse e-mail de votre compte : nous vous envoyons un code pour choisir
+                  un nouveau mot de passe.
                 </AppText>
               </View>
 
@@ -145,22 +145,19 @@ export function ForgotPasswordScreen({ onDone, onBack }: Props) {
                 <View className="flex-row">
                   <TextField
                     testID="forgot-identifier"
-                    icon="user"
+                    icon="mail"
                     value={raw}
                     onChangeText={(v) => {
                       setRaw(v);
                       setIdentifierError(null);
                     }}
-                    placeholder={
-                      isPhoneAuthEnabled ? 'vous@exemple.fr ou 06 12 34 56 78' : 'vous@exemple.fr'
-                    }
+                    placeholder="vous@exemple.fr"
                     autoCapitalize="none"
                     autoCorrect={false}
-                    autoComplete="username"
-                    textContentType="username"
-                    accessibilityLabel={
-                      isPhoneAuthEnabled ? 'E-mail ou numéro de téléphone' : 'Adresse e-mail'
-                    }
+                    autoComplete="email"
+                    keyboardType="email-address"
+                    textContentType="emailAddress"
+                    accessibilityLabel="Adresse e-mail"
                     invalid={!!identifierError}
                   />
                 </View>
@@ -201,17 +198,17 @@ export function ForgotPasswordScreen({ onDone, onBack }: Props) {
             <CodeStep
               testIDPrefix="forgot-code"
               title="Entrez le code"
-              sentTo={maskIdentifier(step.identifier)}
-              description={`Si un compte existe pour ${maskIdentifier(step.identifier)}, un code à 6 chiffres vient d’être envoyé.`}
+              sentTo={maskEmail(step.email)}
+              description={`Si un compte existe pour ${maskEmail(step.email)}, un code à 6 chiffres vient d’être envoyé.`}
               demo={demo}
               onSubmit={async (code) => {
-                const result = await verifyResetCode(step.identifier, code);
+                const result = await verifyResetCode(step.email, code);
                 if (result.ok) setStep({ name: 'password' });
                 return result;
               }}
-              onResend={() => requestPasswordReset(step.identifier.value)}
+              onResend={() => requestPasswordReset(step.email)}
               onBack={() => setStep({ name: 'request' })}
-              backLabel="Changer d’identifiant"
+              backLabel="Changer d’adresse e-mail"
             />
           ) : null}
 

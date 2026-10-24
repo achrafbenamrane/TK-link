@@ -11,12 +11,24 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { useAuthStore } from '@/features/auth';
-import { selectCompleted, selectHydrated, useOnboardingStore } from '@/features/onboarding';
+import {
+  decideEntry,
+  isDemoSession,
+  selectAuthStatus,
+  selectSession,
+  useAuthStore,
+  type EntryRoute,
+} from '@/features/auth';
+import {
+  selectCompleted,
+  selectHydrated,
+  selectRole,
+  useOnboardingStore,
+} from '@/features/onboarding';
 import { receiptForOrder, useReceiptsStore } from '@/features/receipts';
 import { orderToTransaction, producesReceipt, selectOrders, useShopStore } from '@/features/shop';
 import { useWelcomeStore } from '@/features/welcome';
@@ -26,56 +38,83 @@ import { logger } from '@/shared/lib/logger';
 import { ErrorScreen } from '@/shared/ui';
 import { ThemeProvider, useColors, useScheme } from '@/shared/theme/theme-provider';
 
-/**
- * Écrans qu'un nouvel arrivant a le droit de voir avant d'avoir fini l'accueil.
- *
- * Sans cette liste, l'étape « compte » serait un piège : elle envoie vers
- * l'inscription ou la connexion, et la porte les renverrait aussitôt à
- * l'onboarding puisqu'il n'est pas terminé.
- */
-const FIRST_RUN_ROUTES = new Set([
-  'welcome',
-  'role',
-  'onboarding',
-  'sign-in',
-  'sign-up',
-  'forgot-password',
-  'devenir-livreur',
-  'dossier-pro',
-]);
+import { resetLocalData } from './(tabs)/profil';
+
+/** Les écrans d'un compte déconnecté : y aller, c'est quitter l'app — la pile ne doit rien garder. */
+const SIGNED_OUT_ROUTES: ReadonlySet<EntryRoute> = new Set(['/welcome', '/role', '/sign-in']);
 
 /**
- * LA PORTE DU LANCEMENT : logo animé → choix du profil → inscription → app.
+ * LA PORTE DU LANCEMENT : logo animé → choix du profil → inscription → accueil → app.
  *
- * L'écran de bienvenue montre le produit (la vente flash, les offres proches) ;
- * l'onboarding personnalise et propose le compte. L'ordre compte : demander un
- * avatar et un mot de passe à quelqu'un qui n'a pas encore vu ce que fait
- * l'app, c'est le perdre.
+ * Un compte est OBLIGATOIRE (décision du client, 24/10/2026) : sans session, seuls le logo, le choix
+ * du profil, l'inscription, la connexion et le mot de passe oublié s'ouvrent. La règle vit dans
+ * `decideEntry` (feature `auth`), testée seule ; ce composant lui donne l'état et applique sa
+ * réponse. C'est le SEUL à naviguer au lancement : le logo animé dit seulement qu'il a fini.
  *
- * On attend `hydrated` (lecture du disque terminée) avant de décider, sinon un
- * utilisateur qui revient verrait l'accueil clignoter le temps que le stockage
- * se charge — les deux drapeaux valant `false` par défaut.
+ * Elle attend que le disque ET la session soient relus avant de décider (sauf pour le logo, qui joue
+ * pendant ce temps) : un compte connecté ne voit jamais passer le choix du profil.
  */
-function FirstRunGate() {
+function EntryGate() {
   const router = useRouter();
   const segments = useSegments();
   const completed = useOnboardingStore(selectCompleted);
+  const role = useOnboardingStore(selectRole);
   const onboardingHydrated = useOnboardingStore(selectHydrated);
   const splashDone = useWelcomeStore((s) => s.splashDone);
   const welcomeHydrated = useWelcomeStore((s) => s.hydrated);
+  const auth = useAuthStore(selectAuthStatus);
+  const here = segments[0] ?? '';
 
   useEffect(() => {
-    if (!onboardingHydrated || !welcomeHydrated) return;
-    const here = segments[0] ?? '';
+    const target = decideEntry({
+      hydrated: onboardingHydrated && welcomeHydrated,
+      splashDone,
+      auth,
+      onboardingCompleted: completed,
+      role,
+      here,
+    });
+    if (!target) return;
+    // `replace` ne change que l'écran du dessus : après une déconnexion depuis « Mon compte »,
+    // l'accueil resterait dessous, et le geste retour le rouvrirait le temps d'un éclair.
+    if (SIGNED_OUT_ROUTES.has(target) && router.canDismiss()) router.dismissAll();
+    router.replace(target);
+  }, [onboardingHydrated, welcomeHydrated, splashDone, auth, completed, role, here, router]);
 
-    // À chaque lancement l'app s'ouvre sur le logo animé, qui enchaîne sur le choix
-    // du profil (ou l'accueil si le compte existe déjà).
-    if (!splashDone) {
-      if (here !== 'welcome') router.replace('/welcome');
-      return;
-    }
-    if (!completed && !FIRST_RUN_ROUTES.has(here)) router.replace('/role');
-  }, [onboardingHydrated, welcomeHydrated, splashDone, completed, segments, router]);
+  return null;
+}
+
+/**
+ * LE COMPTE ET L'APPAREIL — une fois par compte et par lancement, dès qu'une VRAIE session existe
+ * (connexion, ou session relue au démarrage) :
+ *
+ * 1. Un AUTRE compte que celui à qui appartient le profil local (session expirée sans déconnexion,
+ *    puis quelqu'un d'autre se connecte) : les données locales du précédent repartent de zéro.
+ * 2. L'accueil n'est pas fini sur cet appareil : le type de compte DÉCLARÉ est relu sur le serveur.
+ *    Une connexion interrompue (app fermée, réseau) ne laisse donc pas un professionnel dans
+ *    l'accueil d'un client. Rien n'est déclaré ici : c'est un geste d'inscription.
+ *
+ * En démonstration, rien : pas de serveur, et les données d'exemple appartiennent à la démo.
+ */
+function AccountSync() {
+  const session = useAuthStore(selectSession);
+  const syncProfile = useAuthStore((s) => s.syncProfile);
+  const userId = session && !isDemoSession(session) ? session.user.id : null;
+  const synced = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!userId || synced.current === userId) return;
+    synced.current = userId;
+    const local = useOnboardingStore.getState();
+    // Seul un profil INSTALLÉ (accueil terminé) appartient vraiment à quelqu'un ; en cours
+    // d'inscription, ce qui vient d'être saisi est celui du nouveau compte.
+    if (local.completed && local.ownerId && local.ownerId !== userId) resetLocalData();
+    useOnboardingStore.getState().setOwnerId(userId);
+    if (useOnboardingStore.getState().completed) return;
+    void syncProfile(useOnboardingStore.getState().role, { declare: false }).then((profile) => {
+      if (profile?.declared) useOnboardingStore.getState().setRole(profile.accountType);
+    });
+  }, [userId, syncProfile]);
 
   return null;
 }
@@ -117,29 +156,6 @@ function ReceiptBridge() {
     }
   }, [orders, receipts, addReceipt]);
 
-  return null;
-}
-
-/**
- * LA SESSION — relue au démarrage, puis suivie (connexion, déconnexion, jeton renouvelé).
- *
- * Il n'y a PAS de porte « connexion obligatoire » : l'app se parcourt sans compte (App Store
- * 5.1.1 : pas de connexion forcée pour ce qui n'en a pas besoin), et l'onboarding reste la porte
- * du premier lancement. Ce composant se contente de tenir la session à jour ; ce qui exige un
- * compte le vérifie là où il le faut.
- *
- * Le renouvellement automatique du jeton ne tourne que lorsque l'app est au premier plan
- * (`registerSupabaseAutoRefresh`) : inutile de réveiller le réseau en arrière-plan.
- */
-function AuthBootstrap() {
-  useEffect(() => {
-    const stopListening = useAuthStore.getState().init();
-    const stopRefresh = isSupabaseConfigured ? registerSupabaseAutoRefresh() : () => {};
-    return () => {
-      stopListening();
-      stopRefresh();
-    };
-  }, []);
   return null;
 }
 
@@ -190,8 +206,18 @@ export default function RootLayout() {
     Manrope_800ExtraBold,
   });
 
-  // La session est relue par <AuthBootstrap /> ci-dessous. Pas de porte « connexion obligatoire »
-  // (`useProtectedRoute`) : l'app se parcourt sans compte, voir AuthBootstrap.
+  // LA SESSION — relue dès le démarrage, AVANT que la porte ne décide (elle attend son statut), puis
+  // suivie : connexion, déconnexion, jeton renouvelé. Le renouvellement automatique ne tourne qu'au
+  // premier plan (`registerSupabaseAutoRefresh`) : inutile de réveiller le réseau en arrière-plan.
+  // L'écran de démarrage natif, lui, n'attend PAS la session : sans réseau, il resterait figé.
+  useEffect(() => {
+    const stopListening = useAuthStore.getState().init();
+    const stopRefresh = isSupabaseConfigured ? registerSupabaseAutoRefresh() : () => {};
+    return () => {
+      stopListening();
+      stopRefresh();
+    };
+  }, []);
 
   const onboardingHydrated = useOnboardingStore(selectHydrated);
   const welcomeHydrated = useWelcomeStore((s) => s.hydrated);
@@ -216,8 +242,8 @@ export default function RootLayout() {
     <GestureHandlerRootView className="flex-1">
       <ThemeProvider>
         <SafeAreaProvider>
-          <AuthBootstrap />
-          <FirstRunGate />
+          <EntryGate />
+          <AccountSync />
           <ReceiptBridge />
           <AppStack />
         </SafeAreaProvider>

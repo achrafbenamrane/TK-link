@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { isPhoneAuthEnabled } from '@/shared/lib/env';
@@ -33,11 +33,11 @@ type FieldErrors = { identifier?: string; password?: string };
 type Props = {
   onCreateAccount?: () => void;
   /**
-   * Connexion réussie. Sans ce rappel, l'écran resterait affiché après une
-   * connexion valide tant que le garde de route (désactivé en démo) ne prend
-   * pas le relais — l'utilisateur croirait que rien ne s'est passé.
+   * Connexion réussie : la route relit le profil du serveur, puis entre dans l'app. L'écran garde
+   * son indicateur de chargement jusqu'à la fin de cette promesse — sans quoi le bouton se
+   * réactiverait le temps du trajet, et l'utilisateur croirait que rien ne s'est passé.
    */
-  onSignedIn?: () => void;
+  onSignedIn?: () => void | Promise<void>;
   /**
    * Inscrire une BOUTIQUE, pas un compte de consommateur.
    *
@@ -54,6 +54,11 @@ type Props = {
    * range dans le profil local. L'écran ne connaît pas les autres tranches de l'app.
    */
   onProfile?: (profile: { firstName: string; lastName: string }) => void;
+  /**
+   * L'écran est au premier plan. Sous « Mot de passe oublié », il reste monté : la session que le
+   * code de récupération ouvre ne doit PAS le faire entrer dans l'app avant le nouveau mot de passe.
+   */
+  active?: boolean;
 };
 
 export function SignInScreen({
@@ -62,6 +67,7 @@ export function SignInScreen({
   onMerchantSignUp,
   onForgotPassword,
   onProfile,
+  active = true,
 }: Props = {}) {
   const colors = useColors();
   const [identifier, setIdentifier] = useState('');
@@ -76,6 +82,20 @@ export function SignInScreen({
   const signIn = useAuthStore((s) => s.signIn);
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
   const signInWithApple = useAuthStore((s) => s.signInWithApple);
+  const status = useAuthStore((s) => s.status);
+  // Une seule connexion à la fois, et une seule entrée dans l'app : deux appuis dans la même image
+  // (Google puis « Se connecter ») lanceraient deux connexions.
+  const entering = useRef(false);
+
+  // Une session qui s'ouvre SANS appui sur cet écran — lancé hors ligne avec un jeton expiré, puis
+  // renouvelé au retour du réseau — fait entrer dans l'app : on ne reste pas bloqué sur la connexion.
+  useEffect(() => {
+    if (!active || status !== 'authenticated' || entering.current || !onSignedIn) return;
+    entering.current = true;
+    void Promise.resolve(onSignedIn()).finally(() => {
+      entering.current = false;
+    });
+  }, [active, status, onSignedIn]);
 
   // L'erreur du serveur ne s'affiche qu'après une tentative : sinon une erreur
   // d'une session précédente accueille l'utilisateur à l'ouverture.
@@ -85,6 +105,7 @@ export function SignInScreen({
   );
 
   const submit = async () => {
+    if (entering.current) return;
     // Validation locale d'abord : inutile d'aller au réseau pour apprendre
     // qu'il manque un « @ ».
     const id = parseIdentifier(identifier, { allowPhone: isPhoneAuthEnabled });
@@ -100,22 +121,34 @@ export function SignInScreen({
 
     setFieldErrors({});
     setTouched(true);
+    entering.current = true;
     setSubmitting(true);
-    const result = await signIn(id.identifier.value, password);
-    setSubmitting(false);
-    if (result.ok) onSignedIn?.();
+    try {
+      const result = await signIn(id.identifier.value, password);
+      if (result.ok) await onSignedIn?.();
+    } finally {
+      entering.current = false;
+      setSubmitting(false);
+    }
   };
 
   const social = async (provider: SocialProvider) => {
+    if (entering.current) return;
+    entering.current = true;
     setTouched(true);
     setBusy(provider);
-    const result = provider === 'google' ? await signInWithGoogle() : await signInWithApple();
-    setBusy(null);
-    if (!result.ok) return;
-    if (result.firstName || result.lastName) {
-      onProfile?.({ firstName: result.firstName, lastName: result.lastName });
+    try {
+      const result = provider === 'google' ? await signInWithGoogle() : await signInWithApple();
+      if (result.ok) {
+        if (result.firstName || result.lastName) {
+          onProfile?.({ firstName: result.firstName, lastName: result.lastName });
+        }
+        await onSignedIn?.();
+      }
+    } finally {
+      entering.current = false;
+      setBusy(null);
     }
-    onSignedIn?.();
   };
 
   const working = submitting || busy !== null;
@@ -260,6 +293,7 @@ export function SignInScreen({
             <SocialSection
               verb="Continuer avec"
               busy={busy}
+              disabled={submitting}
               legal
               onSelect={(p) => !working && void social(p)}
             />

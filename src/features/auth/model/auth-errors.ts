@@ -27,6 +27,12 @@ export type AuthErrorCode =
   | 'network'
   | 'otp_invalid'
   | 'sms_unavailable'
+  /** Le serveur n'a pas pu envoyer l'e-mail (Resend en panne, quota du forfait atteint…). */
+  | 'email_unavailable'
+  /** Le numéro est déjà celui d'un autre compte. */
+  | 'phone_taken'
+  /** Ce compte a déjà un numéro : le changer passe par le support (pas encore de vérification par SMS). */
+  | 'phone_locked'
   | 'provider_disabled'
   | 'signup_disabled'
   | 'session_missing'
@@ -85,9 +91,11 @@ const BY_MESSAGE: { match: RegExp; code: AuthErrorCode }[] = [
   { match: /rate limit|too many requests/i, code: 'rate_limited' },
   { match: /token has expired or is invalid|otp.*(expired|invalid)/i, code: 'otp_invalid' },
   { match: /error sending .*otp|sms.*(provider|send)/i, code: 'sms_unavailable' },
+  // « Error sending confirmation email » (500) : le SMTP (Resend) a refusé l'envoi.
+  { match: /error sending .*e-?mail/i, code: 'email_unavailable' },
   { match: /signups? not allowed/i, code: 'signup_disabled' },
   { match: /provider is not enabled|provider.*disabled/i, code: 'provider_disabled' },
-  { match: /fetch|network|timeout/i, code: 'network' },
+  { match: /fetch|network|timeout|failed to send a request/i, code: 'network' },
 ];
 
 const MESSAGE: Record<AuthErrorCode, string | null> = {
@@ -103,6 +111,9 @@ const MESSAGE: Record<AuthErrorCode, string | null> = {
   network: 'Connexion impossible. Vérifiez votre réseau et réessayez.',
   otp_invalid: 'Code incorrect ou expiré. Demandez-en un nouveau.',
   sms_unavailable: 'L’envoi de SMS n’est pas disponible pour le moment. Utilisez votre e-mail.',
+  email_unavailable: 'L’e-mail n’a pas pu partir. Réessayez dans quelques minutes.',
+  phone_taken: 'Ce numéro est déjà associé à un autre compte. Connectez-vous avec votre e-mail.',
+  phone_locked: 'Un numéro est déjà associé à ce compte. Pour le changer, contactez-nous.',
   provider_disabled: 'Cette méthode de connexion n’est pas disponible pour le moment.',
   signup_disabled: 'Les inscriptions sont fermées pour le moment.',
   session_missing: 'Votre session a expiré. Reconnectez-vous.',
@@ -122,8 +133,11 @@ export function classifyAuthError(input: AuthErrorInput): AuthErrorCode {
   if (typeof input === 'string' && Object.hasOwn(BY_CODE, input)) return BY_CODE[input]!;
   if (typeof input !== 'string') {
     if (input.code && BY_CODE[input.code]) return BY_CODE[input.code]!;
-    // `AuthRetryableFetchError` : le réseau, pas le serveur.
-    if (input.name === 'AuthRetryableFetchError') return 'network';
+    // `AuthRetryableFetchError` (Auth) et `FunctionsFetchError` (fonctions Edge, qui RENDENT
+    // l'erreur au lieu de la lever) : le réseau, pas le serveur.
+    if (input.name === 'AuthRetryableFetchError' || input.name === 'FunctionsFetchError') {
+      return 'network';
+    }
     if (input.name === 'AuthWeakPasswordError') return 'weak_password';
   }
   const text = typeof input === 'string' ? input : (input.message ?? '');

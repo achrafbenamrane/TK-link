@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(13);
+select plan(32);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -58,6 +58,10 @@ select ok(
   not has_column_privilege('authenticated', 'public.profiles', 'contact_phone', 'update'),
   'authenticated cannot change contact_phone'
 );
+select ok(
+  not has_column_privilege('authenticated', 'public.profiles', 'account_type_declared', 'update'),
+  'authenticated cannot change account_type_declared'
+);
 
 -- 7) …mais il peut corriger son nom.
 select ok(
@@ -73,10 +77,10 @@ values (
   '{"first_name":"Neo","last_name":"Démo","account_type":"admin","contact_phone":"06 12"}'::jsonb
 );
 select results_eq(
-  $$ select first_name, last_name, account_type, contact_phone, phone_verified
+  $$ select first_name, last_name, account_type, account_type_declared, contact_phone, phone_verified
        from public.profiles where id = '00000000-0000-0000-0000-0000000000a1' $$,
-  $$ values ('Neo'::text, 'Démo'::text, 'consommateur'::text, null::text, false) $$,
-  'signup trigger ignores an unknown account_type and a malformed phone'
+  $$ values ('Neo'::text, 'Démo'::text, 'consommateur'::text, false, null::text, false) $$,
+  'signup trigger ignores an unknown account_type (left to declare) and a malformed phone'
 );
 
 -- 9) …et retient ce qui est valide.
@@ -86,10 +90,10 @@ values (
   '{"first_name":"Sofia","account_type":"commercant","contact_phone":"+33612345678"}'::jsonb
 );
 select results_eq(
-  $$ select first_name, account_type, contact_phone, phone_verified
+  $$ select first_name, account_type, account_type_declared, contact_phone, phone_verified
        from public.profiles where id = '00000000-0000-0000-0000-0000000000a2' $$,
-  $$ values ('Sofia'::text, 'commercant'::text, '+33612345678'::text, false) $$,
-  'signup trigger keeps valid metadata, phone stays unverified'
+  $$ values ('Sofia'::text, 'commercant'::text, true, '+33612345678'::text, false) $$,
+  'signup trigger keeps valid metadata (type declared), phone stays unverified'
 );
 
 -- 10) Un nom de Google (full_name seul) alimente display_name.
@@ -104,15 +108,147 @@ select is(
   'display_name falls back to the provider full_name'
 );
 
--- 11) Confirmer un numéro par SMS le recopie dans le profil et le marque vérifié.
+-- 11) Un numéro associé (`link-phone`, migration 0008) devient le numéro de contact, SANS être
+--     « vérifié » : aucune vérification par SMS n'existe avant Prelude.
 update auth.users
    set phone = '33698765432', phone_confirmed_at = now()
  where id = '00000000-0000-0000-0000-0000000000a2';
 select results_eq(
   $$ select contact_phone, phone_verified
        from public.profiles where id = '00000000-0000-0000-0000-0000000000a2' $$,
-  $$ values ('+33698765432'::text, true) $$,
-  'a confirmed phone becomes the verified contact phone'
+  $$ values ('+33698765432'::text, false) $$,
+  'a linked phone becomes the contact phone, still unverified'
+);
+
+-- 12) Une inscription confirmée par téléphone ne rend pas non plus le numéro « vérifié ».
+insert into auth.users (id, phone, phone_confirmed_at, raw_user_meta_data)
+values ('00000000-0000-0000-0000-0000000000a4', '33611112222', now(), '{}'::jsonb);
+select results_eq(
+  $$ select contact_phone, phone_verified
+       from public.profiles where id = '00000000-0000-0000-0000-0000000000a4' $$,
+  $$ values ('+33611112222'::text, false) $$,
+  'a phone confirmed by Auth alone is never marked verified'
+);
+
+-- ───────────────────────────────── type de compte déclaré une fois (migration 0008)
+
+-- 13) Seul un compte connecté peut déclarer son type ; anon ne peut même pas appeler la fonction.
+select ok(
+  not has_function_privilege('anon', 'public.declare_account_type(text)', 'execute'),
+  'anon cannot call declare_account_type'
+);
+select ok(
+  has_function_privilege('authenticated', 'public.declare_account_type(text)', 'execute'),
+  'authenticated can call declare_account_type'
+);
+
+-- 14) Le compte Google (a3, sans type) déclare « grossiste » : c'est retenu…
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select is(
+  public.declare_account_type('grossiste'),
+  'grossiste',
+  'an undeclared account declares its type'
+);
+-- …une seconde déclaration est ignorée (le type effectif revient)…
+select is(
+  public.declare_account_type('livreur'),
+  'grossiste',
+  'a second declaration is ignored'
+);
+-- …et un type hors liste est refusé.
+select throws_ok(
+  $$ select public.declare_account_type('admin') $$,
+  '22023',
+  null,
+  'an unknown account type is rejected'
+);
+reset role;
+
+select results_eq(
+  $$ select account_type, account_type_declared
+       from public.profiles where id = '00000000-0000-0000-0000-0000000000a3' $$,
+  $$ values ('grossiste'::text, true) $$,
+  'the declared type is stored once'
+);
+
+-- 15) Un type déjà déclaré à l'inscription (a2, commerçant) ne change pas.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select is(
+  public.declare_account_type('grossiste'),
+  'commercant',
+  'a type declared at sign-up cannot be changed'
+);
+reset role;
+
+-- ─────────────────────────────── tentatives d'association d'un numéro (migration 0008)
+
+-- 16) Le compteur est réservé au serveur : ni anon ni un compte connecté ne l'appellent.
+select ok(
+  not has_function_privilege('authenticated', 'public.record_phone_link_attempt(uuid, text)', 'execute')
+  and not has_function_privilege('anon', 'public.record_phone_link_attempt(uuid, text)', 'execute'),
+  'clients cannot call record_phone_link_attempt'
+);
+
+-- 17) Il compte les numéros DIFFÉRENTS des dernières 24 heures, celui-ci compris : réessayer le même
+--     numéro (avec ou sans « + ») ne coûte rien, un autre numéro si.
+select is(
+  public.record_phone_link_attempt('00000000-0000-0000-0000-0000000000a1', '+33600000011'),
+  1,
+  'a first number counts as one'
+);
+select is(
+  public.record_phone_link_attempt('00000000-0000-0000-0000-0000000000a1', '33600000011'),
+  1,
+  'retrying the same number does not count'
+);
+select is(
+  public.record_phone_link_attempt('00000000-0000-0000-0000-0000000000a1', '+33600000012'),
+  2,
+  'another number counts'
+);
+
+-- 18) L'unicité d'un numéro se vérifie AVANT l'écriture (l'API d'administration ne le fait pas) :
+--     le numéro de a2 est pris pour a1, pas pour a2 lui-même — avec ou sans « + ».
+select ok(
+  public.phone_is_taken('+33698765432', '00000000-0000-0000-0000-0000000000a1')
+  and public.phone_is_taken('33698765432', '00000000-0000-0000-0000-0000000000a1'),
+  'a number held by another account is taken'
+);
+select ok(
+  not public.phone_is_taken('+33698765432', '00000000-0000-0000-0000-0000000000a2'),
+  'an account''s own number is not taken for it'
+);
+select ok(
+  not has_function_privilege('authenticated', 'public.phone_is_taken(text, uuid)', 'execute')
+  and not has_function_privilege('anon', 'public.phone_is_taken(text, uuid)', 'execute'),
+  'clients cannot probe numbers with phone_is_taken'
+);
+
+-- 19) Un AUTRE numéro repart non vérifié.
+update public.profiles set phone_verified = true
+ where id = '00000000-0000-0000-0000-0000000000a2';
+update auth.users set phone = '33611113333'
+ where id = '00000000-0000-0000-0000-0000000000a2';
+select results_eq(
+  $$ select contact_phone, phone_verified
+       from public.profiles where id = '00000000-0000-0000-0000-0000000000a2' $$,
+  $$ values ('+33611113333'::text, false) $$,
+  'a new number resets phone_verified'
+);
+
+-- 20) Le crochet « Send SMS » refuse tout envoi, et seul Auth peut l'appeler.
+select is(
+  public.send_sms_disabled('{}'::jsonb) -> 'error' ->> 'http_code',
+  '422',
+  'the send-sms hook refuses every SMS'
+);
+select ok(
+  has_function_privilege('supabase_auth_admin', 'public.send_sms_disabled(jsonb)', 'execute')
+  and not has_function_privilege('authenticated', 'public.send_sms_disabled(jsonb)', 'execute')
+  and not has_function_privilege('anon', 'public.send_sms_disabled(jsonb)', 'execute'),
+  'only Auth can call the send-sms hook'
 );
 
 select * from finish();

@@ -1,3 +1,5 @@
+import { FunctionsFetchError } from '@supabase/supabase-js';
+
 import {
   authErrorMessage,
   classifyAuthError,
@@ -85,11 +87,39 @@ describe('classifyAuthError — par code Supabase', () => {
     expect(classifyAuthError({ message: 'Unsupported phone provider' })).toBe('unknown');
   });
 
+  // Le SMTP (Resend) a refusé l'envoi : Supabase répond 500 « Error sending confirmation email ».
+  it('un e-mail qui n’a pas pu partir : « email_unavailable », avec son message', () => {
+    expect(classifyAuthError({ message: 'Error sending confirmation email' })).toBe(
+      'email_unavailable',
+    );
+    expect(classifyAuthError('Error sending recovery email')).toBe('email_unavailable');
+    expect(friendlyAuthError('Error sending confirmation email')).toBe(
+      'L’e-mail n’a pas pu partir. Réessayez dans quelques minutes.',
+    );
+    // Un SMS qui ne part pas reste un SMS : ce n'est pas l'e-mail qui est en cause.
+    expect(classifyAuthError({ message: 'Error sending confirmation OTP to provider' })).toBe(
+      'sms_unavailable',
+    );
+  });
+
   it('reconnaît une coupure réseau par le nom de l’erreur', () => {
     expect(classifyAuthError({ name: 'AuthRetryableFetchError', message: 'x' })).toBe('network');
     expect(classifyAuthError({ name: 'AuthWeakPasswordError', message: 'x' })).toBe(
       'weak_password',
     );
+  });
+
+  // Les fonctions Edge RENDENT la coupure réseau au lieu de la lever : une `FunctionsFetchError`.
+  it('reconnaît la coupure réseau d’une fonction Edge par son nom, ou par son libellé', () => {
+    expect(classifyAuthError({ name: 'FunctionsFetchError', message: 'x' })).toBe('network');
+    expect(classifyAuthError({ message: 'Failed to send a request to the Edge Function' })).toBe(
+      'network',
+    );
+    expect(classifyAuthError('Failed to send a request to the Edge Function')).toBe('network');
+    // La vraie erreur de `@supabase/functions-js`, telle que `invoke` la rend hors ligne.
+    expect(
+      classifyAuthError(new FunctionsFetchError(new TypeError('Network request failed'))),
+    ).toBe('network');
   });
 
   it('reclasse une catégorie déjà classée, ou un code Supabase passé en texte', () => {
@@ -100,6 +130,16 @@ describe('classifyAuthError — par code Supabase', () => {
     expect(classifyAuthError('cancelled')).toBe('cancelled');
   });
 
+  it('retraduit les refus de l’association du numéro, gardés en catégorie par le store', () => {
+    expect(friendlyAuthError('phone_taken')).toBe(
+      'Ce numéro est déjà associé à un autre compte. Connectez-vous avec votre e-mail.',
+    );
+    expect(friendlyAuthError('phone_locked')).toBe(
+      'Un numéro est déjà associé à ce compte. Pour le changer, contactez-nous.',
+    );
+    expect(friendlyAuthError('email_unavailable')).toMatch(/n’a pas pu partir/);
+  });
+
   it('un code inconnu retombe sur « inconnu », jamais sur un message brut', () => {
     const code = classifyAuthError({ code: 'quelque_chose_de_nouveau', message: 'secret interne' });
     expect(code).toBe('unknown');
@@ -108,24 +148,29 @@ describe('classifyAuthError — par code Supabase', () => {
 });
 
 describe('messages', () => {
-  const ALL: AuthErrorCode[] = [
-    'invalid_input',
-    'invalid_credentials',
-    'email_not_confirmed',
-    'phone_not_confirmed',
-    'user_exists',
-    'weak_password',
-    'same_password',
-    'rate_limited',
-    'network',
-    'otp_invalid',
-    'sms_unavailable',
-    'provider_disabled',
-    'signup_disabled',
-    'session_missing',
-    'unavailable',
-    'unknown',
-  ];
+  // Exhaustive par construction : une catégorie ajoutée à `AuthErrorCode` sans figurer ici fait
+  // échouer la vérification des types — elle ne peut pas échapper au test de son message.
+  const ALL = Object.keys({
+    invalid_input: true,
+    invalid_credentials: true,
+    email_not_confirmed: true,
+    phone_not_confirmed: true,
+    user_exists: true,
+    weak_password: true,
+    same_password: true,
+    rate_limited: true,
+    network: true,
+    otp_invalid: true,
+    sms_unavailable: true,
+    email_unavailable: true,
+    phone_taken: true,
+    phone_locked: true,
+    provider_disabled: true,
+    signup_disabled: true,
+    session_missing: true,
+    unavailable: true,
+    unknown: true,
+  } satisfies Record<Exclude<AuthErrorCode, 'cancelled'>, true>) as AuthErrorCode[];
 
   it('chaque catégorie a un message français, avec une apostrophe typographique', () => {
     for (const code of ALL) {

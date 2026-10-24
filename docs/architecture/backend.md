@@ -24,12 +24,15 @@ a service_role key.
 
 `src/features/auth` owns sign in / up / out, the session store (`useAuthStore`), e-mail **or**
 phone + password, Google and Apple (native ID-token flows), six-digit codes for confirmation and
-password recovery, and the account screen (sign-out, phone verification, deletion). The session is
-loaded at startup by `AuthBootstrap` in the root layout; there is **no forced login** (App Store
-5.1.1). `useProtectedRoute` remains available for a screen that truly needs an account. Inputs are
-Zod-validated before any network call. Migration `0007_auth_identity` fills `public.profiles` at
-sign-up and locks the server-owned columns. Full guide and console setup:
-[authentication](../security/authentication.md) ([ADR-0009](decisions/0009-authentification.md)).
+password recovery, and the account screen (sign-out, phone linking, deletion). **An account is
+mandatory** (ADR-0010): the root layout loads the session at startup and its `EntryGate` applies
+`decideEntry` — without a session only the splash, role choice, sign-up, sign-in and forgot-password
+screens open. A phone number is linked without SMS by the `link-phone` Edge Function (Prelude will
+verify it later); Apple on Android goes through Apple’s web page with PKCE. Inputs are Zod-validated
+before any network call. Migrations `0007_auth_identity` and `0008_phone_link_account_type` fill
+`public.profiles` at sign-up, lock the server-owned columns and let a Google/Apple sign-up declare
+its account type once. Full guide and console setup: [authentication](../security/authentication.md)
+([ADR-0009](decisions/0009-authentification.md), [ADR-0010](decisions/0010-compte-obligatoire-numero-sans-sms.md)).
 
 ## Database — secure-by-default rules
 

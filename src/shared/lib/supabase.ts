@@ -7,6 +7,36 @@ import { env } from './env';
 import { LargeSecureStore } from './storage';
 
 /**
+ * PKCE en S256 (RFC 7636 §4.2). auth-js hache le vérificateur avec `crypto.subtle.digest`, absent
+ * de React Native (seul `getRandomValues` y est fourni) : sans lui, il passe en « plain » et met le
+ * vérificateur EN CLAIR dans l'adresse d'autorisation (connexion Apple sur Android). On fournit ce
+ * seul `digest` (SHA-256), par expo-crypto, chargé au premier usage.
+ */
+function provideSha256ForPkce(): void {
+  if (Platform.OS === 'web') return;
+  const webCrypto = (globalThis as { crypto?: { subtle?: unknown } }).crypto;
+  if (!webCrypto || webCrypto.subtle !== undefined) return;
+  webCrypto.subtle = {
+    digest: async (
+      algorithm: string | { name: string },
+      data: BufferSource,
+    ): Promise<ArrayBuffer> => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- why: module natif, chargé au premier usage
+      const Crypto = require('expo-crypto') as typeof import('expo-crypto');
+      const name = typeof algorithm === 'string' ? algorithm : algorithm.name;
+      if (name.toUpperCase() !== Crypto.CryptoDigestAlgorithm.SHA256) {
+        throw new Error(`digest : seul SHA-256 est fourni (demandé : ${name}).`);
+      }
+      return Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, data);
+    },
+  };
+}
+provideSha256ForPkce();
+
+/** Où la session est rangée : chiffrée sur téléphone ; le stockage par défaut sur le web. */
+const sessionStore = Platform.OS !== 'web' ? new LargeSecureStore() : undefined;
+
+/**
  * The Supabase client. Security-critical configuration — read before changing:
  *
  * - **Session lives in `LargeSecureStore`** (AES + Keychain), NOT AsyncStorage.
@@ -29,7 +59,7 @@ export const supabase = createClient(
   {
     auth: {
       // SecureStore is unavailable on web; let supabase-js use its web default there.
-      ...(Platform.OS !== 'web' ? { storage: new LargeSecureStore() } : {}),
+      ...(sessionStore ? { storage: sessionStore } : {}),
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
@@ -38,6 +68,26 @@ export const supabase = createClient(
     },
   },
 );
+
+/**
+ * Efface la session rangée sur l'appareil, SANS le serveur. supabase-js le fait lui-même quand la
+ * déconnexion aboutit ; mais hors ligne, avec un jeton expiré, il rend une erreur AVANT d'effacer
+ * (la session reviendrait au prochain lancement). La déconnexion appelle donc ceci en secours.
+ */
+export async function forgetStoredSession(): Promise<void> {
+  // why: `storageKey` n'est pas exposé dans les types publics d'auth-js, mais c'est la clé exacte
+  // sous laquelle il range la session (« sb-<projet>-auth-token » par défaut).
+  const key = (supabase.auth as unknown as { storageKey?: unknown }).storageKey;
+  if (typeof key !== 'string' || key === '') return;
+  for (const item of [key, `${key}-code-verifier`, `${key}-user`]) {
+    try {
+      if (sessionStore) await sessionStore.removeItem(item);
+      else globalThis.localStorage?.removeItem(item);
+    } catch {
+      // Rien à effacer, ou stockage indisponible : on continue avec la clé suivante.
+    }
+  }
+}
 
 /**
  * Refresh the session only while the app is foregrounded (native). Call once at

@@ -14,11 +14,11 @@ import { AppleLogo, GoogleLogo } from './social-icons';
 /**
  * QUELS BOUTONS AFFICHER — une règle pure, testée seule.
  *
- * - Hors démonstration : Google seulement s'il est branché (identifiant client présent) et hors web ;
- *   Apple seulement si le système l'offre (iOS 13+, capacité activée). Un bouton qui échouerait au
- *   toucher est pire qu'un bouton absent.
+ * - Hors démonstration : Google seulement s'il est branché (identifiant client présent) et hors web.
+ *   Apple sur iPhone si le système l'offre (iOS 13+, capacité activée) ; sur Android TOUJOURS — sa
+ *   page web, ouverte dans le navigateur du système (ADR-0010). Tout le réglage d'Apple sur Android
+ *   est côté serveur (Services ID, secret) : `npm run auth:check` le rappelle.
  * - En démonstration (aucun serveur) : on montre ce qui existera, pour que le client voie l'écran.
- *   Apple y reste réservé à iOS — et au web, où l'on prévisualise — comme en vrai.
  *
  * App Store 4.8 : dès qu'on propose Google sur iOS, on propose aussi Apple. Les deux règles ci-dessus
  * ne les séparent jamais sur un iPhone récent.
@@ -31,10 +31,10 @@ export function socialAvailability(input: {
   googleConfigured: boolean;
   appleAvailable: boolean;
 }): SocialAvailability {
-  if (input.demo) return { google: true, apple: input.os === 'ios' || input.os === 'web' };
+  if (input.demo) return { google: true, apple: true };
   return {
     google: input.googleConfigured && input.os !== 'web',
-    apple: input.appleAvailable,
+    apple: input.os === 'android' || input.appleAvailable,
   };
 }
 
@@ -154,9 +154,12 @@ export function SocialSection({
   busy,
   verb,
   legal = false,
+  disabled = false,
 }: {
   onSelect: (provider: SocialProvider) => void;
   busy: SocialProvider | null;
+  /** Une autre connexion est en cours (formulaire) : les boutons se désactivent, et le disent. */
+  disabled?: boolean;
   verb?: string;
   /** Rappeler que continuer vaut accepter les CGU (écran de connexion : pas de case à cocher). */
   legal?: boolean;
@@ -177,7 +180,7 @@ export function SocialSection({
         <SocialButton
           provider="google"
           loading={busy === 'google'}
-          disabled={busy !== null}
+          disabled={busy !== null || disabled}
           onPress={() => onSelect('google')}
           {...(verb ? { verb } : {})}
         />
@@ -186,7 +189,7 @@ export function SocialSection({
         <SocialButton
           provider="apple"
           loading={busy === 'apple'}
-          disabled={busy !== null}
+          disabled={busy !== null || disabled}
           onPress={() => onSelect('apple')}
           {...(verb ? { verb } : {})}
         />

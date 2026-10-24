@@ -1,6 +1,7 @@
 import {
   resolveDeepLinkPath,
   isAllowedExternalUrl,
+  isAuthCallback,
   SAFE_FALLBACK_ROUTE,
 } from '@/shared/lib/deep-link';
 
@@ -25,6 +26,31 @@ describe('resolveDeepLinkPath', () => {
     expect(resolveDeepLinkPath(null)).toBe(SAFE_FALLBACK_ROUTE);
     expect(resolveDeepLinkPath('')).toBe(SAFE_FALLBACK_ROUTE);
     expect(resolveDeepLinkPath('::::not a url::::')).toBe(SAFE_FALLBACK_ROUTE);
+  });
+});
+
+/**
+ * The Apple sign-in return on Android (`tklink://auth/callback?code=…`) is handed to the sign-in in
+ * progress: the router must NOT navigate to it. Only the app's own callback qualifies.
+ */
+describe('isAuthCallback', () => {
+  it('recognises the callback as a full link or as a bare path, whatever follows it', () => {
+    expect(isAuthCallback('tklink://auth/callback?code=x')).toBe(true);
+    expect(isAuthCallback('/auth/callback')).toBe(true);
+    expect(isAuthCallback('auth/callback#a')).toBe(true);
+  });
+
+  it('rejects empty input and ordinary routes', () => {
+    expect(isAuthCallback(null)).toBe(false);
+    expect(isAuthCallback(undefined)).toBe(false);
+    expect(isAuthCallback('')).toBe(false);
+    expect(isAuthCallback('/')).toBe(false);
+  });
+
+  it('rejects another host, a web URL, or a deeper path', () => {
+    expect(isAuthCallback('tklink://evil/auth/callback')).toBe(false);
+    expect(isAuthCallback('https://x.com/auth/callback')).toBe(false);
+    expect(isAuthCallback('/auth/callback/extra')).toBe(false);
   });
 });
 

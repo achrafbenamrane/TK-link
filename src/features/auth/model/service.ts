@@ -1,12 +1,15 @@
-import { supabase } from '@/shared/lib/supabase';
-import type { Role } from '@/shared/lib/roles';
+import { Platform } from 'react-native';
+import { z } from 'zod';
+
+import { ROLES, type Role } from '@/shared/lib/roles';
+import { forgetStoredSession, supabase } from '@/shared/lib/supabase';
 
 import { classifyAuthError, type AuthErrorCode, type AuthErrorInput } from './auth-errors';
 import type { Identifier } from './identifier';
 import type { SocialIdentity, SocialProvider } from './social/types';
 
 /**
- * LE SERVICE D'AUTHENTIFICATION — chaque appel à Supabase Auth, et rien d'autre.
+ * LE SERVICE D'AUTHENTIFICATION — chaque appel à Supabase, et rien d'autre.
  *
  * Aucune règle d'écran ici, aucun mode démonstration : ce fichier est la frontière avec le serveur.
  * Chaque fonction renvoie un résultat typé (`{ ok: true, … }` ou `{ ok: false, code }`) au lieu de
@@ -30,7 +33,7 @@ const fail = (error: unknown): Failure => ({
 export type SignUpMeta = {
   firstName: string;
   lastName: string;
-  /** E.164, ou vide. Un contact, pas encore une identité : il n'est « vérifié » que par SMS. */
+  /** E.164, ou vide. Associé au compte juste après l'inscription (`linkPhone`), sans code. */
   phone: string;
   accountType: Role;
 };
@@ -47,6 +50,11 @@ function metadata(meta: SignUpMeta | undefined): Record<string, string> {
 
 /* ───────────────────────────────────────────────────────────── mot de passe */
 
+/**
+ * E-mail ou téléphone + mot de passe. Par téléphone, Supabase exige que le fournisseur « Phone »
+ * soit activé et que le numéro soit confirmé — c'est ce que fait `linkPhone` (sans code, pour
+ * l'instant : la vérification par SMS viendra avec Prelude).
+ */
 export async function signInWithPassword(id: Identifier, password: string): Promise<Outcome> {
   try {
     const { error } = await supabase.auth.signInWithPassword(
@@ -60,7 +68,7 @@ export async function signInWithPassword(id: Identifier, password: string): Prom
 
 /**
  * Crée le compte par e-mail. `needsCode` : le projet exige la confirmation de l'adresse — aucune
- * session n'existe encore, et un code à six chiffres vient d'être envoyé.
+ * session n'existe encore, et un code à six chiffres vient d'être envoyé (par Resend).
  */
 export async function signUpWithEmail(
   email: string,
@@ -105,33 +113,73 @@ export async function resendSignUpCode(email: string): Promise<Outcome> {
   }
 }
 
-/* ───────────────────────────────────────────────────────── numéro de téléphone */
+/* ─────────────────────────────────────────────────── numéro de téléphone */
+
+/** Ce qu'une fonction Edge renvoie dans le corps d'un refus : `{ "error": "phone_exists" }`. */
+async function functionErrorCode(error: unknown): Promise<string | null> {
+  const context = (error as { context?: unknown } | null)?.context as
+    { clone?: () => { json: () => Promise<unknown> }; json?: () => Promise<unknown> } | undefined;
+  if (!context) return null;
+  try {
+    const body = (await (context.clone ? context.clone().json() : context.json?.())) as
+      { error?: unknown } | undefined;
+    return typeof body?.error === 'string' ? body.error : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Le statut HTTP d'un refus de fonction Edge (la réponse est dans `error.context`), s'il y en a un. */
+function functionStatus(error: unknown): number | null {
+  const status = ((error as { context?: unknown } | null)?.context as { status?: unknown } | null)
+    ?.status;
+  return typeof status === 'number' ? status : null;
+}
 
 /**
- * Rattache (ou change) le numéro d'un compte déjà connecté : Supabase envoie un code par SMS. Le
- * numéro ne devient une identité de connexion qu'une fois confirmé (`confirmPhone`).
+ * Associe un numéro au compte connecté — SANS code, pour l'instant (décision du 24/10/2026 ; la
+ * vérification par SMS viendra avec Prelude). C'est la fonction Edge `link-phone` qui le fait, avec
+ * les droits du serveur : le client ne peut pas confirmer un numéro tout seul.
+ *
+ * Une fois associé, le numéro sert à se connecter (avec le même mot de passe). La session est
+ * rafraîchie pour que l'app voie tout de suite le numéro sur le compte.
  */
-export async function startPhoneVerification(phone: string): Promise<Outcome> {
+export async function linkPhone(phone: string): Promise<Outcome> {
   try {
-    const { error } = await supabase.auth.updateUser({ phone });
-    return error ? fail(error) : { ok: true };
+    const { error } = await supabase.functions.invoke('link-phone', {
+      method: 'POST',
+      body: { phone },
+    });
+    if (error) {
+      const code = await functionErrorCode(error);
+      if (code === 'phone_exists') return { ok: false, code: 'phone_taken' };
+      if (code === 'phone_locked') return { ok: false, code: 'phone_locked' };
+      if (code === 'invalid_phone') return { ok: false, code: 'invalid_input' };
+      if (code === 'email_not_confirmed') return { ok: false, code: 'email_not_confirmed' };
+      // Cinq numéros différents par 24 heures : au-delà, on n'en teste plus (voir la fonction Edge).
+      if (code === 'too_many_attempts') return { ok: false, code: 'rate_limited' };
+      // Jeton refusé — par la fonction, ou avant elle par la passerelle de Supabase (qui répond
+      // dans son propre format) : session révoquée, compte supprimé ailleurs… il faut se reconnecter.
+      if (code === 'unauthorized' || functionStatus(error) === 401) {
+        return { ok: false, code: 'session_missing' };
+      }
+      return fail(error);
+    }
+    await supabase.auth.refreshSession().catch(() => undefined);
+    return { ok: true };
   } catch (error) {
     return fail(error);
   }
 }
 
-export async function confirmPhone(phone: string, code: string): Promise<Outcome> {
+/**
+ * Range le numéro saisi à l'inscription par Google ou Apple dans les métadonnées du compte (un
+ * CONTACT, comme celui de l'inscription par e-mail) — aucun SMS ne part. S'il ne peut pas être associé
+ * tout de suite, il le sera à la connexion suivante, ou depuis « Mon compte ».
+ */
+export async function saveContactPhone(phone: string): Promise<Outcome> {
   try {
-    const { error } = await supabase.auth.verifyOtp({ phone, token: code, type: 'phone_change' });
-    return error ? fail(error) : { ok: true };
-  } catch (error) {
-    return fail(error);
-  }
-}
-
-export async function resendPhoneCode(phone: string): Promise<Outcome> {
-  try {
-    const { error } = await supabase.auth.resend({ type: 'phone_change', phone });
+    const { error } = await supabase.auth.updateUser({ data: { contact_phone: phone } });
     return error ? fail(error) : { ok: true };
   } catch (error) {
     return fail(error);
@@ -141,48 +189,23 @@ export async function resendPhoneCode(phone: string): Promise<Outcome> {
 /* ─────────────────────────────────────────────────── mot de passe oublié */
 
 /**
- * Un numéro inconnu : Supabase refuse d'envoyer un code (« signups not allowed for otp ») puisqu'on
- * interdit la création de compte. Répondre autre chose que « code envoyé » dirait à n'importe qui si
- * un numéro possède un compte : on avale cette erreur-là, et seulement celle-là.
+ * Envoie un code de réinitialisation à une adresse e-mail. Toujours « ok » pour une adresse inconnue
+ * (Supabase ne dit rien, volontairement) : on ne révèle pas quelles adresses ont un compte. Par SMS,
+ * pas encore : il faudra Prelude.
  */
-function isUnknownUser(error: unknown): boolean {
-  const e = error as { code?: string; message?: string } | null;
-  return (
-    e?.code === 'otp_disabled' ||
-    e?.code === 'user_not_found' ||
-    /signups? not allowed|user not found/i.test(e?.message ?? '')
-  );
-}
-
-/**
- * Envoie un code de réinitialisation. Toujours « ok » pour un identifiant inconnu : on ne révèle pas
- * quels e-mails ou numéros ont un compte. Seuls un réseau coupé ou une limite d'envoi se voient.
- */
-export async function requestPasswordReset(id: Identifier): Promise<Outcome> {
+export async function requestPasswordReset(email: string): Promise<Outcome> {
   try {
-    if (id.kind === 'email') {
-      const { error } = await supabase.auth.resetPasswordForEmail(id.value);
-      return error ? fail(error) : { ok: true };
-    }
-    const { error } = await supabase.auth.signInWithOtp({
-      phone: id.value,
-      options: { shouldCreateUser: false },
-    });
-    if (error && !isUnknownUser(error)) return fail(error);
-    return { ok: true };
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    return error ? fail(error) : { ok: true };
   } catch (error) {
     return fail(error);
   }
 }
 
 /** Vérifie le code : ouvre une session (c'est elle qui autorise à changer le mot de passe). */
-export async function verifyPasswordReset(id: Identifier, code: string): Promise<Outcome> {
+export async function verifyPasswordReset(email: string, code: string): Promise<Outcome> {
   try {
-    const { error } = await supabase.auth.verifyOtp(
-      id.kind === 'email'
-        ? { email: id.value, token: code, type: 'recovery' }
-        : { phone: id.value, token: code, type: 'sms' },
-    );
+    const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'recovery' });
     return error ? fail(error) : { ok: true };
   } catch (error) {
     return fail(error);
@@ -198,10 +221,82 @@ export async function setPassword(password: string): Promise<Outcome> {
   }
 }
 
+/* ───────────────────────────────────────────────────── le profil serveur */
+
+/**
+ * Ce que le serveur sait de la personne : utile sur un nouvel appareil, où rien n'est en local.
+ * `accountTypeDeclared` : faux pour un compte créé par Google ou Apple dont le type n'a pas encore
+ * été déclaré (`declareAccountType`) — `accountType` n'y vaut alors que la valeur par défaut.
+ */
+export type ServerProfile = {
+  firstName: string;
+  lastName: string;
+  accountType: Role;
+  accountTypeDeclared: boolean;
+};
+
+const ProfileRowSchema = z.object({
+  first_name: z.string().nullable(),
+  last_name: z.string().nullable(),
+  account_type: z.enum(ROLES),
+  account_type_declared: z.boolean(),
+});
+
+/**
+ * Relit le profil de la personne connectée (RLS : elle ne voit que le sien). `profile: null` : pas
+ * de ligne, ou une ligne illisible — l'app garde alors ce qu'elle a en local.
+ */
+export async function fetchMyProfile(
+  userId: string,
+): Promise<Outcome<{ profile: ServerProfile | null }>> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, account_type, account_type_declared')
+      .eq('id', userId)
+      .maybeSingle();
+    if (error) return fail(error);
+    const parsed = ProfileRowSchema.safeParse(data);
+    if (!parsed.success) return { ok: true, profile: null };
+    return {
+      ok: true,
+      profile: {
+        firstName: parsed.data.first_name ?? '',
+        lastName: parsed.data.last_name ?? '',
+        accountType: parsed.data.account_type,
+        accountTypeDeclared: parsed.data.account_type_declared,
+      },
+    };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/**
+ * Déclare le type de compte — une seule fois, côté serveur (`declare_account_type`, migration 0008).
+ * Sert aux comptes créés par Google ou Apple, qui ne transmettent pas nos métadonnées. Renvoie le
+ * type EFFECTIF : celui-ci, ou celui déjà déclaré (une seconde déclaration est ignorée).
+ */
+export async function declareAccountType(type: Role): Promise<Outcome<{ accountType: Role }>> {
+  try {
+    const { data, error } = await supabase.rpc('declare_account_type', { p_type: type });
+    if (error) return fail(error);
+    const parsed = z.enum(ROLES).safeParse(data);
+    return parsed.success ? { ok: true, accountType: parsed.data } : { ok: false, code: 'unknown' };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
 /* ───────────────────────────────────────────────────── Google et Apple */
 
 /** « Nouveau » : le compte vient d'être créé par cette connexion (quelques secondes à peine). */
 const NEW_USER_WINDOW_MS = 2 * 60 * 1000;
+
+const isRecent = (createdAt: string | undefined): boolean => {
+  const age = Date.now() - Date.parse(createdAt ?? '');
+  return Number.isFinite(age) && age < NEW_USER_WINDOW_MS;
+};
 
 /**
  * Remet le jeton d'identité du fournisseur à Supabase, qui en vérifie la signature, le destinataire
@@ -218,11 +313,76 @@ export async function signInWithIdToken(
       ...(identity.nonce ? { nonce: identity.nonce } : {}),
     });
     if (error || !data.user) return fail(error);
-    const age = Date.now() - Date.parse(data.user.created_at);
+    return { ok: true, isNewUser: isRecent(data.user.created_at), userId: data.user.id };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/**
+ * Le retour de la page Apple dans l'app. Un lien d'app (pas un lien web) : l'échange du code est
+ * protégé par PKCE — un code intercepté ne sert à rien sans le vérificateur, resté sur l'appareil.
+ */
+export const APPLE_WEB_REDIRECT = 'tklink://auth/callback';
+
+type WebBrowserModule = typeof import('expo-web-browser');
+
+/**
+ * APPLE SUR ANDROID — Apple n'a pas de fenêtre native sur Android : on passe par sa page de connexion,
+ * dans un onglet du navigateur du système (jamais une vue web intégrée), avec PKCE.
+ *
+ * 1. Supabase fabrique l'adresse de la page Apple (sans l'ouvrir).
+ * 2. L'onglet s'ouvre ; Apple renvoie vers Supabase, qui renvoie vers `tklink://auth/callback?code=…`.
+ * 3. L'app échange le code contre une session.
+ *
+ * Exige côté Apple un « Services ID » et sa clé secrète, déclarés dans Supabase (voir la doc).
+ */
+export async function signInWithAppleWeb(): Promise<
+  Outcome<{ isNewUser: boolean; userId: string; email: string }>
+> {
+  if (Platform.OS === 'web') return { ok: false, code: 'unavailable' };
+  let browser: WebBrowserModule;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- why: module natif, chargé à la demande
+    browser = require('expo-web-browser') as WebBrowserModule;
+  } catch {
+    return { ok: false, code: 'unavailable' };
+  }
+
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: { redirectTo: APPLE_WEB_REDIRECT, skipBrowserRedirect: true },
+    });
+    if (error || !data?.url) return fail(error);
+
+    // Onglet fermé (« dismiss ») ou jamais ouvert (« cancel ») : la personne a renoncé.
+    const result = await browser.openAuthSessionAsync(data.url, APPLE_WEB_REDIRECT);
+    if (result.type !== 'success') return { ok: false, code: 'cancelled' };
+
+    // Le lien de retour porte le code (ou l'erreur) dans sa requête ; Supabase recopie l'erreur dans
+    // le fragment. On ne le journalise JAMAIS : il porte le code d'autorisation.
+    const callback = new URL(result.url);
+    const fragment = new URLSearchParams(callback.hash.replace(/^#/, ''));
+    const read = (key: string) => callback.searchParams.get(key) ?? fragment.get(key);
+    const returnedError = read('error');
+    if (returnedError) {
+      // `user_cancelled_authorize` : la personne a fermé la page d'Apple. `access_denied`, lui, n'est
+      // PAS une annulation (inscriptions fermées, compte suspendu…) : on le classe par son code.
+      if (returnedError === 'user_cancelled_authorize') return { ok: false, code: 'cancelled' };
+      return fail({ code: read('error_code') ?? returnedError });
+    }
+    const code = callback.searchParams.get('code');
+    if (!code) return { ok: false, code: 'unknown' };
+
+    const exchange = await supabase.auth.exchangeCodeForSession(code);
+    if (exchange.error || !exchange.data.user) return fail(exchange.error);
+    const user = exchange.data.user;
     return {
       ok: true,
-      isNewUser: Number.isFinite(age) && age < NEW_USER_WINDOW_MS,
-      userId: data.user.id,
+      isNewUser: isRecent(user.created_at),
+      userId: user.id,
+      email: user.email ?? '',
     };
   } catch (error) {
     return fail(error);
@@ -257,19 +417,41 @@ export async function rememberName(
 /* ───────────────────────────────────────────────────────────────── session */
 
 /** Ferme la session de CET appareil seulement (« global » déconnecterait tous les autres). */
+/** Au-delà, on n'attend plus le serveur : la session locale est effacée quand même. */
+const SIGN_OUT_TIMEOUT_MS = 5000;
+
+/**
+ * Ferme la session de CET appareil seulement (« global » déconnecterait tous les autres).
+ *
+ * Hors ligne avec un jeton expiré, supabase-js réessaie de le renouveler (jusqu'à ~25 s) puis rend
+ * une erreur SANS effacer la session : on n'attend pas plus de 5 s, et on l'efface nous-mêmes —
+ * sinon la personne se retrouverait connectée au lancement suivant.
+ */
 export async function signOut(): Promise<void> {
+  let closed = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    await supabase.auth.signOut({ scope: 'local' });
+    const timeout = new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), SIGN_OUT_TIMEOUT_MS);
+    });
+    const result = await Promise.race([supabase.auth.signOut({ scope: 'local' }), timeout]);
+    closed = result !== null && !result.error;
   } catch {
-    // Hors ligne : la session locale est quand même effacée par le client.
+    closed = false;
+  } finally {
+    clearTimeout(timer);
   }
+  if (!closed) await forgetStoredSession();
 }
 
 /** Supprime le compte et toutes ses données (fonction Edge `delete-account`, JWT vérifié). */
 export async function deleteAccount(): Promise<Outcome> {
   try {
     const { error } = await supabase.functions.invoke('delete-account', { method: 'POST' });
-    return error ? fail(error) : { ok: true };
+    if (!error) return { ok: true };
+    // Jeton refusé (session révoquée ou expirée) : réessayer ne servirait à rien, il faut se reconnecter.
+    if (functionStatus(error) === 401) return { ok: false, code: 'session_missing' };
+    return fail(error);
   } catch (error) {
     return fail(error);
   }

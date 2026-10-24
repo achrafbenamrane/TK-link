@@ -18,10 +18,17 @@ export {
   selectIsAuthenticated,
   selectDemoMode,
   selectSession,
+  selectAuthStatus,
   type AuthResult,
   type SocialSignIn,
 } from './model/store';
 export { describeAccount, type AccountInfo } from './model/account';
 export { DemoNotice } from './ui/demo-notice';
 export { isDemoSession, makeDemoSession } from './model/demo-session';
-export { useProtectedRoute } from './model/use-protected-route';
+export {
+  decideEntry,
+  homeFor,
+  firstRunRoute,
+  type EntryRoute,
+  type EntryState,
+} from './model/gate';

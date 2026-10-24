@@ -1,5 +1,10 @@
+import { supabase } from '@/shared/lib/supabase';
+import { act, fireEvent, render, screen, waitFor } from '@/shared/testing/render';
+
+import { describeAccount } from '../model/account';
 import { isDemoSession, makeDemoSession, DEMO_TOKEN } from '../model/demo-session';
 import { useAuthStore } from '../model/store';
+import { SignUpScreen } from '../ui/sign-up-screen';
 
 /**
  * Le mode démonstration : ce qui se passe quand aucun back-end n'est branché.
@@ -9,7 +14,31 @@ import { useAuthStore } from '../model/store';
  * chemin qu'on veut couvrir.
  */
 
+/**
+ * Le trousseau du téléphone, simulé en mémoire (comme dans `demo-flows.test.ts`) : la démonstration
+ * y range sa session, et `init` l'y relit.
+ */
+const mockKeychain = new Map<string, string>();
+jest.mock('@/shared/lib/storage', () => ({
+  ...jest.requireActual('@/shared/lib/storage'),
+  secureStorage: {
+    get: jest.fn((key: string) => Promise.resolve(mockKeychain.get(key) ?? null)),
+    set: jest.fn((key: string, value: string) => {
+      mockKeychain.set(key, value);
+      return Promise.resolve();
+    }),
+    remove: jest.fn((key: string) => {
+      mockKeychain.delete(key);
+      return Promise.resolve();
+    }),
+  },
+}));
+
+/** Laisse aboutir ce qui attend encore : la lecture du trousseau est asynchrone. */
+const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
 beforeEach(() => {
+  mockKeychain.clear();
   useAuthStore.setState({ session: null, status: 'unauthenticated', error: null });
 });
 
@@ -78,10 +107,83 @@ describe('store sans back-end', () => {
     expect(useAuthStore.getState().status).toBe('unauthenticated');
   });
 
-  it('`init` n’interroge aucun serveur et rend un désabonnement inerte', () => {
-    const unsubscribe = useAuthStore.getState().init();
+  it('`init` n’interroge aucun serveur et rend un désabonnement inerte', async () => {
+    const getSession = jest.spyOn(supabase.auth, 'getSession');
+    const onAuthStateChange = jest.spyOn(supabase.auth, 'onAuthStateChange');
+    useAuthStore.setState({ status: 'loading' });
 
+    const unsubscribe = useAuthStore.getState().init();
+    // Rien n'est encore décidé : la lecture du trousseau n'a pas répondu.
+    expect(useAuthStore.getState().status).toBe('loading');
+    expect(getSession).not.toHaveBeenCalled();
+    expect(onAuthStateChange).not.toHaveBeenCalled();
+
+    await settle();
     expect(useAuthStore.getState().status).toBe('unauthenticated');
+    expect(getSession).not.toHaveBeenCalled();
+    expect(onAuthStateChange).not.toHaveBeenCalled();
     expect(() => unsubscribe()).not.toThrow();
+
+    getSession.mockRestore();
+    onAuthStateChange.mockRestore();
+  });
+});
+
+describe('un compte est obligatoire, même en démonstration', () => {
+  it.each(['consommateur', 'commercant', 'grossiste', 'livreur'] as const)(
+    'l’inscription (%s) ne propose plus de « Continuer sans compte »',
+    async (role) => {
+      render(<SignUpScreen role={role} />);
+      // Les icônes chargent leur police en tâche de fond : on laisse ce rendu aboutir.
+      await act(async () => {});
+
+      expect(screen.getByTestId('signup-submit')).toBeTruthy();
+      // Le bas du formulaire, où se trouvait le lien, est bien rendu : l'absence n'est pas vide de sens.
+      expect(
+        screen.getByTestId(role === 'commercant' ? 'signup-free-ops' : 'signup-alternatives'),
+      ).toBeTruthy();
+      expect(screen.queryByTestId('signup-skip')).toBeNull();
+      // Le lien était un bouton nommé par son `accessibilityLabel`, pas par un texte visible.
+      expect(screen.queryByLabelText(/sans compte/i)).toBeNull();
+      expect(screen.queryByText(/sans compte/i)).toBeNull();
+    },
+  );
+});
+
+describe('Google et Apple à l’inscription, en démonstration', () => {
+  it('le numéro tapé dans le formulaire est associé juste après la connexion Google', async () => {
+    const onSignedUp = jest.fn();
+    render(<SignUpScreen role="consommateur" onSignedUp={onSignedUp} />);
+    await act(async () => {});
+
+    fireEvent.changeText(screen.getByTestId('signup-phone'), '06 12 34 56 78');
+    fireEvent.press(screen.getByTestId('signup-terms'));
+    fireEvent.press(screen.getByTestId('auth-google'));
+
+    await waitFor(() => expect(onSignedUp).toHaveBeenCalledTimes(1));
+    expect(useAuthStore.getState().status).toBe('authenticated');
+    expect(describeAccount(useAuthStore.getState().session)).toMatchObject({
+      email: 'alex.demo@gmail.com',
+      phone: '+33612345678',
+      phoneLinked: true,
+      provider: 'google',
+    });
+  });
+
+  it('sans numéro tapé, la session Google reste sans numéro', async () => {
+    const onSignedUp = jest.fn();
+    render(<SignUpScreen role="consommateur" onSignedUp={onSignedUp} />);
+    await act(async () => {});
+
+    fireEvent.press(screen.getByTestId('signup-terms'));
+    fireEvent.press(screen.getByTestId('auth-google'));
+
+    await waitFor(() => expect(onSignedUp).toHaveBeenCalledTimes(1));
+    expect(describeAccount(useAuthStore.getState().session)).toMatchObject({
+      email: 'alex.demo@gmail.com',
+      phone: null,
+      phoneLinked: false,
+      provider: 'google',
+    });
   });
 });

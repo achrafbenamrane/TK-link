@@ -29,6 +29,8 @@ type Store = OnboardingState & {
   /** Remplace tous les centres d'intérêt d'un coup (« tout choisir »). */
   setInterests: (list: Interest[]) => void;
   complete: () => void;
+  /** Le compte propriétaire de ce profil local (voir `OnboardingSchema.ownerId`). */
+  setOwnerId: (id: string) => void;
   /** Rejouer l'accueil (bouton de démonstration dans le profil). */
   reset: () => void;
 };
@@ -50,12 +52,14 @@ export const useOnboardingStore = create<Store>()(
       toggleInterest: (i) => set((s) => ({ interests: toggleInterest(s.interests, i) })),
       setInterests: (interests) => set({ interests }),
       complete: () => set({ completed: true }),
+      setOwnerId: (ownerId) => set({ ownerId }),
       reset: () => set({ ...initial }),
     }),
     {
       name: 'tklink-onboarding-v1',
       storage: createJSONStorage(() => asyncStorageBackend),
-      partialize: ({ completed, firstName, avatar, role, siret, interests }) => ({
+      partialize: ({ completed, firstName, avatar, role, siret, interests, ownerId }) => ({
+        ownerId,
         completed,
         firstName,
         avatar,
@@ -84,4 +88,5 @@ export const selectFirstName = (s: Store) => s.firstName;
 export const selectAvatar = (s: Store) => s.avatar;
 export const selectInterests = (s: Store) => s.interests;
 export const selectRole = (s: Store) => s.role;
+export const selectOwnerId = (s: Store) => s.ownerId;
 export const selectSiret = (s: Store) => s.siret;

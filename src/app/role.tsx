@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 
+import { useAuthStore } from '@/features/auth';
 import { useCourierStore } from '@/features/courier';
 import { DEFAULT_TIERS, useMerchantLoyaltyStore } from '@/features/loyalty';
 import { useMessagesStore } from '@/features/messages';
@@ -20,8 +21,17 @@ import type { Role } from '@/shared/lib/roles';
  * « Démo » ouvre l'app d'un profil déjà REMPLI — commandes, fidélité, offres,
  * boutique, missions, avec leurs images et leurs textes — pour montrer au client ce
  * que chacun voit. Ce sont des données d'exemple, posées dans les stores locaux ;
- * aucun serveur n'est touché.
+ * aucun serveur n'est touché. Le compte étant obligatoire, la démo ouvre aussi une
+ * session LOCALE (sans serveur, sans jeton) au nom de ce profil d'exemple.
  */
+
+/** L'identifiant de la session de démonstration de chaque profil. */
+const DEMO_IDENTITY: Record<Role, string> = {
+  consommateur: 'neo.demo@tklink.fr',
+  commercant: 'contact@petit-toulousain.fr',
+  grossiste: 'contact@grossiste-occitan.fr',
+  livreur: 'alex.martin.demo@tklink.fr',
+};
 
 const MIN = 60_000;
 const DAY = 24 * 3600 * 1000;
@@ -515,6 +525,7 @@ export default function RoleRoute() {
         ? {
             onDemo: (role: Role) => {
               seedDemo(role);
+              useAuthStore.getState().openDemo(DEMO_IDENTITY[role]);
               router.replace('/');
             },
           }

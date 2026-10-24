@@ -4,10 +4,13 @@ import type { Session } from '@supabase/supabase-js';
  * CE QUE LA SESSION DIT DU COMPTE — lu par l'écran « Mon compte ».
  *
  * Deux numéros peuvent coexister, et il ne faut pas les confondre :
- *  - `user.phone` : le numéro CONFIRMÉ par SMS (Supabase l'écrit sans « + »). C'est une identité de
- *    connexion.
- *  - `user_metadata.contact_phone` : le numéro SAISI à l'inscription, pas encore vérifié. Un contact,
- *    pas une identité : on ne peut pas se connecter avec.
+ *  - `user.phone` : le numéro ASSOCIÉ au compte (Supabase l'écrit sans « + »). C'est une identité de
+ *    connexion : on peut se connecter avec lui et son mot de passe.
+ *  - `user_metadata.contact_phone` : le numéro SAISI à l'inscription, pas encore associé (il le sera
+ *    à la première connexion). Un contact, pas une identité.
+ *
+ * Aucun des deux n'est « vérifié » par SMS aujourd'hui (décision du 24/10/2026) : la vérification
+ * viendra avec Prelude, et se lira alors dans le profil serveur (`profiles.phone_verified`).
  */
 export type AccountProvider = 'email' | 'phone' | 'google' | 'apple' | 'demo';
 
@@ -15,8 +18,8 @@ export type AccountInfo = {
   email: string | null;
   /** E.164, avec le « + ». */
   phone: string | null;
-  /** Le numéro est-il confirmé par SMS — donc utilisable pour se connecter ? */
-  phoneVerified: boolean;
+  /** Le numéro est-il associé au compte — donc utilisable pour se connecter ? */
+  phoneLinked: boolean;
   provider: AccountProvider;
   firstName: string;
 };
@@ -33,19 +36,16 @@ export function describeAccount(session: Session | null): AccountInfo | null {
   const rawProvider = (user.app_metadata as { provider?: string } | undefined)?.provider ?? 'email';
   const provider = PROVIDERS.find((p) => p === rawProvider) ?? 'email';
 
-  const confirmed = Boolean(user.phone) && Boolean(user.phone_confirmed_at);
   const contact = typeof meta.contact_phone === 'string' ? meta.contact_phone : '';
   const phone = user.phone ? plus(user.phone) : contact || null;
-
-  // Un compte de démonstration n'a pas de serveur pour confirmer quoi que ce soit : son numéro est
-  // « vérifié » dès qu'il a servi d'identifiant, ou après le code de démonstration.
-  const phoneVerified = provider === 'demo' ? Boolean(user.phone) : confirmed;
+  // Supabase n'accepte une connexion par numéro que s'il est marqué confirmé sur le compte.
+  const phoneLinked = Boolean(user.phone) && Boolean(user.phone_confirmed_at);
 
   const first = meta.first_name ?? meta.given_name ?? '';
   return {
     email: user.email ?? null,
     phone,
-    phoneVerified,
+    phoneLinked,
     provider,
     firstName: typeof first === 'string' ? first : '',
   };

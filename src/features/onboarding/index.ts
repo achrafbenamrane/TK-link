@@ -16,6 +16,7 @@ export {
   selectInterests,
   selectRole,
   selectSiret,
+  selectOwnerId,
 } from './model/store';
 export type { Avatar, CustomAvatar, Interest, OnboardingState } from './model/schema';
 export { AVATARS, avatarAt, type AvatarPreset } from './model/avatars';

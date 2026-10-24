@@ -21,6 +21,7 @@
     "doctor": "npx expo-doctor",
     "docs:lint": "node scripts/docs-lint.mjs",
     "auth:check": "node --env-file-if-exists=.env scripts/check-auth-config.mjs",
+    "apple:secret": "node scripts/apple-client-secret.mjs",
     "secrets:check": "node scripts/check-secrets.mjs",
     "a11y:check": "node scripts/check-a11y.mjs",
     "store:check": "node scripts/check-store-readiness.mjs",
@@ -61,6 +62,7 @@
     "expo-status-bar": "~56.0.4",
     "expo-system-ui": "~56.0.5",
     "expo-video": "~56.1.4",
+    "expo-web-browser": "~56.0.6",
     "nativewind": "^4.2.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -102,7 +104,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix --max-warnings 0",
+      "eslint --fix --max-warnings 0 --no-warn-ignored",
       "prettier --write"
     ],
     "*.{js,mjs,cjs,json,md,yml,yaml,css}": [

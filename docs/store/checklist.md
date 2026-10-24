@@ -22,7 +22,7 @@ STORE-APL-4.2-MINFUNC  | P1 | apple  | More than a web wrapper; real native util
 STORE-APL-4.3-UNIQUE   | P1 | apple  | Differentiated vs existing/sibling apps; not a cosmetic re-skin; one Bundle ID/concept | Originality review (see below) | auto(placeholders) + manual
 STORE-APL-4.8-SIWA     | P2 | apple  | If social login offered, also offer Sign in with Apple | Inspect auth screen | manual
 STORE-ACCT-DELETE      | P1 | both   | In-app account-deletion path exists (+ web URL for Google) | /account route + delete-account function present | auto + manual
-STORE-APL-5.1.1-NOWALL | P2 | apple  | No forced login for features that don't need an account | Review gating | manual
+STORE-APL-5.1.1-NOWALL | P2 | apple  | No forced login for features that don't need an account | Review gating | manual — TK LINK impose le compte (décision du client, ADR-0010) : le justifier dans les notes de soumission (commandes, paiements, fidélité, dossiers pro = fonctions de compte) et fournir le compte de démonstration (STORE-APL-2.1-DEMO)
 STORE-APL-5.1.1-POLICY | P1 | apple  | Privacy policy linked in-app + on product page | Check links resolve | manual
 STORE-APL-5.1.1-STRINGS| P1 | apple  | Tailored NSxxxUsageDescription for each permission used (no boilerplate, no unused perms) | Inspect app.config ios.infoPlist | auto(presence) + manual
 STORE-APL-PRIVMANIFEST | P1 | apple  | ios.privacyManifests declares required-reason APIs (+ SDK reasons) | app.config check; ASC upload passes | auto + manual

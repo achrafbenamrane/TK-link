@@ -80,7 +80,7 @@ Then **Phase N** mirrors this into Next.js.
 
 - [x] ADR `0007-supabase-backend.md` (RLS-first posture, data boundary).
 - [x] `src/shared/lib/supabase.ts` — client with **LargeSecureStore** session, `flowType:'pkce'`, `detectSessionInUrl:false`, `autoRefreshToken`, `persistSession`, `lock:processLock`; `registerSupabaseAutoRefresh()` AppState wiring. Env adds `SUPABASE_URL` + `ANON_KEY` (env.ts **rejects a service_role key**).
-- [x] Auth slice `src/features/auth/` — sign up/in/out/session store, Zod-validated, error/loading states, testIDs; `useProtectedRoute` guard wired in `_layout`; `sign-in` route. _(Polished UI + verified-link PKCE deep-link callback = Phase 4/later.)_
+- [x] Auth slice `src/features/auth/` — sign up/in/out/session store, Zod-validated, error/loading states, testIDs; `useProtectedRoute` guard wired in `_layout` (since replaced by `decideEntry`/`EntryGate`, ADR-0010); `sign-in` route. _(Polished UI + verified-link PKCE deep-link callback = Phase 4/later.)_
 - [x] **RLS reference migrations** (`supabase/migrations/`): revoke default grants + **auto-enable RLS event trigger** + `private` schema (`0001`); `profiles` mirror (`0002`); owner-scoped CRUD example `notes` (`0003`, the canonical pattern); entitlement table (`0004`). MFA-`aal2` restrictive policy documented in `backend.md`.
 - [x] Canonical **example feature persisted behind RLS** = `notes` (replaces the painted-door pattern).
 - [x] **pgTAP RLS tests** (`supabase/tests/database/rls.test.sql`) + **Security Advisor** gate documented (`supabase db lint`, block ERROR 0007/0013/0015).

@@ -23,7 +23,8 @@ All three install side-by-side on one device (different bundle ids — see
   `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` (sans elles : mode démonstration),
   `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` (identifiants OAuth
   publics ; vides = bouton Google masqué), `EXPO_PUBLIC_AUTH_PHONE` (`on` par défaut, `off` tant
-  qu’aucun fournisseur de SMS n’est branché). Le secret du client Google et les identifiants Twilio
+  que le fournisseur « Phone » n’est pas activé dans Supabase — le numéro s’associe sans SMS,
+  ADR-0010). Le secret du client Google, le secret Apple (`npm run apple:secret`) et la clé Resend
   vivent dans Supabase, jamais dans l’app. `npm run auth:check` vérifie le projet réel.
 - CI/EAS: EAS environment variables per profile (`environment:` field in
   eas.json); GitHub Actions secrets for workflow credentials.

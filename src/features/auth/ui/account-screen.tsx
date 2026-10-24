@@ -10,9 +10,8 @@ import { useColors } from '@/shared/theme/theme-provider';
 
 import { describeAccount, type AccountProvider } from '../model/account';
 import { friendlyAuthError } from '../model/auth-errors';
-import { displayPhone, maskPhone } from '../model/identifier';
-import { selectDemoMode, selectSession, useAuthStore } from '../model/store';
-import { CodeStep } from './code-step';
+import { displayPhone } from '../model/identifier';
+import { selectSession, useAuthStore } from '../model/store';
 import { DemoNotice } from './demo-notice';
 
 type Props = {
@@ -36,25 +35,25 @@ const PROVIDER_LABEL: Record<AccountProvider, string> = {
 };
 
 /**
- * MON COMPTE — l'identité de connexion, la vérification du numéro, la déconnexion, et le chemin
+ * MON COMPTE — l'identité de connexion, le numéro associé, la déconnexion, et le chemin
  * EXIGÉ par les stores pour supprimer son compte depuis l'app (Apple 5.1.1(v), Google Play). Il
  * doit être facile à trouver : on y accède depuis le profil, en première ligne.
  */
 export function AccountScreen({ onSignOut, onAccountDeleted, onSignIn }: Props = {}) {
   const colors = useColors();
   const session = useAuthStore(selectSession);
-  const demo = useAuthStore(selectDemoMode);
   const signOut = useAuthStore((s) => s.signOut);
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
-  const startPhoneVerification = useAuthStore((s) => s.startPhoneVerification);
-  const confirmPhone = useAuthStore((s) => s.confirmPhone);
-  const resendPhoneCode = useAuthStore((s) => s.resendPhoneCode);
+  const linkPhone = useAuthStore((s) => s.linkPhone);
 
   const account = describeAccount(session);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [phoneStep, setPhoneStep] = useState<'idle' | 'sending' | 'code' | 'verified'>('idle');
+  const [phoneStep, setPhoneStep] = useState<'idle' | 'linking' | 'linked'>('idle');
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  // Associé à l'instant : la réponse du serveur fait foi, même si la session n'a pas pu être
+  // rafraîchie tout de suite (elle le sera au prochain renouvellement du jeton).
+  const phoneLinked = Boolean(account?.phoneLinked) || phoneStep === 'linked';
 
   const leave = () => {
     if (onSignOut) onSignOut();
@@ -81,11 +80,12 @@ export function AccountScreen({ onSignOut, onAccountDeleted, onSignIn }: Props =
     );
   };
 
-  const verifyPhone = async (phone: string) => {
-    setPhoneStep('sending');
+  /** Associe le numéro saisi à l'inscription — sans code pour l'instant (voir `linkPhone`). */
+  const associate = async (phone: string) => {
+    setPhoneStep('linking');
     setPhoneError(null);
-    const result = await startPhoneVerification(phone);
-    if (result.ok) setPhoneStep('code');
+    const result = await linkPhone(phone);
+    if (result.ok) setPhoneStep('linked');
     else {
       setPhoneStep('idle');
       setPhoneError(friendlyAuthError(result.error));
@@ -106,33 +106,6 @@ export function AccountScreen({ onSignOut, onAccountDeleted, onSignIn }: Props =
             <Button testID="account-sign-in" label="Se connecter" onPress={onSignIn} />
           ) : null}
         </View>
-      </Screen>
-    );
-  }
-
-  if (phoneStep === 'code' && account.phone) {
-    const phone = account.phone;
-    return (
-      <Screen testID="account-screen">
-        <ScrollView
-          contentContainerClassName="flex-grow justify-center py-8"
-          keyboardShouldPersistTaps="handled"
-        >
-          <CodeStep
-            testIDPrefix="account-phone"
-            title="Vérifiez votre numéro"
-            sentTo={maskPhone(phone)}
-            demo={demo}
-            onSubmit={async (code) => {
-              const result = await confirmPhone(phone, code);
-              if (result.ok) setPhoneStep('verified');
-              return result;
-            }}
-            onResend={() => resendPhoneCode(phone)}
-            onBack={() => setPhoneStep('idle')}
-            backLabel="Annuler"
-          />
-        </ScrollView>
       </Screen>
     );
   }
@@ -173,44 +146,45 @@ export function AccountScreen({ onSignOut, onAccountDeleted, onSignIn }: Props =
                 <View
                   testID="account-phone-status"
                   className={
-                    account.phoneVerified
+                    phoneLinked
                       ? 'rounded-pill bg-success/15 px-2.5 py-1'
                       : 'rounded-pill bg-surface-muted px-2.5 py-1'
                   }
                 >
                   <AppText
-                    className={
-                      account.phoneVerified ? 'font-sans-semibold text-success' : 'text-ink-muted'
-                    }
+                    className={phoneLinked ? 'font-sans-semibold text-success' : 'text-ink-muted'}
                     style={{ fontSize: 11.5 }}
                   >
-                    {account.phoneVerified ? 'Vérifié' : 'Non vérifié'}
+                    {phoneLinked ? 'Associé' : 'Non associé'}
                   </AppText>
                 </View>
               </View>
-              {!account.phoneVerified ? (
-                <AppText variant="caption" className="text-ink-faint">
-                  Un numéro vérifié permet aussi de vous connecter avec lui.
+              {phoneStep === 'linked' ? (
+                <AppText testID="account-phone-linked" variant="caption" className="text-success">
+                  Numéro associé : vous pouvez maintenant vous connecter avec lui.
                 </AppText>
-              ) : null}
-              {!account.phoneVerified && isPhoneAuthEnabled ? (
-                <Button
-                  testID="account-verify-phone"
-                  label="Vérifier mon numéro"
-                  variant="secondary"
-                  size="sm"
-                  loading={phoneStep === 'sending'}
-                  onPress={() => void verifyPhone(account.phone as string)}
-                />
+              ) : phoneLinked ? (
+                <AppText variant="caption" className="text-ink-faint">
+                  Vous pouvez vous connecter avec ce numéro et votre mot de passe.
+                </AppText>
+              ) : isPhoneAuthEnabled ? (
+                <>
+                  <AppText variant="caption" className="text-ink-faint">
+                    Associez-le pour pouvoir aussi vous connecter avec lui.
+                  </AppText>
+                  <Button
+                    testID="account-link-phone"
+                    label="Associer ce numéro"
+                    variant="secondary"
+                    size="sm"
+                    loading={phoneStep === 'linking'}
+                    onPress={() => void associate(account.phone as string)}
+                  />
+                </>
               ) : null}
               {phoneError ? (
                 <AppText testID="account-phone-error" variant="caption" className="text-brand-600">
                   {phoneError}
-                </AppText>
-              ) : null}
-              {phoneStep === 'verified' ? (
-                <AppText testID="account-phone-verified" variant="caption" className="text-success">
-                  Numéro vérifié : vous pouvez maintenant vous connecter avec lui.
                 </AppText>
               ) : null}
             </View>
