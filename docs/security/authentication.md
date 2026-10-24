@@ -36,6 +36,9 @@ numéro sans SMS, Resend, Apple sur Android). Journal du chantier :
 - **Les données locales appartiennent à un compte** : si un AUTRE compte se connecte sur l’appareil
   (session expirée sans déconnexion), le profil, le panier, les commandes et la fidélité du précédent
   repartent de zéro.
+- **Le numéro est facultatif pour un client** (l’e-mail suffit) et obligatoire pour un commerçant,
+  un grossiste ou un livreur, qui doivent être joignables. L’inscription par numéro SEUL viendra avec
+  Prelude, quand un code SMS pourra prouver qu’il appartient à la personne.
 - **Le numéro n’est jamais bloquant** : s’il est déjà pris ou si le réseau lâche, l’app le dit et
   laisse entrer avec l’e-mail. Il se rattache aussi à la connexion suivante, ou depuis « Mon compte ».
 - **Le numéro n’est pas vérifié** (aucun SMS avant Prelude) : il est « associé ».

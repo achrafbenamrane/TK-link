@@ -28,7 +28,16 @@ export const RegistrationSchema = z
     firstName: z.string().trim().min(2, 'Indiquez votre prénom.'),
     lastName: z.string().trim().min(2, 'Indiquez votre nom.'),
     email: z.email({ error: 'Entrez une adresse e-mail valide.' }),
-    phone: z.string().trim().regex(PHONE_RE, 'Numéro invalide (ex. 06 12 34 56 78).'),
+    /**
+     * Facultatif pour un CLIENT (décision du 24/10/2026) : l'e-mail suffit à créer le compte, le
+     * numéro sert ensuite à se connecter s'il est donné. Obligatoire pour un professionnel et un
+     * livreur, qui doivent être joignables (voir `validateRegistration`). Renseigné, il doit être
+     * valide.
+     */
+    phone: z
+      .string()
+      .trim()
+      .refine((v) => v === '' || PHONE_RE.test(v), 'Numéro invalide (ex. 06 12 34 56 78).'),
     password: z
       .string()
       .min(MIN_PASSWORD, `Le mot de passe doit faire au moins ${MIN_PASSWORD} caractères.`),
@@ -102,6 +111,11 @@ function proErrors(draft: RegistrationDraft): Record<string, string> {
   return errors;
 }
 
+/** Le numéro est-il obligatoire pour ce rôle ? Un client peut s'en passer ; les autres, non. */
+export function needsPhone(role: Role): boolean {
+  return role !== 'consommateur';
+}
+
 /** Erreurs par champ, prêtes à afficher. Vide = le formulaire est valide. */
 export function validateRegistration(
   draft: RegistrationDraft,
@@ -116,6 +130,9 @@ export function validateRegistration(
       // rend pas le formulaire plus clair, seulement plus décourageant.
       if (typeof key === 'string' && !errors[key]) errors[key] = issue.message;
     }
+  }
+  if (needsPhone(role) && !errors.phone && draft.phone.trim() === '') {
+    errors.phone = 'Indiquez votre numéro de téléphone.';
   }
   if (needsSiret(role)) {
     for (const [key, message] of Object.entries(proErrors(draft))) {

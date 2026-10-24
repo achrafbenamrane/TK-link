@@ -13,6 +13,7 @@ import { useColors } from '@/shared/theme/theme-provider';
 import { friendlyAuthError } from '../model/auth-errors';
 import {
   EMPTY_REGISTRATION,
+  needsPhone,
   needsSiret,
   toProfile,
   validateRegistration,
@@ -248,7 +249,7 @@ export function SignUpScreen({
         if (all[key]) found[key] = all[key];
       }
       if (modes.length === 0) found.modes = 'Choisissez au moins un mode de remise.';
-    } else if (draft.phone.trim() && all.phone) {
+    } else if ((needsPhone(role) || draft.phone.trim()) && all.phone) {
       found.phone = all.phone;
     }
     if (Object.keys(found).length > 0) {
@@ -367,7 +368,7 @@ export function SignUpScreen({
       value={draft.phone}
       onChangeText={(v) => set('phone', v)}
       error={errors.phone}
-      placeholder="Téléphone"
+      placeholder={needsPhone(role) ? 'Téléphone' : 'Téléphone (facultatif)'}
       accessibilityLabel="Numéro de téléphone"
       keyboardType="phone-pad"
       textContentType="telephoneNumber"

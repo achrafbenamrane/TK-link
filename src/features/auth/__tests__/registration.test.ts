@@ -1,5 +1,6 @@
 import {
   EMPTY_REGISTRATION,
+  needsPhone,
   needsSiret,
   toProfile,
   validateRegistration,
@@ -25,11 +26,13 @@ describe('validateRegistration — CDC §5', () => {
     expect(validateRegistration(draft())).toEqual({});
   });
 
-  it('exige prénom, nom, e-mail, téléphone et mot de passe', () => {
+  it('exige prénom, nom, e-mail et mot de passe ; le téléphone pour tout le monde sauf le client', () => {
     const errors = validateRegistration(EMPTY_REGISTRATION);
-    for (const field of ['firstName', 'lastName', 'email', 'phone', 'password']) {
+    for (const field of ['firstName', 'lastName', 'email', 'password']) {
       expect(errors[field]).toBeDefined();
     }
+    expect(errors.phone).toBeUndefined();
+    expect(validateRegistration(EMPTY_REGISTRATION, 'livreur').phone).toBeDefined();
   });
 
   it('laisse la localisation facultative — « selon consentement » (CDC §2.2)', () => {
@@ -120,5 +123,35 @@ describe('livreur (TK Deliver)', () => {
     expect(needsSiret('livreur')).toBe(false);
     expect(needsSiret('commercant')).toBe(true);
     expect(needsSiret('grossiste')).toBe(true);
+  });
+});
+
+describe('le numéro de téléphone selon le profil', () => {
+  const filled = {
+    ...EMPTY_REGISTRATION,
+    firstName: 'Neo',
+    lastName: 'Rey',
+    email: 'neo@exemple.fr',
+    password: 'motdepasse1',
+    confirm: 'motdepasse1',
+  };
+
+  it('un client peut s’inscrire SANS numéro : l’e-mail suffit', () => {
+    expect(needsPhone('consommateur')).toBe(false);
+    expect(validateRegistration(filled, 'consommateur')).toEqual({});
+  });
+
+  it('un numéro donné par un client doit quand même être valide', () => {
+    expect(validateRegistration({ ...filled, phone: '06 12' }, 'consommateur').phone).toMatch(
+      /invalide/i,
+    );
+  });
+
+  it('un livreur, un commerçant et un grossiste doivent donner un numéro', () => {
+    for (const role of ['livreur', 'commercant', 'grossiste'] as const) {
+      expect(needsPhone(role)).toBe(true);
+      expect(validateRegistration(filled, role).phone).toBe('Indiquez votre numéro de téléphone.');
+    }
+    expect(validateRegistration({ ...filled, phone: '06 12 34 56 78' }, 'livreur')).toEqual({});
   });
 });

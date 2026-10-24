@@ -303,7 +303,7 @@ describe('<SignUpScreen /> — avec Google ou Apple', () => {
       'Indiquez l’adresse de votre commerce.',
     );
     expect(screen.getByTestId('signup-phone-error')).toHaveTextContent(
-      'Numéro invalide (ex. 06 12 34 56 78).',
+      'Indiquez votre numéro de téléphone.',
     );
     // Le fournisseur donne l'identité : ni nom, ni e-mail, ni mot de passe. Le SIRET reste facultatif.
     for (const id of ['firstname', 'lastname', 'email', 'password', 'confirm', 'siret']) {
