@@ -72,6 +72,10 @@ Tout se règle dans le **tableau de bord** du projet hébergé. Ne pas pousser l
 2. **Base et fonctions** : `npx supabase login`, `npx supabase link --project-ref <ref>`,
    `npx supabase db push` (migrations `0001` → `0008`), puis
    `npx supabase functions deploy delete-account` et `npx supabase functions deploy link-phone`.
+   Sans la CLI : SQL Editor (les fichiers de migration l’un après l’autre, dans l’ordre) et Edge
+   Functions → Deploy a new function → Via Editor. Pour les deux fonctions, **Verify JWT with
+   legacy secret** reste DÉSACTIVÉ : elles vérifient l’appelant elles-mêmes, et ce contrôle
+   refuserait les sessions signées avec les nouvelles clés JWT du projet.
 3. **Authentication → Providers → Email** : activé, **Confirm email** activé (obligatoire :
    `link-phone` n’associe un numéro qu’à une adresse confirmée), longueur minimale 8.
 4. **Authentication → Emails → Templates** : coller `supabase/templates/confirmation.html` dans

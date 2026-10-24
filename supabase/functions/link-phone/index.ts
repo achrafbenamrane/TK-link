@@ -17,8 +17,9 @@
 //     et encore APRÈS un échec, pour le cas où un autre compte l'a pris entre-temps ;
 //   - le profil n'est PAS marqué « vérifié » (`phone_verified` reste faux, migration 0008).
 //
-// Sécurité : la plateforme vérifie le JWT de l'appelant (verify_jwt = true) ; on relit l'utilisateur
-// à partir de ce jeton — jamais d'un identifiant envoyé dans le corps.
+// Sécurité : l'appelant est authentifié ICI — `auth.getUser()` avec son jeton, vérifié par le
+// serveur Auth (401 sinon) — et jamais d'après un identifiant envoyé dans le corps. La vérification
+// « legacy secret » de la plateforme est désactivée (voir supabase/config.toml).
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';

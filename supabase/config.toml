@@ -7,13 +7,17 @@ project_id = "expo-skeleton"
 # header that the function verifies itself. Do NOT enable verify_jwt here.
 verify_jwt = false
 
+# Les deux fonctions ci-dessous sont appelées par un compte CONNECTÉ et vérifient elles-mêmes
+# l'appelant (`auth.getUser()` avec son jeton → 401 sinon). La vérification de la plateforme
+# (« Verify JWT with legacy secret ») ne reconnaît que les jetons signés par l'ANCIEN secret : sur un
+# projet qui signe avec les nouvelles clés JWT, elle refuserait tout le monde. Supabase la
+# recommande désactivée quand la fonction fait sa propre vérification — c'est le cas.
 [functions.delete-account]
-# Called by a signed-in user — require a valid Supabase JWT (the default).
-verify_jwt = true
+verify_jwt = false
 
 [functions.link-phone]
-# Associe un numéro au compte CONNECTÉ (sans code, avant Prelude) : JWT obligatoire.
-verify_jwt = true
+# Associe un numéro au compte connecté (sans code, avant Prelude).
+verify_jwt = false
 
 # ─────────────────────────────────────────────────────────────── authentification
 #

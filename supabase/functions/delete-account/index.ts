@@ -1,9 +1,11 @@
 // In-app account deletion. Apple Guideline 5.1.1(v) and Google Play both REQUIRE
 // an in-app path to fully delete the account + its data. (Store-readiness: STORE-ACCT-DELETE.)
 //
-// Security: the platform validates the caller's JWT (verify_jwt = true, the
-// default). We re-derive the user from their token, then delete with the
-// service_role admin API. FKs to auth.users use ON DELETE CASCADE, so the user's
+// Security: the caller is authenticated HERE — `auth.getUser()` with their token,
+// verified by the Auth server (401 otherwise). The platform's legacy-secret JWT
+// check is off (see supabase/config.toml): it would reject sessions signed with
+// the project's new JWT signing keys. We then delete with the service_role
+// admin API. FKs to auth.users use ON DELETE CASCADE, so the user's
 // rows (profiles, notes, subscriptions) are removed with them.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
