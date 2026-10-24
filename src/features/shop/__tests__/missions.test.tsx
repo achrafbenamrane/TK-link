@@ -67,14 +67,15 @@ describe('missionOffers — les commandes prêtes en livraison', () => {
 });
 
 describe('missionOffers — livraison à la position actuelle', () => {
-  it('affiche « Ma position actuelle », jamais les coordonnées, sans distance inventée', () => {
+  it('affiche « Ma position actuelle », jamais les coordonnées, avec la distance en ligne droite', () => {
     const [offer] = missionOffers(
       [order({ addressId: 'position', position: { lat: 43.6123, lng: 1.4567 } })],
       [],
     );
     expect(offer?.dropoff).toBe('Ma position actuelle');
     expect(JSON.stringify(offer)).not.toMatch(/43\.6123|1\.4567/);
-    expect(offer?.distanceKm).toBeNull();
+    // Pizzeria Napoli → la position : environ 1,1 km. C'est la mesure facturée au client.
+    expect(offer?.distanceKm).toBeCloseTo(1.1, 0);
   });
 });
 

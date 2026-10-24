@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { makeId } from '@/shared/lib/id';
 import { currentSettings } from '@/shared/lib/platform-overrides';
 // Cart/favorites/orders hold no secrets → the plaintext tier is correct.
+import { clientDeliveryFee, deliveryDistanceKm } from '../lib/delivery';
 import { POSITION_ADDRESS_ID } from '../lib/destination';
 import { routeIssue, type IssueKind } from '../lib/issues';
 import { canTransition, isActive, type Fulfilment, type OrderStatus } from '../lib/order-status';
@@ -11,7 +12,7 @@ import { canRate, clampStars, type RatingTag } from '../lib/rating';
 import { DEFAULT_PREFERENCES, type Preferences } from '../lib/preferences';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
-import { getDeal } from './catalog';
+import { getDeal, getMerchant } from './catalog';
 import { POINTS_PER_EURO } from './loyalty';
 import {
   PersistedShopSchema,
@@ -300,7 +301,16 @@ export const useShopStore = create<ShopState>()(
           total,
           discount,
           // Pas de frais de livraison quand le client vient chercher — CDC §12.
-          deliveryFee: fulfilment === 'touch-collect' ? 0 : currentSettings().deliveryFeeEur,
+          deliveryFee:
+            fulfilment === 'touch-collect'
+              ? 0
+              : clientDeliveryFee(
+                  deliveryDistanceKm(
+                    lines[0] ? getMerchant(lines[0].deal.merchantId)?.coord : null,
+                    here,
+                  ),
+                  currentSettings(),
+                ),
           fulfilment,
           status: 'creee',
           pointsEarned,

@@ -169,6 +169,28 @@ describe('<CartScreen /> — livraison : chez moi ou position actuelle', () => {
     expect(useShopStore.getState().addresses).toEqual([home]);
   });
 
+  it('position lointaine : 0,80 € par km au-delà de la zone de base, annoncé avant le paiement', async () => {
+    // Pizzeria Napoli est à 43,6053 / 1,4478 : cette position est à ~8 km, soit 5 km au-delà de 3 km.
+    mockedCoord.mockResolvedValue({ lat: 43.6773, lng: 1.4478 });
+    render(<CartScreen />);
+    fireEvent.press(screen.getByTestId('cart-delivery-here'));
+
+    const detail = await screen.findByTestId('cart-delivery-detail');
+    expect(detail).toHaveTextContent(/0\.80€ par km au-delà de 3 km/);
+    // 3,00 € + 5 km × 0,80 € = 7,00 € de livraison, en plus des 6,90 € d'articles.
+    expect(screen.getByTestId('cart-total')).toHaveTextContent('13.90€');
+
+    fireEvent.press(screen.getByTestId('cart-checkout'));
+    await waitFor(() => expect(useShopStore.getState().orders).toHaveLength(1));
+    expect(useShopStore.getState().orders[0]?.deliveryFee).toBe(7);
+  });
+
+  it('adresse du carnet : le forfait seul, aucune distance inventée', () => {
+    render(<CartScreen />);
+    expect(screen.getByTestId('cart-total')).toHaveTextContent('9.90€');
+    expect(screen.queryByTestId('cart-delivery-detail')).not.toBeOnTheScreen();
+  });
+
   it('position accordée sans aucune adresse : on peut payer', async () => {
     useShopStore.setState({ addresses: [] });
     mockedCoord.mockResolvedValue({ lat: 43.61, lng: 1.45 });

@@ -1,5 +1,6 @@
 import { getDeal, getMerchant } from '../model/catalog';
 import type { Address, Order } from '../model/schema';
+import { deliveryDistanceKm } from './delivery';
 import { POSITION_ADDRESS_ID, POSITION_LABEL } from './destination';
 
 /**
@@ -11,8 +12,9 @@ import { POSITION_ADDRESS_ID, POSITION_LABEL } from './destination';
  * `Mission` et ne connaît ni les commandes ni le catalogue — c'est la route qui
  * les met en relation.
  *
- * `distanceKm` reste `null` : une adresse de livraison n'a pas de coordonnées
- * ici, et on n'invente pas de kilomètres.
+ * `distanceKm` n'est connue que pour une livraison à la position du client (la ligne droite
+ * commerçant → position, la même mesure que celle facturée au client). Une adresse du carnet n'a
+ * pas de coordonnées : `null`, on n'invente pas de kilomètres.
  */
 export type MissionOffer = {
   orderId: string;
@@ -47,7 +49,7 @@ export function missionOffers(orders: Order[], addresses: Address[]): MissionOff
         dropoff,
         itemCount: o.items.reduce((n, l) => n + l.qty, 0),
         totalEur: o.total,
-        distanceKm: null,
+        distanceKm: deliveryDistanceKm(merchant?.coord, o.position),
       };
     });
 }

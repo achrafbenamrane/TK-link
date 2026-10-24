@@ -71,9 +71,11 @@ développeur trancher) : frais de livraison du client 3,00 €, zone de base du 
 (`src/features/demo`, `src/shared/lib/platform-overrides.ts`) permet d'essayer d'autres montants sur un
 appareil, dans les builds de démonstration seulement ; une build de production ignore tout ajustement.
 
-Limite connue : la livraison est facturée à plat (3,00 €), sans majoration au km au-delà de la zone de
-base, alors que le livreur, lui, touche 0,80 €/km en plus. Une livraison lointaine coûte donc à TK LINK.
-À revoir avec le client si les courses longues deviennent fréquentes.
+Le client paie le même barème que le livreur : 3,00 € puis 0,80 €/km au-delà de 3 km
+(`shop/lib/delivery.ts`). Limite connue : la distance n'est connue que pour « Ma position actuelle »
+(les adresses du carnet n'ont pas de coordonnées) ; elle est mesurée en ligne droite, donc plus courte
+que le trajet réel. Pour une adresse du carnet, le forfait seul s'applique, des deux côtés. Le jour où
+les adresses sont géocodées, la majoration s'appliquera sans autre changement.
 
 Les modales sortent de la racine du thème **sur le web** (les variables CSS ne les atteignent pas) :
 tout contenu de `Modal` s'enveloppe dans `ThemeScope` (fait pour la galerie et l'éditeur d'avatar).

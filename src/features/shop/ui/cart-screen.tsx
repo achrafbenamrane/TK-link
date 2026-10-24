@@ -12,9 +12,11 @@ import { useColors } from '@/shared/theme/theme-provider';
 
 import { authenticate } from '../lib/biometrics';
 import { POSITION_LABEL, POSITION_UNAVAILABLE_MESSAGE } from '../lib/destination';
+import { clientDeliveryFee, deliveryDistanceKm } from '../lib/delivery';
 import { getUserCoord } from '../lib/location';
 import type { Coord } from '../model/schema';
 import { FULFILMENTS, FULFILMENT_LABEL, type Fulfilment } from '../lib/order-status';
+import { getMerchant } from '../model/catalog';
 import { cartLines, selectCart, useShopStore } from '../model/store';
 import { QtyStepper } from './components/qty-stepper';
 
@@ -96,7 +98,16 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
 
   // Le coût de la livraison est dans le total AVANT le paiement — CDC V1.1 : jamais
   // de frais révélé après coup. Le Touch & Collect est gratuit.
-  const deliveryFee = fulfilment === 'touch-collect' ? 0 : settings.deliveryFeeEur;
+  // Barème du livreur : forfait, puis 0,80 €/km au-delà de la zone de base. La distance n'est connue
+  // que pour « Ma position actuelle » (les adresses du carnet n'ont pas de coordonnées) : sinon, le
+  // forfait seul — la même mesure que celle du livreur, pour que client et livreur soient d'accord.
+  const firstMerchant = lines[0] ? getMerchant(lines[0].deal.merchantId) : undefined;
+  const deliveryKm = deliveryDistanceKm(
+    firstMerchant?.coord,
+    destination === 'here' ? position : null,
+  );
+  const deliveryFee = fulfilment === 'touch-collect' ? 0 : clientDeliveryFee(deliveryKm, settings);
+  const surcharge = fulfilment === 'touch-collect' ? 0 : deliveryFee - settings.deliveryFeeEur;
   // Le crédit se déduit AVANT le paiement, borné aux articles.
   const discount = Math.round(Math.min(Math.max(0, credit), subtotal) * 100) / 100;
   const total = subtotal + deliveryFee - discount;
@@ -433,6 +444,11 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
                 : `${deliveryFee.toFixed(2)}€`}
             </AppText>
           </View>
+          {surcharge > 0 && deliveryKm !== null ? (
+            <AppText testID="cart-delivery-detail" variant="caption" className="text-ink-faint">
+              {`${settings.deliveryFeeEur.toFixed(2)}€ + ${settings.courierPerKmEur.toFixed(2)}€ par km au-delà de ${settings.courierBaseZoneKm ?? 0} km (${deliveryKm.toFixed(1).replace('.', ',')} km)`}
+            </AppText>
+          ) : null}
           {discount > 0 ? (
             <View className="flex-row items-center justify-between" testID="cart-credit">
               <AppText variant="caption" className="text-ink-muted">
