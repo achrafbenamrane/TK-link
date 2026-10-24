@@ -80,7 +80,8 @@ Tout se règle dans le **tableau de bord** du projet hébergé. Ne pas pousser l
    legacy secret** reste DÉSACTIVÉ : elles vérifient l’appelant elles-mêmes, et ce contrôle
    refuserait les sessions signées avec les nouvelles clés JWT du projet.
 3. **Authentication → Providers → Email** : activé, **Confirm email** activé (obligatoire :
-   `link-phone` n’associe un numéro qu’à une adresse confirmée), longueur minimale 8.
+   `link-phone` n’associe un numéro qu’à une adresse confirmée), longueur minimale 8, et **Email
+   OTP Length = 6** : les projets récents envoient 8 chiffres par défaut, et l’app en attend 6.
 4. **Authentication → Emails → Templates** : coller `supabase/templates/confirmation.html` dans
    « Confirm signup » et `recovery.html` dans « Reset password ». Ils contiennent `{{ .Token }}` :
    c’est le code que l’app demande. Sans lui, l’e-mail n’a qu’un lien et l’app attend en vain.

@@ -81,7 +81,7 @@ if (settings.mailer_autoconfirm) {
 } else {
   ok('Confirmation de l’e-mail active : l’app demande le code reçu.');
   warn(
-    'Vérifiez que les modèles « Confirm signup » et « Reset password » contiennent {{ .Token }} (code à 6 chiffres) — voir supabase/templates/.',
+    'Vérifiez que les modèles « Confirm signup » et « Reset password » contiennent {{ .Token }} (code à 6 chiffres) — voir supabase/templates/ — et que « Email OTP Length » vaut 6 (Providers → Email ; 8 par défaut).',
   );
 }
 warn(
