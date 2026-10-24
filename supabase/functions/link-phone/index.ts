@@ -29,13 +29,23 @@ const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const E164 = /^\+[1-9]\d{7,14}$/;
 const MAX_NUMBERS_PER_DAY = 5;
 
+// Le navigateur (aperçu web, back-office) demande d'abord la permission (`OPTIONS`) et refuse toute
+// réponse sans ces en-têtes. Le téléphone ne les regarde pas. Aucun cookie n'est utilisé (l'appelant
+// s'identifie par son jeton dans `Authorization`), donc « * » n'ouvre rien de plus.
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 const reply = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...CORS, 'Content-Type': 'application/json' },
   });
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' });
 
   const authHeader = req.headers.get('Authorization') ?? '';
