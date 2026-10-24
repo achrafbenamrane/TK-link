@@ -103,9 +103,9 @@ export function missingProfileFields(p: ProfileDraft): Record<string, string> {
  * Le gain d'une course — CDC V1.1 : « 3,00 € par commande, puis 0,80 €/km au-delà
  * de la zone de base ».
  *
- * ⚠️ La zone de base n'est PAS chiffrée par le CDC (`courierBaseZoneKm` est
- * `null`). Tant qu'on ne la connaît pas, ou qu'on ne connaît pas la distance, on
- * ne calcule pas la majoration : le montant rendu est le forfait seul, et
+ * La zone de base n'est pas chiffrée par le CDC : elle a été arrêtée à 3 km le 24/10/2026
+ * (`PLATFORM_SETTINGS`, réglable au Super Admin). Si elle est retirée (`null`), ou si on ne
+ * connaît pas la distance, on ne calcule pas la majoration : le montant rendu est le forfait seul, et
  * `complet` vaut `false` pour que l'écran le dise au lieu d'afficher un faux total.
  */
 export type Gain = { eur: number; complet: boolean };

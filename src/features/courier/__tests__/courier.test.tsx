@@ -55,6 +55,9 @@ const state = () => useCourierStore.getState();
 
 beforeEach(() => {
   usePlatformOverrides.getState().reset();
+  // Les parcours ci-dessous exercent l'empreinte sur de petits colis : on abaisse le seuil du
+  // « colis important » (100 € par défaut) pour qu'ils l'exigent. Le défaut a ses propres tests.
+  usePlatformOverrides.getState().setOverride('importantParcelMinEur', 1);
   state().reset();
   pick.mockReset();
 });
@@ -87,10 +90,16 @@ describe('règles du livreur — CDC V1.1', () => {
     expect(nextStep('livree')).toBeNull();
   });
 
-  it('3 € par commande, et 0,80 €/km seulement quand la zone de base est connue', () => {
-    // Zone de base absente du CDC : jamais de majoration inventée.
-    expect(courierGain(12)).toEqual({ eur: 3, complet: false });
+  it('3 € par commande, et 0,80 €/km au-delà de la zone de base (3 km, arrêtée le 24/10/2026)', () => {
+    // 12 km : 3 € + 9 km × 0,80 € = 10,20 €.
+    expect(courierGain(12)).toEqual({ eur: 10.2, complet: true });
+    expect(courierGain(2)).toEqual({ eur: 3, complet: true });
+    // Distance inconnue : le forfait seul, et l'écran dit que le total n'est pas complet.
     expect(courierGain(null)).toEqual({ eur: 3, complet: false });
+    // Zone de base retirée par le Super Admin : jamais de majoration inventée.
+    expect(
+      courierGain(12, { courierBaseFeeEur: 3, courierPerKmEur: 0.8, courierBaseZoneKm: null }),
+    ).toEqual({ eur: 3, complet: false });
 
     const settings = { courierBaseFeeEur: 3, courierPerKmEur: 0.8, courierBaseZoneKm: 5 };
     expect(courierGain(4, settings)).toEqual({ eur: 3, complet: true });
@@ -714,10 +723,14 @@ describe('l’empreinte selon le seuil du colis important', () => {
     state().startRoute();
   };
 
-  it('sans seuil arrêté : exigée pour tous les colis', () => {
-    toPickup();
-    expect(identityRequired(1)).toBe(true);
-    expect(state().confirmPickup(pin())).toEqual({ ok: false, reason: 'biometrie' });
+  it('sans seuil (retiré par le Super Admin) : exigée pour tous les colis', () => {
+    expect(identityRequired(1, null)).toBe(true);
+  });
+
+  it('par défaut le seuil est de 100 € : un petit colis n’exige pas l’empreinte, un gros oui', () => {
+    usePlatformOverrides.getState().reset();
+    expect(identityRequired(38.5)).toBe(false);
+    expect(identityRequired(189)).toBe(true);
   });
 
   it('avec un seuil : seuls les colis qui l’atteignent exigent l’empreinte', () => {
@@ -732,8 +745,8 @@ describe('l’empreinte selon le seuil du colis important', () => {
 });
 
 describe('gain du livreur selon la zone de base', () => {
-  it('suit la zone posée dans les réglages, et reste « dès 3 € » sans zone', () => {
-    expect(courierGain(5)).toEqual({ eur: 3, complet: false });
+  it('suit la zone posée dans les réglages', () => {
+    expect(courierGain(5)).toEqual({ eur: 4.6, complet: true });
     usePlatformOverrides.getState().setOverride('courierBaseZoneKm', 2);
     expect(courierGain(5)).toEqual({ eur: 5.4, complet: true });
   });

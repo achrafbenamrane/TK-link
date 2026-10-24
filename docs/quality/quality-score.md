@@ -64,12 +64,16 @@ qu'en build de démonstration ; ailleurs l'app dit « pas encore disponible ». 
 
 ## Réglages de démonstration
 
-Trois valeurs que le CDC ne chiffre pas (frais de livraison du client, zone de base du livreur, montant
-d'un « colis important ») se règlent en direct depuis Compte, dans les builds de démonstration
-(`src/features/demo`, `src/shared/lib/platform-overrides.ts`). Ce n'est pas une décision : sans
-valeur, l'app garde son comportement prudent (livraison offerte, gain « dès 3,00 € », empreinte exigée
-pour tous les colis). Quand le client tranche, la valeur va dans `PLATFORM_SETTINGS` et l'écran peut
-disparaître. Une build de production ignore tout ajustement.
+Trois valeurs que le CDC ne chiffre pas ont été **arrêtées le 24/10/2026** (Farid a laissé le
+développeur trancher) : frais de livraison du client 3,00 €, zone de base du livreur 3 km, colis
+« important » 100 € ; la réservation du panier est de 10 min. Ce sont des **défauts**, dans
+`PLATFORM_SETTINGS` : le Super Admin les change depuis Réglages (web). L'écran de démonstration
+(`src/features/demo`, `src/shared/lib/platform-overrides.ts`) permet d'essayer d'autres montants sur un
+appareil, dans les builds de démonstration seulement ; une build de production ignore tout ajustement.
+
+Limite connue : la livraison est facturée à plat (3,00 €), sans majoration au km au-delà de la zone de
+base, alors que le livreur, lui, touche 0,80 €/km en plus. Une livraison lointaine coûte donc à TK LINK.
+À revoir avec le client si les courses longues deviennent fréquentes.
 
 Les modales sortent de la racine du thème **sur le web** (les variables CSS ne les atteignent pas) :
 tout contenu de `Modal` s'enveloppe dans `ThemeScope` (fait pour la galerie et l'éditeur d'avatar).

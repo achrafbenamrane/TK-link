@@ -19,12 +19,12 @@ export const DEFAULT_SETTINGS = {
   commissionB2bPct: 5,
   referralRewardEur: 5,
   pointsPerEuro: 1,
-  deliveryFeeEur: 0,
+  deliveryFeeEur: 3,
   courierBaseFeeEur: 3,
   courierPerKmEur: 0.8,
-  courierBaseZoneKm: null,
-  importantParcelMinEur: null,
-  cartHoldSeconds: null,
+  courierBaseZoneKm: 3,
+  importantParcelMinEur: 100,
+  cartHoldSeconds: 600,
 };
 
 /**

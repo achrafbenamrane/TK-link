@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ScrollView, TextInput, View } from 'react-native';
 
 import { isImportantParcel } from '@/shared/lib/handover';
+import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
 import {
   type OverridableKey,
   usePlatformOverrides,
@@ -25,9 +26,11 @@ type FieldProps = {
   hint: string;
   unit: string;
   effect: string;
+  /** La valeur arrêtée, montrée tant qu'on n'a rien essayé. */
+  original: number;
 };
 
-function Field({ field, label, hint, unit, effect }: FieldProps) {
+function Field({ field, label, hint, unit, effect, original }: FieldProps) {
   const colors = useColors();
   const value = usePlatformOverrides((s) => s.overrides[field]);
   const setOverride = usePlatformOverrides((s) => s.setOverride);
@@ -48,7 +51,7 @@ function Field({ field, label, hint, unit, effect }: FieldProps) {
             setOverride(field, parse(v));
           }}
           keyboardType="decimal-pad"
-          placeholder="À définir"
+          placeholder={`${original}`}
           placeholderTextColor={colors.inkFaint}
           accessibilityLabel={label}
           className="flex-1 rounded-control border border-line bg-surface-muted px-3.5 py-3 font-sans text-ink"
@@ -68,8 +71,8 @@ function Field({ field, label, hint, unit, effect }: FieldProps) {
  * essayer devant le client : ce que paie le client à la livraison, la zone de base du livreur, le
  * montant d'un « colis important ». Chaque ligne dit ce que la valeur change dans l'app.
  *
- * Ce n'est pas une décision : sans valeur, l'app garde son comportement prudent (livraison
- * offerte, gain « dès 3,00 € », empreinte exigée pour tous les colis).
+ * Les valeurs d'origine ont été arrêtées le 24/10/2026 (voir `PLATFORM_SETTINGS`) ; cet écran ne
+ * sert qu'à essayer d'autres montants sur cet appareil, sans toucher au code.
  */
 export function DemoSettingsScreen() {
   const settings = usePlatformSettings();
@@ -112,8 +115,8 @@ export function DemoSettingsScreen() {
             Réglages de démonstration
           </AppText>
           <AppText variant="caption">
-            Des valeurs que le cahier des charges ne chiffre pas. Elles ne servent qu’à montrer
-            l’effet : rien n’est décidé.
+            Des valeurs que le cahier des charges ne chiffre pas, arrêtées le 24/10/2026. Essayez-en
+            d’autres ici : cela ne change que cet appareil.
           </AppText>
         </View>
 
@@ -121,7 +124,8 @@ export function DemoSettingsScreen() {
           key={`fee-${epoch}`}
           field="deliveryFeeEur"
           label="Frais de livraison payés par le client"
-          hint="Aujourd’hui : livraison offerte. Le Touch & Collect reste gratuit."
+          hint="Valeur arrêtée : 3,00 €, comme le gain du livreur. Le Touch & Collect reste gratuit."
+          original={PLATFORM_SETTINGS.deliveryFeeEur}
           unit="€"
           effect={`Un client livré paie ${fee === 0 ? 'rien (livraison offerte)' : eur(fee)}.`}
         />
@@ -131,6 +135,7 @@ export function DemoSettingsScreen() {
           label="Zone de base du livreur"
           hint="Au-delà de cette distance, le livreur touche 0,80 € par km en plus du forfait de 3 €."
           unit="km"
+          original={PLATFORM_SETTINGS.courierBaseZoneKm ?? 0}
           effect={`Une course de ${String(sampleKm).replace('.', ',')} km rapporte ${gain}.`}
         />
         <Field
@@ -139,12 +144,13 @@ export function DemoSettingsScreen() {
           label="Montant d’un colis important"
           hint="À partir de ce montant, la remise exige l’empreinte du livreur."
           unit="€"
+          original={PLATFORM_SETTINGS.importantParcelMinEur ?? 0}
           effect={`Pour un colis de ${eur(sampleParcel)}, l’empreinte est ${identity}.`}
         />
 
         <Button
           testID="demo-reset"
-          label="Tout remettre à zéro"
+          label="Revenir aux valeurs arrêtées"
           variant="secondary"
           onPress={() => {
             reset();

@@ -17,16 +17,22 @@ describe('paramètres de plateforme — CDC V1.0 §12.3 et V1.1', () => {
     expect(isSettled('commissionB2bPct')).toBe(true);
   });
 
-  it('NE tranche PAS ce que le client a laissé ouvert', () => {
-    // V1.1, « Points encore ouverts » : la durée de réservation du panier — la
-    // réponse reçue (« 2 jours hors alimentaires ») répond à une autre question.
-    // Règle de développement (V1.0 §14) : « un paramètre non finalisé doit être
-    // prévu dans l'architecture, mais pas inventé ».
-    expect(PLATFORM_SETTINGS.cartHoldSeconds).toBeNull();
+  it('porte les valeurs arrêtées le 24/10/2026, quand Farid a laissé le développeur trancher', () => {
+    // Le CDC (V1.0 §14) interdit d'INVENTER ce qu'il laisse ouvert ; ici ce n'est pas une invention :
+    // le client a délégué la décision. Les valeurs restent des défauts, réglables par le Super Admin.
+    expect(PLATFORM_SETTINGS.courierBaseZoneKm).toBe(3);
+    expect(PLATFORM_SETTINGS.importantParcelMinEur).toBe(100);
+    expect(PLATFORM_SETTINGS.cartHoldSeconds).toBe(600);
+    expect(PLATFORM_SETTINGS.deliveryFeeEur).toBe(3);
   });
 
-  it('distingue un paramètre arbitré d’un paramètre ouvert', () => {
+  it('la livraison payée par le client couvre le forfait du livreur : elle ne coûte rien à TK LINK', () => {
+    expect(PLATFORM_SETTINGS.deliveryFeeEur).toBe(PLATFORM_SETTINGS.courierBaseFeeEur);
+  });
+
+  it('tout est arbitré aujourd’hui ; un paramètre vidé redeviendrait « ouvert »', () => {
     expect(isSettled('freeOperations')).toBe(true);
-    expect(isSettled('cartHoldSeconds')).toBe(false);
+    expect(isSettled('cartHoldSeconds')).toBe(true);
+    expect(isSettled('courierBaseZoneKm')).toBe(true);
   });
 });

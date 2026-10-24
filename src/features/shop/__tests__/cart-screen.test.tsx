@@ -29,6 +29,8 @@ describe('<CartScreen /> — total', () => {
 
   it('le total est le sous-total : aucune réduction ni coupon à la caisse', () => {
     render(<CartScreen />);
+    // Touch & Collect : gratuit, donc le total est exactement le sous-total.
+    fireEvent.press(screen.getByTestId('cart-fulfilment-touch-collect'));
 
     expect(screen.getByTestId('cart-total')).toHaveTextContent('6.90€');
     expect(screen.queryByTestId('cart-discount-line')).not.toBeOnTheScreen();
@@ -82,7 +84,8 @@ describe('<CartScreen /> — crédit de parrainage (CDC V1.1)', () => {
 
   it('ne rembourse jamais plus que les articles', () => {
     render(<CartScreen credit={50} />);
-    expect(screen.getByTestId('cart-total')).toHaveTextContent('0.00€');
+    // Le crédit couvre les articles, jamais la livraison (3,00 €, arrêtée le 24/10/2026).
+    expect(screen.getByTestId('cart-total')).toHaveTextContent('3.00€');
   });
 
   it('enregistre la réduction dans la commande', async () => {

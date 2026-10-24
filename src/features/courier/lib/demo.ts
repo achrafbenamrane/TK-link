@@ -4,7 +4,7 @@ import type { Mission } from '../model/store';
  * MISSIONS D'EXEMPLE — pour montrer au client ce que voit un livreur.
  *
  * Sans serveur, aucune course réelle n'arrive tant qu'un client n'a pas commandé
- * en livraison sur le même appareil. Ces trois missions, signalées « exemple » à
+ * en livraison sur le même appareil. Ces quatre missions, signalées « exemple » à
  * l'écran, remplissent la liste vide pour que la démonstration ait de la matière.
  * Elles disparaissent dès qu'une vraie commande est prête. Les codes de remise (4 chiffres
  * au retrait, 6 au client) sont affichés : c'est la démo ; en vrai, ils viennent du commerçant
@@ -66,6 +66,26 @@ export const DEMO_MISSIONS: Mission[] = [
     targetTime: '13:10',
     pickupGeo: { lat: 43.6008, lng: 1.4493 },
     dropoffGeo: { lat: 43.5871, lng: 1.4349 },
+  },
+  {
+    // Un colis de valeur : au-dessus du seuil du « colis important » (100 €), la remise exige
+    // l'empreinte du livreur. Sans lui, la démonstration ne montrerait jamais ce contrôle.
+    orderId: 'demo_8895',
+    ref: 'CMD-8895',
+    merchantName: 'Techno Capitole',
+    merchantArea: 'Rue d’Alsace-Lorraine, 31000 Toulouse',
+    merchantPhone: '01 99 00 88 95',
+    clientName: 'Hugo Martin',
+    clientPhone: '01 99 00 41 41',
+    dropoff: '41 allée Jean-Jaurès, 31000 Toulouse',
+    itemCount: 1,
+    bags: 1,
+    totalEur: 189,
+    distanceKm: 4.2,
+    etaMin: 22,
+    targetTime: '13:30',
+    pickupGeo: { lat: 43.6002, lng: 1.4501 },
+    dropoffGeo: { lat: 43.6075, lng: 1.4531 },
   },
 ];
 

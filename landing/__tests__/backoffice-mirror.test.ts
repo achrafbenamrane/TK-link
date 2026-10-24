@@ -81,15 +81,11 @@ describe('réglages de la plateforme — web = app', () => {
     });
   });
 
-  it('seuls les réglages que le CDC laisse ouverts peuvent rester vides', () => {
+  it('seuls les réglages que le CDC ne chiffrait pas peuvent être vidés (« à définir »)', () => {
     const nullable = platform.FIELDS.filter((f) => f.nullable)
       .map((f) => f.key)
       .sort();
-    const open = Object.entries(PLATFORM_SETTINGS)
-      .filter(([, v]) => v === null)
-      .map(([k]) => k)
-      .sort();
-    expect(nullable).toEqual(open);
+    expect(nullable).toEqual(['cartHoldSeconds', 'courierBaseZoneKm', 'importantParcelMinEur']);
   });
 
   it('valide une saisie : virgule française, bornes, vide = « à définir »', () => {
@@ -97,7 +93,9 @@ describe('réglages de la plateforme — web = app', () => {
       Object.entries(platform.DEFAULT_SETTINGS).map(([k, v]) => [k, platform.toInput(v)]),
     );
     expect(platform.validateSettings(inputs)).toMatchObject({ ok: true });
-    expect(platform.validateSettings(inputs).values.courierBaseZoneKm).toBeNull();
+    expect(
+      platform.validateSettings({ ...inputs, courierBaseZoneKm: '' }).values.courierBaseZoneKm,
+    ).toBeNull();
 
     const r = platform.validateSettings({ ...inputs, courierPerKmEur: '0,9', freeOperations: '8' });
     expect(r.values).toMatchObject({ courierPerKmEur: 0.9, freeOperations: 8 });
