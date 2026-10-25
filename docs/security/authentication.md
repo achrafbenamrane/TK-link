@@ -137,7 +137,18 @@ Tout se règle dans le **tableau de bord** du projet hébergé. Ne pas pousser l
      `app.config.ts`.
 3. **Supabase → Providers → Google** : activer ; **Client IDs** = identifiant Web **en premier**, puis
    iOS et Android, séparés par des virgules ; **Client Secret** = secret du client Web ;
-   « Skip nonce checks » désactivé (voir le dépannage si iOS se plaint du nonce).
+   « Skip nonce checks » désactivé (voir le dépannage si iOS se plaint du nonce). Sur Android, le jeton
+   porte l’identifiant **Web** comme destinataire : l’identifiant Android n’est pas indispensable ici.
+4. Tant que l’écran de consentement est **en test**, seuls les comptes ajoutés dans **Audience → Test
+   users** peuvent se connecter.
+
+> **État au 25/10/2026 (comptes de test, à transférer au client)** : projet Google Cloud « TK LINK »
+> (`tk-link-512715`), client Web `188076300528-nk5gpqajhiqe721pmpsm08ju4pdv8mrr`, client Android
+> `com.progix.tklink.preview` `188076300528-nif7noenbvhheliu0f0bvprtkdsohroo` (SHA-1 de la clé EAS du
+> profil `preview`). `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` est posée dans l’environnement EAS `preview`.
+> Restent : clients Android `com.progix.tklink` et `.dev`, client iOS, publication de l’écran de
+> consentement. Le transfert au client se fait en l’ajoutant **Owner** du projet (IAM), ou en recréant
+> les clients sur son compte — les identifiants changent alors, ainsi que la variable EAS.
 
 ### 4. Apple (compte développeur Progix)
 
