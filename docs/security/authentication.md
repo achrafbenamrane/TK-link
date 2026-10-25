@@ -140,7 +140,9 @@ Tout se règle dans le **tableau de bord** du projet hébergé. Ne pas pousser l
    « Skip nonce checks » désactivé (voir le dépannage si iOS se plaint du nonce). Sur Android, le jeton
    porte l’identifiant **Web** comme destinataire : l’identifiant Android n’est pas indispensable ici.
 4. Tant que l’écran de consentement est **en test**, seuls les comptes ajoutés dans **Audience → Test
-   users** peuvent se connecter.
+   users** peuvent se connecter (100 au plus). « Publish app » reste grisé tant que **Branding** n’a
+   pas une page d’accueil, une politique de confidentialité en ligne et leur domaine autorisé : à
+   faire avec le domaine du client (le même que Resend et les fiches des stores).
 
 > **État au 25/10/2026 (comptes de test, à transférer au client)** : projet Google Cloud « TK LINK »
 > (`tk-link-512715`), client Web `188076300528-nk5gpqajhiqe721pmpsm08ju4pdv8mrr`, client Android
