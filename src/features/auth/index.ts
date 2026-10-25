@@ -20,6 +20,7 @@ export {
   selectSession,
   selectAuthStatus,
   type AuthResult,
+  type ServerProfile,
   type SocialSignIn,
 } from './model/store';
 export { describeAccount, type AccountInfo } from './model/account';

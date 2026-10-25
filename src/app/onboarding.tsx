@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
-import { OnboardingScreen, type OnboardingExit } from '@/features/onboarding';
+import { useAuthStore } from '@/features/auth';
+import { OnboardingScreen, useOnboardingStore, type OnboardingExit } from '@/features/onboarding';
 import { authenticateBiometric, getUserCoord, useShopStore } from '@/features/shop';
 
 /**
@@ -18,13 +19,17 @@ export default function OnboardingRoute() {
   const setUserCoord = useShopStore((s) => s.setUserCoord);
   const setBiometricEnabled = useShopStore((s) => s.setBiometricEnabled);
 
+  const saveOnboarding = useAuthStore((s) => s.saveOnboarding);
   const onDone = useCallback(
     (_next: OnboardingExit) => {
+      // Le COMPTE retient l'accueil : la prochaine connexion (autre appareil, après une
+      // déconnexion) entre directement, sans repasser par ici.
+      void saveOnboarding(useOnboardingStore.getState().interests);
       // `replace` : revenir sur un onboarding terminé n'a aucun sens, et la
       // porte du layout renverrait aussitôt dans l'app.
       router.replace('/');
     },
-    [router],
+    [router, saveOnboarding],
   );
 
   const onRequestLocation = useCallback(async () => {

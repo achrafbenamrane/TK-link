@@ -233,6 +233,10 @@ export type ServerProfile = {
   lastName: string;
   accountType: Role;
   accountTypeDeclared: boolean;
+  /** L'accueil (centres d'intérêt, dossier pro ou livreur) a déjà été fait par ce compte. */
+  onboarded: boolean;
+  /** Les centres d'intérêt choisis à l'accueil (identifiants de catégories). */
+  interests: string[];
 };
 
 const ProfileRowSchema = z.object({
@@ -240,6 +244,9 @@ const ProfileRowSchema = z.object({
   last_name: z.string().nullable(),
   account_type: z.enum(ROLES),
   account_type_declared: z.boolean(),
+  // Migration 0009 : absentes tant qu'elle n'est pas appliquée — on lit alors « pas encore fait ».
+  onboarded_at: z.string().nullable().optional(),
+  interests: z.array(z.string().max(40)).max(20).nullable().optional(),
 });
 
 /**
@@ -252,7 +259,9 @@ export async function fetchMyProfile(
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('first_name, last_name, account_type, account_type_declared')
+      // `*` plutôt qu'une liste : une colonne pas encore créée (migration en retard) ne fait pas
+      // échouer toute la lecture — le type de compte reste lisible.
+      .select('*')
       .eq('id', userId)
       .maybeSingle();
     if (error) return fail(error);
@@ -265,8 +274,27 @@ export async function fetchMyProfile(
         lastName: parsed.data.last_name ?? '',
         accountType: parsed.data.account_type,
         accountTypeDeclared: parsed.data.account_type_declared,
+        onboarded: Boolean(parsed.data.onboarded_at),
+        interests: parsed.data.interests ?? [],
       },
     };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/**
+ * Retient sur le COMPTE que l'accueil est fait, avec les centres d'intérêt choisis (migration 0009) :
+ * une connexion suivante — après une déconnexion, sur un autre appareil — entre directement dans
+ * l'app. RLS : la personne n'écrit que sa propre ligne, et seulement ces colonnes-là.
+ */
+export async function saveOnboarding(userId: string, interests: string[]): Promise<Outcome> {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ interests, onboarded_at: new Date().toISOString() })
+      .eq('id', userId);
+    return error ? fail(error) : { ok: true };
   } catch (error) {
     return fail(error);
   }

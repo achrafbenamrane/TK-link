@@ -1,8 +1,27 @@
 import { useIsFocused, useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
-import { homeFor, SignInScreen, useAuthStore } from '@/features/auth';
+import { homeFor, SignInScreen, useAuthStore, type ServerProfile } from '@/features/auth';
 import { useOnboardingStore } from '@/features/onboarding';
+import { isCategory } from '@/shared/lib/categories';
+import type { Role } from '@/shared/lib/roles';
+
+/**
+ * Range dans le profil LOCAL ce que le compte sait déjà : son type, son prénom (si l'appareil n'en a
+ * pas), et — s'il a déjà fait l'accueil — ses centres d'intérêt, l'accueil étant alors marqué fait.
+ * Une personne déjà inscrite ne repasse donc jamais par les centres d'intérêt, ni après une
+ * déconnexion ni sur un autre appareil. Partagé par la connexion et le lancement (`AccountSync`).
+ */
+export function adoptServerProfile(profile: ServerProfile, role: Role): void {
+  const local = useOnboardingStore.getState();
+  local.setRole(role);
+  // Le prénom choisi sur cet appareil l'emporte ; à défaut, celui du compte.
+  if (profile.firstName && !local.firstName) local.setFirstName(profile.firstName);
+  if (profile.onboarded) {
+    local.setInterests(profile.interests.filter(isCategory));
+    local.complete();
+  }
+}
 
 /**
  * Entrer dans l'app une fois connecté — après la connexion, ou après un nouveau mot de passe.
@@ -21,12 +40,8 @@ export function useEnterApp() {
     // ou Apple depuis cet écran, sans le formulaire) est un compte client. Un professionnel passe par
     // l'inscription, sa fiche et ses CGU.
     const profile = await syncProfile(useOnboardingStore.getState().role, { declare: false });
-    const local = useOnboardingStore.getState();
-    if (profile) {
-      local.setRole(profile.declared ? profile.accountType : 'consommateur');
-      // Le prénom choisi sur cet appareil l'emporte ; à défaut, celui du compte.
-      if (profile.firstName && !local.firstName) local.setFirstName(profile.firstName);
-    }
+    if (profile)
+      adoptServerProfile(profile, profile.declared ? profile.accountType : 'consommateur');
     const { completed, role } = useOnboardingStore.getState();
     router.replace(homeFor({ auth: 'authenticated', onboardingCompleted: completed, role }));
   }, [router, syncProfile]);

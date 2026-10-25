@@ -39,6 +39,7 @@ import { ErrorScreen } from '@/shared/ui';
 import { ThemeProvider, useColors, useScheme } from '@/shared/theme/theme-provider';
 
 import { resetLocalData } from './(tabs)/profil';
+import { adoptServerProfile } from './sign-in';
 
 /** Les écrans d'un compte déconnecté : y aller, c'est quitter l'app — la pile ne doit rien garder. */
 const SIGNED_OUT_ROUTES: ReadonlySet<EntryRoute> = new Set(['/welcome', '/role', '/sign-in']);
@@ -90,9 +91,11 @@ function EntryGate() {
  *
  * 1. Un AUTRE compte que celui à qui appartient le profil local (session expirée sans déconnexion,
  *    puis quelqu'un d'autre se connecte) : les données locales du précédent repartent de zéro.
- * 2. L'accueil n'est pas fini sur cet appareil : le type de compte DÉCLARÉ est relu sur le serveur.
+ * 2. L'accueil n'est pas fini sur cet appareil : le type de compte DÉCLARÉ est relu sur le serveur,
+ *    et si le compte a déjà fait l'accueil, il est marqué fait ici aussi (centres d'intérêt compris).
  *    Une connexion interrompue (app fermée, réseau) ne laisse donc pas un professionnel dans
- *    l'accueil d'un client. Rien n'est déclaré ici : c'est un geste d'inscription.
+ *    l'accueil d'un client, ni une personne déjà inscrite dans les centres d'intérêt. Rien n'est
+ *    déclaré ici : c'est un geste d'inscription.
  *
  * En démonstration, rien : pas de serveur, et les données d'exemple appartiennent à la démo.
  */
@@ -111,8 +114,10 @@ function AccountSync() {
     if (local.completed && local.ownerId && local.ownerId !== userId) resetLocalData();
     useOnboardingStore.getState().setOwnerId(userId);
     if (useOnboardingStore.getState().completed) return;
-    void syncProfile(useOnboardingStore.getState().role, { declare: false }).then((profile) => {
-      if (profile?.declared) useOnboardingStore.getState().setRole(profile.accountType);
+    const localRole = useOnboardingStore.getState().role;
+    void syncProfile(localRole, { declare: false }).then((profile) => {
+      // Un type non déclaré n'écrase pas le profil choisi (inscription Google ou Apple en cours).
+      if (profile) adoptServerProfile(profile, profile.declared ? profile.accountType : localRole);
     });
   }, [userId, syncProfile]);
 

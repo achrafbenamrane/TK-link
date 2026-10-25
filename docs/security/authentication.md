@@ -33,6 +33,9 @@ numéro sans SMS, Resend, Apple sur Android). Journal du chantier :
   Se connecter ne déclare rien : un compte créé par Google ou Apple depuis l’écran de connexion est
   un compte client. Sur un nouvel appareil, l’app relit le type déclaré (`syncProfile`) avant de
   choisir l’accueil — à la connexion, et à chaque lancement tant que l’accueil n’est pas fini.
+- **L’accueil est retenu par le compte** (`profiles.onboarded_at`, `interests`, migration 0009) :
+  une personne déjà inscrite qui se reconnecte — après une déconnexion, sur un autre appareil, ou
+  après un nouveau mot de passe — entre directement dans l’app, avec ses centres d’intérêt.
 - **Les données locales appartiennent à un compte** : si un AUTRE compte se connecte sur l’appareil
   (session expirée sans déconnexion), le profil, le panier, les commandes et la fidélité du précédent
   repartent de zéro.
@@ -73,7 +76,7 @@ Tout se règle dans le **tableau de bord** du projet hébergé. Ne pas pousser l
 
 1. **Projet** : en créer un (région UE, Paris de préférence), noter sa référence (`<ref>`).
 2. **Base et fonctions** : `npx supabase login`, `npx supabase link --project-ref <ref>`,
-   `npx supabase db push` (migrations `0001` → `0008`), puis
+   `npx supabase db push` (migrations `0001` → `0009`), puis
    `npx supabase functions deploy delete-account` et `npx supabase functions deploy link-phone`.
    Sans la CLI : SQL Editor (les fichiers de migration l’un après l’autre, dans l’ordre) et Edge
    Functions → Deploy a new function → Via Editor. Pour les deux fonctions, **Verify JWT with
@@ -180,7 +183,7 @@ restent tant que `EXPO_PUBLIC_APP_ENV` n’est pas `production`.
 ### 6. Vérifier
 
 `npm run auth:check` lit le `.env` et dit, pour le vrai projet, ce qui est prêt et ce qui bloque
-(fournisseurs, confirmations, migrations 0007–0008, fonction `link-phone`). Puis, sur téléphone,
+(fournisseurs, confirmations, migrations 0007–0009, fonction `link-phone`). Puis, sur téléphone,
 dérouler [CUJ-001 et CUJ-007](../quality/critical-user-journeys.md).
 
 ## Dépannage

@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 
 import { ProSetupScreen } from '@/features/merchant';
+import { useAuthStore } from '@/features/auth';
 import { selectRole, selectSiret, useOnboardingStore } from '@/features/onboarding';
 import { authenticateBiometric, useShopStore } from '@/features/shop';
 import { isDemoBuild } from '@/shared/lib/env';
@@ -19,6 +20,7 @@ const DEMO_IBAN = 'FR76 3000 6000 0112 3456 7890 189';
 export default function ProDossierRoute() {
   const router = useRouter();
   const complete = useOnboardingStore((s) => s.complete);
+  const saveOnboarding = useAuthStore((s) => s.saveOnboarding);
   const siret = useOnboardingStore(selectSiret);
   const role = useOnboardingStore(selectRole);
   const application = useShopStore((s) => s.merchantApplication);
@@ -32,8 +34,9 @@ export default function ProDossierRoute() {
       demo={isDemoBuild}
       authenticate={async (reason) => (await authenticateBiometric(reason)).ok}
       onDone={() => {
-        // Le compte est prêt : la porte du premier lancement s'ouvre.
+        // Le compte est prêt : la porte du premier lancement s'ouvre — et le compte s'en souvient.
         complete();
+        void saveOnboarding(useOnboardingStore.getState().interests);
         router.replace('/');
       }}
     />

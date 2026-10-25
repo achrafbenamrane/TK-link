@@ -455,6 +455,8 @@ describe('profil serveur', () => {
     lastName: 'Rey',
     accountType: 'consommateur',
     accountTypeDeclared: false,
+    onboarded: false,
+    interests: [],
   };
 
   beforeEach(() => {
@@ -477,6 +479,8 @@ describe('profil serveur', () => {
       lastName: 'Rey',
       accountType: 'commercant',
       declared: true,
+      onboarded: false,
+      interests: [],
     });
     expect(svc.fetchMyProfile).toHaveBeenCalledWith('u1');
     expect(svc.declareAccountType).not.toHaveBeenCalled();
@@ -490,6 +494,8 @@ describe('profil serveur', () => {
       lastName: 'Rey',
       accountType: 'livreur',
       declared: true,
+      onboarded: false,
+      interests: [],
     });
     expect(svc.declareAccountType).toHaveBeenCalledWith('livreur');
   });
@@ -501,6 +507,8 @@ describe('profil serveur', () => {
       lastName: 'Rey',
       accountType: 'commercant',
       declared: false,
+      onboarded: false,
+      interests: [],
     });
     expect(svc.declareAccountType).not.toHaveBeenCalled();
   });
@@ -513,6 +521,8 @@ describe('profil serveur', () => {
     expect(await state().syncProfile('consommateur', { declare: false })).toMatchObject({
       accountType: 'grossiste',
       declared: true,
+      onboarded: false,
+      interests: [],
     });
     expect(svc.declareAccountType).not.toHaveBeenCalled();
   });
@@ -531,6 +541,8 @@ describe('profil serveur', () => {
       lastName: 'Rey',
       accountType: 'livreur',
       declared: false,
+      onboarded: false,
+      interests: [],
     });
   });
 
@@ -804,5 +816,38 @@ describe('session de démonstration dans une build branchée sur un serveur', ()
     expect(googleOut).not.toHaveBeenCalled();
     expect(svc.signOut).not.toHaveBeenCalled();
     expect(svc.deleteAccount).not.toHaveBeenCalled();
+  });
+});
+
+describe('l’accueil retenu par le compte', () => {
+  it('un compte qui a déjà fait l’accueil le dit, avec ses centres d’intérêt', async () => {
+    useAuthStore.setState({ session: aSession, status: 'authenticated' });
+    svc.fetchMyProfile.mockResolvedValue({
+      ok: true,
+      profile: {
+        firstName: 'Sofia',
+        lastName: 'Rey',
+        accountType: 'consommateur',
+        accountTypeDeclared: true,
+        onboarded: true,
+        interests: ['mode'],
+      },
+    });
+    expect(await state().syncProfile('consommateur', { declare: false })).toMatchObject({
+      onboarded: true,
+      interests: ['mode'],
+    });
+  });
+
+  it('terminer l’accueil l’enregistre sur le compte — pas en démonstration, pas sans session', async () => {
+    useAuthStore.setState({ session: aSession, status: 'authenticated' });
+    svc.saveOnboarding.mockResolvedValue({ ok: true });
+    await state().saveOnboarding(['mode', 'sport']);
+    expect(svc.saveOnboarding).toHaveBeenCalledWith('u1', ['mode', 'sport']);
+
+    svc.saveOnboarding.mockClear();
+    useAuthStore.setState({ session: null, status: 'unauthenticated' });
+    await state().saveOnboarding(['mode']);
+    expect(svc.saveOnboarding).not.toHaveBeenCalled();
   });
 });

@@ -128,7 +128,7 @@ if (external.apple) {
     'Fournisseur « Apple » désactivé : obligatoire sur iOS dès que Google est proposé (App Store 4.8).',
   );
 
-// Les migrations 0007 et 0008 sont-elles appliquées ? Sans droit de lecture (clé anon), Postgres répond
+// Les migrations 0007 à 0009 sont-elles appliquées ? Sans droit de lecture (clé anon), Postgres répond
 // « permission refusée » si la colonne existe, et « colonne inconnue » si elle n'existe pas.
 console.log('\nBase de données');
 const probeColumn = async (column) => {
@@ -155,8 +155,12 @@ try {
     fail(
       'La migration 0008_phone_link_account_type n’est pas appliquée (colonne profiles.account_type_declared absente).',
     );
+  } else if ((await probeColumn('onboarded_at')) === 'missing') {
+    fail(
+      'La migration 0009_profile_onboarding n’est pas appliquée (colonne profiles.onboarded_at absente) : une personne déjà inscrite repasserait par les centres d’intérêt à chaque connexion.',
+    );
   } else {
-    ok('Profils : migrations 0007 et 0008 en place (accès anonyme refusé, comme prévu).');
+    ok('Profils : migrations 0007 à 0009 en place (accès anonyme refusé, comme prévu).');
   }
 } catch {
   warn('Impossible de sonder la table des profils.');

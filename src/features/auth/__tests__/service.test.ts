@@ -488,6 +488,8 @@ describe('profil serveur', () => {
         last_name: 'Rey',
         account_type: 'commercant',
         account_type_declared: true,
+        onboarded_at: '2026-10-24T20:00:00Z',
+        interests: ['restauration', 'mode'],
       },
       error: null,
     });
@@ -498,12 +500,13 @@ describe('profil serveur', () => {
         lastName: 'Rey',
         accountType: 'commercant',
         accountTypeDeclared: true,
+        onboarded: true,
+        interests: ['restauration', 'mode'],
       },
     });
     expect(from).toHaveBeenCalledWith('profiles');
-    expect(query.select).toHaveBeenCalledWith(
-      'first_name, last_name, account_type, account_type_declared',
-    );
+    // `*` : une colonne pas encore créée (migration en retard) ne fait pas échouer la lecture.
+    expect(query.select).toHaveBeenCalledWith('*');
     expect(query.eq).toHaveBeenCalledWith('id', 'u1');
     expect(query.maybeSingle).toHaveBeenCalled();
   });
@@ -525,8 +528,33 @@ describe('profil serveur', () => {
         lastName: '',
         accountType: 'consommateur',
         accountTypeDeclared: false,
+        // Migration 0009 pas encore appliquée (colonnes absentes) : accueil pas encore fait.
+        onboarded: false,
+        interests: [],
       },
     });
+  });
+
+  it('l’accueil fait : enregistré sur le compte, avec les centres d’intérêt et la date', async () => {
+    const eq = jest.fn().mockResolvedValue({ error: null });
+    const update = jest.fn().mockReturnValue({ eq });
+    from.mockReturnValueOnce({ update } as never);
+    expect(await service.saveOnboarding('u1', ['restauration', 'mode'])).toEqual({ ok: true });
+    expect(from).toHaveBeenCalledWith('profiles');
+    expect(update).toHaveBeenCalledWith({
+      interests: ['restauration', 'mode'],
+      onboarded_at: expect.any(String),
+    });
+    expect(Number.isNaN(Date.parse(update.mock.calls[0][0].onboarded_at))).toBe(false);
+    expect(eq).toHaveBeenCalledWith('id', 'u1');
+  });
+
+  it('l’accueil fait : un refus du serveur est classé, jamais levé', async () => {
+    const eq = jest
+      .fn()
+      .mockResolvedValue({ error: { code: '', message: 'TypeError: Network request failed' } });
+    from.mockReturnValueOnce({ update: jest.fn().mockReturnValue({ eq }) } as never);
+    expect(await service.saveOnboarding('u1', [])).toEqual({ ok: false, code: 'network' });
   });
 
   it('pas de ligne, ou une ligne illisible : aucun profil, l’app garde ce qu’elle a', async () => {

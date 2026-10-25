@@ -43,6 +43,9 @@ export type ServerProfile = {
   accountType: Role;
   /** Le type est-il DÉCLARÉ sur le serveur ? Sinon `accountType` n'est que la valeur par défaut. */
   declared: boolean;
+  /** Ce compte a déjà fait l'accueil : on entre directement dans l'app, avec ses centres d'intérêt. */
+  onboarded: boolean;
+  interests: string[];
 };
 
 type AuthState = {
@@ -96,6 +99,12 @@ type AuthState = {
    * `null` : pas de serveur (démonstration) ou pas de réseau ; l'app garde ce qu'elle a en local.
    */
   syncProfile: (localRole: Role, options?: { declare?: boolean }) => Promise<ServerProfile | null>;
+  /**
+   * L'accueil vient d'être terminé : le COMPTE le retient (et les centres d'intérêt), pour ne plus le
+   * redemander à la connexion suivante. Sans serveur, rien à faire. Un échec est silencieux : au pire,
+   * l'accueil sera reproposé une fois.
+   */
+  saveOnboarding: (interests: string[]) => Promise<void>;
 
   /**
    * Builds de démonstration : ouvre une session locale sans serveur (boutons « Démo » du choix du
@@ -429,19 +438,27 @@ export const useAuthStore = create<AuthState>()((set, get) => {
       if (get().demoMode || !session || isDemoSession(session)) return null;
       const read = await service.fetchMyProfile(session.user.id);
       if (!read.ok || !read.profile) return null;
-      const { firstName, lastName, accountType, accountTypeDeclared } = read.profile;
-      if (accountTypeDeclared) return { firstName, lastName, accountType, declared: true };
+      const { firstName, lastName, accountType, accountTypeDeclared, onboarded, interests } =
+        read.profile;
+      const base = { firstName, lastName, onboarded, interests };
+      if (accountTypeDeclared) return { ...base, accountType, declared: true };
       // Déclarer est un geste d'INSCRIPTION (le formulaire et ses CGU l'accompagnent) : la connexion
       // et la synchronisation au lancement passent `declare: false` et laissent le type en blanc.
       if (options.declare === false) {
-        return { firstName, lastName, accountType: localRole, declared: false };
+        return { ...base, accountType: localRole, declared: false };
       }
       // Pas encore déclaré : le profil choisi dans l'app le devient. Si la déclaration échoue (réseau),
       // on garde le profil local — la valeur par défaut du serveur n'en sait pas plus.
       const declared = await service.declareAccountType(localRole);
       return declared.ok
-        ? { firstName, lastName, accountType: declared.accountType, declared: true }
-        : { firstName, lastName, accountType: localRole, declared: false };
+        ? { ...base, accountType: declared.accountType, declared: true }
+        : { ...base, accountType: localRole, declared: false };
+    },
+
+    saveOnboarding: async (interests) => {
+      const session = get().session;
+      if (get().demoMode || !session || isDemoSession(session)) return;
+      await service.saveOnboarding(session.user.id, interests);
     },
 
     openDemo: (identifier) => {
