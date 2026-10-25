@@ -102,6 +102,26 @@ describe('Google', () => {
     expect(G.hasPlayServices).toHaveBeenCalledWith({ showPlayServicesUpdateDialog: true });
   });
 
+  it('propose toujours de CHOISIR le compte : le compte mémorisé est oublié avant la fenêtre', async () => {
+    const order: string[] = [];
+    G.signOut!.mockImplementation(async () => order.push('signOut'));
+    G.signIn!.mockImplementation(async () => {
+      order.push('signIn');
+      return signed();
+    });
+    await googleIdentity();
+    expect(order).toEqual(['signOut', 'signIn']);
+
+    // Rien de mémorisé : rien à oublier, et un oubli qui échoue n'empêche pas la fenêtre.
+    order.length = 0;
+    G.hasPreviousSignIn!.mockReturnValue(false);
+    await googleIdentity();
+    expect(order).toEqual(['signIn']);
+    G.hasPreviousSignIn!.mockReturnValue(true);
+    G.signOut!.mockRejectedValue(new Error('hors ligne'));
+    expect((await googleIdentity()).ok).toBe(true);
+  });
+
   it('omet les champs que Google ne donne pas', async () => {
     G.signIn!.mockResolvedValue(
       signed({ user: { givenName: null, familyName: null, email: 'a@b.fr' } }),

@@ -50,6 +50,14 @@ function configure(google: GoogleModule): void {
   configured = true;
 }
 
+async function forgetCachedAccount(google: GoogleModule): Promise<void> {
+  try {
+    if (google.GoogleSignin.hasPreviousSignIn()) await google.GoogleSignin.signOut();
+  } catch {
+    // Rien de mémorisé, ou hors ligne : la fenêtre s'ouvre quand même.
+  }
+}
+
 /** La fenêtre Google : un jeton d'identité, ou la raison pour laquelle il n'y en a pas. */
 export async function googleIdentity(): Promise<SocialResult> {
   const google = loadGoogle();
@@ -59,6 +67,10 @@ export async function googleIdentity(): Promise<SocialResult> {
     configure(google);
     // Android : propose d'installer / mettre à jour les services Google Play s'ils manquent.
     await google.GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    // Google rouvre sinon, SANS rien demander, le dernier compte utilisé dans l'app : on l'oublie
+    // pour que la liste des comptes du téléphone s'affiche à chaque fois. (Avec UN SEUL compte
+    // Google sur le téléphone, Android le prend d'office : c'est le système, pas l'app.)
+    await forgetCachedAccount(google);
 
     const response = await google.GoogleSignin.signIn();
     if (response.type === 'cancelled') return { ok: false, code: 'cancelled' };
