@@ -217,8 +217,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     policy: 'fingerprint',
   },
   updates: {
-    // TODO(company): set after `eas init` + `eas update:configure`
-    // url: 'https://u.expo.dev/<EAS_PROJECT_ID>',
+    // EAS Update (canaux `development`, `preview`, `production` de eas.json) — même identifiant que
+    // `extra.eas.projectId` ci-dessous.
+    url: 'https://u.expo.dev/4c764f8e-8c18-43d4-bbe6-972ee71b76c5',
   },
   extra: {
     eas: {
