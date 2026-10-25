@@ -27,6 +27,7 @@ export { describeAccount, type AccountInfo } from './model/account';
 export { DemoNotice } from './ui/demo-notice';
 export { isDemoSession, makeDemoSession } from './model/demo-session';
 export {
+  afterSignUpRoute,
   decideEntry,
   homeFor,
   firstRunRoute,

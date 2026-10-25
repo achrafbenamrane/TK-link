@@ -67,6 +67,15 @@ export function firstRunRoute(role: Role): FirstRunRoute {
 }
 
 /**
+ * Où aller une fois l'inscription faite. Google et Apple ne distinguent pas créer et retrouver un
+ * compte : « Créer un compte » avec un compte déjà inscrit est une reconnexion, et si ce compte a
+ * déjà fait l'accueil (`onboarded`, retenu par le serveur), il entre directement dans l'app.
+ */
+export function afterSignUpRoute(role: Role, onboarded: boolean): FirstRunRoute | '/' {
+  return onboarded ? '/' : firstRunRoute(role);
+}
+
+/**
  * Où aller après le logo animé, et après une connexion. Aussi la destination par défaut quand la
  * porte ramène quelqu'un.
  *

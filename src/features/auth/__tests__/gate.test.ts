@@ -1,4 +1,10 @@
-import { decideEntry, firstRunRoute, homeFor, type EntryState } from '../model/gate';
+import {
+  afterSignUpRoute,
+  decideEntry,
+  firstRunRoute,
+  homeFor,
+  type EntryState,
+} from '../model/gate';
 
 const base: EntryState = {
   hydrated: true,
@@ -133,5 +139,13 @@ describe('après le logo animé', () => {
     expect(firstRunRoute('commercant')).toBe('/dossier-pro');
     expect(firstRunRoute('grossiste')).toBe('/dossier-pro');
     expect(firstRunRoute('livreur')).toBe('/devenir-livreur');
+  });
+
+  it('après l’inscription, un compte qui a déjà fait l’accueil entre directement', () => {
+    // « Créer un compte » puis Google avec un compte Google déjà inscrit : c'est une reconnexion.
+    expect(afterSignUpRoute('consommateur', true)).toBe('/');
+    expect(afterSignUpRoute('grossiste', true)).toBe('/');
+    expect(afterSignUpRoute('consommateur', false)).toBe('/onboarding');
+    expect(afterSignUpRoute('livreur', false)).toBe('/devenir-livreur');
   });
 });

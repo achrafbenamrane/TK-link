@@ -1,10 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 
-import { firstRunRoute, SignUpScreen, useAuthStore, type SignUpProfile } from '@/features/auth';
+import { afterSignUpRoute, SignUpScreen, useAuthStore, type SignUpProfile } from '@/features/auth';
 import { AvatarPicker, selectRole, useOnboardingStore } from '@/features/onboarding';
 import { useShopStore } from '@/features/shop';
 import { isDemoBuild } from '@/shared/lib/env';
+
+import { adoptServerProfile } from './sign-in';
 
 /**
  * INSCRIPTION — CDC V1.0 §2.2.
@@ -82,13 +84,14 @@ export default function SignUpRoute() {
   // Le compte existe. Son type fait foi côté serveur : déclaré à l'inscription par e-mail, déclaré
   // MAINTENANT pour Google et Apple (`syncProfile`) — ou déjà fixé, si ce compte existait. Puis un
   // livreur, un commerçant et un fournisseur déposent leurs justificatifs ; le client choisit ses
-  // centres d'intérêt.
+  // centres d'intérêt. Un compte Google ou Apple DÉJÀ inscrit, lui, reprend son accueil et entre.
   const toOnboarding = useCallback(async () => {
     const profile = await syncProfile(role);
     const type = profile?.accountType ?? role;
     // Toujours : une synchronisation au lancement a pu changer le rôle local entre-temps.
-    setRole(type);
-    router.replace(firstRunRoute(type));
+    if (profile) adoptServerProfile(profile, type);
+    else setRole(type);
+    router.replace(afterSignUpRoute(type, profile?.onboarded ?? false));
   }, [router, role, setRole, syncProfile]);
   const toSignIn = useCallback(() => router.replace('/sign-in'), [router]);
 
