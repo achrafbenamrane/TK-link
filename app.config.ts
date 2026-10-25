@@ -213,8 +213,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     typedRoutes: true,
     reactCompiler: true,
   },
+  // La version de l'app, pas une empreinte : `app.config.ts` dépend des variables d'environnement
+  // (Google, Mapbox) et EAS génère le dossier `android` — l'empreinte calculée sur la machine ne
+  // correspondait jamais à celle d'EAS, et le build échouait (« Runtime version mismatch »).
+  // Conséquence : quand un module NATIF change, monter `version` avant de publier une mise à jour.
   runtimeVersion: {
-    policy: 'fingerprint',
+    policy: 'appVersion',
   },
   updates: {
     // EAS Update (canaux `development`, `preview`, `production` de eas.json) — même identifiant que
