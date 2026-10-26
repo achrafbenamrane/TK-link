@@ -1,4 +1,4 @@
-import { parseEnv } from '@/shared/lib/env';
+import { offersDemoShortcuts, parseEnv } from '@/shared/lib/env';
 
 describe('parseEnv', () => {
   it('applies safe defaults for local development', () => {
@@ -58,5 +58,13 @@ describe('lecture des variables', () => {
 
   it('ne passe jamais `process.env` entier', () => {
     expect(source).not.toMatch(/process\.env(?!\.EXPO_PUBLIC_)\s*(as|[,)])/);
+  });
+});
+
+describe('raccourcis de démonstration', () => {
+  it('seulement sans vrai serveur : avec Supabase, « Démo » ouvrait un faux compte local', () => {
+    expect(offersDemoShortcuts({ demoBuild: true, serverConfigured: false })).toBe(true);
+    expect(offersDemoShortcuts({ demoBuild: true, serverConfigured: true })).toBe(false);
+    expect(offersDemoShortcuts({ demoBuild: false, serverConfigured: false })).toBe(false);
   });
 });

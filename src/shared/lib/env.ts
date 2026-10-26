@@ -111,9 +111,29 @@ export const isPhoneAuthEnabled: boolean = env.EXPO_PUBLIC_AUTH_PHONE === 'on';
 /**
  * Cette build est-elle une DÉMONSTRATION ? Vrai partout sauf en production.
  *
- * Tout ce qui sert à montrer l'app au client (inscription pré-remplie, bouton « Démo » du choix de
- * profil, missions d'exemple, vitrine d'exemple, boutons « simuler la validation ») passe par ce
- * drapeau, posé par les ROUTES : une build de production n'en montre aucun, et un vrai commerçant ne
- * peut pas valider par erreur un IBAN d'exemple.
+ * Tout ce qui sert à montrer l'app au client (missions d'exemple, vitrine d'exemple, boutons
+ * « simuler la validation ») passe par ce drapeau, posé par les ROUTES : une build de production n'en
+ * montre aucun, et un vrai commerçant ne peut pas valider par erreur un IBAN d'exemple. Le bouton
+ * « Démo » et l'inscription pré-remplie demandent EN PLUS l'absence de serveur : voir
+ * `offersDemoShortcuts`.
  */
 export const isDemoBuild: boolean = env.EXPO_PUBLIC_APP_ENV !== 'production';
+
+/**
+ * Les RACCOURCIS de démonstration — le bouton « Démo » du choix du profil et l'inscription
+ * pré-remplie — ne s'offrent que SANS vrai serveur. Avec Supabase branché, « Démo » ouvrait un faux
+ * compte local au milieu des vrais (sans Google, droit aux centres d'intérêt), et l'inscription
+ * pré-remplie créait `demo@tklink.fr` sur le serveur (26/10/2026). Le reste de la démonstration
+ * (exemples, vitrine) reste régi par `isDemoBuild`.
+ */
+export function offersDemoShortcuts(state: {
+  demoBuild: boolean;
+  serverConfigured: boolean;
+}): boolean {
+  return state.demoBuild && !state.serverConfigured;
+}
+
+export const isDemoShortcutAvailable: boolean = offersDemoShortcuts({
+  demoBuild: isDemoBuild,
+  serverConfigured: isSupabaseConfigured,
+});

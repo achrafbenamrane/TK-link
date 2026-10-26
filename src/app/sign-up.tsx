@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import { afterSignUpRoute, SignUpScreen, useAuthStore, type SignUpProfile } from '@/features/auth';
 import { AvatarPicker, selectRole, useOnboardingStore } from '@/features/onboarding';
 import { useShopStore } from '@/features/shop';
-import { isDemoBuild } from '@/shared/lib/env';
+import { isDemoShortcutAvailable } from '@/shared/lib/env';
 
 import { adoptServerProfile } from './sign-in';
 
@@ -98,8 +98,8 @@ export default function SignUpRoute() {
   return (
     <SignUpScreen
       role={role}
-      // L'inscription pré-remplie (et le consentement pré-coché) n'existent qu'en démonstration.
-      {...(isDemoBuild
+      // L'inscription pré-remplie (et le consentement pré-coché) : démonstration SANS serveur seulement.
+      {...(isDemoShortcutAvailable
         ? {
             initialDraft:
               role === 'grossiste'
