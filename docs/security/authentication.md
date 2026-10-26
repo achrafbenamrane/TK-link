@@ -148,8 +148,10 @@ Tout se règle dans le **tableau de bord** du projet hébergé. Ne pas pousser l
 > (`tk-link-512715`), client Web `188076300528-nk5gpqajhiqe721pmpsm08ju4pdv8mrr`, client Android
 > `com.progix.tklink.preview` `188076300528-nif7noenbvhheliu0f0bvprtkdsohroo` (SHA-1 de la clé EAS du
 > profil `preview`). `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` est posée dans l’environnement EAS `preview`.
-> Restent : clients Android `com.progix.tklink` et `.dev`, client iOS, publication de l’écran de
-> consentement. Le transfert au client se fait en l’ajoutant **Owner** du projet (IAM), ou en recréant
+> **Publiée « In production » le 26/10/2026** (tout compte Gmail) : page d’accueil et politique de
+> confidentialité sur le site vitrine, projet Vercel `tklink` → `https://tklink-wine.vercel.app` et
+> `/confidentialite` (brouillon, contact provisoire, à valider par le client). Restent : clients
+> Android `com.progix.tklink` et `.dev`, client iOS. Le transfert au client se fait en l’ajoutant **Owner** du projet (IAM), ou en recréant
 > les clients sur son compte — les identifiants changent alors, ainsi que la variable EAS.
 
 ### 4. Apple (compte développeur Progix)
