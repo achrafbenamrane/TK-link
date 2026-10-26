@@ -174,6 +174,12 @@ Tout se règle dans le **tableau de bord** du projet hébergé. Ne pas pousser l
 6. Build iOS avec le compte Apple de Progix : `npx eas-cli build -p ios --profile preview`. Android :
    un nouveau build aussi (module `expo-web-browser`).
 
+> **État au 26/10/2026 — Apple fonctionne sur l’APK Android** (page web d’Apple). Compte Apple
+> Developer de l’équipe Progix (Team ID `89884BGNZR`) ; App ID `com.progix.tklink` (Sign in with
+> Apple, primary) ; Services ID `com.progix.tklink.web` ; clé `757G3F7C6C` (fichier `.p8` gardé
+> hors du dépôt). **Le secret expire le 24/04/2027** : le refaire avant (étape 4), puis le coller dans
+> Supabase. Reste : le build iOS.
+
 Un même compte Apple ouvre le même compte TK LINK sur iPhone et sur Android (l’identifiant Apple est
 commun à toute l’équipe Progix). Apple ne donne le nom qu’à la toute première connexion. Sur Android,
 toute la connexion (double authentification comprise) doit tenir en 5 minutes.
