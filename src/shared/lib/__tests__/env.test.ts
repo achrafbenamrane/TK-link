@@ -37,3 +37,26 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ EXPO_PUBLIC_API_URL: 'not-a-url' })).toThrow(/EXPO_PUBLIC_API_URL/);
   });
 });
+
+/**
+ * Dans une build de production (APK, mise à jour EAS), Expo ne remplace QUE les lectures écrites en
+ * toutes lettres, `process.env.EXPO_PUBLIC_X`. Lire `process.env` d'un bloc marche en développement
+ * et rend un objet VIDE dans l'APK : l'app y tournait en démonstration, sans Supabase ni Google.
+ */
+describe('lecture des variables', () => {
+  // why: les types de Node ne sont pas chargés dans l'app ; Jest tourne depuis la racine du dépôt.
+  const { readFileSync } = jest.requireActual<{
+    readFileSync: (path: string, enc: 'utf8') => string;
+  }>('fs');
+  const source = readFileSync('src/shared/lib/env.ts', 'utf8');
+
+  it('lit chaque variable du schéma en toutes lettres', () => {
+    const keys = [...source.matchAll(/^\s+(EXPO_PUBLIC_[A-Z_]+):/gm)].map((m) => m[1]);
+    expect(keys.length).toBeGreaterThan(0);
+    for (const key of new Set(keys)) expect(source).toContain(`process.env.${key}`);
+  });
+
+  it('ne passe jamais `process.env` entier', () => {
+    expect(source).not.toMatch(/process\.env(?!\.EXPO_PUBLIC_)\s*(as|[,)])/);
+  });
+});

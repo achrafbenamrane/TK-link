@@ -62,7 +62,18 @@ export function parseEnv(raw: Record<string, string | undefined>): Env {
   return result.data;
 }
 
-export const env: Env = parseEnv(process.env as Record<string, string | undefined>);
+// Chaque variable EN TOUTES LETTRES : dans une build de production (APK, mise à jour EAS), Expo ne
+// remplace que `process.env.EXPO_PUBLIC_X` écrit ainsi. `process.env` passé d'un bloc y est VIDE —
+// l'app tournait alors en démonstration, sans Supabase ni Google (le test `env.test.ts` y veille).
+export const env: Env = parseEnv({
+  EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
+  EXPO_PUBLIC_APP_ENV: process.env.EXPO_PUBLIC_APP_ENV,
+  EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  EXPO_PUBLIC_AUTH_PHONE: process.env.EXPO_PUBLIC_AUTH_PHONE,
+});
 
 /**
  * Les valeurs de repli du schéma ci-dessus. Un `.env` qui ne définit pas
