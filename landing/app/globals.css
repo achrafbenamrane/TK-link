@@ -929,3 +929,45 @@ footer {
   color: var(--ink-muted);
   margin: 0;
 }
+
+/* ------------------------------------------------ pages légales (/confidentialite) */
+.legal {
+  background: var(--surface);
+  color: var(--ink);
+  min-height: 100vh;
+  padding: 48px 0 80px;
+}
+.legal-wrap {
+  max-width: 760px;
+}
+.legal .logo {
+  display: inline-block;
+  margin-bottom: 32px;
+  color: var(--ink);
+}
+.legal h1 {
+  font-size: clamp(28px, 5vw, 40px);
+  margin: 0 0 8px;
+}
+.legal h2 {
+  font-size: 20px;
+  margin: 36px 0 10px;
+}
+.legal p,
+.legal li {
+  color: var(--ink-muted);
+  line-height: 1.65;
+}
+.legal ul {
+  padding-left: 20px;
+}
+.legal li + li {
+  margin-top: 8px;
+}
+.legal a:not(.logo) {
+  color: var(--brand-600);
+}
+.legal-date {
+  color: var(--ink-faint);
+  font-size: 14px;
+}

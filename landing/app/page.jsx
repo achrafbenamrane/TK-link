@@ -310,6 +310,7 @@ export default function Page() {
               <a href="#commercants">Vous êtes commerçant</a>
               <a href="#impact">Notre impact</a>
               <a href="#telecharger">Obtenir l’app</a>
+              <a href="/confidentialite">Confidentialité</a>
             </div>
           </div>
           <div className="foot-bot">
