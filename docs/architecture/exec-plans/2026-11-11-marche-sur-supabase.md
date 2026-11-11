@@ -53,6 +53,10 @@ ils viennent après, sur les mêmes fondations.
 - [x] Doc : requête de validation, `docs/security/checklist.md`
       **Preuve :** dossier déposé sur le téléphone → ligne `shops` ; validé dans Supabase → la
       publication s’ouvre sur le téléphone
+- [x] 11/11 : 0010 appliquée sur le projet ; règles éprouvées sur le vrai serveur avec de vraies
+      sessions (statut, dossier d’un client, clé SIRET, commerce d’un autre : tous refusés). Comptes
+      de test client / commerçant / grossiste créés par script SQL (hors dépôt : il porte un mot de
+      passe), dossiers validés. Reste : l’essai sur téléphone
 
 ### Étape 2 — Les Flash en direct
 
