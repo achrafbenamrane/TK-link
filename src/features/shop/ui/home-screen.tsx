@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 
 import { AppText, Screen, TextField, ThemeToggle, Wordmark } from '@/shared/ui';
@@ -9,6 +9,7 @@ import { useColors } from '@/shared/theme/theme-provider';
 import { activeFilterCount, filterDeals } from '../lib/preferences';
 import { splitByInterests } from '../lib/urgency';
 import { dealsByCategory, getMerchant } from '../model/catalog';
+import { liveDeal, selectLiveOffers, useLiveFeedStore } from '../model/live';
 import type { Category, Deal } from '../model/schema';
 import { getUserCoord } from '../lib/location';
 import { useShopStore } from '../model/store';
@@ -91,6 +92,11 @@ type HomeScreenProps = {
    * l'espace commerçant : c'est la ROUTE qui les lui apporte, déjà converties.
    */
   extraDeals?: Deal[];
+  /**
+   * Les offres d'EXEMPLE du catalogue (démonstration). Avec un vrai serveur, la route les retire : un
+   * pilote ne montre que les Flash publiées par de vrais commerces. Par défaut : affichées.
+   */
+  examples?: boolean;
 };
 
 export function HomeScreen({
@@ -98,6 +104,7 @@ export function HomeScreen({
   renderIdentity,
   interests,
   extraDeals,
+  examples = true,
 }: HomeScreenProps = {}) {
   const colors = useColors();
   const [category, setCategory] = useState<Category | null>(null);
@@ -117,6 +124,17 @@ export function HomeScreen({
     };
   }, [setUserCoord]);
 
+  // Les Flash en direct : relues à chaque passage sur l'accueil (une offre se termine, une autre
+  // vient d'être publiée). Hors ligne, le cache du dernier passage reste affiché.
+  const liveOffers = useLiveFeedStore(selectLiveOffers);
+  const refreshLive = useLiveFeedStore((s) => s.refresh);
+  const [now, setNow] = useState(() => Date.now());
+  useFocusEffect(
+    useCallback(() => {
+      void refreshLive().then(() => setNow(Date.now()));
+    }, [refreshLive]),
+  );
+
   const preferences = useShopStore((s) => s.preferences);
   const userCoord = useShopStore((s) => s.userCoord);
 
@@ -125,7 +143,11 @@ export function HomeScreen({
     // que le catalogue : régimes, rayon, catégorie, recherche. Les exempter
     // ferait apparaître une offre que « Ma Fan Zone » vient d'écarter.
     const extra = extraDeals ?? [];
-    let list = [...extra, ...dealsByCategory(category)];
+    // Une Flash terminée ou épuisée depuis la dernière lecture n'est plus proposée.
+    const live = liveOffers
+      .filter((o) => o.endsAt > now && o.stockLeft > 0)
+      .map((o) => liveDeal(o, now));
+    let list = [...extra, ...live, ...(examples ? dealsByCategory(category) : [])];
     if (category) list = list.filter((d) => d.category === category);
     const q = query.trim().toLowerCase();
     if (q) {
@@ -150,7 +172,7 @@ export function HomeScreen({
       forYouCount: forYou.length,
       radiusRelaxed: outcome.radiusRelaxed,
     };
-  }, [category, query, preferences, userCoord, interests, extraDeals]);
+  }, [category, query, preferences, userCoord, interests, extraDeals, liveOffers, now, examples]);
 
   return (
     <Screen padded={false} testID="home-screen">

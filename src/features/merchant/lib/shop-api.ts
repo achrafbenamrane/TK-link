@@ -49,6 +49,8 @@ export type ShopFiling = {
   address: string;
   area: string;
   modes: OfferMode[];
+  /** Coordonnées de l'adresse (géocodage) : absentes si le géocodage a échoué. */
+  coord?: { lat: number; lng: number } | null;
 };
 
 export type ShopApiError =
@@ -120,6 +122,7 @@ export async function fileMyShop(filing: ShopFiling): Promise<Result<ServerShop>
       address: filing.address.trim(),
       area: filing.area.trim(),
       modes: filing.modes,
+      ...(filing.coord ? { lat: filing.coord.lat, lng: filing.coord.lng } : {}),
     };
     const existing = await supabase.from('shops').select('id').eq('owner_id', userId).maybeSingle();
     if (existing.error) return { ok: false, code: classifyShopError(existing.error) };

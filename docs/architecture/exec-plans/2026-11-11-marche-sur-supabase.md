@@ -60,10 +60,13 @@ ils viennent après, sur les mêmes fondations.
 
 ### Étape 2 — Les Flash en direct
 
-- [ ] `flash_offers` (prix en centimes, stock, début/fin, modes, photo dans Storage) ; publication
+- [x] `flash_offers` (prix en centimes, stock, début/fin, modes, photo dans Storage) ; publication
       réservée aux commerces validés ; quota d’opérations offertes tenu par le serveur
-- [ ] Coordonnées du commerce (géocodage Mapbox de l’adresse) pour « autour de vous »
-- [ ] Accueil client et carte lisent les Flash du serveur (les exemples restent en démonstration)
+- [x] Coordonnées du commerce (géocodage Mapbox de l’adresse) pour « autour de vous »
+- [x] Accueil client et carte lisent les Flash du serveur (les exemples restent en démonstration)
+      — la fiche produit, le panier, les favoris et la page du commerce les retrouvent par
+      `getDeal`/`getMerchant`. Reste : offres pro (B2B) lues du serveur côté commerçant, récurrence
+      des offres pro côté serveur
 
 ### Étape 3 — La commande
 

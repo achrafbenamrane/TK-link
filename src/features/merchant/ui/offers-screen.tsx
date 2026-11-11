@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 
 import { CATEGORY_INFO } from '@/shared/lib/categories';
@@ -78,6 +78,25 @@ function timeLabel(seconds: number): string {
  * L'écran fait aussi le service après-vente du modèle économique : le quota du
  * §9 et la commission du §21 s'affichent AVANT d'être subis, jamais après.
  */
+/** Ce que l'écran dit quand une publication échoue — la raison, et quoi faire. */
+const PUBLISH_ERROR: Record<string, [string, string]> = {
+  quota: [
+    'Quota épuisé',
+    'Vos opérations gratuites sont utilisées. Les packs complémentaires seront proposés dès que leur tarification sera arrêtée.',
+  ],
+  not_validated: [
+    'Publication fermée',
+    'Votre dossier n’est pas (ou plus) validé par TK LINK : ouvrez votre dossier pour voir où il en est.',
+  ],
+  photo: ['Photo non envoyée', 'La photo n’a pas pu partir. Réessayez, ou publiez sans photo.'],
+  network: ['Pas de connexion', 'L’offre n’est pas partie. Réessayez dans un instant.'],
+  not_signed_in: ['Session expirée', 'Reconnectez-vous, puis publiez à nouveau.'],
+};
+const PUBLISH_FAILED: [string, string] = [
+  'Publication impossible',
+  'L’offre n’a pas pu être publiée. Réessayez dans un instant.',
+];
+
 export function MerchantOffersScreen({
   audience = 'clients',
   seller = '',
@@ -92,7 +111,8 @@ export function MerchantOffersScreen({
   const offers = useMerchantStore(selectOffers);
   const used = useMerchantStore(selectUsed);
   const purchased = useMerchantStore(selectPurchased);
-  const publish = useMerchantStore((s) => s.publish);
+  const publish = useMerchantStore((s) => s.publishOnline);
+  const refreshMyOffers = useMerchantStore((s) => s.refreshMyOffers);
   const takeOffline = useMerchantStore((s) => s.takeOffline);
   const republishDue = useMerchantStore((s) => s.republishDue);
 
@@ -100,6 +120,15 @@ export function MerchantOffersScreen({
   useEffect(() => {
     republishDue();
   }, [republishDue]);
+
+  // Avec un serveur, la liste et le quota consommé viennent de lui (autre téléphone, retrait…).
+  useEffect(() => {
+    void refreshMyOffers();
+  }, [refreshMyOffers]);
+
+  // Un seul envoi à la fois : deux appuis rapides publieraient deux fois (et consommeraient deux
+  // opérations).
+  const publishing = useRef(false);
 
   const wholesale = audience === 'commercants';
   const left = operationsLeft(used, purchased);
@@ -110,13 +139,14 @@ export function MerchantOffersScreen({
   const revenue = useMemo(() => offers.reduce((sum, o) => sum + soldCents(o), 0), [offers]);
   const liveCount = offers.filter((o) => o.state === 'publiee' && !o.offline).length;
 
-  const onPublish = (draft: OfferDraft) => {
-    const result = publish({ ...draft, audience }, seller);
+  const onPublish = async (draft: OfferDraft) => {
+    if (publishing.current) return;
+    publishing.current = true;
+    const result = await publish({ ...draft, audience }, seller);
+    publishing.current = false;
     if (!result.ok) {
-      Alert.alert(
-        'Quota épuisé',
-        'Vos opérations gratuites sont utilisées. Les packs complémentaires seront proposés dès que leur tarification sera arrêtée.',
-      );
+      const [title, message] = PUBLISH_ERROR[result.reason] ?? PUBLISH_FAILED;
+      Alert.alert(title, message);
       return;
     }
     setMode('list');
@@ -144,7 +174,7 @@ export function MerchantOffersScreen({
     return (
       <Screen testID="merchant-publish" padded={false}>
         <PublishForm
-          onPublish={onPublish}
+          onPublish={(draft) => void onPublish(draft)}
           onCancel={() => setMode('list')}
           {...(shopName ? { shopName } : {})}
           wholesale={audience === 'commercants'}

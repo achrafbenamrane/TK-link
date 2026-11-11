@@ -39,7 +39,7 @@ import {
 } from '@/features/shop';
 import { CATEGORY_INFO } from '@/shared/lib/categories';
 import { AppText } from '@/shared/ui';
-import { isDemoBuild } from '@/shared/lib/env';
+import { isDemoBuild, isSupabaseConfigured } from '@/shared/lib/env';
 
 /**
  * ACCUEIL — ce que l'utilisateur voit dépend de CE QU'IL EST (CDC §3.1, §3.2).
@@ -128,7 +128,13 @@ function ConsumerHome() {
   );
 
   return (
-    <HomeScreen interests={interests} extraDeals={extraDeals} renderIdentity={renderIdentity} />
+    <HomeScreen
+      interests={interests}
+      // Avec un serveur, les Flash viennent du flux en direct (celles de ce téléphone comprises) et les
+      // offres d'exemple disparaissent : un pilote ne montre que de vrais commerces.
+      {...(isSupabaseConfigured ? { examples: false } : { extraDeals })}
+      renderIdentity={renderIdentity}
+    />
   );
 }
 

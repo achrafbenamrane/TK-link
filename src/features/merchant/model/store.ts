@@ -2,12 +2,14 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { isSupabaseConfigured } from '@/shared/lib/env';
+import { geocodeAddress } from '@/shared/lib/geocode';
 import { makeId } from '@/shared/lib/id';
 import { asyncStorageBackend, secureStorage } from '@/shared/lib/storage';
 
 import { canPublish } from '../lib/billing';
 import { dueOccurrence, recurrencePeriodMs } from '../lib/recurrence';
 import { startOf } from '../lib/offers';
+import { fetchMyFlashes, publishFlash, withdrawFlash, type FlashApiError } from '../lib/flash-api';
 import { fetchMyShop, fileMyShop, type ShopApiError, type ShopFiling } from '../lib/shop-api';
 import {
   maskIban,
@@ -20,6 +22,7 @@ import { seedWholesaleLots } from './seed';
 import {
   EMPTY_PROFILE,
   EMPTY_SUPPLIER,
+  OfferDraftSchema,
   PersistedMerchantSchema,
   type Supplier,
   type OfferDraftInput,
@@ -53,6 +56,10 @@ export type FileShopResult =
   | { ok: false; code: ShopApiError | 'incomplete' };
 
 type PublishResult = { ok: true; offer: PublishedOffer } | { ok: false; reason: 'quota' };
+
+/** Avec un serveur, la publication peut aussi échouer pour d'autres raisons que le quota. */
+export type PublishOnlineResult =
+  PublishResult | { ok: false; reason: Exclude<FlashApiError, 'quota'> };
 
 type OrderResult =
   { ok: true; order: WholesaleOrder } | { ok: false; reason: 'introuvable' | 'stock' | 'minimum' };
@@ -96,6 +103,20 @@ type MerchantState = {
   validateSupplier: () => void;
   setSupplierDevice: (enrolled: boolean) => void;
 
+  /**
+   * Publie une offre — sur le SERVEUR quand il y en a un (le quota, le stock et l'heure de fin y sont
+   * tenus, et les clients la voient), sinon comme `publish`. Un brouillon reste sur le téléphone.
+   */
+  publishOnline: (
+    draft: OfferDraftInput,
+    seller?: string,
+    nowMs?: number,
+  ) => Promise<PublishOnlineResult>;
+  /**
+   * Relit SES offres publiées sur le serveur (et le quota consommé) ; les brouillons du téléphone
+   * restent. Sans serveur ou sans réseau, rien ne change.
+   */
+  refreshMyOffers: () => Promise<void>;
   /** Publie une offre flash. Échoue si le quota est épuisé — CDC §9. */
   publish: (draft: OfferDraftInput, seller?: string, nowMs?: number) => PublishResult;
   /**
@@ -169,7 +190,15 @@ export const useMerchantStore = create<MerchantState>()(
           if (Object.keys(errors).length > 0) return { ok: false, errors };
           if (shop.name.trim().length < 2 || !shop.category)
             return { ok: false, code: 'incomplete' };
-          const filed = await fileMyShop({ ...shop, siret: draft.siret, address: draft.address });
+          // L'adresse en coordonnées : sans elles, le commerce n'apparaît ni sur la carte ni « autour
+          // de vous ». Un échec n'empêche pas le dépôt.
+          const coord = await geocodeAddress(draft.address);
+          const filed = await fileMyShop({
+            ...shop,
+            siret: draft.siret,
+            address: draft.address,
+            coord,
+          });
           if (!filed.ok) return { ok: false, code: filed.code };
           keepPieces(draft, filed.value.status, filed.value.reviewNote);
           return { ok: true };
@@ -237,10 +266,47 @@ export const useMerchantStore = create<MerchantState>()(
           return { ok: true, offer };
         },
 
-        takeOffline: (id) =>
+        publishOnline: async (draft, seller = '', nowMs = Date.now()) => {
+          if (!isSupabaseConfigured || draft.state === 'brouillon') {
+            return get().publish(draft, seller, nowMs);
+          }
+          const parsed = OfferDraftSchema.safeParse(draft);
+          if (!parsed.success) return { ok: false, reason: 'invalid' };
+          const res = await publishFlash(parsed.data, nowMs);
+          if (!res.ok) return { ok: false, reason: res.code };
+          const offer = { ...res.value, seller };
+          set((s) => ({
+            offers: [offer, ...s.offers],
+            used: offer.audience === 'clients' ? s.used + 1 : s.used,
+          }));
+          return { ok: true, offer };
+        },
+
+        refreshMyOffers: async () => {
+          if (!isSupabaseConfigured) return;
+          const res = await fetchMyFlashes();
+          if (!res.ok) return;
+          set((s) => ({
+            // Le serveur fait foi pour ce qui est publié ; les brouillons ne vivent qu'ici.
+            offers: [...res.value, ...s.offers.filter((o) => o.state === 'brouillon')],
+            // Les opérations consommées : les Flash publiées, comptées par le serveur comme lui.
+            used: res.value.filter((o) => o.audience === 'clients').length,
+          }));
+        },
+
+        takeOffline: (id) => {
           set((s) => ({
             offers: s.offers.map((o) => (o.id === id ? { ...o, offline: true } : o)),
-          })),
+          }));
+          const offer = get().offers.find((o) => o.id === id);
+          if (isSupabaseConfigured && offer?.state === 'publiee') {
+            // Le retrait part au serveur ; s'il échoue (réseau), on relit l'état réel plutôt que de
+            // laisser croire au commerçant que les clients ne la voient plus.
+            void withdrawFlash(id).then((res) => {
+              if (!res.ok) void get().refreshMyOffers();
+            });
+          }
+        },
 
         republishDue: (nowMs = Date.now()) => {
           const created: PublishedOffer[] = [];

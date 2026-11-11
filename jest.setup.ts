@@ -54,6 +54,11 @@ jest.mock('expo-router', () => ({
     canGoBack: () => true,
   }),
   useLocalSearchParams: () => ({}),
+  // Un écran « au premier plan » une fois monté : l'effet tourne au montage, comme à la première
+  // mise au point dans l'app.
+  // `require` : une fabrique de `jest.mock` ne peut pas capturer un import du fichier.
+  useFocusEffect: (effect: () => void | (() => void)) =>
+    require('react').useEffect(effect, [effect]),
 }));
 
 // Reanimated ships an official Jest integration (v3.6+ / v4).

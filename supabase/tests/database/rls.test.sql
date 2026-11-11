@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(44);
+select plan(54);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -345,6 +345,116 @@ select results_eq(
   $ select status::text from public.shops where siret = '73282932000074' $,
   $ values ('en_verification'::text) $,
   'changing the SIRET of a validated shop sends it back to review'
+);
+reset role;
+
+-- ───────────────────────────────────────────────── Flash en direct (migration 0011)
+
+-- 28) Le stock restant, l'heure de fin et le quota sont hors de portée du client.
+select ok(
+  not has_column_privilege('authenticated', 'public.flash_offers', 'stock_left', 'insert')
+  and not has_column_privilege('authenticated', 'public.flash_offers', 'stock_left', 'update')
+  and not has_column_privilege('authenticated', 'public.flash_offers', 'ends_at', 'insert')
+  and not has_column_privilege('authenticated', 'public.shops', 'ops_purchased', 'update'),
+  'a client cannot write stock, end time or quota'
+);
+
+-- 29) Un commerce en vérification (a2, SIRET changé plus haut) ne publie pas.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select throws_ok(
+  $ insert into public.flash_offers
+       (shop_id, title, category, price_cents, old_price_cents, stock_total, duration_minutes)
+     values ((select id from public.shops where siret = '73282932000074'),
+             'Pain au chocolat', 'restauration', 90, 150, 10, 30) $,
+  '42501',
+  null,
+  'a shop under review cannot publish'
+);
+reset role;
+
+-- TK LINK valide à nouveau le commerce de a2.
+update public.shops set status = 'valide' where siret = '73282932000074';
+
+-- 30) Validé : il publie ; le serveur pose le stock restant et l'heure de fin.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select lives_ok(
+  $ insert into public.flash_offers
+       (shop_id, title, category, price_cents, old_price_cents, stock_total, duration_minutes)
+     values ((select id from public.shops where siret = '73282932000074'),
+             'Pain au chocolat', 'restauration', 90, 150, 10, 30) $,
+  'a validated shop publishes a Flash'
+);
+select results_eq(
+  $ select stock_left, ends_at - starts_at from public.flash_offers where title = 'Pain au chocolat' $,
+  $ values (10, interval '30 minutes') $,
+  'the server sets the remaining stock and the end time'
+);
+
+-- 31) Un Flash de 3 heures est refusé (CDC V1.1 : 15 min à 2 h).
+select throws_ok(
+  $ insert into public.flash_offers
+       (shop_id, title, category, price_cents, old_price_cents, stock_total, duration_minutes)
+     values ((select id from public.shops where siret = '73282932000074'),
+             'Croissant', 'restauration', 80, 120, 10, 180) $,
+  '23514',
+  null,
+  'a Flash longer than 2 hours is rejected'
+);
+reset role;
+
+-- 32) Le public voit le Flash en ligne.
+set local role anon;
+select results_eq(
+  $ select title from public.flash_offers where title = 'Pain au chocolat' $,
+  $ values ('Pain au chocolat'::text) $,
+  'anon sees a live Flash'
+);
+reset role;
+
+-- 33) Quota épuisé (une seule opération offerte) : la publication suivante est refusée.
+update public.shops set ops_free = 1 where siret = '73282932000074';
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select throws_ok(
+  $ insert into public.flash_offers
+       (shop_id, title, category, price_cents, old_price_cents, stock_total, duration_minutes)
+     values ((select id from public.shops where siret = '73282932000074'),
+             'Chausson aux pommes', 'restauration', 100, 160, 5, 60) $,
+  'P0001',
+  'quota_exhausted',
+  'publishing past the free operations is refused'
+);
+
+-- 34) Retirer son offre la cache au public ; elle ne revient pas en ligne.
+update public.flash_offers set offline = true where title = 'Pain au chocolat';
+select throws_ok(
+  $ update public.flash_offers set offline = false where title = 'Pain au chocolat' $,
+  '23514',
+  null,
+  'a withdrawn offer cannot come back online'
+);
+reset role;
+
+set local role anon;
+select is_empty(
+  $ select 1 from public.flash_offers where title = 'Pain au chocolat' $,
+  'anon no longer sees a withdrawn Flash'
+);
+reset role;
+
+-- 35) Un autre compte ne publie pas pour un commerce qui n'est pas le sien.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select throws_ok(
+  $ insert into public.flash_offers
+       (shop_id, title, category, price_cents, old_price_cents, stock_total, duration_minutes)
+     values ((select id from public.shops where siret = '73282932000074'),
+             'Faux Flash', 'restauration', 100, 200, 5, 30) $,
+  '42501',
+  null,
+  'an account cannot publish for a shop it does not own'
 );
 reset role;
 

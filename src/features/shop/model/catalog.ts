@@ -1,3 +1,4 @@
+import { findLiveOffer, findLiveShop, liveDeal, liveMerchant } from './live';
 import type { Category, Deal, Merchant } from './schema';
 
 /**
@@ -627,12 +628,23 @@ export const DEALS: Deal[] = [
 
 const DEAL_BY_ID: Record<string, Deal> = Object.fromEntries(DEALS.map((d) => [d.id, d]));
 
+/**
+ * Une offre par son identifiant : un exemple du catalogue, sinon une Flash en direct du serveur
+ * (voir `live.ts`). Le compte à rebours part de maintenant.
+ */
 export function getDeal(id: string): Deal | undefined {
-  return DEAL_BY_ID[id];
+  const example = DEAL_BY_ID[id];
+  if (example) return example;
+  const live = findLiveOffer(id);
+  return live ? liveDeal(live, Date.now()) : undefined;
 }
 
+/** Un commerce par son identifiant : un exemple, sinon un commerce validé qui publie en direct. */
 export function getMerchant(id: string): Merchant | undefined {
-  return MERCHANTS[id];
+  const example = MERCHANTS[id];
+  if (example) return example;
+  const live = findLiveShop(id);
+  return live ? liveMerchant(live) : undefined;
 }
 
 export function dealsByCategory(category: Category | null): Deal[] {

@@ -105,6 +105,22 @@ update public.shops set status = 'refuse',
 
 L’app relit le statut à l’ouverture de l’onglet Flash et de l’écran du dossier.
 
+**`public.flash_offers` (0011) — les Flash en direct.** Publiées par un commerce **validé**, pour
+lui seul. Le client déclare (titre, prix en centimes, quantité, durée, heure souhaitée) ; le serveur
+calcule le stock restant (`stock_left`, hors de tout droit client, ne baissera que par une commande),
+l’heure de fin, et tient le quota d’opérations (`shops.ops_free` = 5 par défaut + `ops_purchased`,
+posés par TK LINK). Un Flash dure 15 min à 2 h ; une offre pro n’a pas de borne. Le public lit les
+Flash clients en ligne d’un commerce validé ; les offres pro ne se lisent qu’entre professionnels.
+Retirer une offre est le seul geste d’écriture du titulaire, sans retour en ligne. Photos : dossier
+Storage public `flash-photos`, écriture dans `<id du compte>/…` seulement. Côté app :
+`merchant/lib/flash-api.ts` (publier, relire, retirer), `shop/lib/feed-api.ts` + `shop/model/live.ts`
+(le flux client, retrouvé par `getDeal`/`getMerchant`).
+
+```sql
+-- Offrir des opérations à un commerce (geste commercial, ou pack payé hors app)
+update public.shops set ops_purchased = ops_purchased + 10 where siret = '44306184100047';
+```
+
 ## Payments (entitlement is server-owned)
 
 `public.subscriptions` is **client read-only** (no client write policy). The

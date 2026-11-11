@@ -51,6 +51,8 @@ describe('déposer le dossier auprès de TK LINK', () => {
       ...SHOP,
       siret: DRAFT.siret,
       address: DRAFT.address,
+      // Le géocodage de l'adresse (Mapbox) : sans jeton ici, pas de coordonnées — le dossier part quand même.
+      coord: null,
     });
     const { supplier } = useMerchantStore.getState();
     expect(supplier.status).toBe('en_verification');

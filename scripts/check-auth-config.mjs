@@ -183,6 +183,28 @@ try {
   warn('Impossible de sonder la table des dossiers professionnels.');
 }
 
+// Les Flash en direct (0011) : la table, et le dossier de photos (public, lisible sans compte).
+try {
+  const res = await fetch(`${url}/rest/v1/flash_offers?select=id&limit=1`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
+  const bucket = await fetch(`${url}/storage/v1/bucket/flash-photos`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
+  if (!res.ok) {
+    fail(
+      'La migration 0011_flash_offers n’est pas appliquée (table flash_offers absente) : les Flash ne partent pas au serveur et les clients ne les voient pas.',
+    );
+  } else {
+    ok('Flash en direct : migration 0011 en place.');
+    // La lecture d'un dossier de Storage demande une clé de service : un 400/404 ici n'est pas une
+    // preuve d'absence. Le test réel est la publication d'une Flash avec photo.
+    if (bucket.status >= 500) warn('Storage injoignable : les photos des Flash ne partiront pas.');
+  }
+} catch {
+  warn('Impossible de sonder la table des Flash.');
+}
+
 // La fonction Edge qui associe un numéro est-elle déployée ? Une requête sans session est refusée
 // (401) par une fonction présente ; une fonction absente répond 404. Rien n'est associé.
 if (phoneWanted) {

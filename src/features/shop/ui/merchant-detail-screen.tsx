@@ -13,6 +13,7 @@ import { STOCK_CLASSES, stockAccessibilityLabel, stockTone } from '../lib/stock'
 import { videoSource } from '../lib/showcase';
 import { DEALS, getMerchant } from '../model/catalog';
 import { productImageUri } from '../model/product-images';
+import { liveDeal, selectLiveOffers, useLiveFeedStore } from '../model/live';
 import type { Deal } from '../model/schema';
 import { useShopStore } from '../model/store';
 import { Countdown } from './components/countdown';
@@ -169,7 +170,18 @@ export function MerchantDetailScreen({
   const [showInfos, setShowInfos] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
-  const deals = useMemo(() => DEALS.filter((d) => d.merchantId === merchantId), [merchantId]);
+  // Les exemples du catalogue, et les Flash en direct de ce commerce (serveur).
+  const liveOffers = useLiveFeedStore(selectLiveOffers);
+  const [openedAt] = useState(() => Date.now());
+  const deals = useMemo(
+    () => [
+      ...liveOffers
+        .filter((o) => o.shopId === merchantId && o.endsAt > openedAt && o.stockLeft > 0)
+        .map((o) => liveDeal(o, openedAt)),
+      ...DEALS.filter((d) => d.merchantId === merchantId),
+    ],
+    [liveOffers, merchantId, openedAt],
+  );
   const hero = deals[0];
   // Les favoris portent sur des OFFRES, pas sur des enseignes.
   const isFavorite = hero ? favorites.includes(hero.id) : false;

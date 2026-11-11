@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@/shared/testing/render';
+import { fireEvent, render, screen, waitFor, within } from '@/shared/testing/render';
 
 import { FREE_OPERATIONS } from '../lib/billing';
 import { useMerchantStore } from '../model/store';
@@ -31,7 +31,7 @@ describe('<MerchantOffersScreen />', () => {
     ).toBeTruthy();
   });
 
-  it('publie une offre depuis le formulaire et la liste ensuite', () => {
+  it('publie une offre depuis le formulaire et la liste ensuite', async () => {
     render(<MerchantOffersScreen />);
 
     fireEvent.press(screen.getByTestId('merchant-new-offer'));
@@ -41,11 +41,11 @@ describe('<MerchantOffersScreen />', () => {
     fireEvent.changeText(screen.getByTestId('publish-stock'), '6');
     fireEvent.press(screen.getByTestId('publish-submit'));
 
+    await waitFor(() => expect(useMerchantStore.getState().offers).toHaveLength(1));
     const offers = useMerchantStore.getState().offers;
-    expect(offers).toHaveLength(1);
     expect(offers[0]!.priceCents).toBe(900);
     expect(offers[0]!.oldPriceCents).toBe(1800);
-    expect(screen.getByTestId(`merchant-offer-${offers[0]!.id}`)).toBeTruthy();
+    expect(await screen.findByTestId(`merchant-offer-${offers[0]!.id}`)).toBeTruthy();
   });
 
   it('refuse un prix flash au-dessus du prix initial, sans rien publier', () => {

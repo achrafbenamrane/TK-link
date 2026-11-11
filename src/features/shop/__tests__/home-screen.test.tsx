@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@/shared/testing/render';
 
 import { DEFAULT_PREFERENCES } from '../lib/preferences';
 import { getDeal } from '../model/catalog';
+import { useLiveFeedStore } from '../model/live';
 import { useShopStore } from '../model/store';
 import { HomeScreen } from '../ui/home-screen';
 
@@ -14,6 +15,8 @@ jest.mock('expo-router', () => ({
     back: jest.fn(),
     canGoBack: () => true,
   }),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- why: jest.mock ne peut pas capturer d'import
+  useFocusEffect: (effect: () => void) => require('react').useEffect(effect, [effect]),
 }));
 jest.mock('expo-image', () => ({ Image: () => null }));
 // La carte Mapbox est native : on ne teste ici que le basculement vers elle.
@@ -109,6 +112,56 @@ describe('<HomeScreen />', () => {
 
     fireEvent.press(screen.getByTestId('cat-services'));
     expect(screen.queryByTestId('deal-extra_1')).toBeNull();
+  });
+
+  it('avec un serveur : les Flash en direct, sans les offres d’exemple', () => {
+    useLiveFeedStore.setState({
+      offers: [
+        {
+          id: 'f-1',
+          shopId: 'shop-1',
+          shopName: 'Le Petit Toulousain',
+          area: 'Toulouse centre',
+          lat: 43.5965,
+          lng: 1.444,
+          category: 'restauration',
+          title: 'Plateau de viennoiseries',
+          description: '',
+          priceCents: 900,
+          oldPriceCents: 1800,
+          stockTotal: 6,
+          stockLeft: 4,
+          endsAt: Date.now() + 3_600_000,
+          modes: ['touch-collect'],
+          photoUrl: '',
+        },
+        // Terminée depuis la dernière lecture : plus proposée.
+        {
+          id: 'f-old',
+          shopId: 'shop-1',
+          shopName: 'Le Petit Toulousain',
+          area: '',
+          lat: null,
+          lng: null,
+          category: 'restauration',
+          title: 'Flash terminée',
+          description: '',
+          priceCents: 100,
+          oldPriceCents: 200,
+          stockTotal: 1,
+          stockLeft: 1,
+          endsAt: Date.now() - 1000,
+          modes: ['touch-collect'],
+          photoUrl: '',
+        },
+      ],
+    });
+    render(<HomeScreen examples={false} />);
+
+    expect(screen.getByTestId('deal-f-1')).toBeOnTheScreen();
+    expect(screen.queryByTestId('deal-f-old')).toBeNull();
+    expect(screen.queryByTestId('deal-d_cote')).toBeNull();
+    useLiveFeedStore.setState({ offers: [] });
   });
 
   it('sépare les centres d’intérêt déclarés du reste des offres', () => {
