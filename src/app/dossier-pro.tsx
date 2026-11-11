@@ -4,7 +4,7 @@ import { ProSetupScreen } from '@/features/merchant';
 import { useAuthStore } from '@/features/auth';
 import { selectRole, selectSiret, useOnboardingStore } from '@/features/onboarding';
 import { authenticateBiometric, useShopStore } from '@/features/shop';
-import { isDemoBuild } from '@/shared/lib/env';
+import { isDemoShortcutAvailable } from '@/shared/lib/env';
 
 /**
  * DÉMONSTRATION : l'IBAN s'affiche déjà rempli (un numéro d'exemple, clé valide), comme
@@ -30,8 +30,21 @@ export default function ProDossierRoute() {
       role={role === 'commercant' ? 'commercant' : 'grossiste'}
       siret={siret}
       address={application?.address ?? ''}
-      initialIban={isDemoBuild ? DEMO_IBAN : ''}
-      demo={isDemoBuild}
+      // Le commerce décrit à l'inscription part au serveur avec le dossier (table `shops`).
+      {...(application
+        ? {
+            shop: {
+              name: application.shopName,
+              category: application.category,
+              area: application.area,
+              modes: application.modes,
+            },
+          }
+        : {})}
+      // IBAN d'exemple et validation simulée : démonstration SANS serveur seulement — avec un
+      // serveur, c'est TK LINK qui valide.
+      initialIban={isDemoShortcutAvailable ? DEMO_IBAN : ''}
+      demo={isDemoShortcutAvailable}
       authenticate={async (reason) => (await authenticateBiometric(reason)).ok}
       onDone={() => {
         // Le compte est prêt : la porte du premier lancement s'ouvre — et le compte s'en souvient.

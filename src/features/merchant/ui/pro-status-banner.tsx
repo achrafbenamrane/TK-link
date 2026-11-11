@@ -36,7 +36,9 @@ export function ProStatusBanner({
         <AppText className="font-sans-bold text-ink" style={{ fontSize: 13.5 }}>
           {status === 'en_verification'
             ? 'Dossier en cours de contrôle'
-            : `Finalisez votre dossier ${PRO_COPY[role].account}`}
+            : status === 'refuse'
+              ? 'Dossier à corriger'
+              : `Finalisez votre dossier ${PRO_COPY[role].account}`}
         </AppText>
         <AppText variant="caption" style={{ fontSize: 11.5 }}>
           Votre accès à {PRO_COPY[role].publish} s’ouvre une fois votre dossier vérifié par TK LINK.

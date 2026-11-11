@@ -412,6 +412,7 @@ function seedDemo(role: Role) {
       ibanHint: 'FR76 •••• 0189',
       idUri: 'demo',
       deviceEnrolled: true,
+      reviewNote: '',
     },
     wholesaleOrders: role === 'grossiste' ? b2bOrders : [],
     offers:

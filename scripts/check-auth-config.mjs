@@ -166,6 +166,23 @@ try {
   warn('Impossible de sonder la table des profils.');
 }
 
+// La table des dossiers professionnels (0010) existe-t-elle ? Le public la lit (commerces validés
+// seulement) : une table présente répond 200, même vide ; absente, PostgREST répond 404.
+try {
+  const res = await fetch(`${url}/rest/v1/shops?select=id&limit=1`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
+  if (res.ok) {
+    ok('Dossiers professionnels : migration 0010 en place.');
+  } else {
+    fail(
+      'La migration 0010_shops n’est pas appliquée (table shops absente) : un commerçant ou un grossiste ne peut pas déposer son dossier.',
+    );
+  }
+} catch {
+  warn('Impossible de sonder la table des dossiers professionnels.');
+}
+
 // La fonction Edge qui associe un numéro est-elle déployée ? Une requête sans session est refusée
 // (401) par une fonction présente ; une fonction absente répond 404. Rien n'est associé.
 if (phoneWanted) {

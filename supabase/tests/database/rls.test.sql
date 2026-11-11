@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(32);
+select plan(44);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -250,6 +250,103 @@ select ok(
   and not has_function_privilege('anon', 'public.send_sms_disabled(jsonb)', 'execute'),
   'only Auth can call the send-sms hook'
 );
+
+-- ─────────────────────────────────────── dossier du professionnel (migration 0010)
+
+-- 21) Le statut, le motif et les dates sont hors de portée du client.
+select ok(
+  not has_column_privilege('authenticated', 'public.shops', 'status', 'insert')
+  and not has_column_privilege('authenticated', 'public.shops', 'status', 'update')
+  and not has_column_privilege('authenticated', 'public.shops', 'review_note', 'update'),
+  'a client cannot write the shop status or review note'
+);
+
+-- 22) Le commerçant (a2) dépose son dossier : il part en vérification.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select lives_ok(
+  $ insert into public.shops (kind, name, category, siret, address)
+     values ('commercant', 'Le Petit Toulousain', 'restauration', '44306184100047',
+             '8 rue des Carmes, 31000 Toulouse') $,
+  'a merchant files their shop'
+);
+select results_eq(
+  $ select status::text from public.shops where siret = '44306184100047' $,
+  $ values ('en_verification'::text) $,
+  'a filed shop starts under review'
+);
+
+-- 23) Un type qui n'est pas celui déclaré est refusé ; un SIRET mal formé aussi.
+select throws_ok(
+  $ update public.shops set siret = '44306184100048' where siret = '44306184100047' $,
+  '23514',
+  null,
+  'a SIRET failing the Luhn key is rejected'
+);
+reset role;
+
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select throws_ok(
+  $ insert into public.shops (kind, name, category, siret, address)
+     values ('commercant', 'Faux commerce', 'mode', '73282932000074', '1 place du Capitole, Toulouse') $,
+  '42501',
+  null,
+  'an account cannot file a shop of another type than the one it declared'
+);
+-- 24) Un SIRET déjà déposé par un autre compte est refusé.
+select throws_ok(
+  $ insert into public.shops (kind, name, category, siret, address)
+     values ('grossiste', 'Grossiste Occitan', 'restauration', '44306184100047',
+             '14 avenue des Pyrénées, 31600 Muret') $,
+  '23505',
+  null,
+  'a SIRET already filed by another account is rejected'
+);
+-- 25) Un autre compte ne voit pas un dossier en vérification.
+select is_empty(
+  $ select 1 from public.shops where siret = '44306184100047' $,
+  'another account cannot see a shop under review'
+);
+reset role;
+
+set local role anon;
+select is_empty(
+  $ select 1 from public.shops where siret = '44306184100047' $,
+  'anon cannot see a shop under review'
+);
+reset role;
+
+-- 26) TK LINK valide (tableau de bord) : le commerce devient public, la date de contrôle est posée.
+update public.shops set status = 'valide' where siret = '44306184100047';
+select ok(
+  (select reviewed_at is not null from public.shops where siret = '44306184100047'),
+  'validating stamps the review date'
+);
+set local role anon;
+select results_eq(
+  $ select name from public.shops where siret = '44306184100047' $,
+  $ values ('Le Petit Toulousain'::text) $,
+  'a validated shop is public'
+);
+reset role;
+
+-- 27) Le titulaire ne peut pas se valider lui-même, mais changer son SIRET le renvoie en vérification.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select throws_ok(
+  $ update public.shops set status = 'valide' where siret = '44306184100047' $,
+  '42501',
+  null,
+  'an owner cannot set their own status'
+);
+update public.shops set siret = '73282932000074' where siret = '44306184100047';
+select results_eq(
+  $ select status::text from public.shops where siret = '73282932000074' $,
+  $ values ('en_verification'::text) $,
+  'changing the SIRET of a validated shop sends it back to review'
+);
+reset role;
 
 select * from finish();
 rollback;

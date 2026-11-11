@@ -1,13 +1,20 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { isSupabaseConfigured } from '@/shared/lib/env';
 import { makeId } from '@/shared/lib/id';
 import { asyncStorageBackend, secureStorage } from '@/shared/lib/storage';
 
 import { canPublish } from '../lib/billing';
 import { dueOccurrence, recurrencePeriodMs } from '../lib/recurrence';
 import { startOf } from '../lib/offers';
-import { maskIban, missingSupplierFields, normalizeIban } from '../lib/supplier';
+import { fetchMyShop, fileMyShop, type ShopApiError, type ShopFiling } from '../lib/shop-api';
+import {
+  maskIban,
+  missingSupplierFields,
+  normalizeIban,
+  type SupplierDraft,
+} from '../lib/supplier';
 import { PREP_STEPS, nextWholesaleStatus, type PrepStep } from '../lib/wholesale-orders';
 import { seedWholesaleLots } from './seed';
 import {
@@ -35,6 +42,15 @@ import {
 
 /** La clé du coffre sécurisé où se range l'IBAN du fournisseur. */
 const SUPPLIER_IBAN_KEY = 'tklink-supplier-iban';
+
+/** Ce que le dossier dit du commerce lui-même (inscription), en plus des pièces. */
+export type ShopDetails = Omit<ShopFiling, 'siret' | 'address'>;
+
+export type FileShopResult =
+  | { ok: true }
+  | { ok: false; errors: Record<string, string> }
+  /** `incomplete` : le nom ou la catégorie du commerce manque sur cet appareil. */
+  | { ok: false; code: ShopApiError | 'incomplete' };
 
 type PublishResult = { ok: true; offer: PublishedOffer } | { ok: false; reason: 'quota' };
 
@@ -66,6 +82,16 @@ type MerchantState = {
     iban: string;
     idUri: string;
   }) => { ok: true } | { ok: false; errors: Record<string, string> };
+  /**
+   * Étape 3, avec un serveur : le dossier part à TK LINK (table `shops`), qui seul le valide. Sans
+   * serveur (démonstration), revient à `submitSupplier`.
+   */
+  fileShop: (draft: SupplierDraft, shop: ShopDetails) => Promise<FileShopResult>;
+  /**
+   * Relit le statut du dossier sur le serveur (validé, refusé…) : le serveur fait foi. Sans serveur
+   * ou sans réseau, rien ne change.
+   */
+  refreshShop: () => Promise<void>;
   /** DÉMO — simule le contrôle par TK LINK (étape 4 → 6). Disparaît avec le serveur. */
   validateSupplier: () => void;
   setSupplierDevice: (enrolled: boolean) => void;
@@ -100,21 +126,13 @@ type MerchantState = {
 
 export const useMerchantStore = create<MerchantState>()(
   persist(
-    (set, get) => ({
-      offers: [],
-      lots: seedWholesaleLots(),
-      used: 0,
-      purchased: 0,
-      wholesaleOrders: [],
-      profile: EMPTY_PROFILE,
-      saveProfile: (profile) => set({ profile }),
-
-      supplier: EMPTY_SUPPLIER,
-      submitSupplier: (draft) => {
-        const errors = missingSupplierFields(draft);
-        if (Object.keys(errors).length > 0) return { ok: false as const, errors };
-        // L'IBAN entier part dans le coffre sécurisé (échec silencieux sous Jest et sur le web, où
-        // il n'y a pas de coffre) ; l'état n'en garde qu'un repère masqué.
+    (set, get) => {
+      /**
+       * Ce que l'appareil garde du dossier : l'IBAN entier dans le coffre sécurisé (échec silencieux
+       * sous Jest et sur le web, où il n'y a pas de coffre), un repère masqué et la pièce d'identité
+       * dans l'état, avec le statut.
+       */
+      const keepPieces = (draft: SupplierDraft, status: Supplier['status'], reviewNote: string) => {
         void secureStorage
           .set(SUPPLIER_IBAN_KEY, normalizeIban(draft.iban), { deviceOnly: true })
           .catch(() => undefined);
@@ -123,194 +141,238 @@ export const useMerchantStore = create<MerchantState>()(
             ...s.supplier,
             ibanHint: maskIban(draft.iban),
             idUri: draft.idUri,
-            status: 'en_verification',
+            status,
+            reviewNote,
           },
         }));
-        return { ok: true as const };
-      },
-      validateSupplier: () => {
-        if (get().supplier.status === 'en_verification') {
-          set((s) => ({ supplier: { ...s.supplier, status: 'valide' } }));
-        }
-      },
-      setSupplierDevice: (enrolled) =>
-        set((s) => ({ supplier: { ...s.supplier, deviceEnrolled: enrolled } })),
+      };
 
-      publish: (draft, seller = '', nowMs = Date.now()) => {
-        const s = get();
-        // Un BROUILLON ne consomme rien et ne bute sur aucun quota : enregistrer
-        // une idée n'est pas la publier. Facturer le brouillon découragerait de
-        // préparer ses ventes à l'avance — exactement ce qu'on veut encourager.
-        const brouillon = draft.state === 'brouillon';
-        // Le quota d'opérations est celui des FLASH du commerçant (CDC §9). Une offre pro de
-        // grossiste n'est pas un Flash : elle ne le consomme pas et n'en dépend pas.
-        const b2b = draft.audience === 'commercants';
-        const counted = !brouillon && !b2b;
-        if (counted && !canPublish(s.used, s.purchased)) return { ok: false, reason: 'quota' };
+      return {
+        offers: [],
+        lots: seedWholesaleLots(),
+        used: 0,
+        purchased: 0,
+        wholesaleOrders: [],
+        profile: EMPTY_PROFILE,
+        saveProfile: (profile) => set({ profile }),
 
-        const offer: PublishedOffer = {
-          id: makeId(),
-          title: draft.title,
-          category: draft.category,
-          priceCents: draft.priceCents,
-          oldPriceCents: draft.oldPriceCents,
-          stock: draft.stock,
-          stockLeft: draft.stock,
-          durationMinutes: draft.durationMinutes,
-          description: draft.description ?? '',
-          publishedAt: nowMs,
-          // Le brouillon dit « dans 1 h », le store dit à quelle heure. Zéro
-          // reste zéro : « tout de suite » n'a pas besoin d'être daté, et le
-          // laisser à zéro garde le comportement des offres d'avant le §4.2.
-          startsAt: draft.startInMinutes ? nowMs + draft.startInMinutes * 60_000 : 0,
-          state: draft.state ?? 'publiee',
-          offline: false,
-          audience: draft.audience ?? 'clients',
-          photoUri: draft.photoUri ?? '',
-          modes: draft.modes ?? ['touch-collect', 'livraison'],
-          seller,
-          minQty: draft.minQty ?? 1,
-          recurrence: draft.recurrence ?? 'aucune',
-        };
+        supplier: EMPTY_SUPPLIER,
+        submitSupplier: (draft) => {
+          const errors = missingSupplierFields(draft);
+          if (Object.keys(errors).length > 0) return { ok: false as const, errors };
+          keepPieces(draft, 'en_verification', '');
+          return { ok: true as const };
+        },
+        fileShop: async (draft, shop) => {
+          if (!isSupabaseConfigured) return get().submitSupplier(draft);
+          const errors = missingSupplierFields(draft);
+          if (Object.keys(errors).length > 0) return { ok: false, errors };
+          if (shop.name.trim().length < 2 || !shop.category)
+            return { ok: false, code: 'incomplete' };
+          const filed = await fileMyShop({ ...shop, siret: draft.siret, address: draft.address });
+          if (!filed.ok) return { ok: false, code: filed.code };
+          keepPieces(draft, filed.value.status, filed.value.reviewNote);
+          return { ok: true };
+        },
+        refreshShop: async () => {
+          if (!isSupabaseConfigured) return;
+          const res = await fetchMyShop();
+          if (!res.ok) return;
+          // Aucun dossier sur le serveur : ce que l'appareil croyait déposé ne l'a pas été (dossier
+          // d'avant le serveur, ou d'un autre compte). On repart du dépôt.
+          set((s) => ({
+            supplier: {
+              ...s.supplier,
+              status: res.value?.status ?? 'brouillon',
+              reviewNote: res.value?.reviewNote ?? '',
+            },
+          }));
+        },
+        validateSupplier: () => {
+          if (get().supplier.status === 'en_verification') {
+            set((s) => ({ supplier: { ...s.supplier, status: 'valide' } }));
+          }
+        },
+        setSupplierDevice: (enrolled) =>
+          set((s) => ({ supplier: { ...s.supplier, deviceEnrolled: enrolled } })),
 
-        set({ offers: [offer, ...s.offers], used: counted ? s.used + 1 : s.used });
-        return { ok: true, offer };
-      },
+        publish: (draft, seller = '', nowMs = Date.now()) => {
+          const s = get();
+          // Un BROUILLON ne consomme rien et ne bute sur aucun quota : enregistrer
+          // une idée n'est pas la publier. Facturer le brouillon découragerait de
+          // préparer ses ventes à l'avance — exactement ce qu'on veut encourager.
+          const brouillon = draft.state === 'brouillon';
+          // Le quota d'opérations est celui des FLASH du commerçant (CDC §9). Une offre pro de
+          // grossiste n'est pas un Flash : elle ne le consomme pas et n'en dépend pas.
+          const b2b = draft.audience === 'commercants';
+          const counted = !brouillon && !b2b;
+          if (counted && !canPublish(s.used, s.purchased)) return { ok: false, reason: 'quota' };
 
-      takeOffline: (id) =>
-        set((s) => ({
-          offers: s.offers.map((o) => (o.id === id ? { ...o, offline: true } : o)),
-        })),
-
-      republishDue: (nowMs = Date.now()) => {
-        const created: PublishedOffer[] = [];
-        const offers = get().offers.map((o) => {
-          if (o.state !== 'publiee' || o.offline || o.recurrence === 'aucune') return o;
-          let at = dueOccurrence(startOf(o), o.recurrence, nowMs);
-          if (at === null) return o;
-          // Un téléphone resté fermé : si la créneau dû est déjà passé en entier, la republier la
-          // ferait naître terminée. On programme alors le créneau suivant, à venir.
-          const period = recurrencePeriodMs(o.recurrence) ?? 0;
-          if (at + o.durationMinutes * 60_000 <= nowMs) at += period;
-          // La nouvelle occurrence reprend l'offre à neuf (stock plein) et porte la récurrence ;
-          // l'ancienne reste dans l'historique, ponctuelle : une seule chaîne vivante.
-          created.push({
-            ...o,
+          const offer: PublishedOffer = {
             id: makeId(),
-            publishedAt: at,
-            startsAt: at,
-            stockLeft: o.stock,
+            title: draft.title,
+            category: draft.category,
+            priceCents: draft.priceCents,
+            oldPriceCents: draft.oldPriceCents,
+            stock: draft.stock,
+            stockLeft: draft.stock,
+            durationMinutes: draft.durationMinutes,
+            description: draft.description ?? '',
+            publishedAt: nowMs,
+            // Le brouillon dit « dans 1 h », le store dit à quelle heure. Zéro
+            // reste zéro : « tout de suite » n'a pas besoin d'être daté, et le
+            // laisser à zéro garde le comportement des offres d'avant le §4.2.
+            startsAt: draft.startInMinutes ? nowMs + draft.startInMinutes * 60_000 : 0,
+            state: draft.state ?? 'publiee',
             offline: false,
+            audience: draft.audience ?? 'clients',
+            photoUri: draft.photoUri ?? '',
+            modes: draft.modes ?? ['touch-collect', 'livraison'],
+            seller,
+            minQty: draft.minQty ?? 1,
+            recurrence: draft.recurrence ?? 'aucune',
+          };
+
+          set({ offers: [offer, ...s.offers], used: counted ? s.used + 1 : s.used });
+          return { ok: true, offer };
+        },
+
+        takeOffline: (id) =>
+          set((s) => ({
+            offers: s.offers.map((o) => (o.id === id ? { ...o, offline: true } : o)),
+          })),
+
+        republishDue: (nowMs = Date.now()) => {
+          const created: PublishedOffer[] = [];
+          const offers = get().offers.map((o) => {
+            if (o.state !== 'publiee' || o.offline || o.recurrence === 'aucune') return o;
+            let at = dueOccurrence(startOf(o), o.recurrence, nowMs);
+            if (at === null) return o;
+            // Un téléphone resté fermé : si la créneau dû est déjà passé en entier, la republier la
+            // ferait naître terminée. On programme alors le créneau suivant, à venir.
+            const period = recurrencePeriodMs(o.recurrence) ?? 0;
+            if (at + o.durationMinutes * 60_000 <= nowMs) at += period;
+            // La nouvelle occurrence reprend l'offre à neuf (stock plein) et porte la récurrence ;
+            // l'ancienne reste dans l'historique, ponctuelle : une seule chaîne vivante.
+            created.push({
+              ...o,
+              id: makeId(),
+              publishedAt: at,
+              startsAt: at,
+              stockLeft: o.stock,
+              offline: false,
+            });
+            return { ...o, recurrence: 'aucune' as const };
           });
-          return { ...o, recurrence: 'aucune' as const };
-        });
-        if (created.length === 0) return 0;
-        set({ offers: [...created, ...offers] });
-        return created.length;
-      },
+          if (created.length === 0) return 0;
+          set({ offers: [...created, ...offers] });
+          return created.length;
+        },
 
-      adjustStock: (id, delta) =>
-        set((s) => ({
-          offers: s.offers.map((o) =>
-            o.id === id
-              ? {
-                  ...o,
-                  stock: Math.max(o.stock + delta, 0),
-                  stockLeft: Math.max(o.stockLeft + delta, 0),
-                }
-              : o,
-          ),
-        })),
+        adjustStock: (id, delta) =>
+          set((s) => ({
+            offers: s.offers.map((o) =>
+              o.id === id
+                ? {
+                    ...o,
+                    stock: Math.max(o.stock + delta, 0),
+                    stockLeft: Math.max(o.stockLeft + delta, 0),
+                  }
+                : o,
+            ),
+          })),
 
-      sellOne: (id) =>
-        set((s) => ({
-          offers: s.offers.map((o) =>
-            o.id === id ? { ...o, stockLeft: Math.max(0, o.stockLeft - 1) } : o,
-          ),
-        })),
+        sellOne: (id) =>
+          set((s) => ({
+            offers: s.offers.map((o) =>
+              o.id === id ? { ...o, stockLeft: Math.max(0, o.stockLeft - 1) } : o,
+            ),
+          })),
 
-      orderLot: (offerId, qty, nowMs = Date.now()) => {
-        const s = get();
-        // Le lot peut venir du marché OU de mes propres publications B2B (un
-        // grossiste qui teste son annonce depuis le même appareil).
-        const lot = s.lots.find((o) => o.id === offerId) ?? s.offers.find((o) => o.id === offerId);
-        if (!lot) return { ok: false, reason: 'introuvable' };
-        // Le minimum du grossiste (V1.1) : on ne valide pas en dessous.
-        if (qty < (lot.minQty ?? 1)) return { ok: false, reason: 'minimum' };
-        if (qty <= 0 || lot.stockLeft < qty) return { ok: false, reason: 'stock' };
+        orderLot: (offerId, qty, nowMs = Date.now()) => {
+          const s = get();
+          // Le lot peut venir du marché OU de mes propres publications B2B (un
+          // grossiste qui teste son annonce depuis le même appareil).
+          const lot =
+            s.lots.find((o) => o.id === offerId) ?? s.offers.find((o) => o.id === offerId);
+          if (!lot) return { ok: false, reason: 'introuvable' };
+          // Le minimum du grossiste (V1.1) : on ne valide pas en dessous.
+          if (qty < (lot.minQty ?? 1)) return { ok: false, reason: 'minimum' };
+          if (qty <= 0 || lot.stockLeft < qty) return { ok: false, reason: 'stock' };
 
-        const order: WholesaleOrder = {
-          id: makeId(),
-          offerId: lot.id,
-          title: lot.title,
-          seller: lot.seller,
-          qty,
-          // Prix figé à la commande : un lot dont le prix bouge ne doit pas
-          // réécrire ce qui a déjà été commandé.
-          unitCents: lot.priceCents,
-          totalCents: lot.priceCents * qty,
-          at: nowMs,
-          status: 'recue',
-          buyer: '',
-          prep: [],
-        };
+          const order: WholesaleOrder = {
+            id: makeId(),
+            offerId: lot.id,
+            title: lot.title,
+            seller: lot.seller,
+            qty,
+            // Prix figé à la commande : un lot dont le prix bouge ne doit pas
+            // réécrire ce qui a déjà été commandé.
+            unitCents: lot.priceCents,
+            totalCents: lot.priceCents * qty,
+            at: nowMs,
+            status: 'recue',
+            buyer: '',
+            prep: [],
+          };
 
-        const take = (list: PublishedOffer[]) =>
-          list.map((o) => (o.id === offerId ? { ...o, stockLeft: o.stockLeft - qty } : o));
+          const take = (list: PublishedOffer[]) =>
+            list.map((o) => (o.id === offerId ? { ...o, stockLeft: o.stockLeft - qty } : o));
 
-        set({
-          lots: take(s.lots),
-          offers: take(s.offers),
-          wholesaleOrders: [order, ...s.wholesaleOrders],
-        });
-        return { ok: true, order };
-      },
+          set({
+            lots: take(s.lots),
+            offers: take(s.offers),
+            wholesaleOrders: [order, ...s.wholesaleOrders],
+          });
+          return { ok: true, order };
+        },
 
-      advanceWholesaleOrder: (orderId) => {
-        const order = get().wholesaleOrders.find((o) => o.id === orderId);
-        const next = order ? nextWholesaleStatus(order.status) : null;
-        if (!order || !next) return false;
-        // Le bon de préparation se remplit AVANT l'expédition : on n'envoie pas un colis
-        // dont on n'a pas coché le contenu.
-        if (
-          order.status === 'preparation' &&
-          !PREP_STEPS.every((p) => order.prep.includes(p.key))
-        ) {
-          return false;
-        }
-        set((s) => ({
-          wholesaleOrders: s.wholesaleOrders.map((o) =>
-            o.id === orderId ? { ...o, status: next } : o,
-          ),
-        }));
-        return true;
-      },
+        advanceWholesaleOrder: (orderId) => {
+          const order = get().wholesaleOrders.find((o) => o.id === orderId);
+          const next = order ? nextWholesaleStatus(order.status) : null;
+          if (!order || !next) return false;
+          // Le bon de préparation se remplit AVANT l'expédition : on n'envoie pas un colis
+          // dont on n'a pas coché le contenu.
+          if (
+            order.status === 'preparation' &&
+            !PREP_STEPS.every((p) => order.prep.includes(p.key))
+          ) {
+            return false;
+          }
+          set((s) => ({
+            wholesaleOrders: s.wholesaleOrders.map((o) =>
+              o.id === orderId ? { ...o, status: next } : o,
+            ),
+          }));
+          return true;
+        },
 
-      togglePrep: (orderId, step) =>
-        set((s) => ({
-          wholesaleOrders: s.wholesaleOrders.map((o) =>
-            o.id === orderId && o.status === 'preparation'
-              ? {
-                  ...o,
-                  prep: o.prep.includes(step)
-                    ? o.prep.filter((p) => p !== step)
-                    : [...o.prep, step],
-                }
-              : o,
-          ),
-        })),
+        togglePrep: (orderId, step) =>
+          set((s) => ({
+            wholesaleOrders: s.wholesaleOrders.map((o) =>
+              o.id === orderId && o.status === 'preparation'
+                ? {
+                    ...o,
+                    prep: o.prep.includes(step)
+                      ? o.prep.filter((p) => p !== step)
+                      : [...o.prep, step],
+                  }
+                : o,
+            ),
+          })),
 
-      resetDemo: () =>
-        set({
-          supplier: EMPTY_SUPPLIER,
-          offers: [],
-          lots: seedWholesaleLots(),
-          used: 0,
-          purchased: 0,
-          wholesaleOrders: [],
-          profile: EMPTY_PROFILE,
-        }),
-    }),
+        resetDemo: () =>
+          set({
+            supplier: EMPTY_SUPPLIER,
+            offers: [],
+            lots: seedWholesaleLots(),
+            used: 0,
+            purchased: 0,
+            wholesaleOrders: [],
+            profile: EMPTY_PROFILE,
+          }),
+      };
+    },
     {
       name: 'tklink-merchant-v1',
       storage: createJSONStorage(() => asyncStorageBackend),

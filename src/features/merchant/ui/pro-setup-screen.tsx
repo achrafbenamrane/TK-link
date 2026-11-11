@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
@@ -9,8 +9,9 @@ import { formatSiret } from '@/shared/lib/roles';
 import { AppText, Button, Screen, Wordmark } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
-import { PRO_COPY, type ProRole } from '../lib/supplier';
-import { selectSupplier, useMerchantStore } from '../model/store';
+import type { ShopApiError } from '../lib/shop-api';
+import { PRO_COPY, type ProRole, type SupplierStatus } from '../lib/supplier';
+import { selectSupplier, useMerchantStore, type ShopDetails } from '../model/store';
 
 type Props = {
   /** Build de démonstration : propose de simuler le contrôle de TK LINK. Absent en production. */
@@ -23,6 +24,11 @@ type Props = {
    */
   siret: string;
   address: string;
+  /**
+   * Le commerce tel que l'inscription l'a décrit (nom, catégorie, quartier, modes de remise) : il part
+   * au serveur avec le dossier. Le type de compte vient de `role`.
+   */
+  shop?: Omit<ShopDetails, 'kind'>;
   /** IBAN proposé d'avance (démonstration) ; vide en production. */
   initialIban?: string;
   /**
@@ -36,6 +42,48 @@ type Props = {
 };
 
 type Step = 'infos' | 'verification' | 'securite' | 'valide';
+
+const NO_SHOP: Omit<ShopDetails, 'kind'> = {
+  name: '',
+  category: 'restauration',
+  area: '',
+  modes: [],
+};
+
+/**
+ * Après une relecture du statut sur le serveur : un dossier que l'appareil croyait à déposer peut
+ * déjà être en vérification, validé ou refusé (nouveau téléphone) — et l'inverse. Les autres étapes
+ * ne bougent pas : la personne y est en train de faire quelque chose.
+ */
+export function stepAfterSync(current: Step, status: SupplierStatus): Step {
+  if (current === 'infos' && status !== 'brouillon') return 'verification';
+  if (current === 'verification' && status === 'brouillon') return 'infos';
+  return current;
+}
+
+/** Ce que l'écran dit quand le serveur refuse le dépôt. */
+function filingMessage(code: ShopApiError | 'incomplete', role: ProRole): Record<string, string> {
+  switch (code) {
+    case 'siret_taken':
+      return { siret: 'Ce SIRET est déjà enregistré par un autre compte TK LINK.' };
+    case 'invalid':
+      return { form: 'TK LINK a refusé ces informations : vérifiez le SIRET et l’adresse.' };
+    case 'forbidden':
+      return {
+        form: `Ce compte n’est pas déclaré comme ${PRO_COPY[role].account}. Contactez TK LINK.`,
+      };
+    case 'incomplete':
+      return {
+        form: `Le nom ou la catégorie de votre ${PRO_COPY[role].entity} manque sur ce téléphone. Contactez TK LINK.`,
+      };
+    case 'not_signed_in':
+      return { form: 'Votre session a expiré : reconnectez-vous, puis renvoyez le dossier.' };
+    case 'network':
+      return { form: 'Pas de connexion : le dossier n’est pas parti. Réessayez dans un instant.' };
+    default:
+      return { form: 'Le dossier n’a pas pu partir. Réessayez dans un instant.' };
+  }
+}
 const STEPS: Step[] = ['infos', 'verification', 'securite', 'valide'];
 const STEP_TITLE: Record<Step, string> = {
   infos: 'Informations professionnelles',
@@ -60,6 +108,7 @@ export function ProSetupScreen({
   role = 'grossiste',
   siret,
   address,
+  shop = NO_SHOP,
   initialIban = '',
   authenticate,
   onDone,
@@ -67,7 +116,8 @@ export function ProSetupScreen({
 }: Props) {
   const colors = useColors();
   const supplier = useMerchantStore(selectSupplier);
-  const submit = useMerchantStore((s) => s.submitSupplier);
+  const fileShop = useMerchantStore((s) => s.fileShop);
+  const refreshShop = useMerchantStore((s) => s.refreshShop);
   const validate = useMerchantStore((s) => s.validateSupplier);
   const setDevice = useMerchantStore((s) => s.setSupplierDevice);
 
@@ -77,10 +127,12 @@ export function ProSetupScreen({
       ? supplier.deviceEnrolled
         ? 'valide'
         : 'securite'
-      : supplier.status === 'en_verification'
+      : supplier.status === 'en_verification' || supplier.status === 'refuse'
         ? 'verification'
         : 'infos',
   );
+  const [sending, setSending] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [addr, setAddr] = useState(address);
   // Connu à l'inscription : affiché, verrouillé. Inconnu sur cet appareil : à saisir, sinon le dossier
   // ne pourrait jamais partir.
@@ -93,13 +145,37 @@ export function ProSetupScreen({
 
   const index = STEPS.indexOf(step);
 
-  const send = () => {
-    const res = submit({ siret: siretValue.replace(/s/g, ''), address: addr, iban, idUri });
+  // Le serveur fait foi : à l'ouverture, on relit où en est le dossier (validé, refusé…).
+  useEffect(() => {
+    let alive = true;
+    void refreshShop().then(() => {
+      if (alive) setStep((s) => stepAfterSync(s, useMerchantStore.getState().supplier.status));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [refreshShop]);
+
+  const check = async () => {
+    setChecking(true);
+    await refreshShop();
+    setChecking(false);
+    setStep((s) => stepAfterSync(s, useMerchantStore.getState().supplier.status));
+  };
+
+  const send = async () => {
+    if (sending) return;
+    setSending(true);
+    const res = await fileShop(
+      { siret: siretValue.replace(/\s/g, ''), address: addr, iban, idUri },
+      { ...shop, kind: role },
+    );
+    setSending(false);
     if (res.ok) {
       setErrors({});
       setStep('verification');
     } else {
-      setErrors(res.errors);
+      setErrors('errors' in res ? res.errors : filingMessage(res.code, role));
     }
   };
 
@@ -280,7 +356,17 @@ export function ProSetupScreen({
               ) : null}
             </View>
 
-            <Button testID="supplier-submit" label="Envoyer mon dossier" onPress={send} />
+            {errors.form ? (
+              <AppText testID="supplier-form-error" variant="caption" className="text-danger">
+                {errors.form}
+              </AppText>
+            ) : null}
+            <Button
+              testID="supplier-submit"
+              label="Envoyer mon dossier"
+              loading={sending}
+              onPress={() => void send()}
+            />
           </View>
         ) : null}
 
@@ -289,7 +375,13 @@ export function ProSetupScreen({
             <View className="items-center gap-3 rounded-card border border-line bg-surface p-6">
               <View className="h-16 w-16 items-center justify-center rounded-pill bg-brand-50">
                 <Feather
-                  name={supplier.status === 'valide' ? 'check' : 'shield'}
+                  name={
+                    supplier.status === 'valide'
+                      ? 'check'
+                      : supplier.status === 'refuse'
+                        ? 'alert-circle'
+                        : 'shield'
+                  }
                   size={28}
                   color={colors.brand500}
                 />
@@ -297,12 +389,21 @@ export function ProSetupScreen({
               <AppText testID="supplier-verification-status" className="text-center font-sans-bold">
                 {supplier.status === 'valide'
                   ? `Votre ${PRO_COPY[role].entity} est vérifié${role === 'grossiste' ? 'e' : ''}`
-                  : 'Votre dossier est en cours de contrôle'}
+                  : supplier.status === 'refuse'
+                    ? 'Votre dossier n’a pas été accepté'
+                    : 'Votre dossier est en cours de contrôle'}
               </AppText>
-              <AppText variant="caption" className="text-center">
-                TK LINK contrôle les informations de votre {PRO_COPY[role].entity} avant d’ouvrir la
-                publication d’offres. Vous serez prévenu dès que c’est fait.
-              </AppText>
+              {supplier.status === 'refuse' ? (
+                <AppText testID="supplier-review-note" variant="caption" className="text-center">
+                  {supplier.reviewNote ||
+                    'TK LINK n’a pas pu vérifier ces informations. Corrigez-les et renvoyez le dossier.'}
+                </AppText>
+              ) : (
+                <AppText variant="caption" className="text-center">
+                  TK LINK contrôle les informations de votre {PRO_COPY[role].entity} avant d’ouvrir
+                  la publication d’offres. Vous serez prévenu dès que c’est fait.
+                </AppText>
+              )}
             </View>
 
             {supplier.status === 'valide' ? (
@@ -310,6 +411,12 @@ export function ProSetupScreen({
                 testID="supplier-to-security"
                 label="Continuer"
                 onPress={() => setStep('securite')}
+              />
+            ) : supplier.status === 'refuse' ? (
+              <Button
+                testID="supplier-fix"
+                label="Corriger mon dossier"
+                onPress={() => setStep('infos')}
               />
             ) : demo ? (
               <Pressable
@@ -322,7 +429,24 @@ export function ProSetupScreen({
                   Démo — simuler la validation par TK LINK
                 </AppText>
               </Pressable>
-            ) : null}
+            ) : (
+              <View className="gap-2">
+                <Button
+                  testID="supplier-check"
+                  label="Vérifier l’avancement"
+                  variant="ghost"
+                  loading={checking}
+                  onPress={() => void check()}
+                />
+                {/* La vérification prend du temps : on entre dans l'app en attendant, la publication
+                    reste fermée (onglet Flash) jusqu'à la validation. */}
+                <Button
+                  testID="supplier-wait-in-app"
+                  label="Découvrir l’app en attendant"
+                  onPress={onDone}
+                />
+              </View>
+            )}
           </View>
         ) : null}
 

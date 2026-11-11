@@ -74,6 +74,37 @@ read `user_metadata` in a policy (user-editable); split highly-sensitive columns
 their own table. Enforce MFA on a table with a restrictive policy:
 `as restrictive ... using ((select auth.jwt()->>'aal') = 'aal2')`.
 
+## Le marché (branchement en cours)
+
+Plan : [exec-plans/2026-11-11-marche-sur-supabase.md](exec-plans/2026-11-11-marche-sur-supabase.md).
+Les tables `merchants`/`deals`/`orders` de `0005` datent d’avant le CDC V1.1 et ne sont pas
+utilisées par l’app : ne pas s’en servir, elles seront retirées.
+
+**`public.shops` (0010) — le dossier du professionnel.** Un par compte, un compte par SIRET (clé de
+Luhn vérifiée par le serveur), du type de compte **déclaré**. Le statut (`en_verification`,
+`valide`, `refuse`) n’est dans aucun droit client ; un déclencheur force `en_verification` au dépôt
+et y renvoie un dossier refusé que l’on corrige, ou validé dont on change le SIRET ou le nom. Le
+public ne lit que les commerces validés. Côté app : `src/features/merchant/lib/shop-api.ts`.
+
+**Valider ou refuser un dossier** (TK LINK, SQL Editor du tableau de bord, en attendant une vraie
+connexion à `/admin`) :
+
+```sql
+-- Les dossiers à contrôler
+select name, kind, siret, address, submitted_at from public.shops
+ where status = 'en_verification' order by submitted_at;
+
+-- Valider
+update public.shops set status = 'valide' where siret = '44306184100047';
+
+-- Refuser, avec le motif que le professionnel verra dans l'app
+update public.shops set status = 'refuse',
+       review_note = 'Le SIRET ne correspond pas à l’adresse indiquée.'
+ where siret = '44306184100047';
+```
+
+L’app relit le statut à l’ouverture de l’onglet Flash et de l’écran du dossier.
+
 ## Payments (entitlement is server-owned)
 
 `public.subscriptions` is **client read-only** (no client write policy). The

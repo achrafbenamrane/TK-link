@@ -40,7 +40,11 @@ export const PRO_COPY: Record<
   },
 };
 
-export const SUPPLIER_STATUSES = ['brouillon', 'en_verification', 'valide'] as const;
+/**
+ * `refuse` : TK LINK a refusé le dossier (motif dans `reviewNote`) ; le professionnel le corrige et le
+ * redépose. Les statuts autres que `brouillon` viennent du serveur quand il y en a un (table `shops`).
+ */
+export const SUPPLIER_STATUSES = ['brouillon', 'en_verification', 'valide', 'refuse'] as const;
 export type SupplierStatus = (typeof SUPPLIER_STATUSES)[number];
 
 export type SupplierDraft = {

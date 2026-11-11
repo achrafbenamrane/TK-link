@@ -264,6 +264,8 @@ export const SupplierSchema = z.object({
   idUri: z.string().default(''),
   /** L'appareil est-il enregistré avec une authentification locale ? Un drapeau, jamais l'empreinte. */
   deviceEnrolled: z.boolean().default(false),
+  /** Le motif d'un refus, écrit par TK LINK. Vide tant que le dossier n'est pas refusé. */
+  reviewNote: z.string().default(''),
 });
 export type Supplier = z.infer<typeof SupplierSchema>;
 export const EMPTY_SUPPLIER: Supplier = {
@@ -271,6 +273,7 @@ export const EMPTY_SUPPLIER: Supplier = {
   ibanHint: '',
   idUri: '',
   deviceEnrolled: false,
+  reviewNote: '',
 };
 
 export const PersistedMerchantSchema = z.object({

@@ -22,25 +22,42 @@ export function ProLocked({
 }) {
   const colors = useColors();
   const pending = status === 'en_verification';
+  const refused = status === 'refuse';
 
   return (
     <Screen testID="pro-locked">
       <View className="flex-1 items-center justify-center gap-4 px-4">
         <View className="h-20 w-20 items-center justify-center rounded-pill border-2 border-brand-500">
-          <Feather name={pending ? 'clock' : 'shield'} size={34} color={colors.brand500} />
+          <Feather
+            name={pending ? 'clock' : refused ? 'alert-circle' : 'shield'}
+            size={34}
+            color={colors.brand500}
+          />
         </View>
         <AppText variant="display" className="text-center text-2xl">
-          {pending ? 'Dossier en cours de contrôle' : 'Compte à valider'}
+          {pending
+            ? 'Dossier en cours de contrôle'
+            : refused
+              ? 'Dossier à corriger'
+              : 'Compte à valider'}
         </AppText>
         <AppText variant="caption" className="text-center">
           {pending
             ? `TK LINK vérifie votre dossier. Vous pourrez accéder à ${PRO_COPY[role].publish} dès la validation.`
-            : PRO_COPY[role].locked}
+            : refused
+              ? 'TK LINK n’a pas accepté votre dossier. Ouvrez-le pour voir pourquoi et le corriger.'
+              : PRO_COPY[role].locked}
         </AppText>
         <View className="w-full">
           <Button
             testID="pro-locked-open"
-            label={pending ? 'Voir l’avancement' : 'Finaliser mon dossier'}
+            label={
+              pending
+                ? 'Voir l’avancement'
+                : refused
+                  ? 'Corriger mon dossier'
+                  : 'Finaliser mon dossier'
+            }
             onPress={onOpenSetup}
           />
         </View>

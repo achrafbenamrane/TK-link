@@ -233,7 +233,7 @@ describe('dossier fournisseur — étapes 3 à 6 du schéma', () => {
 
     // Dossier vide : l'envoi est refusé, avec les champs en cause.
     fireEvent.press(screen.getByTestId('supplier-submit'));
-    expect(screen.getByText('Cet IBAN n’est pas valide')).toBeTruthy();
+    expect(await screen.findByText('Cet IBAN n’est pas valide')).toBeTruthy();
     expect(screen.getByText('Ajoutez la pièce d’identité du dirigeant')).toBeTruthy();
 
     fireEvent.changeText(screen.getByTestId('supplier-iban'), VALID.iban);
@@ -241,7 +241,7 @@ describe('dossier fournisseur — étapes 3 à 6 du schéma', () => {
     await waitFor(() => expect(screen.getByTestId('supplier-id-preview')).toBeTruthy());
 
     fireEvent.press(screen.getByTestId('supplier-submit'));
-    expect(screen.getByTestId('supplier-verification-status')).toHaveTextContent(/en cours/);
+    expect(await screen.findByTestId('supplier-verification-status')).toHaveTextContent(/en cours/);
 
     // La validation vient de TK LINK : ici, le bouton de démonstration.
     fireEvent.press(screen.getByTestId('supplier-demo-validate'));

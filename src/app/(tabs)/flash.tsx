@@ -1,4 +1,5 @@
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback } from 'react';
 
 import {
   canSupplierPublish,
@@ -23,10 +24,19 @@ export default function FlashRoute() {
   const firstName = useOnboardingStore(selectFirstName);
   const application = useShopStore((s) => s.merchantApplication);
   const supplier = useMerchantStore(selectSupplier);
+  const refreshShop = useMerchantStore((s) => s.refreshShop);
   const router = useRouter();
 
+  // TK LINK valide (ou refuse) le dossier sur le serveur : on relit son statut à chaque passage ici.
+  const pro = role === 'grossiste' || role === 'commercant';
+  useFocusEffect(
+    useCallback(() => {
+      if (pro) void refreshShop();
+    }, [pro, refreshShop]),
+  );
+
   // Un professionnel dont le dossier n'est pas validé ne publie pas (étape 6 des schémas).
-  if ((role === 'grossiste' || role === 'commercant') && !canSupplierPublish(supplier.status)) {
+  if (pro && !canSupplierPublish(supplier.status)) {
     return (
       <ProLocked
         status={supplier.status}
