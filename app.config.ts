@@ -170,13 +170,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     [
-      // Scan du QR code d’une remise de colis (app livreur). Le texte dit pourquoi,
+      // Scan du QR de retrait d’un client par le commerçant (Touch & Collect). Le texte dit pourquoi,
       // précisément — un texte générique est refusé par l’App Store. Pas de micro :
       // on ne filme pas, on lit un code.
       'expo-camera',
       {
         cameraPermission:
-          'TK LINK utilise la caméra pour scanner le QR code d’une remise de colis.',
+          'TK LINK utilise la caméra pour scanner le QR code de retrait de vos clients.',
         microphonePermission: false,
         recordAudioAndroid: false,
       },

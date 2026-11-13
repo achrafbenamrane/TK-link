@@ -4,6 +4,7 @@ import { callEdge } from '@/shared/lib/edge';
 import { supabase } from '@/shared/lib/supabase';
 
 import { toServerOrder } from '../lib/orders-api';
+import { parsePickupQr, pickupPayload } from '../lib/pickup';
 import { useServerOrdersStore } from '../model/server-orders';
 import { MerchantOrdersScreen } from '../ui/merchant-orders-screen';
 
@@ -15,6 +16,20 @@ jest.mock('@/shared/lib/edge', () => ({ callEdge: jest.fn() }));
 jest.mock('@/shared/lib/supabase', () => ({
   supabase: { auth: { getSession: jest.fn() }, from: jest.fn(), rpc: jest.fn() },
 }));
+
+// La caméra : on garde la fonction de lecture que l'écran lui passe, pour simuler un scan.
+let mockScan: ((event: { data: string }) => void) | undefined;
+jest.mock('expo-camera', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- why: une fabrique de jest.mock ne capture pas un import
+  const { View } = require('react-native');
+  return {
+    useCameraPermissions: () => [{ granted: true, status: 'granted' }, jest.fn()],
+    CameraView: (props: { testID?: string; onBarcodeScanned?: (e: { data: string }) => void }) => {
+      mockScan = props.onBarcodeScanned;
+      return <View testID={props.testID} />;
+    },
+  };
+});
 
 const rpc = supabase.rpc as unknown as jest.Mock;
 const edge = callEdge as jest.Mock;
@@ -118,4 +133,40 @@ it('le numéro du commerce manque : le commerçant sait quoi corriger', async ()
   expect(await screen.findByTestId(`merchant-order-${ID}-error`)).toHaveTextContent(
     /numéro de votre commerce/,
   );
+});
+
+describe('scanner le QR de retrait', () => {
+  it('le QR de CETTE commande remet la commande (le serveur vérifie le code)', async () => {
+    seed([order({ status: 'prete' })]);
+    rpc.mockResolvedValue({ data: null, error: null });
+    render(<MerchantOrdersScreen server />);
+
+    fireEvent.press(screen.getByTestId(`merchant-order-${ID}-pickup`));
+    fireEvent.press(screen.getByTestId(`merchant-order-${ID}-scan`));
+    expect(screen.getByTestId(`merchant-order-${ID}-scanner`)).toBeOnTheScreen();
+
+    await act(async () => {
+      mockScan?.({ data: pickupPayload(ID, '048213') });
+    });
+    expect(rpc).toHaveBeenCalledWith('confirm_pickup', { p_order: ID, p_code: '048213' });
+  });
+
+  it('le QR d’une autre commande est refusé sur place, sans appel au serveur', () => {
+    seed([order({ status: 'prete' })]);
+    render(<MerchantOrdersScreen server />);
+    fireEvent.press(screen.getByTestId(`merchant-order-${ID}-pickup`));
+    fireEvent.press(screen.getByTestId(`merchant-order-${ID}-scan`));
+
+    act(() => {
+      mockScan?.({ data: pickupPayload('99999999-9999-4999-8999-999999999999', '048213') });
+    });
+    expect(screen.getByTestId(`merchant-order-${ID}-wrong-qr`)).toBeOnTheScreen();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('ne reconnaît que les QR de retrait TK LINK', () => {
+    expect(parsePickupQr(pickupPayload(ID, '123456'))).toEqual({ orderId: ID, code: '123456' });
+    expect(parsePickupQr('https://exemple.fr')).toBeNull();
+    expect(parsePickupQr(JSON.stringify({ v: 1, id: ID, code: '12' }))).toBeNull();
+  });
 });

@@ -14,6 +14,7 @@ import {
   type ServerOrder,
   startPayment,
 } from '../../lib/orders-api';
+import { pickupPayload } from '../../lib/pickup';
 import { CHECKOUT_ERROR, openPaymentPage } from '../../lib/server-checkout';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -21,11 +22,6 @@ const hhmm = (ms: number) => {
   const d = new Date(ms);
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
-
-/** Ce que le QR de retrait contient : le commerçant le scanne, le serveur vérifie le code. */
-export function pickupPayload(orderId: string, code: string): string {
-  return JSON.stringify({ v: 1, id: orderId, code });
-}
 
 const PAID = ['payee', 'acceptee', 'preparation', 'prete'];
 

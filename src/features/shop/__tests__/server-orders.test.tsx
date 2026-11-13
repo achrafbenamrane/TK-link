@@ -8,7 +8,8 @@ import { supabase } from '@/shared/lib/supabase';
 import { classifyOrdersError, toServerOrder } from '../lib/orders-api';
 import { prepareServerCheckout } from '../lib/server-checkout';
 import { useServerOrdersStore } from '../model/server-orders';
-import { pickupPayload, ServerOrderPanel } from '../ui/components/server-order-panel';
+import { pickupPayload } from '../lib/pickup';
+import { ServerOrderPanel } from '../ui/components/server-order-panel';
 
 /**
  * La commande sur le serveur, côté client (rapport d’avancement du 13/11/2026) : réserver, payer

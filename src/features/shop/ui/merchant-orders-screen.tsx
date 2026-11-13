@@ -4,7 +4,7 @@ import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { Linking, Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { AppText, PrepTicket, Screen } from '@/shared/ui';
+import { AppText, PrepTicket, QrScanner, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import {
@@ -21,6 +21,7 @@ import {
   type OrdersError,
   type ServerOrder,
 } from '../lib/orders-api';
+import { parsePickupQr } from '../lib/pickup';
 import type { Order } from '../model/schema';
 import { selectShopServerOrders, useServerOrdersStore } from '../model/server-orders';
 import { selectOrders, useShopStore } from '../model/store';
@@ -437,6 +438,22 @@ function ServerActions({ order, onDone }: { order: ServerOrder; onDone: () => vo
   const [error, setError] = useState<OrdersError | null>(null);
   const [asking, setAsking] = useState(false);
   const [code, setCode] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [wrongQr, setWrongQr] = useState(false);
+
+  // Le QR du client contient sa commande et son code : on vérifie que c'est CETTE commande, puis le
+  // serveur vérifie le code. Un QR d'une autre commande ou étranger à TK LINK est refusé sur place.
+  const onScan = (value: string) => {
+    const qr = parsePickupQr(value);
+    if (!qr || qr.orderId !== order.id) {
+      setWrongQr(true);
+      return;
+    }
+    setWrongQr(false);
+    setScanning(false);
+    setCode(qr.code);
+    void run(() => confirmPickup(order.id, qr.code));
+  };
 
   const run = async (action: () => Promise<{ ok: true } | { ok: false; code: OrdersError }>) => {
     if (busy) return;
@@ -505,11 +522,48 @@ function ServerActions({ order, onDone }: { order: ServerOrder; onDone: () => vo
         </View>
       ) : null}
 
-      {asking ? (
+      {asking && scanning ? (
+        <View className="gap-2">
+          <QrScanner
+            testID={`merchant-order-${order.id}-scanner`}
+            title="QR de retrait du client"
+            onScan={onScan}
+            onClose={() => setScanning(false)}
+          />
+          {wrongQr ? (
+            <AppText
+              testID={`merchant-order-${order.id}-wrong-qr`}
+              variant="caption"
+              className="text-danger"
+            >
+              Ce QR n’est pas celui de cette commande.
+            </AppText>
+          ) : null}
+        </View>
+      ) : null}
+
+      {asking && !scanning ? (
         <View className="gap-2 rounded-control border border-line p-3">
-          <AppText className="font-sans-semibold text-ink" style={{ fontSize: 13 }}>
-            Code de retrait du client
-          </AppText>
+          <View className="flex-row items-center justify-between">
+            <AppText className="font-sans-semibold text-ink" style={{ fontSize: 13 }}>
+              Code de retrait du client
+            </AppText>
+            <Pressable
+              testID={`merchant-order-${order.id}-scan`}
+              accessibilityRole="button"
+              accessibilityLabel="Scanner le QR de retrait du client"
+              onPress={() => {
+                setWrongQr(false);
+                setScanning(true);
+              }}
+              className="flex-row items-center gap-1.5 rounded-control border border-brand-500 px-3 py-1.5"
+            >
+              <Feather name="maximize" size={13} color={colors.brand500} />
+              <AppText className="font-sans-semibold text-brand-600" style={{ fontSize: 12 }}>
+                Scanner le QR
+              </AppText>
+            </Pressable>
+          </View>
           <View className="flex-row items-center gap-2">
             <TextInput
               testID={`merchant-order-${order.id}-code`}
