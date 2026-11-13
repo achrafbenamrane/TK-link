@@ -355,7 +355,7 @@ export function MerchantDetailScreen({
             <View className="flex-row items-center gap-1.5">
               <Feather name="clock" size={13} color={colors.inkFaint} />
               <AppText testID="merchant-open-status" variant="caption" className="text-ink-muted">
-                {profile?.status ?? 'Horaires non renseignés'}
+                {profile?.status || 'Horaires non renseignés'}
               </AppText>
             </View>
             {profile?.zone ? (
