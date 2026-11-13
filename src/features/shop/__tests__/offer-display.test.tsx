@@ -201,18 +201,26 @@ describe('stock en jauge d’essence', () => {
   });
 });
 
-describe('« Voir la boutique » sur la fiche offre', () => {
-  it('ouvre la vitrine de l’enseigne, où sont ses autres offres', () => {
+describe('le bloc du commerçant mène à sa boutique', () => {
+  const toShop = { pathname: '/enseigne/[id]', params: { id: cote.merchantId } };
+
+  it('fiche offre : un seul chemin, le bloc entier, sans bouton en double', () => {
     render(<ProductScreen dealId="d_cote" />);
 
-    const link = screen.getByTestId('product-view-shop');
-    expect(link.props.accessibilityRole).toBe('button');
-    expect(screen.getByText('Voir la boutique')).toBeOnTheScreen();
+    expect(screen.queryByTestId('product-view-shop')).toBeNull();
+    const block = screen.getByTestId('product-merchant');
+    expect(block.props.accessibilityRole).toBe('button');
+    expect(block.props.accessibilityLabel).toMatch(/^Voir la boutique /);
 
-    fireEvent.press(link);
-    expect(mockPush).toHaveBeenCalledWith({
-      pathname: '/enseigne/[id]',
-      params: { id: cote.merchantId },
-    });
+    fireEvent.press(block);
+    expect(mockPush).toHaveBeenCalledWith(toShop);
+  });
+
+  it('carte Flash : le nom du commerçant ouvre la boutique, pas l’offre', () => {
+    render(<FlashCard deal={cote} />);
+
+    fireEvent.press(screen.getByTestId(`deal-${cote.id}-merchant`));
+    expect(mockPush).toHaveBeenCalledWith(toShop);
+    expect(mockPush).not.toHaveBeenCalledWith(`/produit/${cote.id}`);
   });
 });

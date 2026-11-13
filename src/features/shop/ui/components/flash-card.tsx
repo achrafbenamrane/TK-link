@@ -154,7 +154,18 @@ export function FlashCard({ deal }: Props) {
       {/* ------------------------------------------------------------ contenu */}
       <View className="gap-2 p-4">
         <View className="flex-row items-center justify-between">
-          <View className="flex-1 flex-row items-center gap-1.5 pr-2">
+          {/* Le nom du commerçant mène DIRECTEMENT à sa boutique (rapport d’avancement du
+              13/11/2026) ; le reste de la carte ouvre l’offre. */}
+          <Pressable
+            testID={`deal-${deal.id}-merchant`}
+            accessibilityRole="button"
+            accessibilityLabel={`Voir la boutique ${merchant?.name ?? ''}`.trim()}
+            hitSlop={6}
+            onPress={() =>
+              merchant && router.push({ pathname: '/enseigne/[id]', params: { id: merchant.id } })
+            }
+            className="flex-1 flex-row items-center gap-1.5 pr-2 active:opacity-70"
+          >
             <AppText style={{ fontSize: 14 }}>{merchant?.emoji}</AppText>
             <AppText
               variant="caption"
@@ -166,23 +177,27 @@ export function FlashCard({ deal }: Props) {
             {/* La note ET le nombre d'avis, comme sur les affiches du client.
                 Une note nue ne prouve rien : « 5,0 » sur un avis rassure moins
                 que « 4,6 » sur deux cents. Le compte se tait s'il est absent,
-                plutôt que d'afficher « 0 » sous une note. */}
-            <View className="flex-row items-center gap-0.5">
-              <Ionicons name="star" size={11} color={colors.brand500} />
-              <AppText variant="caption" className="font-sans-semibold text-ink">
-                {deal.rating.toFixed(1)}
-              </AppText>
-              {deal.reviewCount ? (
-                <AppText
-                  testID={`deal-${deal.id}-reviews`}
-                  variant="caption"
-                  className="text-ink-faint"
-                >
-                  ({deal.reviewCount})
+                plutôt que d'afficher « 0 » sous une note ; une Flash du serveur
+                sans avis n'affiche pas de note du tout. */}
+            {deal.rating > 0 ? (
+              <View className="flex-row items-center gap-0.5">
+                <Ionicons name="star" size={11} color={colors.brand500} />
+                <AppText variant="caption" className="font-sans-semibold text-ink">
+                  {deal.rating.toFixed(1)}
                 </AppText>
-              ) : null}
-            </View>
-          </View>
+                {deal.reviewCount ? (
+                  <AppText
+                    testID={`deal-${deal.id}-reviews`}
+                    variant="caption"
+                    className="text-ink-faint"
+                  >
+                    ({deal.reviewCount})
+                  </AppText>
+                ) : null}
+              </View>
+            ) : null}
+            <Feather name="chevron-right" size={13} color={colors.inkFaint} />
+          </Pressable>
           <View className="flex-row items-center gap-1">
             <Feather name={distance ? 'navigation' : 'map-pin'} size={12} color={colors.inkFaint} />
             <AppText variant="caption" className="text-ink-faint">

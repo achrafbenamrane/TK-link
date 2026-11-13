@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
-import { Linking, Pressable, ScrollView, Share, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, Share, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen, ThemeToggle } from '@/shared/ui';
@@ -65,7 +65,9 @@ function FlashTile({ deal, onOpen, onAdd }: { deal: Deal; onOpen: () => void; on
   return (
     <Pressable
       testID={`merchant-deal-${deal.id}`}
-      accessibilityRole="button"
+      // Le bouton « + » est DANS la tuile : sur le web, un bouton dans un bouton est du HTML
+      // invalide, la tuile y est donc un lien (comme la carte Flash de l'accueil).
+      accessibilityRole={Platform.OS === 'web' ? 'link' : 'button'}
       accessibilityLabel={deal.title}
       onPress={onOpen}
       className="flex-1 gap-1.5 rounded-card border border-brand-500 bg-surface-muted p-3 active:opacity-80"

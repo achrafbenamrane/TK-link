@@ -329,9 +329,22 @@ export function DealsMap({ deals, category }: Props) {
               <ProductImage deal={selected} emojiSize={34} />
             </View>
             <View className="flex-1 gap-0.5">
-              <AppText variant="caption" className="font-sans-medium text-ink-muted">
-                {selectedMerchant.name} · {selectedMerchant.area}
-              </AppText>
+              {/* Le commerçant mène directement à sa boutique ; le reste de la carte, à l'offre. */}
+              <Pressable
+                testID="map-detail-merchant"
+                accessibilityRole="button"
+                accessibilityLabel={`Voir la boutique ${selectedMerchant.name}`}
+                hitSlop={6}
+                onPress={() =>
+                  router.push({ pathname: '/enseigne/[id]', params: { id: selectedMerchant.id } })
+                }
+                className="flex-row items-center gap-1 self-start active:opacity-70"
+              >
+                <AppText variant="caption" className="font-sans-medium text-ink-muted">
+                  {selectedMerchant.name} · {selectedMerchant.area}
+                </AppText>
+                <Feather name="chevron-right" size={12} color={colors.inkFaint} />
+              </Pressable>
               <AppText variant="title" className="text-base" numberOfLines={1}>
                 {selected.title}
               </AppText>

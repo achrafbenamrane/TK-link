@@ -208,46 +208,12 @@ export function ProductScreen({ dealId }: Props) {
 
         {/* Body */}
         <View className="gap-4 px-5 pt-5">
-          {/* Merchant — ouvre sa fiche : ventes flash, fidélité, infos. */}
+          {/* LE BLOC DU COMMERÇANT EST LE CHEMIN VERS SA BOUTIQUE — un seul geste. Il y avait deux
+              boutons pour la même destination (le bloc, puis « Voir la boutique » dessous) : le
+              rapport d’avancement du 13/11/2026 retire ce doublon. Le bloc entier, encadré, mène à la
+              vitrine (ses autres Flash, sa fidélité, ses infos). */}
           <Pressable
             testID="product-merchant"
-            accessibilityRole="button"
-            accessibilityLabel={`Voir ${merchant?.name ?? 'le commerçant'}`}
-            onPress={() =>
-              merchant && router.push({ pathname: '/enseigne/[id]', params: { id: merchant.id } })
-            }
-            className="flex-row items-center justify-between active:opacity-70"
-          >
-            <View className="flex-1 flex-row items-center gap-2 pr-2">
-              <View className="h-9 w-9 items-center justify-center rounded-pill bg-surface-muted">
-                <AppText style={{ fontSize: 18 }}>{merchant?.emoji}</AppText>
-              </View>
-              <View>
-                <AppText variant="label" numberOfLines={1}>
-                  {merchant?.name}
-                </AppText>
-                <AppText variant="caption" className="text-ink-faint">
-                  {merchant?.area} · Toulouse
-                </AppText>
-              </View>
-            </View>
-            <View className="flex-row items-center gap-1">
-              <Ionicons name="star" size={14} color={colors.brand500} />
-              <AppText variant="label">{deal.rating.toFixed(1)}</AppText>
-              {/* Le nombre d'avis, exigé par les affiches à côté de la note. */}
-              {deal.reviewCount ? (
-                <AppText testID="product-reviews" variant="caption" className="text-ink-faint">
-                  ({deal.reviewCount} avis)
-                </AppText>
-              ) : null}
-              <Feather name="chevron-right" size={16} color={colors.inkFaint} />
-            </View>
-          </Pressable>
-
-          {/* Le chemin vers les AUTRES offres du commerçant : sa vitrine les liste
-              toutes (« Nos Flash du moment »). Sous le nom, aligné dessus. */}
-          <Pressable
-            testID="product-view-shop"
             accessibilityRole="button"
             accessibilityLabel={`Voir la boutique${
               merchant ? ` ${merchant.name} et ses autres offres` : ''
@@ -255,13 +221,46 @@ export function ProductScreen({ dealId }: Props) {
             onPress={() =>
               merchant && router.push({ pathname: '/enseigne/[id]', params: { id: merchant.id } })
             }
-            className="-mt-2 ml-11 flex-row items-center gap-1 self-start rounded-pill border border-brand-500 px-3 py-1.5 active:opacity-70"
+            className="flex-row items-center gap-3 rounded-card border border-line bg-surface-muted p-3 active:opacity-70"
           >
-            <Feather name="shopping-bag" size={13} color={colors.brand500} />
-            <AppText className="font-sans-semibold text-brand-600" style={{ fontSize: 12.5 }}>
-              Voir la boutique
-            </AppText>
-            <Feather name="chevron-right" size={14} color={colors.brand500} />
+            <View className="h-11 w-11 items-center justify-center rounded-pill bg-surface">
+              <AppText style={{ fontSize: 20 }}>{merchant?.emoji}</AppText>
+            </View>
+            <View className="flex-1 gap-0.5">
+              <AppText variant="label" numberOfLines={1}>
+                {merchant?.name}
+              </AppText>
+              <View className="flex-row flex-wrap items-center gap-1">
+                <AppText variant="caption" className="text-ink-faint">
+                  {merchant?.area} · Toulouse
+                </AppText>
+                {deal.rating > 0 ? (
+                  <View className="flex-row items-center gap-0.5">
+                    <Ionicons name="star" size={12} color={colors.brand500} />
+                    <AppText variant="caption" className="font-sans-semibold text-ink">
+                      {deal.rating.toFixed(1)}
+                    </AppText>
+                    {/* Le nombre d'avis, exigé par les affiches à côté de la note. */}
+                    {deal.reviewCount ? (
+                      <AppText
+                        testID="product-reviews"
+                        variant="caption"
+                        className="text-ink-faint"
+                      >
+                        ({deal.reviewCount} avis)
+                      </AppText>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+            </View>
+            <View className="flex-row items-center gap-1">
+              <Feather name="shopping-bag" size={14} color={colors.brand500} />
+              <AppText className="font-sans-semibold text-brand-600" style={{ fontSize: 12.5 }}>
+                Boutique
+              </AppText>
+              <Feather name="chevron-right" size={16} color={colors.brand500} />
+            </View>
           </Pressable>
 
           {/* Title + tags */}
