@@ -57,6 +57,11 @@ it('sans motif : 401 → session, 503 → pas configuré, sinon inconnu', async 
   expect(await callEdge('x')).toMatchObject({ code: 'unauthorized' });
   invoke.mockResolvedValue(refusal(503, 'down'));
   expect(await callEdge('x')).toMatchObject({ code: 'not_configured' });
+  // Fonction pas encore déployée : Supabase répond 404 dans son propre format.
+  invoke.mockResolvedValue(
+    refusal(404, { code: 'NOT_FOUND', message: 'Requested function was not found' }),
+  );
+  expect(await callEdge('x')).toMatchObject({ code: 'not_configured', status: 404 });
   invoke.mockResolvedValue(refusal(500, null));
   expect(await callEdge('x')).toMatchObject({ code: 'unknown', status: 500 });
 });

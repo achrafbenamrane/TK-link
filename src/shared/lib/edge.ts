@@ -9,8 +9,9 @@ import { supabase } from '@/shared/lib/supabase';
  * réécrivait cette fouille ; elle vit ici. Les fonctions TK LINK répondent toutes
  * `{ error: '<code>' }` en cas de refus (supabase/functions/_shared/http.ts).
  *
- * Codes génériques : `offline` (la requête n'est pas partie), `not_configured` (pas de serveur, ou
- * la fonction attend ses secrets — 503), `unauthorized` (session absente ou révoquée), `unknown`.
+ * Codes génériques : `offline` (la requête n'est pas partie), `not_configured` (pas de serveur, la
+ * fonction attend ses secrets — 503 — ou n'est pas encore déployée — 404), `unauthorized`
+ * (session absente ou révoquée), `unknown`.
  */
 export type EdgeResult<T> =
   { ok: true; data: T } | { ok: false; code: string; status: number | null };
@@ -45,7 +46,9 @@ export async function callEdge<T>(
     }
     if (code) return { ok: false, code, status };
     if (status === 401) return { ok: false, code: 'unauthorized', status };
-    if (status === 503) return { ok: false, code: 'not_configured', status };
+    // 503 : la fonction attend ses secrets. 404 sans motif TK LINK : la fonction n'est pas encore
+    // déployée — pour l'utilisateur, c'est le même « pas encore activé ».
+    if (status === 503 || status === 404) return { ok: false, code: 'not_configured', status };
     return { ok: false, code: 'unknown', status };
   } catch {
     return { ok: false, code: 'offline', status: null };
