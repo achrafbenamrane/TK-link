@@ -205,6 +205,25 @@ try {
   warn('Impossible de sonder la table des Flash.');
 }
 
+// Les commandes (0012). Sans compte, la fonction de réservation est refusée (401/403) si elle existe ;
+// absente, PostgREST répond 404. Rien n'est réservé.
+try {
+  const res = await fetch(`${url}/rest/v1/rpc/reserve_flash`, {
+    method: 'POST',
+    headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (res.status === 404) {
+    fail(
+      'La migration 0012_flash_orders n’est pas appliquée (fonction reserve_flash absente) : un client ne peut pas commander une Flash.',
+    );
+  } else {
+    ok('Commandes : migration 0012 en place (réservation refusée sans compte, comme prévu).');
+  }
+} catch {
+  warn('Impossible de sonder les commandes.');
+}
+
 // La fonction Edge qui associe un numéro est-elle déployée ? Une requête sans session est refusée
 // (401) par une fonction présente ; une fonction absente répond 404. Rien n'est associé.
 if (phoneWanted) {

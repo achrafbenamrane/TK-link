@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(54);
+select plan(92);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -318,6 +318,8 @@ select is_empty(
 reset role;
 
 -- 26) TK LINK valide (tableau de bord) : le commerce devient public, la date de contrôle est posée.
+-- Geste de TK LINK (SQL Editor) : sans claims JWT, `auth.role()` est nul — pas un client.
+set local request.jwt.claims to '{}';
 update public.shops set status = 'valide' where siret = '44306184100047';
 select ok(
   (select reviewed_at is not null from public.shops where siret = '44306184100047'),
@@ -374,6 +376,8 @@ select throws_ok(
 reset role;
 
 -- TK LINK valide à nouveau le commerce de a2.
+-- Geste de TK LINK (SQL Editor) : sans claims JWT, `auth.role()` est nul — pas un client.
+set local request.jwt.claims to '{}';
 update public.shops set status = 'valide' where siret = '73282932000074';
 
 -- 30) Validé : il publie ; le serveur pose le stock restant et l'heure de fin.
@@ -414,6 +418,8 @@ select results_eq(
 reset role;
 
 -- 33) Quota épuisé (une seule opération offerte) : la publication suivante est refusée.
+-- Geste de TK LINK (SQL Editor) : sans claims JWT, `auth.role()` est nul — pas un client.
+set local request.jwt.claims to '{}';
 update public.shops set ops_free = 1 where siret = '73282932000074';
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
@@ -457,6 +463,347 @@ select throws_ok(
   'an account cannot publish for a shop it does not own'
 );
 reset role;
+
+-- ─────────────────────────────────────────────────────────── la commande (migration 0012)
+
+-- TK LINK met en ligne un Flash de test pour le commerce de a2 (3 pièces à 2,00 €).
+set local request.jwt.claims to '{}';
+insert into public.flash_offers
+  (shop_id, title, category, price_cents, old_price_cents, stock_total, stock_left, duration_minutes)
+values ((select id from public.shops where siret = '73282932000074'),
+        'Brioche', 'restauration', 200, 400, 3, 3, 60);
+
+-- 36) Aucune écriture directe sur les commandes ; anon ne réserve pas.
+select ok(
+  not has_table_privilege('authenticated', 'public.flash_orders', 'insert')
+  and not has_table_privilege('authenticated', 'public.flash_orders', 'update')
+  and not has_function_privilege('anon',
+    'public.reserve_flash(jsonb, text, text, double precision, double precision, text)', 'execute'),
+  'orders are written only through server functions'
+);
+
+-- 37) a1 réserve 2 brioches : le stock baisse, le serveur fait le prix et la commission (5 %).
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select lives_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object(
+         'offer_id', (select id from public.flash_offers where title = 'Brioche'), 'qty', 2)),
+       'touch-collect') $$,
+  'a customer reserves a live Flash'
+);
+select results_eq(
+  $$ select status, subtotal_cents, commission_cents, total_cents from public.flash_orders $$,
+  $$ values ('paiement_attente'::text, 400, 20, 400) $$,
+  'the server prices the order and its commission'
+);
+reset role;
+select results_eq(
+  $$ select stock_left from public.flash_offers where title = 'Brioche' $$,
+  $$ values (1) $$,
+  'the reserved quantity leaves the stock'
+);
+
+-- 38) Plus que la dernière pièce : en demander deux est refusé.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select throws_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object(
+         'offer_id', (select id from public.flash_offers where title = 'Brioche'), 'qty', 2)),
+       'touch-collect') $$,
+  'P0001',
+  'out_of_stock',
+  'a reservation beyond the remaining stock is refused'
+);
+
+-- 39) Un autre compte ne voit pas la commande de a1.
+select is_empty(
+  $$ select 1 from public.flash_orders $$,
+  'another account cannot see someone else''s order'
+);
+reset role;
+
+-- 40) Le commerçant voit la commande de son commerce, mais pas le code de retrait.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select results_eq(
+  $$ select count(*)::integer from public.flash_orders $$,
+  $$ values (1) $$,
+  'the merchant sees the orders of their shop'
+);
+select is(
+  public.order_pickup_code((select id from public.flash_orders limit 1)),
+  null,
+  'the merchant cannot read the pickup code'
+);
+
+-- 41) Pas de préparation avant paiement.
+select throws_ok(
+  $$ select public.advance_order((select id from public.flash_orders limit 1), 'preparation') $$,
+  'P0001',
+  'invalid_transition',
+  'an unpaid order cannot move to preparation'
+);
+reset role;
+
+-- Le webhook Stripe (service_role) marque la commande payée.
+set local request.jwt.claims to '{}';
+update public.flash_orders set status = 'payee', paid_at = now();
+
+-- 42) Payée : l'acheteur lit son code ; un autre compte ne fait pas avancer la commande.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select ok(
+  public.order_pickup_code((select id from public.flash_orders limit 1)) ~ '^[0-9]{6}$',
+  'the buyer reads a six-digit pickup code once paid'
+);
+select throws_ok(
+  $$ select public.advance_order((select id from public.flash_orders limit 1), 'preparation') $$,
+  '42501',
+  'not_your_order',
+  'only the shop owner moves an order forward'
+);
+reset role;
+
+-- 43) Le commerçant prépare ; un mauvais code de retrait est refusé, le bon remet la commande.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select lives_ok(
+  $$ select public.advance_order((select id from public.flash_orders limit 1), 'preparation') $$,
+  'the merchant starts preparing a paid order'
+);
+select throws_ok(
+  $$ select public.confirm_pickup((select id from public.flash_orders limit 1), '000000x') $$,
+  'P0001',
+  'pickup_refused',
+  'a wrong pickup code is refused'
+);
+reset role;
+create temporary table pickup on commit drop as
+  select code from private.order_pickup_codes limit 1;
+grant select on pickup to authenticated;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select lives_ok(
+  $$ select public.confirm_pickup((select id from public.flash_orders limit 1),
+                                 (select code from pickup)) $$,
+  'the right pickup code hands the order over'
+);
+select results_eq(
+  $$ select status from public.flash_orders $$,
+  $$ values ('recuperee'::text) $$,
+  'the order is picked up'
+);
+reset role;
+
+-- 44) Annuler avant paiement rend le stock (a3 réserve la dernière pièce, puis annule).
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select lives_ok(
+  $$ select public.cancel_order(public.reserve_flash(
+       jsonb_build_array(jsonb_build_object(
+         'offer_id', (select id from public.flash_offers where title = 'Brioche'), 'qty', 1)),
+       'touch-collect')) $$,
+  'a customer cancels an unpaid reservation'
+);
+reset role;
+select results_eq(
+  $$ select stock_left from public.flash_offers where title = 'Brioche' $$,
+  $$ values (1) $$,
+  'cancelling gives the stock back'
+);
+
+-- 45) Une livraison sans adresse est refusée.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select throws_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object(
+         'offer_id', (select id from public.flash_offers where title = 'Brioche'), 'qty', 1)),
+       'livraison') $$,
+  '22023',
+  'address_required',
+  'a delivery needs an address'
+);
+reset role;
+
+-- 46) Le code de retrait n'est pas exposé par l'API.
+select ok(
+  not has_table_privilege('authenticated', 'private.order_pickup_codes', 'select'),
+  'pickup codes are not readable through the API'
+);
+
+-- ─────────────────────────────────────────────────────── support TK LINK (migration 0014)
+
+-- 47) Un compte n'écrit ni au nom de TK LINK, ni le statut d'une demande.
+select ok(
+  not has_column_privilege('authenticated', 'public.support_messages', 'from_staff', 'insert')
+  and not has_column_privilege('authenticated', 'public.support_tickets', 'status', 'insert')
+  and not has_table_privilege('authenticated', 'public.support_tickets', 'update'),
+  'a client cannot speak as TK LINK nor set a ticket status'
+);
+
+-- 48) a1 ouvre une demande sur sa commande, et écrit son premier message.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select lives_ok(
+  $$ insert into public.support_tickets (category, subject, order_id)
+     values ('commande', 'Brioche manquante', (select id from public.flash_orders limit 1)) $$,
+  'a customer opens a support ticket about their order'
+);
+select lives_ok(
+  $$ insert into public.support_messages (ticket_id, body)
+     values ((select id from public.support_tickets where subject = 'Brioche manquante'),
+             'Il manquait une brioche dans ma commande.') $$,
+  'a customer writes in their ticket'
+);
+select results_eq(
+  $$ select t.status, m.from_staff from public.support_tickets t
+       join public.support_messages m on m.ticket_id = t.id $$,
+  $$ values ('ouvert'::text, false) $$,
+  'a new ticket is open and the message is not from staff'
+);
+reset role;
+
+-- 49) Un autre compte ne voit pas la demande, et ne la rattache pas à une commande qui n'est pas la
+--     sienne.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select is_empty(
+  $$ select 1 from public.support_tickets $$,
+  'another account cannot see someone else''s ticket'
+);
+select throws_ok(
+  $$ insert into public.support_tickets (category, subject, order_id)
+     values ('commande', 'Pas la mienne', (select id from public.flash_orders limit 1)) $$,
+  '42501',
+  'not_your_order',
+  'a ticket cannot point at someone else''s order'
+);
+reset role;
+
+-- 50) TK LINK répond depuis le back-office (clé de service) : la demande passe « en cours ».
+set local request.jwt.claims to '{}';
+insert into public.support_messages (ticket_id, from_staff, body)
+values ((select id from public.support_tickets where subject = 'Brioche manquante'), true,
+        'Nous contactons le commerçant et revenons vers vous.');
+select results_eq(
+  $$ select status from public.support_tickets where subject = 'Brioche manquante' $$,
+  $$ values ('en_cours'::text) $$,
+  'a staff reply moves the ticket to in progress'
+);
+
+-- 51) Une demande close ne reçoit plus de message.
+update public.support_tickets set status = 'ferme' where subject = 'Brioche manquante';
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select throws_ok(
+  $$ insert into public.support_messages (ticket_id, body)
+     values ((select id from public.support_tickets where subject = 'Brioche manquante'), 'Et alors ?') $$,
+  'P0001',
+  'ticket_closed',
+  'a closed ticket refuses new messages'
+);
+
+-- 52) Le client voit la réponse de TK LINK dans sa demande.
+select results_eq(
+  $$ select count(*)::integer from public.support_messages where from_staff $$,
+  $$ values (1) $$,
+  'the customer reads the staff reply'
+);
+reset role;
+
+-- ───────────────────────────────────────────────── visuels IA des commerces (migration 0015)
+
+-- 53) Rien ne s'écrit depuis l'app, et le quota n'est pas lisible par un compte.
+select ok(
+  not has_table_privilege('authenticated', 'public.shop_media', 'insert')
+  and not has_table_privilege('authenticated', 'public.shop_media', 'update')
+  and not has_function_privilege('authenticated', 'public.shop_media_quota_left(uuid, text)', 'execute'),
+  'AI media are written by the server only'
+);
+
+-- Le serveur (clé de service) range deux visuels prêts pour le commerce de a2 : un montré, un caché.
+set local request.jwt.claims to '{}';
+insert into public.shop_media (shop_id, kind, status, prompt, fal_model, url, visible)
+values
+  ((select id from public.shops where siret = '73282932000074'), 'image', 'pret', 'p', 'm',
+   'https://example.supabase.co/storage/v1/object/public/shop-media/a.jpg', true),
+  ((select id from public.shops where siret = '73282932000074'), 'image', 'pret', 'p', 'm',
+   'https://example.supabase.co/storage/v1/object/public/shop-media/b.jpg', false);
+
+-- 54) Le public voit le visuel montré, pas le caché ; le commerçant voit les deux.
+set local role anon;
+select results_eq(
+  $$ select count(*)::integer from public.shop_media $$,
+  $$ values (1) $$,
+  'the public sees only the shown, ready media'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select results_eq(
+  $$ select count(*)::integer from public.shop_media $$,
+  $$ values (2) $$,
+  'the shop owner sees all their media'
+);
+reset role;
+
+-- 55) Un autre compte ne cache pas les visuels d'un commerce ; le titulaire, oui.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select throws_ok(
+  $$ select public.set_shop_media_visible((select id from public.shop_media limit 1), false) $$,
+  '42501',
+  'not_your_media',
+  'another account cannot hide a shop''s media'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select lives_ok(
+  $$ select public.set_shop_media_visible(id, false) from public.shop_media where visible $$,
+  'the owner hides a media'
+);
+reset role;
+set local role anon;
+select is_empty(
+  $$ select 1 from public.shop_media $$,
+  'a hidden media leaves the public shop page'
+);
+reset role;
+
+-- ──────────────────────────────────────────────────── jetons de notification (migration 0016)
+
+-- 56) Un jeton ne se lit pas (il permet d'écrire à quelqu'un) ; il s'enregistre par fonction.
+select ok(
+  not has_table_privilege('authenticated', 'public.push_tokens', 'select')
+  and not has_table_privilege('authenticated', 'public.push_tokens', 'insert')
+  and not has_function_privilege('anon', 'public.register_push_token(text, text)', 'execute'),
+  'push tokens are neither readable nor writable directly'
+);
+
+-- 57) a1 enregistre son téléphone ; le même téléphone connecté ensuite à a3 suit a3.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select lives_ok(
+  $$ select public.register_push_token('ExponentPushToken[test-a1]', 'android') $$,
+  'a signed-in account registers its device token'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select lives_ok(
+  $$ select public.register_push_token('ExponentPushToken[test-a1]', 'android') $$,
+  'the same device signed in to another account re-registers'
+);
+reset role;
+select results_eq(
+  $$ select user_id::text from public.push_tokens where token = 'ExponentPushToken[test-a1]' $$,
+  $$ values ('00000000-0000-0000-0000-0000000000a3'::text) $$,
+  'notifications follow the account signed in on the device'
+);
 
 select * from finish();
 rollback;
