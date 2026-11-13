@@ -4,6 +4,15 @@ import {
   formatHour,
   minutesUntilTomorrowAt,
   tomorrowAt,
+  FIRST_SLOT,
+  LAST_SLOT,
+  SLOT_STEP,
+  defaultSlot,
+  formatSlot,
+  minutesUntilSlot,
+  slotDate,
+  slotsFor,
+  scheduledStartMs,
 } from '../lib/schedule';
 
 describe('minutesUntilTomorrowAt', () => {
@@ -75,5 +84,54 @@ describe('minutesUntilTomorrowAt', () => {
     expect(TOMORROW_HOURS).toContain(DEFAULT_TOMORROW_HOUR);
     expect(formatHour(9)).toBe('09:00');
     expect(formatHour(20)).toBe('20:00');
+  });
+});
+
+describe('programmation simplifiée : un jour, un créneau', () => {
+  const at = (h: number, m = 0) => new Date(2026, 10, 13, h, m, 0, 0); // 13 nov.
+
+  it('aujourd’hui : seulement les créneaux à venir, à dix minutes au moins', () => {
+    expect(slotsFor('aujourdhui', at(17, 10))[0]).toBe(17 * 60 + 30);
+    expect(slotsFor('aujourdhui', at(17, 25))[0]).toBe(18 * 60);
+    expect(slotsFor('aujourdhui', at(5, 0))[0]).toBe(FIRST_SLOT);
+    expect(slotsFor('aujourdhui', at(17, 10)).at(-1)).toBe(LAST_SLOT);
+  });
+
+  it('trop tard aujourd’hui : aucun créneau, et pas de créneau d’office', () => {
+    expect(slotsFor('aujourdhui', at(21, 55))).toEqual([]);
+    expect(defaultSlot('aujourdhui', at(21, 55))).toBeNull();
+  });
+
+  it('demain : de 07:00 à 22:00, 09:00 d’office', () => {
+    const slots = slotsFor('demain', at(23, 0));
+    expect(slots[0]).toBe(FIRST_SLOT);
+    expect(slots.at(-1)).toBe(LAST_SLOT);
+    expect(slots).toHaveLength((LAST_SLOT - FIRST_SLOT) / SLOT_STEP + 1);
+    expect(defaultSlot('demain', at(23, 0))).toBe(9 * 60);
+  });
+
+  it('compte les minutes jusqu’au créneau, jamais en négatif', () => {
+    expect(minutesUntilSlot('aujourdhui', 18 * 60, at(17, 10))).toBe(50);
+    expect(minutesUntilSlot('demain', 9 * 60 + 30, at(22, 0))).toBe(11 * 60 + 30);
+    expect(minutesUntilSlot('aujourdhui', 18 * 60, at(18, 2))).toBe(0);
+  });
+
+  it('le dernier jour du mois passe au mois suivant', () => {
+    const d = slotDate('demain', 600, new Date(2026, 10, 30, 20, 0));
+    expect([d.getMonth(), d.getDate(), d.getHours()]).toEqual([11, 1, 10]);
+  });
+
+  it('écrit les créneaux en HH:MM', () => {
+    expect(formatSlot(570)).toBe('09:30');
+    expect(formatSlot(22 * 60)).toBe('22:00');
+  });
+});
+
+describe('scheduledStartMs', () => {
+  it('cale le début programmé sur la minute pleine', () => {
+    // Formulaire ouvert à 06:56:40, créneau 07:30 → 33 min arrondies → 07:30:00 et non 07:29:40.
+    const now = new Date(2026, 10, 13, 6, 56, 40).getTime();
+    const start = new Date(scheduledStartMs(now, 33));
+    expect([start.getHours(), start.getMinutes(), start.getSeconds()]).toEqual([7, 30, 0]);
   });
 });

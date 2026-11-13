@@ -6,6 +6,7 @@ import { supabase } from '@/shared/lib/supabase';
 
 import { AUDIENCES, OFFER_MODES, type OfferDraft, type PublishedOffer } from '../model/schema';
 import { RECURRENCES } from './recurrence';
+import { scheduledStartMs } from './schedule';
 import { classifyShopError, type ShopApiError } from './shop-api';
 
 /**
@@ -160,7 +161,7 @@ export async function publishFlash(
         ...(photoUrl ? { photo_url: photoUrl } : {}),
         // Une heure SOUHAITÉE : le serveur ne la laisse pas reculer dans le passé.
         ...(draft.startInMinutes
-          ? { starts_at: new Date(nowMs + draft.startInMinutes * 60_000).toISOString() }
+          ? { starts_at: new Date(scheduledStartMs(nowMs, draft.startInMinutes)).toISOString() }
           : {}),
       })
       .select(COLUMNS)

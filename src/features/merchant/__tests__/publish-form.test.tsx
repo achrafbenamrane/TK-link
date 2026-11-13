@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@/shared/testing/render';
 
 import { pickFlashPhoto } from '../lib/photo';
-import { minutesUntilTomorrowAt } from '../lib/schedule';
+import { minutesUntilSlot } from '../lib/schedule';
 import { OfferDraftSchema, PublishedOfferSchema } from '../model/schema';
 import { PublishForm } from '../ui/publish-form';
 
@@ -172,9 +172,9 @@ describe('page « Nouveau Flash » — la maquette du client', () => {
   });
 });
 
-describe('mise en ligne — « Demain » à l’heure choisie (CDC V1.1 : jusqu’à la veille)', () => {
-  // 14 oct. 2026, 22:10 heure locale : « demain » est déjà tout proche.
-  const NOW = new Date(2026, 9, 14, 22, 10, 0, 0);
+describe('mise en ligne simplifiée — un jour, une heure (rapport d’avancement du 13/11/2026)', () => {
+  // 13 nov. 2026, 17:10 heure locale.
+  const NOW = new Date(2026, 10, 13, 17, 10, 0, 0);
 
   beforeEach(() => {
     jest.useFakeTimers({ doNotFake: ['setTimeout', 'clearTimeout', 'setImmediate'] });
@@ -191,84 +191,107 @@ describe('mise en ligne — « Demain » à l’heure choisie (CDC V1.1 : jusqu�
     fireEvent.changeText(screen.getByTestId('publish-stock'), '10');
   };
 
-  it('n’affiche le sélecteur d’heure que sous « Demain »', () => {
-    render(<PublishForm onPublish={jest.fn()} onCancel={jest.fn()} />);
-    expect(screen.queryByTestId('publish-tomorrow')).toBeNull();
+  it('par défaut : tout de suite, et la phrase le dit', () => {
+    const onPublish = jest.fn();
+    render(<PublishForm onPublish={onPublish} onCancel={jest.fn()} />);
+    expect(screen.queryByTestId('publish-slots')).toBeNull();
+    expect(screen.getByTestId('publish-schedule-summary')).toHaveTextContent(
+      'En ligne dès la publication, fin vers 18:10',
+    );
+    expect(screen.getByTestId('publish-submit')).toHaveTextContent(/^Publier le Flash/);
 
-    fireEvent.press(screen.getByTestId('publish-start-1440'));
-    expect(screen.getByTestId('publish-tomorrow')).toBeTruthy();
-    expect(screen.getByTestId('publish-tomorrow-label')).toHaveTextContent('Demain à 09:00');
-    expect(screen.getByTestId('publish-tomorrow-time-08')).toBeTruthy();
-    expect(screen.getByTestId('publish-tomorrow-time-20')).toBeTruthy();
-    expect(screen.getByTestId('publish-tomorrow-time-09').props.accessibilityState).toMatchObject({
-      selected: true,
-    });
-    expect(screen.getByTestId('publish-tomorrow-time-09').props.accessibilityRole).toBe('radio');
-
-    fireEvent.press(screen.getByTestId('publish-start-0'));
-    expect(screen.queryByTestId('publish-tomorrow')).toBeNull();
+    fillRequired();
+    fireEvent.press(screen.getByTestId('publish-submit'));
+    expect(onPublish.mock.calls[0]![0]).toMatchObject({ startInMinutes: 0 });
   });
 
-  it('publie demain à 10:00 : startInMinutes = minutes jusqu’à demain 10:00', () => {
+  it('aujourd’hui : le premier créneau libre est pris d’office, puis on en choisit un autre', () => {
     const onPublish = jest.fn();
     render(<PublishForm onPublish={onPublish} onCancel={jest.fn()} />);
     fillRequired();
-    fireEvent.press(screen.getByTestId('publish-start-1440'));
-    fireEvent.press(screen.getByTestId('publish-tomorrow-time-10'));
-    expect(screen.getByTestId('publish-tomorrow-label')).toHaveTextContent('Demain à 10:00');
-    expect(screen.getByTestId('publish-tomorrow-time-10').props.accessibilityState).toMatchObject({
+
+    fireEvent.press(screen.getByTestId('publish-when-aujourdhui'));
+    // 17:10 + 10 min de marge → 17:30.
+    expect(screen.getByTestId('publish-slot-1730').props.accessibilityState).toMatchObject({
       selected: true,
     });
-    expect(screen.getByTestId('publish-tomorrow-time-09').props.accessibilityState).toMatchObject({
-      selected: false,
-    });
+    expect(screen.queryByTestId('publish-slot-1700')).toBeNull();
+
+    fireEvent.press(screen.getByTestId('publish-slot-1800'));
+    expect(screen.getByTestId('publish-schedule-summary')).toHaveTextContent(
+      'En ligne aujourd’hui à 18:00, fin à 19:00',
+    );
+    expect(screen.getByTestId('publish-submit')).toHaveTextContent(
+      /^Programmer · aujourd’hui 18:00/,
+    );
 
     fireEvent.press(screen.getByTestId('publish-submit'));
-
-    expect(onPublish).toHaveBeenCalledTimes(1);
-    const expected = minutesUntilTomorrowAt(10, NOW);
-    expect(expected).toBe(11 * 60 + 50); // 22:10 → 10:00 le lendemain
-    expect(onPublish.mock.calls[0]![0]).toMatchObject({ startInMinutes: expected });
+    expect(onPublish.mock.calls[0]![0]).toMatchObject({ startInMinutes: 50 });
   });
 
-  it('la fin du Flash suit l’heure choisie : demain 10:00 + 1 h (durée par défaut)', () => {
+  it('demain : 09:00 d’office ; la fin suit l’heure et la durée', () => {
+    const onPublish = jest.fn();
+    render(<PublishForm onPublish={onPublish} onCancel={jest.fn()} />);
+    fillRequired();
+
+    fireEvent.press(screen.getByTestId('publish-when-demain'));
+    expect(screen.getByTestId('publish-slot-0900').props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+    expect(screen.getByTestId('publish-slot-0700')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('publish-slot-1030'));
+    expect(screen.getByTestId('publish-schedule-summary')).toHaveTextContent(
+      'En ligne demain à 10:30, fin demain à 11:30',
+    );
+
+    fireEvent.press(screen.getByTestId('publish-submit'));
+    expect(onPublish.mock.calls[0]![0]).toMatchObject({
+      startInMinutes: minutesUntilSlot('demain', 10 * 60 + 30, NOW),
+    });
+    expect(minutesUntilSlot('demain', 10 * 60 + 30, NOW)).toBe(17 * 60 + 20);
+  });
+
+  it('revenir à « Maintenant » efface le créneau', () => {
+    const onPublish = jest.fn();
+    render(<PublishForm onPublish={onPublish} onCancel={jest.fn()} />);
+    fillRequired();
+    fireEvent.press(screen.getByTestId('publish-when-demain'));
+    fireEvent.press(screen.getByTestId('publish-when-maintenant'));
+    expect(screen.queryByTestId('publish-slots')).toBeNull();
+    fireEvent.press(screen.getByTestId('publish-submit'));
+    expect(onPublish.mock.calls[0]![0]).toMatchObject({ startInMinutes: 0 });
+  });
+
+  it('trop tard pour aujourd’hui : l’option est désactivée', () => {
+    jest.setSystemTime(new Date(2026, 10, 13, 21, 55, 0, 0));
     render(<PublishForm onPublish={jest.fn()} onCancel={jest.fn()} />);
-    fireEvent.press(screen.getByTestId('publish-start-1440'));
-    fireEvent.press(screen.getByTestId('publish-tomorrow-time-10'));
-    expect(screen.getByTestId('publish-ends')).toHaveTextContent(/, 11:00$/);
-    expect(screen.getByTestId('publish-ends')).not.toHaveTextContent(/Aujourd/);
-
-    fireEvent.press(screen.getByTestId('publish-tomorrow-time-18'));
-    expect(screen.getByTestId('publish-ends')).toHaveTextContent(/, 19:00$/);
+    expect(screen.getByTestId('publish-when-aujourdhui').props.accessibilityState).toMatchObject({
+      disabled: true,
+    });
   });
 
-  it('les autres options ne changent pas : Maintenant, Dans 1 h, Dans 3 h', () => {
-    for (const [testID, minutes] of [
-      ['publish-start-0', 0],
-      ['publish-start-60', 60],
-      ['publish-start-180', 180],
-    ] as const) {
-      const onPublish = jest.fn();
-      const { unmount } = render(<PublishForm onPublish={onPublish} onCancel={jest.fn()} />);
-      fillRequired();
-      fireEvent.press(screen.getByTestId(testID));
-      expect(screen.queryByTestId('publish-tomorrow')).toBeNull();
-      fireEvent.press(screen.getByTestId('publish-submit'));
-      expect(onPublish.mock.calls[0]![0]).toMatchObject({ startInMinutes: minutes });
-      unmount();
-    }
-  });
-
-  it('l’offre B2B (grossiste) propose aussi « Demain » avec l’heure', () => {
+  it('l’offre B2B (grossiste) se programme de la même façon', () => {
     const onPublish = jest.fn();
     render(<PublishForm wholesale onPublish={onPublish} onCancel={jest.fn()} />);
     fillRequired();
-    fireEvent.press(screen.getByTestId('publish-start-1440'));
-    fireEvent.press(screen.getByTestId('publish-tomorrow-time-08'));
+    fireEvent.press(screen.getByTestId('publish-when-demain'));
+    fireEvent.press(screen.getByTestId('publish-slot-0800'));
     fireEvent.press(screen.getByTestId('publish-submit'));
     expect(onPublish.mock.calls[0]![0]).toMatchObject({
       audience: 'commercants',
-      startInMinutes: minutesUntilTomorrowAt(8, NOW),
+      startInMinutes: minutesUntilSlot('demain', 8 * 60, NOW),
     });
   });
+});
+
+it('la fin se compte depuis le créneau, sans les secondes d’ouverture du formulaire', () => {
+  jest.useFakeTimers({ doNotFake: ['setTimeout', 'clearTimeout', 'setImmediate'] });
+  jest.setSystemTime(new Date(2026, 10, 13, 6, 56, 40));
+  render(<PublishForm onPublish={jest.fn()} onCancel={jest.fn()} />);
+  fireEvent.press(screen.getByTestId('publish-when-aujourdhui'));
+  expect(screen.getByTestId('publish-schedule-summary')).toHaveTextContent(
+    'En ligne aujourd’hui à 07:30, fin à 08:30',
+  );
+  expect(screen.getByTestId('publish-ends')).toHaveTextContent(/08:30$/);
+  jest.useRealTimers();
 });

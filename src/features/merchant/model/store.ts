@@ -9,6 +9,7 @@ import { asyncStorageBackend, secureStorage } from '@/shared/lib/storage';
 import { canPublish } from '../lib/billing';
 import { dueOccurrence, recurrencePeriodMs } from '../lib/recurrence';
 import { startOf } from '../lib/offers';
+import { scheduledStartMs } from '../lib/schedule';
 import { fetchMyFlashes, publishFlash, withdrawFlash, type FlashApiError } from '../lib/flash-api';
 import { fetchMyShop, fileMyShop, type ShopApiError, type ShopFiling } from '../lib/shop-api';
 import {
@@ -251,7 +252,7 @@ export const useMerchantStore = create<MerchantState>()(
             // Le brouillon dit « dans 1 h », le store dit à quelle heure. Zéro
             // reste zéro : « tout de suite » n'a pas besoin d'être daté, et le
             // laisser à zéro garde le comportement des offres d'avant le §4.2.
-            startsAt: draft.startInMinutes ? nowMs + draft.startInMinutes * 60_000 : 0,
+            startsAt: draft.startInMinutes ? scheduledStartMs(nowMs, draft.startInMinutes) : 0,
             state: draft.state ?? 'publiee',
             offline: false,
             audience: draft.audience ?? 'clients',

@@ -12,11 +12,13 @@ import { commissionCents, formatCents, netCents, parseEurosToCents } from '../li
 import { pickFlashPhoto } from '../lib/photo';
 import { RECURRENCE_LABEL, RECURRENCES, type Recurrence } from '../lib/recurrence';
 import {
-  DEFAULT_TOMORROW_HOUR,
+  type ScheduleDay,
   currentTime,
-  TOMORROW_HOURS,
-  formatHour,
-  minutesUntilTomorrowAt,
+  defaultSlot,
+  formatSlot,
+  minutesUntilSlot,
+  slotDate,
+  slotsFor,
 } from '../lib/schedule';
 import {
   DURATIONS,
@@ -62,16 +64,16 @@ function Label({ children }: { children: string }) {
 /**
  * QUAND L'OFFRE PART — CDC §4.2, huitième étape : « publier ou programmer ».
  *
- * Des délais RELATIFS et non un calendrier. Un commerçant programme « ce soir »
- * ou « demain matin », il ne cherche pas une date dans un mois.
+ * Un jour (maintenant, aujourd’hui ou demain — un Flash se programme jusqu’à la veille), puis une
+ * heure d’horloge à la demi-heure. Les anciens délais « Dans 1 h / Dans 3 h » obligeaient à faire
+ * le calcul de tête : le commerçant pense « à 18 h », pas « dans 2 h 40 ».
  */
-const TOMORROW = 1440; // « Demain » : repère de l’option, l’heure exacte se choisit dessous.
-const STARTS = [
-  { minutes: 0, label: 'Maintenant' },
-  { minutes: 60, label: 'Dans 1 h' },
-  { minutes: 180, label: 'Dans 3 h' },
-  { minutes: TOMORROW, label: 'Demain' },
-] as const;
+type When = 'maintenant' | ScheduleDay;
+const WHEN: readonly { key: When; label: string }[] = [
+  { key: 'maintenant', label: 'Maintenant' },
+  { key: 'aujourdhui', label: 'Aujourd’hui' },
+  { key: 'demain', label: 'Demain' },
+];
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -120,9 +122,9 @@ export function PublishForm({
   const [recurrence, setRecurrence] = useState<Recurrence>('aucune');
   const [photoUri, setPhotoUri] = useState('');
   const [modes, setModes] = useState<OfferMode[]>([...OFFER_MODES]);
-  // Option choisie ; pour « Demain » (TOMORROW), l'heure se règle séparément.
-  const [startIn, setStartIn] = useState<number>(0);
-  const [tomorrowHour, setTomorrowHour] = useState(DEFAULT_TOMORROW_HOUR);
+  // Quand l'offre part : maintenant, ou un créneau (minutes depuis minuit) aujourd'hui ou demain.
+  const [when, setWhen] = useState<When>('maintenant');
+  const [slot, setSlot] = useState<number | null>(null);
   const [description, setDescription] = useState('');
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
@@ -141,16 +143,41 @@ export function PublishForm({
   const configured = created && qty > 0 && modes.length > 0;
   const step = configured ? 3 : created ? 2 : 1;
 
-  const isTomorrow = startIn === TOMORROW;
-  // Délai avant le début : « Demain » = jusqu'à l'heure choisie demain, pas 24 h pile.
-  const startDelay = isTomorrow
-    ? minutesUntilTomorrowAt(tomorrowHour, new Date(mountedAt))
-    : startIn;
-  const endsAt = new Date(mountedAt + (startDelay + duration) * 60_000);
+  const mountedDate = new Date(mountedAt);
+  const todaySlots = slotsFor('aujourdhui', mountedDate);
+  const daySlots = when === 'maintenant' ? [] : slotsFor(when, mountedDate);
+  const scheduled = when !== 'maintenant' && slot !== null;
+  const chooseWhen = (next: When) => {
+    setWhen(next);
+    setSlot(next === 'maintenant' ? null : defaultSlot(next, mountedDate));
+  };
+  // La fin se compte depuis le créneau lui-même (pile à l'heure), pas depuis l'ouverture du
+  // formulaire plus un délai arrondi : sinon les secondes d'ouverture décalent la fin (08:29 au lieu
+  // de 08:30). Sans créneau, depuis l'ouverture du formulaire (pas d'horloge au rendu).
+  const startsAt = scheduled ? slotDate(when, slot, mountedDate).getTime() : mountedAt;
+  const endsAt = new Date(startsAt + duration * 60_000);
+  const hhmm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const dayWord = when === 'demain' ? 'demain' : 'aujourd’hui';
+  const endsWord =
+    endsAt.getDate() === mountedDate.getDate()
+      ? ''
+      : endsAt.getDate() === slotDate('demain', 0, mountedDate).getDate()
+        ? 'demain '
+        : `le ${endsAt.toLocaleDateString('fr-FR')} `;
+  const scheduleSummary = scheduled
+    ? `En ligne ${dayWord} à ${formatSlot(slot)}, fin ${endsWord}à ${hhmm(endsAt)}`
+    : `En ligne dès la publication, fin ${endsWord}vers ${hhmm(endsAt)}`;
+  const submitLabel = scheduled
+    ? `Programmer · ${dayWord} ${formatSlot(slot)}`
+    : wholesale
+      ? 'Publier l’offre'
+      : 'Publier le Flash';
   const endsDay =
-    endsAt.getDate() === new Date(mountedAt).getDate()
-      ? "Aujourd'hui"
-      : endsAt.toLocaleDateString('fr-FR');
+    endsAt.getDate() === mountedDate.getDate()
+      ? 'Aujourd’hui'
+      : endsAt.getDate() === slotDate('demain', 0, mountedDate).getDate()
+        ? 'Demain'
+        : endsAt.toLocaleDateString('fr-FR');
   const preview =
     duration >= 1440
       ? durationLabel(duration)
@@ -173,7 +200,7 @@ export function PublishForm({
       // Une intention, pas une date : c'est le store qui horodate.
       // « Demain » se recalcule à l'instant de la publication (le store horodate à ce
       // moment-là) ; l'horloge est lue ici, dans un gestionnaire, jamais au rendu.
-      startInMinutes: isTomorrow ? minutesUntilTomorrowAt(tomorrowHour, currentTime()) : startIn,
+      startInMinutes: scheduled ? minutesUntilSlot(when, slot, currentTime()) : 0,
       state,
     });
 
@@ -756,100 +783,102 @@ export function PublishForm({
         </View>
       </View>
 
-      {/* Quand elle part — CDC §4.2. */}
-      <View className="gap-1.5">
+      {/* QUAND ELLE PART — CDC §4.2, simplifié (rapport d’avancement du 13/11/2026) : un jour, puis
+          une heure d’horloge, et une phrase qui dit exactement quand l’offre sera en ligne. */}
+      <View className="gap-2" testID="publish-schedule">
         <Label>Mise en ligne</Label>
         <View className="flex-row gap-2">
-          {STARTS.map((s) => (
-            <Pressable
-              key={s.minutes}
-              testID={`publish-start-${s.minutes}`}
-              accessibilityRole="button"
-              accessibilityState={{ selected: startIn === s.minutes }}
-              accessibilityLabel={`Mise en ligne : ${s.label}`}
-              onPress={() => setStartIn(s.minutes)}
-              className={cn(
-                'flex-1 items-center rounded-pill border py-1.5',
-                startIn === s.minutes
-                  ? 'border-brand-500 bg-brand-500'
-                  : 'border-line bg-surface-muted',
-              )}
-            >
-              <AppText
+          {WHEN.map((w) => {
+            const on = when === w.key;
+            const disabled = w.key === 'aujourdhui' && todaySlots.length === 0;
+            return (
+              <Pressable
+                key={w.key}
+                testID={`publish-when-${w.key}`}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: on, disabled }}
+                accessibilityLabel={`Mise en ligne : ${w.label}`}
+                disabled={disabled}
+                onPress={() => chooseWhen(w.key)}
                 className={cn(
-                  'font-sans-semibold',
-                  startIn === s.minutes ? 'text-white' : 'text-ink-muted',
+                  'flex-1 items-center rounded-pill border py-2',
+                  on ? 'border-brand-500 bg-brand-500' : 'border-line bg-surface-muted',
+                  disabled && 'opacity-40',
                 )}
-                style={{ fontSize: 11.5 }}
               >
-                {s.label}
-              </AppText>
-            </Pressable>
-          ))}
+                <AppText
+                  className={cn('font-sans-semibold', on ? 'text-white' : 'text-ink-muted')}
+                  style={{ fontSize: 12.5 }}
+                >
+                  {w.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
         </View>
 
-        {/* « Demain » : à quelle heure ? Des heures rondes, de 08:00 à 20:00. */}
-        {isTomorrow ? (
-          <View testID="publish-tomorrow" className="gap-1.5">
-            <AppText
-              testID="publish-tomorrow-label"
-              className="font-sans-semibold text-ink"
-              style={{ fontSize: 12.5 }}
-            >
-              Demain à {formatHour(tomorrowHour)}
-            </AppText>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerClassName="gap-1.5"
-            >
-              {TOMORROW_HOURS.map((h) => {
-                const on = tomorrowHour === h;
-                const hh = String(h).padStart(2, '0');
-                return (
-                  <Pressable
-                    key={h}
-                    testID={`publish-tomorrow-time-${hh}`}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: on }}
-                    accessibilityLabel={`Demain à ${formatHour(h)}`}
-                    onPress={() => setTomorrowHour(h)}
-                    className={cn(
-                      'items-center rounded-pill border px-3 py-1.5',
-                      on ? 'border-brand-500 bg-brand-500' : 'border-line bg-surface-muted',
-                    )}
+        {when !== 'maintenant' ? (
+          <ScrollView
+            testID="publish-slots"
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerClassName="gap-1.5"
+          >
+            {daySlots.map((m) => {
+              const on = slot === m;
+              const hhmm = formatSlot(m);
+              return (
+                <Pressable
+                  key={m}
+                  testID={`publish-slot-${hhmm.replace(':', '')}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}
+                  accessibilityLabel={`${when === 'demain' ? 'Demain' : 'Aujourd’hui'} à ${hhmm}`}
+                  onPress={() => setSlot(m)}
+                  className={cn(
+                    'items-center rounded-pill border px-3 py-1.5',
+                    on ? 'border-brand-500 bg-brand-500' : 'border-line bg-surface-muted',
+                  )}
+                >
+                  <AppText
+                    className={cn('font-sans-semibold', on ? 'text-white' : 'text-ink-muted')}
+                    style={{ fontSize: 12, fontVariant: ['tabular-nums'] }}
                   >
-                    <AppText
-                      className={cn('font-sans-semibold', on ? 'text-white' : 'text-ink-muted')}
-                      style={{ fontSize: 11.5, fontVariant: ['tabular-nums'] }}
-                    >
-                      {formatHour(h)}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
+                    {hhmm}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         ) : null}
+
+        <View className="flex-row items-center gap-2 rounded-control border border-line bg-surface-muted px-3 py-2">
+          <Feather
+            name={when === 'maintenant' ? 'zap' : 'clock'}
+            size={14}
+            color={colors.brand500}
+          />
+          <AppText
+            testID="publish-schedule-summary"
+            className="shrink text-ink"
+            style={{ fontSize: 12.5 }}
+          >
+            {scheduleSummary}
+          </AppText>
+        </View>
       </View>
 
       <View className="gap-2">
         <Pressable
           testID="publish-submit"
           accessibilityRole="button"
-          accessibilityLabel="Publier l’offre"
+          accessibilityLabel={submitLabel}
           onPress={() => submit('publiee')}
           className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-3.5 active:bg-brand-600"
         >
           <AppText className="font-sans-bold text-white" style={{ fontSize: 15 }}>
-            {wholesale
-              ? startIn === 0
-                ? 'Publier l’offre'
-                : 'Programmer l’offre'
-              : startIn === 0
-                ? 'Publier le Flash'
-                : 'Programmer le Flash'}
+            {submitLabel}
           </AppText>
           <Feather name="zap" size={16} color="#FFFFFF" />
         </Pressable>
