@@ -14,7 +14,7 @@ export const metadata = {
 };
 
 const CONTACT_EMAIL = 'vfounders5@gmail.com';
-const UPDATED = '26 octobre 2026';
+const UPDATED = '13 novembre 2026';
 
 export default function Confidentialite() {
   return (
@@ -28,9 +28,9 @@ export default function Confidentialite() {
         <p className="legal-date">Dernière mise à jour : {UPDATED}</p>
 
         <p>
-          TK LINK est une application de ventes flash entre commerçants de quartier, clients,
-          grossistes et livreurs. Cette page explique quelles données l’application utilise,
-          pourquoi, où elles sont conservées et comment exercer vos droits.
+          TK LINK est une application de ventes flash entre commerçants de quartier, clients et
+          grossistes. Cette page explique quelles données l’application utilise, pourquoi, où elles
+          sont conservées et comment exercer vos droits.
         </p>
 
         <h2>Responsable du traitement</h2>
@@ -43,8 +43,8 @@ export default function Confidentialite() {
         <ul>
           <li>
             <strong>Votre compte</strong> : prénom, nom, adresse e-mail, numéro de téléphone, type
-            de compte (client, commerçant, grossiste ou livreur) et mot de passe — ce dernier n’est
-            jamais stocké en clair.
+            de compte (client, commerçant ou grossiste) et mot de passe — ce dernier n’est jamais
+            stocké en clair.
           </li>
           <li>
             <strong>Connexion avec Google ou Apple</strong> : si vous choisissez ce mode, nous
@@ -66,8 +66,12 @@ export default function Confidentialite() {
           </li>
           <li>
             <strong>Appareil photo et photos</strong>, seulement si vous l’autorisez : pour
-            illustrer une vente flash (commerçants) ou scanner le QR code d’une remise de colis
-            (livreurs).
+            illustrer une vente flash, ou scanner le QR code d’un client qui retire sa commande
+            (commerçants).
+          </li>
+          <li>
+            <strong>Vos commandes</strong> : les articles, le montant, le mode de remise et, pour
+            une livraison, l’adresse et le numéro de téléphone à transmettre au coursier.
           </li>
           <li>
             <strong>Empreinte ou visage</strong> : le déverrouillage biométrique est vérifié par
@@ -96,6 +100,16 @@ export default function Confidentialite() {
           <li>
             <strong>Mapbox</strong> affiche la carte et calcule les trajets à partir de votre
             position.
+          </li>
+          <li>
+            <strong>Stripe</strong> traite les paiements. Vos données de carte sont saisies chez
+            Stripe et ne passent jamais par TK LINK. Les commerçants transmettent à Stripe les
+            informations exigées pour être payés (identité, compte bancaire).
+          </li>
+          <li>
+            <strong>Uber Direct</strong> assure les livraisons : il reçoit, pour chaque commande
+            livrée, l’adresse de retrait, l’adresse et le prénom du destinataire, son numéro de
+            téléphone et la liste des articles.
           </li>
           <li>Un service d’envoi d’e-mails, pour les codes de vérification et de mot de passe.</li>
         </ul>

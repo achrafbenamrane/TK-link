@@ -8,6 +8,7 @@ import { DEFAULT_SETTINGS, readSettings } from '../pro/platform';
 import { formatDate } from '../pro/data';
 import './admin.css';
 import SettingsPanel from './settings-panel';
+import { STATUS_LABEL } from './support';
 import {
   APPLICATIONS,
   DISPUTES,
@@ -20,8 +21,6 @@ import {
   TOTALS,
   formatEuros,
   THREADS,
-  IDENTITY_METHOD,
-  VEHICLE_LABEL,
 } from './data';
 
 /**
@@ -64,10 +63,7 @@ const ROLE_GROUPS = [
   { role: 'grossiste', title: 'Grossistes', who: 'Fournisseur', metric: 'Lots publiés' },
   { role: 'commercant', title: 'Commerçants', who: 'Enseigne', metric: 'Offres publiées' },
   { role: 'consommateur', title: 'Utilisateurs', who: 'Utilisateur', metric: 'Commandes' },
-  // CDC §11.1 — les livreurs manquaient à l'annuaire, alors que le §7 en fait
-  // un profil à part entière. Un rôle absent du back-office est un rôle que
-  // personne ne peut suspendre.
-  { role: 'livreur', title: 'Livreurs', who: 'Livreur', metric: 'Courses' },
+  // Plus de livreurs TK LINK depuis le 13/11/2026 : les livraisons passent par Uber Direct.
 ];
 
 const ROLE_FILTERS = [
@@ -75,7 +71,6 @@ const ROLE_FILTERS = [
   { key: 'consommateur', label: 'Consommateurs' },
   { key: 'commercant', label: 'Commerçants' },
   { key: 'grossiste', label: 'Grossistes' },
-  { key: 'livreur', label: 'Livreurs' },
 ];
 
 export default function AdminPage() {
@@ -708,7 +703,7 @@ export default function AdminPage() {
                           <thead>
                             <tr>
                               <th>{group.who}</th>
-                              <th>{group.role === 'livreur' ? 'Identité' : 'SIRET'}</th>
+                              <th>SIRET</th>
                               <th>Depuis</th>
                               <th className="num">{group.metric}</th>
                               <th />
@@ -726,24 +721,6 @@ export default function AdminPage() {
                                   <td>
                                     {m.role === 'consommateur' ? (
                                       <span className="tkadmin-sub">—</span>
-                                    ) : m.role === 'livreur' ? (
-                                      // Un livreur n'a pas de SIRET : ce qui
-                                      // l'autorise à porter un colis, c'est sa
-                                      // identité, vérifiée par FranceConnect (§7, étapes 3 et 4).
-                                      <>
-                                        {m.identite === 'vérifiée' ? (
-                                          <span className="tkadmin-sub">
-                                            Identité vérifiée · {IDENTITY_METHOD}
-                                          </span>
-                                        ) : (
-                                          <span className="tkadmin-missing">
-                                            Identité à vérifier ({IDENTITY_METHOD})
-                                          </span>
-                                        )}
-                                        <div className="tkadmin-sub">
-                                          {VEHICLE_LABEL[m.vehicule] ?? '—'} · {m.zone}
-                                        </div>
-                                      </>
                                     ) : m.siret ? (
                                       <span className="tkadmin-mono">{m.siret}</span>
                                     ) : (
@@ -754,9 +731,7 @@ export default function AdminPage() {
                                   <td className="num">
                                     {m.role === 'consommateur'
                                       ? `${m.orders} commande${m.orders > 1 ? 's' : ''}`
-                                      : m.role === 'livreur'
-                                        ? `${m.deliveries} course${m.deliveries > 1 ? 's' : ''}`
-                                        : `${m.offers} offre${m.offers > 1 ? 's' : ''}`}
+                                      : `${m.offers} offre${m.offers > 1 ? 's' : ''}`}
                                   </td>
                                   <td className="num">
                                     <button
@@ -775,20 +750,6 @@ export default function AdminPage() {
                       </div>
                     </div>
                   )}
-
-                  {/* §7.2 — l'empreinte du livreur ne quitte JAMAIS son
-                      téléphone. Le dire ici n'est pas de la pédagogie : c'est
-                      le back-office qu'un contrôle regarde, et un administrateur
-                      qui croirait pouvoir « consulter l'empreinte » d'un livreur
-                      chercherait une donnée que TK LINK ne doit pas détenir. */}
-                  {group.role === 'livreur' && rows.length > 0 ? (
-                    <p className="tkpro-note">
-                      L’authentification biométrique des livreurs est <b>locale</b> : l’empreinte
-                      reste dans le matériel sécurisé du téléphone et n’est jamais transmise ni
-                      conservée par TK LINK (CDC §7.2). Rien n’est donc consultable ici — il n’y a
-                      rien à consulter.
-                    </p>
-                  ) : null}
                 </section>
               );
             })}
@@ -1068,14 +1029,79 @@ function SupportInbox({ onSend }) {
   const [threads, setThreads] = useState(THREADS);
   const [openId, setOpenId] = useState(THREADS[0]?.id ?? null);
   const [reply, setReply] = useState('');
+  // null : lecture en cours ; true : les vraies demandes (Supabase, migration 0014) ; false :
+  // démonstration (le serveur du back-office n'a pas sa clé de service).
+  const [live, setLive] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const ordered = [...threads].sort((a, b) => Number(b.unread) - Number(a.unread));
+  const load = async (keepOpen) => {
+    try {
+      const res = await fetch('/admin/api/support', { cache: 'no-store' });
+      if (res.status === 503) {
+        setLive(false);
+        return;
+      }
+      if (!res.ok) throw new Error(String(res.status));
+      const { threads: next } = await res.json();
+      setThreads(next);
+      setOpenId((current) =>
+        keepOpen && next.some((t) => t.id === current) ? current : (next[0]?.id ?? null),
+      );
+      setLive(true);
+      setFailed(false);
+    } catch {
+      setFailed(true);
+    }
+  };
+
+  useEffect(() => {
+    // Synchronisation avec un système externe (le serveur du back-office) : le cas d'usage même
+    // d'un effet ; l'état n'est posé qu'à la réponse.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- lecture initiale des demandes
+    void load(false);
+  }, []);
+
+  // Les vraies demandes arrivent déjà triées (sans réponse d'abord, la plus ancienne en tête).
+  const ordered = live ? threads : [...threads].sort((a, b) => Number(b.unread) - Number(a.unread));
   const open = threads.find((t) => t.id === openId) ?? null;
 
-  const send = (event) => {
+  const patchStatus = async (status) => {
+    if (!open || !live) return;
+    setBusy(true);
+    const res = await fetch('/admin/api/support', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticketId: open.id, status }),
+    }).catch(() => null);
+    setBusy(false);
+    if (res?.ok) {
+      onSend(`Demande « ${open.subject} » : ${STATUS_LABEL[status].toLowerCase()}.`);
+      await load(true);
+    } else onSend('Le statut n’a pas pu être changé. Réessayez.');
+  };
+
+  const send = async (event) => {
     event.preventDefault();
     const text = reply.trim();
     if (!text || !open) return;
+    if (live) {
+      setBusy(true);
+      const res = await fetch('/admin/api/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticketId: open.id, body: text }),
+      }).catch(() => null);
+      setBusy(false);
+      if (!res?.ok) {
+        onSend('La réponse n’est pas partie. Réessayez.');
+        return;
+      }
+      setReply('');
+      onSend(`Réponse envoyée à ${open.party}.`);
+      await load(true);
+      return;
+    }
     setThreads((list) =>
       list.map((t) =>
         t.id === open.id
@@ -1101,7 +1127,11 @@ function SupportInbox({ onSend }) {
       <div className="tkpro-head">
         <div>
           <h1>Messages</h1>
-          <p>Les demandes des commerçants et des grossistes, et vos réponses.</p>
+          <p>
+            Les demandes des clients, des commerçants et des grossistes, et vos réponses.
+            {live === false ? ' (Démonstration : le serveur n’est pas relié à Supabase.)' : null}
+            {failed ? ' Lecture impossible pour le moment.' : null}
+          </p>
         </div>
         <span
           className={
@@ -1126,7 +1156,7 @@ function SupportInbox({ onSend }) {
                   {t.unread ? <i className="dot" aria-label="Sans réponse" /> : null}
                 </span>
                 <span className="meta">
-                  {ROLE_LABEL[t.role]} · {t.subject}
+                  {ROLE_LABEL[t.role] ?? t.role} · {t.subject}
                 </span>
               </button>
             </li>
@@ -1139,7 +1169,8 @@ function SupportInbox({ onSend }) {
               <div className="tkpro-card-head">
                 <h2>{open.party}</h2>
                 <span className="tkpro-note-inline">
-                  {ROLE_LABEL[open.role]} · {open.subject}
+                  {ROLE_LABEL[open.role] ?? open.role} · {open.subject}
+                  {live ? ` · ${STATUS_LABEL[open.status]}` : null}
                 </span>
               </div>
 
@@ -1166,12 +1197,50 @@ function SupportInbox({ onSend }) {
                   />
                 </label>
                 <div className="tkpro-profile-foot">
-                  <button type="submit" className="tkpro-btn primary" disabled={!reply.trim()}>
+                  <button
+                    type="submit"
+                    className="tkpro-btn primary"
+                    disabled={!reply.trim() || busy}
+                  >
                     Répondre
                   </button>
-                  <span className="tkpro-note-inline">
-                    Démonstration : la réponse reste sur cette page.
-                  </span>
+                  {live ? (
+                    <>
+                      {open.status !== 'resolu' ? (
+                        <button
+                          type="button"
+                          className="tkpro-btn"
+                          disabled={busy}
+                          onClick={() => void patchStatus('resolu')}
+                        >
+                          Marquer résolu
+                        </button>
+                      ) : null}
+                      {open.status !== 'ferme' ? (
+                        <button
+                          type="button"
+                          className="tkpro-btn"
+                          disabled={busy}
+                          onClick={() => void patchStatus('ferme')}
+                        >
+                          Fermer
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="tkpro-btn"
+                          disabled={busy}
+                          onClick={() => void patchStatus('ouvert')}
+                        >
+                          Rouvrir
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <span className="tkpro-note-inline">
+                      Démonstration : la réponse reste sur cette page.
+                    </span>
+                  )}
                 </div>
               </form>
             </>

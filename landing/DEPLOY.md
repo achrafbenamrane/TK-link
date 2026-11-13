@@ -21,6 +21,22 @@ ces deux chemins — n'importe quel identifiant, ce mot de passe. **Variable
 absente = aucune protection**, ce qui est voulu en développement local mais
 jamais en ligne.
 
+### 1 bis. Le support en vrai (messages et tickets de l’app)
+
+La boîte « Messages » de `/admin` lit les vraies demandes envoyées depuis l’app (migration
+`0014_support`) dès que ces deux variables existent — sinon elle reste en démonstration :
+
+| Nom                         | Valeur                                                | Environnements |
+| --------------------------- | ----------------------------------------------------- | -------------- |
+| `SUPABASE_URL`              | `https://<ref>.supabase.co`                           | Production     |
+| `SUPABASE_SERVICE_ROLE_KEY` | clé « service_role » (Supabase → Settings → API Keys) | Production     |
+
+⚠️ La clé de service contourne toute la sécurité de la base : jamais préfixée `NEXT_PUBLIC_`,
+jamais dans le code, et **pas avant d’avoir remplacé `TKLINK_PRO_PASSWORD` par un mot de passe
+long et unique** (20 caractères aléatoires) : c’est alors lui seul qui protège les demandes de
+tous les utilisateurs. À terme, une vraie connexion Supabase avec un rôle « admin » remplacera ce
+mot de passe partagé.
+
 ## 2. Déployer — et NE PAS écraser un autre projet
 
 > ⚠️ **Le piège, rencontré le 11/08/2026.** Ce dossier s'appelle `landing`.
