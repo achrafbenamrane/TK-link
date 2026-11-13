@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 
 import { selectOffers, useMerchantStore, WholesalerOrdersScreen } from '@/features/merchant';
 import { selectRole, useOnboardingStore } from '@/features/onboarding';
+import { isSupabaseConfigured } from '@/shared/lib/env';
 import { LOCAL_MERCHANT_DEAL_IDS, MerchantOrdersScreen, OrdersScreen } from '@/features/shop';
 
 /**
@@ -29,6 +30,8 @@ export default function CommandesRoute() {
   return role === 'commercant' ? (
     <MerchantOrdersScreen
       dealIds={dealIds}
+      // Avec un serveur : les commandes payées du commerce connecté (sinon, la démonstration locale).
+      server={isSupabaseConfigured}
       onHandover={(orderId) => router.push({ pathname: '/remise/[id]', params: { id: orderId } })}
     />
   ) : (

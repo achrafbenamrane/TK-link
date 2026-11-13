@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 
 import { selectOffers, useMerchantStore } from '@/features/merchant';
 import { MerchantOrdersScreen } from '@/features/shop';
+import { isSupabaseConfigured } from '@/shared/lib/env';
 
 /**
  * LES COMMANDES REÇUES — CDC §11 et §18.
@@ -19,5 +20,11 @@ export default function CommandesRecuesRoute() {
 
   const dealIds = useMemo(() => published.map((o) => `pub_${o.id}`), [published]);
 
-  return <MerchantOrdersScreen dealIds={dealIds} onBack={() => router.back()} />;
+  return (
+    <MerchantOrdersScreen
+      dealIds={dealIds}
+      server={isSupabaseConfigured}
+      onBack={() => router.back()}
+    />
+  );
 }

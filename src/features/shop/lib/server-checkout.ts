@@ -64,6 +64,7 @@ export const CHECKOUT_ERROR: Record<OrdersError, string> = {
   delivery_unavailable: 'La livraison n’est pas possible à cette adresse. Essayez le retrait.',
   phone_required: 'Ajoutez votre numéro (Profil → Mon compte) : le coursier en a besoin.',
   shop_cannot_be_paid: 'Ce commerce n’accepte pas encore le paiement en ligne.',
+  shop_phone_missing: 'Ce commerce ne peut pas encore livrer. Essayez le retrait.',
   service_unavailable: 'Le paiement en ligne n’est pas encore activé. Réessayez bientôt.',
   reservation_expired: 'La réservation a expiré. Repassez commande.',
   not_your_order: 'Commande introuvable.',

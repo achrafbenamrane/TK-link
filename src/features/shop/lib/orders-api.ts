@@ -35,6 +35,8 @@ export type OrdersError =
   | 'delivery_unavailable'
   /** Livraison : le numéro du client manque pour le coursier. */
   | 'phone_required'
+  /** Livraison : le commerce n’a pas de numéro de téléphone, Uber Direct l’exige. */
+  | 'shop_phone_missing'
   /** Le commerce n’a pas encore activé l’encaissement en ligne (Stripe). */
   | 'shop_cannot_be_paid'
   /** Le paiement ou la livraison ne sont pas encore activés sur le serveur. */
@@ -58,6 +60,7 @@ const KNOWN: readonly OrdersError[] = [
   'delivery_unavailable',
   'phone_required',
   'shop_cannot_be_paid',
+  'shop_phone_missing',
   'reservation_expired',
   'not_your_order',
   'invalid_transition',
@@ -69,7 +72,6 @@ export function classifyOrdersError(error: unknown): OrdersError {
   if (typeof error === 'string') {
     if ((KNOWN as readonly string[]).includes(error)) return error as OrdersError;
     if (/not_configured$/.test(error) || error === 'uber_unreachable') return 'service_unavailable';
-    if (error === 'shop_phone_missing') return 'service_unavailable';
     if (error === 'unauthorized') return 'not_signed_in';
     if (error === 'offline') return 'network';
     if (error === 'order_not_found') return 'not_your_order';

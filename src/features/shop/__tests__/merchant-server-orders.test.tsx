@@ -1,0 +1,121 @@
+import { act, fireEvent, render, screen, waitFor } from '@/shared/testing/render';
+
+import { callEdge } from '@/shared/lib/edge';
+import { supabase } from '@/shared/lib/supabase';
+
+import { toServerOrder } from '../lib/orders-api';
+import { useServerOrdersStore } from '../model/server-orders';
+import { MerchantOrdersScreen } from '../ui/merchant-orders-screen';
+
+/**
+ * Les commandes reçues du serveur, au comptoir (rapport d’avancement du 13/11/2026) : préparer,
+ * remettre au client contre son code, appeler un coursier Uber Direct. Le serveur est simulé.
+ */
+jest.mock('@/shared/lib/edge', () => ({ callEdge: jest.fn() }));
+jest.mock('@/shared/lib/supabase', () => ({
+  supabase: { auth: { getSession: jest.fn() }, from: jest.fn(), rpc: jest.fn() },
+}));
+
+const rpc = supabase.rpc as unknown as jest.Mock;
+const edge = callEdge as jest.Mock;
+
+const ID = '44444444-4444-4444-8444-444444444444';
+const order = (o: Record<string, unknown>) =>
+  toServerOrder(
+    {
+      id: ID,
+      shop_id: 'shop-1',
+      fulfilment: 'touch-collect',
+      status: 'payee',
+      subtotal_cents: 400,
+      discount_cents: 0,
+      delivery_fee_cents: 0,
+      total_cents: 400,
+      delivery_address: null,
+      delivery_lat: null,
+      delivery_lng: null,
+      reserved_until: '2026-11-13T18:15:00Z',
+      uber_tracking_url: null,
+      created_at: '2026-11-13T18:00:00Z',
+      flash_order_items: [{ offer_id: 'o-1', title: 'Brioche', qty: 2, unit_price_cents: 200 }],
+      ...o,
+    } as never,
+    () => '🥐',
+  );
+
+/** Le magasin tient les commandes ; la relecture est neutralisée (rien à relire en test). */
+function seed(orders: ReturnType<typeof order>[]) {
+  useServerOrdersStore.setState({
+    shop: orders,
+    refreshShop: jest.fn(async () => undefined),
+  });
+}
+
+beforeEach(() => {
+  rpc.mockReset();
+  edge.mockReset();
+});
+
+it('payée : « En préparation » passe par le serveur', async () => {
+  seed([order({})]);
+  rpc.mockResolvedValue({ data: null, error: null });
+  render(<MerchantOrdersScreen server />);
+
+  fireEvent.press(screen.getByTestId(`merchant-order-${ID}-preparation`));
+  await waitFor(() =>
+    expect(rpc).toHaveBeenCalledWith('advance_order', { p_order: ID, p_status: 'preparation' }),
+  );
+});
+
+it('livraison en préparation : « appeler un coursier » commande la course Uber Direct', async () => {
+  seed([order({ fulfilment: 'livraison', status: 'preparation', delivery_address: 'x' })]);
+  edge.mockResolvedValue({ ok: true, data: { trackingUrl: 'https://www.ubr.to/x' } });
+  render(<MerchantOrdersScreen server />);
+
+  expect(screen.getByTestId(`merchant-order-${ID}-dispatch`)).toHaveTextContent(
+    /appeler un coursier/,
+  );
+  fireEvent.press(screen.getByTestId(`merchant-order-${ID}-dispatch`));
+  await waitFor(() => expect(edge).toHaveBeenCalledWith('uber-dispatch', { orderId: ID }));
+});
+
+it('remise en boutique : le code du client est vérifié par le serveur', async () => {
+  seed([order({ status: 'prete' })]);
+  rpc.mockResolvedValueOnce({ data: null, error: { code: 'P0001', message: 'pickup_refused' } });
+  render(<MerchantOrdersScreen server />);
+
+  fireEvent.press(screen.getByTestId(`merchant-order-${ID}-pickup`));
+  const input = screen.getByTestId(`merchant-order-${ID}-code`);
+  fireEvent.changeText(input, '12a34');
+  // Que des chiffres, six au plus ; le bouton attend les six.
+  expect(
+    screen.getByTestId(`merchant-order-${ID}-code-submit`).props.accessibilityState,
+  ).toMatchObject({ disabled: true });
+  fireEvent.changeText(input, '123456');
+  await act(async () => {
+    fireEvent.press(screen.getByTestId(`merchant-order-${ID}-code-submit`));
+  });
+  expect(rpc).toHaveBeenCalledWith('confirm_pickup', { p_order: ID, p_code: '123456' });
+  expect(await screen.findByTestId(`merchant-order-${ID}-error`)).toHaveTextContent(
+    /Code de retrait incorrect/,
+  );
+});
+
+it('livraison prête : le coursier est en route, rien à faire au comptoir', () => {
+  seed([order({ fulfilment: 'livraison', status: 'prete', delivery_address: 'x' })]);
+  render(<MerchantOrdersScreen server />);
+  expect(screen.getByTestId(`merchant-order-${ID}-server`)).toHaveTextContent(
+    /Coursier Uber Direct en route/,
+  );
+  expect(screen.queryByTestId(`merchant-order-${ID}-dispatch`)).toBeNull();
+});
+
+it('le numéro du commerce manque : le commerçant sait quoi corriger', async () => {
+  seed([order({ fulfilment: 'livraison', status: 'preparation', delivery_address: 'x' })]);
+  edge.mockResolvedValue({ ok: false, code: 'shop_phone_missing', status: 422 });
+  render(<MerchantOrdersScreen server />);
+  fireEvent.press(screen.getByTestId(`merchant-order-${ID}-dispatch`));
+  expect(await screen.findByTestId(`merchant-order-${ID}-error`)).toHaveTextContent(
+    /numéro de votre commerce/,
+  );
+});
