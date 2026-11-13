@@ -208,10 +208,12 @@ try {
 // Les commandes (0012). Sans compte, la fonction de réservation est refusée (401/403) si elle existe ;
 // absente, PostgREST répond 404. Rien n'est réservé.
 try {
+  // Les VRAIS noms de paramètres : sans eux, PostgREST ne trouve aucune fonction à appeler et répond
+  // 404 même quand elle existe (signature introuvable). Avec eux et sans compte : refus (401).
   const res = await fetch(`${url}/rest/v1/rpc/reserve_flash`, {
     method: 'POST',
     headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: '{}',
+    body: JSON.stringify({ p_items: [], p_fulfilment: 'touch-collect' }),
   });
   if (res.status === 404) {
     fail(
@@ -247,6 +249,8 @@ const probes = [
   {
     migration: '0016_push_tokens',
     rpc: 'register_push_token',
+    // Avec ses paramètres : sans eux, PostgREST répond 404 même si la fonction existe.
+    body: { p_token: 'ExponentPushToken[sonde]', p_platform: 'android' },
     what: 'les téléphones ne s’enregistrent pas pour les notifications',
   },
   {
@@ -265,7 +269,7 @@ for (const probe of probes) {
     const res = await fetch(`${url}/rest/v1/${path}`, {
       method: probe.rpc ? 'POST' : 'GET',
       headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      ...(probe.rpc ? { body: '{}' } : {}),
+      ...(probe.rpc ? { body: JSON.stringify(probe.body ?? {}) } : {}),
     });
     const missing = probe.missing ? probe.missing(res.status) : res.status === 404;
     if (missing) fail(`La migration ${probe.migration} n’est pas appliquée : ${probe.what}.`);
