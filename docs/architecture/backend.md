@@ -278,7 +278,14 @@ npx supabase functions deploy stripe-connect
 npx supabase functions deploy stripe-payment
 npx supabase functions deploy stripe-webhook
 npx supabase functions deploy stripe-balance
+npx supabase functions deploy order-cancel
 ```
+
+**Annuler avec une page de paiement ouverte (0020).** `cancel_order` refuse (`checkout_open`) dès
+qu’une page Checkout a été ouverte : sinon le stock revenait, puis le paiement arrivait quand même.
+L’app appelle alors `order-cancel`, qui fait d’abord expirer la page chez Stripe (plus personne ne
+peut y payer ; si le paiement vient d’aboutir, Stripe refuse et la commande reste payée), puis annule
+par `cancel_order_after_checkout` (réservée au serveur).
 
 Dans Stripe → Développeurs → Webhooks : un point de terminaison **Connect** vers
 `https://<ref>.supabase.co/functions/v1/stripe-webhook`, événements `payment_intent.succeeded`,

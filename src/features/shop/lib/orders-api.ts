@@ -46,9 +46,15 @@ export type OrdersError =
   | 'invalid_transition'
   | 'pickup_refused'
   /** Le coursier a déjà pris le colis : la course ne s’annule plus depuis l’app. */
-  | 'not_cancellable'
+  | 'courier_not_cancellable'
   /** Uber a refusé l’annulation (le coursier vient de prendre le colis…). */
   | 'cancel_refused'
+  /** La page de paiement Stripe est ouverte : l’annulation passe par le serveur (0020). */
+  | 'checkout_open'
+  /** Le paiement vient d’aboutir : la commande est payée, elle ne s’annule plus. */
+  | 'already_paid'
+  /** La réservation ne s’annule plus (déjà annulée, payée, ou expirée). */
+  | 'not_cancellable'
   | 'network'
   | 'unknown';
 
@@ -69,8 +75,11 @@ const KNOWN: readonly OrdersError[] = [
   'not_your_order',
   'invalid_transition',
   'pickup_refused',
+  'courier_not_cancellable',
   'not_cancellable',
   'cancel_refused',
+  'checkout_open',
+  'already_paid',
 ];
 
 /** Une erreur PostgREST (motif levé par la fonction SQL) ou un code de fonction Edge. */
@@ -281,7 +290,13 @@ export async function reserveOrder(input: ReserveInput): Promise<Result<string>>
 export async function cancelOrder(orderId: string): Promise<Result<null>> {
   try {
     const { error } = await supabase.rpc('cancel_order', { p_order: orderId });
-    return error ? { ok: false, code: classifyOrdersError(error) } : { ok: true, value: null };
+    if (!error) return { ok: true, value: null };
+    const code = classifyOrdersError(error);
+    // Une page de paiement est ouverte (0020) : le serveur la fait d’abord expirer chez Stripe, puis
+    // annule — sinon on pourrait encore y payer une réservation annulée.
+    if (code !== 'checkout_open') return { ok: false, code };
+    const res = await callEdge<unknown>('order-cancel', { orderId });
+    return res.ok ? { ok: true, value: null } : { ok: false, code: classifyOrdersError(res.code) };
   } catch (error) {
     return { ok: false, code: classifyOrdersError(error) };
   }

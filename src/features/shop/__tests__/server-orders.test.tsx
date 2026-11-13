@@ -5,7 +5,7 @@ import { fireEvent, render, screen, waitFor } from '@/shared/testing/render';
 import { callEdge } from '@/shared/lib/edge';
 import { supabase } from '@/shared/lib/supabase';
 
-import { classifyOrdersError, toServerOrder } from '../lib/orders-api';
+import { cancelOrder, classifyOrdersError, toServerOrder } from '../lib/orders-api';
 import { prepareServerCheckout } from '../lib/server-checkout';
 import { useServerOrdersStore } from '../model/server-orders';
 import { pickupPayload } from '../lib/pickup';
@@ -143,6 +143,34 @@ describe('passage en caisse', () => {
     rpc.mockResolvedValueOnce({ data: null, error: { code: 'P0001', message: 'out_of_stock' } });
     expect(await prepareServerCheckout(input)).toEqual({ ok: false, code: 'out_of_stock' });
     expect(edge).not.toHaveBeenCalled();
+  });
+});
+
+describe('annuler une réservation (migration 0020)', () => {
+  it('sans page de paiement ouverte : le serveur annule directement', async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: null });
+    expect(await cancelOrder(ORDER_ID)).toEqual({ ok: true, value: null });
+    expect(edge).not.toHaveBeenCalled();
+  });
+
+  it('page de paiement ouverte : le serveur la fait expirer chez Stripe, puis annule', async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { code: 'P0001', message: 'checkout_open' } });
+    edge.mockResolvedValueOnce({ ok: true, data: { cancelled: true } });
+    expect(await cancelOrder(ORDER_ID)).toEqual({ ok: true, value: null });
+    expect(edge).toHaveBeenCalledWith('order-cancel', { orderId: ORDER_ID });
+  });
+
+  it('le paiement vient d’aboutir : la commande reste payée, et on le dit', async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { code: 'P0001', message: 'checkout_open' } });
+    edge.mockResolvedValueOnce({ ok: false, code: 'already_paid', status: 409 });
+    expect(await cancelOrder(ORDER_ID)).toEqual({ ok: false, code: 'already_paid' });
+  });
+
+  it('un code de la course Uber ne se confond pas avec celui d’une réservation', () => {
+    expect(classifyOrdersError({ message: 'courier_not_cancellable' })).toBe(
+      'courier_not_cancellable',
+    );
+    expect(classifyOrdersError({ message: 'not_cancellable' })).toBe('not_cancellable');
   });
 });
 

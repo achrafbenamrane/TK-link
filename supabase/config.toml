@@ -43,6 +43,9 @@ verify_jwt = false
 [functions.stripe-balance]
 verify_jwt = false
 
+[functions.order-cancel]
+verify_jwt = false
+
 [functions.stripe-payment]
 verify_jwt = false
 

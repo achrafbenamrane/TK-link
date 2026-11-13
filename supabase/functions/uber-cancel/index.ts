@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     .eq('id', order.shop_id)
     .maybeSingle();
   if (!shop || shop.owner_id !== user.id) return reply(404, { error: 'order_not_found' });
-  if (!isCourierCancellable(order)) return reply(409, { error: 'not_cancellable' });
+  if (!isCourierCancellable(order)) return reply(409, { error: 'courier_not_cancellable' });
 
   const deliveryId = order.uber_delivery_id as string;
   const cancelled = await uberRequest(

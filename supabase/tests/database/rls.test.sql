@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(132);
+select plan(138);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -1161,6 +1161,63 @@ set local request.jwt.claims to '{}';
 select lives_ok(
   $$ delete from auth.users where id = '00000000-0000-0000-0000-0000000000a3' $$,
   'a referee who used credit can still delete their account'
+);
+
+-- ─────────────────────────────────────── annuler avec une page de paiement ouverte (migration 0020)
+
+-- 75) a1 réserve ; sa page Stripe s'ouvre : il ne peut plus annuler directement.
+set local request.jwt.claims to '{}';
+select set_config('tklink.stock',
+  (select stock_left::text from public.flash_offers where title = 'Pain de campagne'), true);
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select lives_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object(
+         'offer_id', (select id from public.flash_offers where title = 'Pain de campagne'), 'qty', 1)),
+       'touch-collect') $$,
+  'a customer reserves, then opens the payment page'
+);
+reset role;
+set local request.jwt.claims to '{}';
+update public.flash_orders set stripe_checkout_id = 'cs_test_open'
+ where customer_id = '00000000-0000-0000-0000-0000000000a1' and status = 'paiement_attente';
+select set_config('tklink.order',
+  (select id::text from public.flash_orders
+    where customer_id = '00000000-0000-0000-0000-0000000000a1' and status = 'paiement_attente'),
+  true);
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select throws_ok(
+  $$ select public.cancel_order(current_setting('tklink.order')::uuid) $$,
+  'P0001',
+  'checkout_open',
+  'a reservation with an open payment page is not cancelled behind Stripe''s back'
+);
+reset role;
+
+-- 76) L'annulation après expiration de la page est réservée au serveur.
+select ok(
+  not has_function_privilege('authenticated', 'public.cancel_order_after_checkout(uuid)', 'execute')
+  and not has_function_privilege('anon', 'public.cancel_order_after_checkout(uuid)', 'execute'),
+  'only the server cancels after expiring the payment page'
+);
+
+-- 77) Le serveur (page expirée) annule : la réservation est close, le stock revient.
+set local request.jwt.claims to '{}';
+select lives_ok(
+  $$ select public.cancel_order_after_checkout(current_setting('tklink.order')::uuid) $$,
+  'the server cancels once the payment page has expired'
+);
+select results_eq(
+  $$ select status from public.flash_orders where id = current_setting('tklink.order')::uuid $$,
+  $$ values ('annulee'::text) $$,
+  'the reservation is cancelled'
+);
+select results_eq(
+  $$ select stock_left from public.flash_offers where title = 'Pain de campagne' $$,
+  $$ values (current_setting('tklink.stock')::integer) $$,
+  'its stock is given back'
 );
 
 select * from finish();

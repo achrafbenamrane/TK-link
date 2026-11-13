@@ -125,7 +125,8 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
       comptes
 - [x] 13/11/2026 : migration 0018 (partage des récompenses) appliquée ; `npm run auth:check` voit
       0007 à 0018 en place
-- [ ] Migration 0019 (parrainage) à appliquer dans le SQL Editor ; tests pgTAP 63–68
+- [ ] Migrations 0019 (parrainage, relue) et 0020 (annulation avec page de paiement ouverte) à
+      appliquer dans le SQL Editor ; tests pgTAP 63–77
 - [ ] Clés Stripe (test), Uber Direct, fal.ai ; fonctions Edge déployées ; webhooks déclarés
 - [x] Mises à jour OTA publiées (dernière : be16f769 — factures serveur, partage des récompenses,
       13/11/2026)

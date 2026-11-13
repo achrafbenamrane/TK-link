@@ -427,7 +427,7 @@ const SERVER_ERROR: Partial<Record<OrdersError, string>> = {
   phone_required: 'Le numéro du client manque : contactez le support TK LINK.',
   delivery_unavailable: 'Uber Direct refuse cette course (adresse hors zone).',
   network: 'Pas de connexion. Réessayez.',
-  not_cancellable: 'Le coursier a déjà pris la commande : la course ne s’annule plus ici.',
+  courier_not_cancellable: 'Le coursier a déjà pris la commande : la course ne s’annule plus ici.',
   cancel_refused: 'Uber n’a pas pu annuler la course. Réessayez dans un instant.',
 };
 
