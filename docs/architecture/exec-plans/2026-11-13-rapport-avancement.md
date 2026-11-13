@@ -107,6 +107,18 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
 - [x] Dossiers pros validés ou refusés depuis `/admin` (plus de requête SQL à taper)
 - [x] Scanner le QR de retrait au comptoir
 
+### Mise en service
+
+- [x] 13/11/2026 : migrations 0011 à 0017 appliquées (SQL Editor, une transaction) ; `npm run auth:check`
+      les voit toutes. Règles éprouvées sur le vrai serveur avec les comptes de test (19/19) : prix et
+      commission calculés par le serveur, stock réservé puis rendu à l’annulation, pas de réservation
+      au-delà du stock, aucun statut ni point ni « payé » écrit par un client, pas de message « au nom
+      de TK LINK », commerçant sans saut d’étape ni encaissement auto-déclaré, aucune fuite entre
+      comptes
+- [ ] Clés Stripe (test), Uber Direct, fal.ai ; fonctions Edge déployées ; webhooks déclarés
+- [ ] Mise à jour OTA, puis essai sur deux téléphones
+- [ ] Nouvelle APK (notifications) avec `google-services.json`
+
 ## Risques
 
 - Disque presque plein sur ce poste (cf. mémoire) : vérifier `df -h` avant export ou build.
