@@ -569,8 +569,9 @@
 
 /* ---------------------------------------------------------------- mobile */
 @media (max-width: 900px) {
+  /* minmax(0, 1fr) : un enfant trop large défile chez lui, il n'élargit pas toute la page. */
   .tkpro {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .tkpro-side {
     position: static;
@@ -939,6 +940,10 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+/* En pied de formulaire, la mention passe à la ligne : sur téléphone, elle élargissait la page. */
+.tkpro-profile-foot .tkpro-note-inline {
+  white-space: normal;
 }
 
 /* ------------------------------------------------------------ contact */
