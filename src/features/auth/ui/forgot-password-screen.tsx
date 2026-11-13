@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
-import { AppText, Button, Screen, TextField, Wordmark } from '@/shared/ui';
+import { AppText, BrandBar, Button, Screen, ScreenIntro, TextField } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { friendlyAuthError } from '../model/auth-errors';
@@ -101,45 +101,29 @@ export function ForgotPasswordScreen({ onDone, onBack }: Props) {
 
   return (
     <Screen testID="forgot-password-screen">
+      <BrandBar
+        {...(onBack && step.name !== 'done' ? { onBack } : {})}
+        backTestID="forgot-back"
+        backLabel="Retour à la connexion"
+      />
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerClassName="flex-grow justify-center py-8"
+          contentContainerClassName="flex-grow pb-8 pt-6"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="mb-6 flex-row items-center justify-between">
-            {onBack && step.name !== 'done' ? (
-              <Pressable
-                testID="forgot-back"
-                accessibilityRole="button"
-                accessibilityLabel="Retour à la connexion"
-                hitSlop={10}
-                onPress={onBack}
-                className="w-10"
-              >
-                <Feather name="arrow-left" size={22} color={colors.ink} />
-              </Pressable>
-            ) : (
-              <View className="w-10" />
-            )}
-            <Wordmark size={26} />
-            <View className="w-10" />
-          </View>
-
           <DemoNotice />
 
           {step.name === 'request' ? (
             <View testID="forgot-request" className="gap-4">
-              <View className="gap-1.5">
-                <AppText variant="title">Mot de passe oublié</AppText>
-                <AppText variant="caption" className="text-ink-muted">
-                  Entrez l’adresse e-mail de votre compte : nous vous envoyons un code pour choisir
-                  un nouveau mot de passe.
-                </AppText>
-              </View>
+              <ScreenIntro
+                className="mb-4"
+                title="Mot de passe oublié"
+                subtitle="Entrez l’adresse e-mail de votre compte : nous vous envoyons un code pour choisir un nouveau mot de passe."
+              />
 
               <View className="gap-1.5">
                 <View className="flex-row">
@@ -214,12 +198,11 @@ export function ForgotPasswordScreen({ onDone, onBack }: Props) {
 
           {step.name === 'password' ? (
             <View testID="forgot-password-step" className="gap-4">
-              <View className="gap-1.5">
-                <AppText variant="title">Nouveau mot de passe</AppText>
-                <AppText variant="caption" className="text-ink-muted">
-                  Code vérifié. Choisissez un mot de passe d’au moins 8 caractères.
-                </AppText>
-              </View>
+              <ScreenIntro
+                className="mb-4"
+                title="Nouveau mot de passe"
+                subtitle="Code vérifié. Choisissez un mot de passe d’au moins 8 caractères."
+              />
 
               <View className="gap-2">
                 <View className="flex-row">

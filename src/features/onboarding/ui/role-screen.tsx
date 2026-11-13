@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { ROLE_ICON, ROLE_LABEL, ROLES, type Role } from '@/shared/lib/roles';
-import { AppText, Screen, ThemeToggle, Wordmark } from '@/shared/ui';
+import { AppText, BrandBar, Screen, ScreenIntro } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 type Props = {
@@ -45,20 +45,15 @@ export function RoleScreen({ onPick, onSignIn, onDemo }: Props) {
 
   return (
     <Screen testID="role-screen">
-      <ScrollView contentContainerClassName="gap-4 pb-8 pt-3" showsVerticalScrollIndicator={false}>
-        <View className="flex-row items-center justify-between">
-          <Wordmark size={24} />
-          <ThemeToggle />
-        </View>
-
-        <View className="gap-1.5 pt-2">
-          <AppText variant="display" style={{ fontSize: 28 }}>
-            Qui êtes-vous ?
-          </AppText>
-          <AppText variant="caption">
-            Choisissez votre profil : votre espace s’adapte. Vous pourrez en changer plus tard.
-          </AppText>
-        </View>
+      <BrandBar />
+      <ScrollView
+        contentContainerClassName="flex-grow pb-8 pt-6"
+        showsVerticalScrollIndicator={false}
+      >
+        <ScreenIntro
+          title="Qui êtes-vous ?"
+          subtitle="Choisissez votre profil : votre espace s’adapte. Vous pourrez en changer plus tard."
+        />
 
         <View className="gap-3">
           {ROLES.map((role) => (
@@ -77,9 +72,7 @@ export function RoleScreen({ onPick, onSignIn, onDemo }: Props) {
                   <Feather name={ROLE_ICON[role] as 'user'} size={24} color={colors.brand500} />
                 </View>
                 <View className="flex-1 gap-0.5">
-                  <AppText className="font-sans-bold text-ink" style={{ fontSize: 17 }}>
-                    {TITLE[role]}
-                  </AppText>
+                  <AppText className="font-sans-bold text-lg text-ink">{TITLE[role]}</AppText>
                   <AppText variant="caption" className="text-ink-faint">
                     {HINT[role]}
                   </AppText>
@@ -98,7 +91,9 @@ export function RoleScreen({ onPick, onSignIn, onDemo }: Props) {
                   </AppText>
                 </Pressable>
               ) : (
-                <Feather name="chevron-right" size={20} color={colors.inkFaint} />
+                <View className="pr-4">
+                  <Feather name="chevron-right" size={20} color={colors.inkFaint} />
+                </View>
               )}
             </View>
           ))}
@@ -108,11 +103,11 @@ export function RoleScreen({ onPick, onSignIn, onDemo }: Props) {
           testID="role-signin"
           accessibilityRole="button"
           onPress={onSignIn}
-          className="items-center py-3"
+          className="mt-6 items-center py-3"
         >
-          <AppText className="text-ink-muted" style={{ fontSize: 14 }}>
+          <AppText variant="caption" className="text-ink-muted">
             J’ai déjà un compte ·{' '}
-            <AppText className="font-sans-bold text-brand-600">Me connecter</AppText>
+            <AppText className="font-sans-bold text-sm text-brand-600">Me connecter</AppText>
           </AppText>
         </Pressable>
       </ScrollView>

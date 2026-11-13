@@ -1,4 +1,5 @@
 export { AppText, type AppTextProps } from './text';
+export { BrandBar, type BrandBarProps } from './brand-bar';
 export { Button, type ButtonProps } from './button';
 export { Checkbox, type CheckboxProps } from './checkbox';
 export { Card, type CardProps } from './card';
@@ -8,6 +9,7 @@ export { FingerprintScanner, type ScanState } from './fingerprint-scanner';
 export { PrepTicket, type PrepTicketProps } from './prep-ticket';
 export { PushButton, type PushButtonProps } from './push-button';
 export { Screen, type ScreenProps } from './screen';
+export { ScreenIntro, type ScreenIntroProps } from './screen-intro';
 export { Skeleton, type SkeletonProps } from './skeleton';
 export { TextField, type TextFieldProps } from './text-field';
 export { ThemeToggle } from './theme-toggle';

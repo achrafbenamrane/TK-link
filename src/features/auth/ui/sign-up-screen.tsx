@@ -7,7 +7,7 @@ import { CATEGORIES, CATEGORY_INFO, type Category } from '@/shared/lib/categorie
 import { isPhoneAuthEnabled } from '@/shared/lib/env';
 import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
 import { type Role } from '@/shared/lib/roles';
-import { AppText, Button, Checkbox, Screen, TextField, ThemeToggle, Wordmark } from '@/shared/ui';
+import { AppText, BrandBar, Button, Checkbox, Screen, ScreenIntro, TextField } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { friendlyAuthError } from '../model/auth-errors';
@@ -101,8 +101,12 @@ const PRO_TITLE: Record<'commercant' | 'grossiste', { title: string; subtitle: s
  * publier ou commander en B2B), son adresse et ses modes de remise. Les CGU et la
  * politique de confidentialité doivent être acceptées.
  *
- * TOUT TIENT SUR UNE PAGE, sans défilement, comme les maquettes : des champs de 36 px
- * pour les professionnels (douze champs), la catégorie en liste déroulante.
+ * L'écran DÉFILE, et c'est voulu (retour du 13/11/2026) : tout faire tenir sur une page, comme les
+ * maquettes, imposait des champs de 36 px et des textes de 11 px — sur un Android, l'inscription
+ * était tassée et rien ne s'alignait. Les champs ont la hauteur de ceux de la connexion (48 px), le
+ * formulaire professionnel est rangé en trois groupes (coordonnées, commerce, mot de passe), et
+ * l'en-tête « retour · logo · Nuit/Jour » est celui de tous les écrans d'entrée (`BrandBar`). La
+ * catégorie reste une liste déroulante.
  *
  * Chaque erreur s'affiche sous son champ : un bandeau global oblige à chercher
  * lequel des champs corriger.
@@ -156,7 +160,6 @@ export function SignUpScreen({
   const pro = needsSiret(role);
   const proCopy = PRO_TITLE[role === 'grossiste' ? 'grossiste' : 'commercant'];
   const modeLabel = role === 'grossiste' ? WHOLESALE_MODE_LABEL : MODE_LABEL;
-  const dense = pro;
 
   const set = (key: keyof RegistrationDraft, value: string) => {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -308,7 +311,6 @@ export function SignUpScreen({
   const firstName = (
     <Field
       key="firstname"
-      dense={dense}
       testID="signup-firstname"
       icon="user"
       value={draft.firstName}
@@ -323,7 +325,6 @@ export function SignUpScreen({
   const lastName = (
     <Field
       key="lastname"
-      dense={dense}
       testID="signup-lastname"
       icon="user"
       value={draft.lastName}
@@ -338,7 +339,6 @@ export function SignUpScreen({
   const email = (
     <Field
       key="email"
-      dense={dense}
       testID="signup-email"
       icon="mail"
       value={draft.email}
@@ -355,12 +355,11 @@ export function SignUpScreen({
   const phone = (
     <Field
       key="phone"
-      dense={dense}
       testID="signup-phone"
       icon="phone"
       prefix={
-        <View className="flex-row items-center gap-1 border-x border-line px-2">
-          <AppText style={{ fontSize: 13 }}>🇫🇷</AppText>
+        <View className="flex-row items-center gap-1 self-stretch border-x border-line px-2.5">
+          <AppText className="text-base">🇫🇷</AppText>
           <Feather name="chevron-down" size={11} color={colors.inkFaint} />
         </View>
       }
@@ -376,7 +375,6 @@ export function SignUpScreen({
   const location = (
     <Field
       key="location"
-      dense={dense}
       testID="signup-location"
       icon="map-pin"
       value={draft.location}
@@ -390,7 +388,6 @@ export function SignUpScreen({
   const passwords = [
     <Field
       key="password"
-      dense={dense}
       testID="signup-password"
       icon="lock"
       value={draft.password}
@@ -404,7 +401,6 @@ export function SignUpScreen({
     />,
     <Field
       key="confirm"
-      dense={dense}
       testID="signup-confirm"
       icon="lock"
       value={draft.confirm}
@@ -420,8 +416,9 @@ export function SignUpScreen({
   if (verification) {
     return (
       <Screen testID="sign-up-verification">
+        <BrandBar />
         <ScrollView
-          contentContainerClassName="flex-grow justify-center py-8"
+          contentContainerClassName="flex-grow pb-8 pt-6"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -440,76 +437,60 @@ export function SignUpScreen({
 
   return (
     <Screen testID="sign-up-screen">
+      <BrandBar
+        {...(onBack ? { onBack } : {})}
+        backTestID="signup-back"
+        backLabel="Retour au choix du profil"
+      />
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerClassName="flex-grow justify-between pb-2 pt-1"
+          contentContainerClassName="pb-8 pt-6"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Retour · logo · Nuit/Jour — l'en-tête de la maquette professionnelle */}
-          <View className="mb-1.5 flex-row items-center justify-between">
-            {pro && onBack ? (
-              <Pressable
-                testID="signup-back"
-                accessibilityRole="button"
-                accessibilityLabel="Retour"
-                hitSlop={10}
-                onPress={onBack}
-                className="w-16"
-              >
-                <Feather name="arrow-left" size={22} color={colors.ink} />
-              </Pressable>
-            ) : (
-              <View className="w-16" />
-            )}
-            <Wordmark size={pro ? 22 : 26} />
-            <View className={cn('w-16 items-end')}>{pro ? <ThemeToggle /> : null}</View>
-          </View>
-
-          <View className="mb-1.5 items-center gap-0.5">
-            <AppText variant="display" className="text-center" style={{ fontSize: 21 }}>
-              {pro ? proCopy.title : 'Créer mon compte'}
-            </AppText>
-            <AppText variant="caption" className="text-center" style={{ fontSize: 12 }}>
-              {pro
+          <ScreenIntro
+            title={pro ? proCopy.title : 'Créer mon compte'}
+            subtitle={
+              pro
                 ? proCopy.subtitle
-                : 'Inscris-toi pour accéder aux meilleures offres Flash autour de toi.'}
-            </AppText>
-          </View>
-
-          {pro ? (
-            <View className="mb-1.5 items-center">
-              <View className="h-10 w-10 items-center justify-center rounded-pill border-2 border-brand-500">
-                <Feather name="shopping-bag" size={19} color={colors.brand500} />
-                <View className="absolute -bottom-0.5 -right-0.5 h-5 w-5 items-center justify-center rounded-pill bg-brand-500">
-                  <Feather name="plus" size={12} color="#FFFFFF" />
+                : 'Inscris-toi pour accéder aux meilleures offres Flash autour de toi.'
+            }
+          >
+            {pro ? (
+              <View className="h-16 w-16 items-center justify-center rounded-pill border-2 border-brand-500 bg-brand-50">
+                <Feather name="shopping-bag" size={26} color={colors.brand500} />
+                <View className="absolute -bottom-1 -right-1 h-6 w-6 items-center justify-center rounded-pill border-2 border-surface bg-brand-500">
+                  <Feather name="plus" size={12} color={colors.inkInverse} />
                 </View>
               </View>
-            </View>
-          ) : renderAvatar ? (
-            <View className="mb-1.5 items-center">{renderAvatar()}</View>
-          ) : null}
+            ) : renderAvatar ? (
+              renderAvatar()
+            ) : null}
+          </ScreenIntro>
 
-          <View className={dense ? 'gap-1' : 'gap-1.5'}>
-            {firstName}
-            {lastName}
-            {email}
-            {phone}
+          {pro ? (
+            <View className="gap-8">
+              <FormSection title="Vos coordonnées">
+                {firstName}
+                {lastName}
+                {email}
+                {phone}
+              </FormSection>
 
-            {pro ? (
-              <>
+              <FormSection title={role === 'grossiste' ? 'Votre entreprise' : 'Votre commerce'}>
                 <Field
-                  dense
                   testID="signup-shopname"
                   icon="shopping-bag"
                   value={draft.shopName}
                   onChangeText={(v) => set('shopName', v)}
                   error={errors.shopName}
-                  placeholder="Nom du commerce"
-                  accessibilityLabel="Nom du commerce"
+                  placeholder={role === 'grossiste' ? 'Nom de l’entreprise' : 'Nom du commerce'}
+                  accessibilityLabel={
+                    role === 'grossiste' ? 'Nom de l’entreprise' : 'Nom du commerce'
+                  }
                   autoCapitalize="words"
                 />
                 <CategorySelect
@@ -518,7 +499,6 @@ export function SignUpScreen({
                   onChange={(key) => set('category', key)}
                 />
                 <Field
-                  dense
                   testID="signup-siret"
                   icon="file-text"
                   value={draft.siret}
@@ -529,7 +509,6 @@ export function SignUpScreen({
                   keyboardType="number-pad"
                 />
                 <Field
-                  dense
                   testID="signup-address"
                   icon="home"
                   value={draft.address}
@@ -541,195 +520,199 @@ export function SignUpScreen({
                   textContentType="fullStreetAddress"
                 />
                 {location}
-                {passwords}
-              </>
-            ) : (
-              <>
-                {passwords}
-                {location}
-              </>
-            )}
 
-            {pro ? (
-              <View className="gap-1">
-                <View className="flex-row gap-2">
-                  {(['touch-collect', 'livraison'] as const).map((m) => {
-                    const on = modes.includes(m);
-                    return (
-                      <Pressable
-                        key={m}
-                        testID={`signup-mode-${m}`}
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked: on }}
-                        accessibilityLabel={modeLabel[m]}
-                        onPress={() => toggleMode(m)}
-                        className={cn(
-                          'h-9 flex-1 flex-row items-center justify-center gap-1.5 rounded-control border',
-                          on ? 'border-brand-500 bg-brand-50' : 'border-line bg-surface-muted',
-                        )}
-                      >
-                        <Feather
-                          name={on ? 'check-circle' : m === 'livraison' ? 'truck' : 'shopping-bag'}
-                          size={14}
-                          color={on ? colors.brand600 : colors.inkMuted}
-                        />
-                        <AppText
+                <View className="gap-1.5">
+                  <View className="flex-row gap-3">
+                    {(['touch-collect', 'livraison'] as const).map((m) => {
+                      const on = modes.includes(m);
+                      return (
+                        <Pressable
+                          key={m}
+                          testID={`signup-mode-${m}`}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: on }}
+                          accessibilityLabel={modeLabel[m]}
+                          onPress={() => toggleMode(m)}
                           className={cn(
-                            'font-sans-semibold',
-                            on ? 'text-brand-600' : 'text-ink-muted',
+                            'h-12 flex-1 flex-row items-center justify-center gap-2 rounded-control border',
+                            on ? 'border-brand-500 bg-brand-50' : 'border-line bg-surface-muted',
                           )}
-                          style={{ fontSize: 12 }}
                         >
-                          {modeLabel[m]}
-                        </AppText>
-                      </Pressable>
-                    );
-                  })}
+                          <Feather
+                            name={
+                              on ? 'check-circle' : m === 'livraison' ? 'truck' : 'shopping-bag'
+                            }
+                            size={16}
+                            color={on ? colors.brand600 : colors.inkMuted}
+                          />
+                          <AppText
+                            className={cn(
+                              'font-sans-semibold text-sm',
+                              on ? 'text-brand-600' : 'text-ink-muted',
+                            )}
+                          >
+                            {modeLabel[m]}
+                          </AppText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  {errors.modes ? (
+                    <AppText
+                      testID="signup-modes-error"
+                      variant="caption"
+                      className="text-brand-600"
+                    >
+                      {errors.modes}
+                    </AppText>
+                  ) : null}
                 </View>
-                {errors.modes ? (
-                  <AppText testID="signup-modes-error" variant="caption" className="text-brand-600">
-                    {errors.modes}
-                  </AppText>
+              </FormSection>
+
+              <FormSection title="Mot de passe">{passwords}</FormSection>
+            </View>
+          ) : (
+            <View className="gap-3">
+              {firstName}
+              {lastName}
+              {email}
+              {phone}
+              {passwords}
+              {location}
+            </View>
+          )}
+
+          <View className="mt-6 gap-1.5">
+            <Checkbox
+              testID="signup-terms"
+              checked={accepted}
+              onChange={(v) => {
+                setAccepted(v);
+                if (v) setErrors((e) => ({ ...e, terms: '' }));
+              }}
+              invalid={!!errors.terms}
+              accessibilityLabel="J’accepte les CGU et la politique de confidentialité"
+            >
+              <AppText variant="caption" className="text-ink-muted">
+                J’accepte les <AppText className="text-sm text-brand-600">CGU</AppText> et la{' '}
+                <AppText className="text-sm text-brand-600">politique de confidentialité</AppText>.
+              </AppText>
+            </Checkbox>
+            {errors.terms ? (
+              <AppText testID="signup-terms-error" variant="caption" className="text-brand-600">
+                {errors.terms}
+              </AppText>
+            ) : null}
+          </View>
+
+          {serverError ? (
+            <View className="mt-4 flex-row items-start gap-2 rounded-control border border-brand-200 bg-brand-50 p-3">
+              <Feather name="alert-circle" size={15} color={colors.brand600} />
+              <AppText testID="signup-error" variant="caption" className="flex-1 text-brand-600">
+                {serverError}
+              </AppText>
+            </View>
+          ) : null}
+
+          <View className="mt-6 gap-3">
+            <Button
+              testID="signup-submit"
+              label={pro ? proCopy.title : 'Créer mon compte'}
+              loading={submitting}
+              disabled={socialBusy !== null}
+              onPress={submit}
+            />
+            {onSignIn ? (
+              <Button
+                testID="signup-to-signin"
+                label="J’ai déjà un compte"
+                variant="outline"
+                onPress={onSignIn}
+              />
+            ) : null}
+          </View>
+
+          {role === 'commercant' ? (
+            <View
+              testID="signup-free-ops"
+              className="mt-4 flex-row items-center gap-3 rounded-control border border-line bg-surface-muted p-3"
+            >
+              <View className="h-10 w-10 items-center justify-center rounded-pill bg-brand-50">
+                <Feather name="gift" size={18} color={colors.brand500} />
+              </View>
+              <View className="flex-1">
+                <AppText className="font-sans-bold text-sm text-ink">
+                  {PLATFORM_SETTINGS.freeOperations} opérations Flash gratuites
+                </AppText>
+                <AppText variant="caption" className="text-xs">
+                  Pour démarrer sur TK LINK.
+                </AppText>
+              </View>
+            </View>
+          ) : (
+            <View testID="signup-alternatives" className="mt-8 gap-4">
+              <View className="flex-row items-center gap-3">
+                <View className="h-px flex-1 bg-line" />
+                <AppText variant="caption" className="text-ink-muted">
+                  Continuer autrement
+                </AppText>
+                <View className="h-px flex-1 bg-line" />
+              </View>
+              <View className="flex-row gap-3">
+                {available.google ? (
+                  <SocialButton
+                    provider="google"
+                    variant="icon"
+                    loading={socialBusy === 'google'}
+                    disabled={socialBusy !== null || submitting}
+                    onPress={() => void social('google')}
+                  />
+                ) : null}
+                {available.apple ? (
+                  <SocialButton
+                    provider="apple"
+                    variant="icon"
+                    loading={socialBusy === 'apple'}
+                    disabled={socialBusy !== null || submitting}
+                    onPress={() => void social('apple')}
+                  />
+                ) : null}
+                {isPhoneAuthEnabled ? (
+                  <AltButton
+                    testID="signup-alt-smartphone"
+                    icon="smartphone"
+                    label="Se connecter avec un numéro de téléphone"
+                    onPress={() => onSignIn?.()}
+                  />
                 ) : null}
               </View>
-            ) : null}
-
-            <View className="gap-1">
-              <Checkbox
-                testID="signup-terms"
-                checked={accepted}
-                onChange={(v) => {
-                  setAccepted(v);
-                  if (v) setErrors((e) => ({ ...e, terms: '' }));
-                }}
-                invalid={!!errors.terms}
-                accessibilityLabel="J’accepte les CGU et la politique de confidentialité"
-              >
-                <AppText variant="caption" className="text-ink-muted" style={{ fontSize: 11.5 }}>
-                  J’accepte les{' '}
-                  <AppText className="text-accent-deep" style={{ fontSize: 11.5 }}>
-                    CGU
-                  </AppText>{' '}
-                  et la{' '}
-                  <AppText className="text-brand-600" style={{ fontSize: 11.5 }}>
-                    politique de confidentialité
-                  </AppText>
-                  .
-                </AppText>
-              </Checkbox>
-              {errors.terms ? (
-                <AppText testID="signup-terms-error" variant="caption" className="text-brand-600">
-                  {errors.terms}
-                </AppText>
-              ) : null}
             </View>
+          )}
 
-            {serverError ? (
-              <View className="flex-row items-start gap-2 rounded-control border border-brand-200 bg-brand-50 p-2.5">
-                <Feather name="alert-circle" size={14} color={colors.brand600} />
-                <AppText testID="signup-error" variant="caption" className="flex-1 text-brand-600">
-                  {serverError}
+          {/* La réassurance de la maquette : trois promesses que l'app tient. Chaque icône au-dessus
+              de son texte, centrés : côte à côte, les trois libellés ne s'alignaient sur rien. */}
+          <View className="mt-8 flex-row">
+            {(pro
+              ? ([
+                  ['zap', 'Publication\nrapide'],
+                  ['shield', 'Données\nsécurisées'],
+                  ['map-pin', 'Visibilité\nlocale'],
+                ] as const)
+              : ([
+                  ['shield', 'Paiement\nsécurisé'],
+                  ['lock', 'Données\nprotégées'],
+                  ['map-pin', 'Offres\ngéolocalisées'],
+                ] as const)
+            ).map(([icon, label]) => (
+              <View key={label} className="flex-1 items-center gap-2">
+                <View className="h-10 w-10 items-center justify-center rounded-pill border border-brand-200 bg-brand-50">
+                  <Feather name={icon} size={17} color={colors.brand500} />
+                </View>
+                <AppText variant="caption" className="text-center text-xs leading-4">
+                  {label}
                 </AppText>
               </View>
-            ) : null}
-
-            <View className="gap-1.5">
-              <Button
-                testID="signup-submit"
-                label={pro ? proCopy.title : 'Créer mon compte'}
-                loading={submitting}
-                disabled={socialBusy !== null}
-                onPress={submit}
-                className={pro ? 'h-10' : undefined}
-              />
-              {onSignIn ? (
-                <Button
-                  testID="signup-to-signin"
-                  label="J’ai déjà un compte"
-                  variant="secondary"
-                  onPress={onSignIn}
-                  className={pro ? 'h-10' : undefined}
-                />
-              ) : null}
-            </View>
-
-            {role === 'commercant' ? (
-              <View
-                testID="signup-free-ops"
-                className="flex-row items-center justify-center gap-2 rounded-control border border-line bg-surface-muted py-1"
-              >
-                <Feather name="gift" size={14} color={colors.brand500} />
-                <AppText variant="caption" className="text-ink-muted" style={{ fontSize: 11.5 }}>
-                  <AppText className="font-sans-bold text-ink" style={{ fontSize: 11.5 }}>
-                    {PLATFORM_SETTINGS.freeOperations} opérations Flash
-                  </AppText>{' '}
-                  gratuites pour démarrer
-                </AppText>
-              </View>
-            ) : (
-              <View testID="signup-alternatives" className="gap-1.5">
-                <View className="flex-row items-center gap-3">
-                  <View className="h-px flex-1 bg-line" />
-                  <AppText variant="caption" className="text-ink-muted" style={{ fontSize: 12 }}>
-                    Continuer autrement
-                  </AppText>
-                  <View className="h-px flex-1 bg-line" />
-                </View>
-                <View className="flex-row gap-3">
-                  {available.google ? (
-                    <SocialButton
-                      provider="google"
-                      variant="icon"
-                      loading={socialBusy === 'google'}
-                      disabled={socialBusy !== null || submitting}
-                      onPress={() => void social('google')}
-                    />
-                  ) : null}
-                  {available.apple ? (
-                    <SocialButton
-                      provider="apple"
-                      variant="icon"
-                      loading={socialBusy === 'apple'}
-                      disabled={socialBusy !== null || submitting}
-                      onPress={() => void social('apple')}
-                    />
-                  ) : null}
-                  {isPhoneAuthEnabled ? (
-                    <AltButton
-                      testID="signup-alt-smartphone"
-                      icon="smartphone"
-                      label="Se connecter avec un numéro de téléphone"
-                      onPress={() => onSignIn?.()}
-                    />
-                  ) : null}
-                </View>
-              </View>
-            )}
-
-            {/* La réassurance de la maquette : trois promesses que l'app tient. */}
-            <View className="flex-row justify-between pt-1">
-              {(pro
-                ? ([
-                    ['zap', 'Publication\nrapide'],
-                    ['shield', 'Données\nsécurisées'],
-                    ['map-pin', 'Visibilité\nlocale'],
-                  ] as const)
-                : ([
-                    ['shield', 'Paiement\nsécurisé'],
-                    ['lock', 'Données\nprotégées'],
-                    ['map-pin', 'Offres\ngéolocalisées'],
-                  ] as const)
-              ).map(([icon, label]) => (
-                <View key={label} className="flex-1 flex-row items-center justify-center gap-2">
-                  <View className="h-8 w-8 items-center justify-center rounded-pill border border-brand-200 bg-brand-50">
-                    <Feather name={icon} size={15} color={colors.brand500} />
-                  </View>
-                  <AppText variant="caption" style={{ fontSize: 10.5, lineHeight: 13 }}>
-                    {label}
-                  </AppText>
-                </View>
-              ))}
-            </View>
+            ))}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -739,26 +722,36 @@ export function SignUpScreen({
 
 /* ---------------------------------------------------------------- morceaux */
 
+/** Un groupe du formulaire professionnel : un petit titre, puis ses champs. */
+function FormSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <View className="gap-3">
+      <AppText className="font-sans-semibold text-xs uppercase tracking-wider text-ink-faint">
+        {title}
+      </AppText>
+      {children}
+    </View>
+  );
+}
+
 type FieldProps = {
   testID: string;
   error?: string | undefined;
   hint?: string;
-  /** Hauteur de 36 px, pour le formulaire professionnel qui tient sur une page. */
-  dense?: boolean;
 } & Omit<React.ComponentProps<typeof TextField>, 'testID' | 'className' | 'invalid'>;
 
-function Field({ testID, error, hint, dense, ...rest }: FieldProps) {
+function Field({ testID, error, hint, ...rest }: FieldProps) {
   return (
-    <View className="gap-0.5">
+    <View className="gap-1.5">
       <View className="flex-row">
-        <TextField testID={testID} invalid={!!error} compact dense={!!dense} {...rest} />
+        <TextField testID={testID} invalid={!!error} {...rest} />
       </View>
       {error ? (
         <AppText testID={`${testID}-error`} variant="caption" className="text-brand-600">
           {error}
         </AppText>
       ) : hint ? (
-        <AppText variant="caption" className="text-ink-faint" style={{ fontSize: 11 }}>
+        <AppText variant="caption" className="text-xs text-ink-faint">
           {hint}
         </AppText>
       ) : null}
@@ -793,15 +786,12 @@ function CategorySelect({
         accessibilityState={{ expanded: open }}
         onPress={() => setOpen((v) => !v)}
         className={cn(
-          'h-9 flex-row items-center gap-2.5 rounded-control border bg-surface-muted px-3.5',
+          'h-12 flex-row items-center gap-2.5 rounded-control border bg-surface-muted px-3.5',
           error ? 'border-brand-500' : 'border-line',
         )}
       >
-        <Feather name="tag" size={15} color={colors.brand500} />
-        <AppText
-          className={cn('flex-1', label ? 'text-ink' : 'text-ink-faint')}
-          style={{ fontSize: 13 }}
-        >
+        <Feather name="tag" size={17} color={colors.brand500} />
+        <AppText className={cn('flex-1 text-base', label ? 'text-ink' : 'text-ink-faint')}>
           {label || 'Catégorie'}
         </AppText>
         <Feather name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.inkMuted} />
@@ -824,11 +814,10 @@ function CategorySelect({
                   onChange(key);
                   setOpen(false);
                 }}
-                className="flex-row items-center justify-between px-3.5 py-2.5"
+                className="flex-row items-center justify-between px-3.5 py-3"
               >
                 <AppText
-                  className={on ? 'font-sans-bold text-brand-500' : 'text-ink'}
-                  style={{ fontSize: 13 }}
+                  className={cn('text-sm', on ? 'font-sans-bold text-brand-500' : 'text-ink')}
                 >
                   {CATEGORY_INFO[key].label}
                 </AppText>
@@ -866,7 +855,7 @@ function AltButton({
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      className="h-10 flex-1 items-center justify-center rounded-control border border-line bg-surface-muted active:opacity-70"
+      className="h-12 flex-1 items-center justify-center rounded-control border border-line bg-surface-muted active:opacity-70"
     >
       <Feather name={icon} size={19} color={colors.brand500} />
     </Pressable>
@@ -879,7 +868,7 @@ export function SignUpFooterLink({ onPress }: { onPress: () => void }) {
     <Pressable testID="signup-footer-signin" accessibilityRole="button" onPress={onPress}>
       <AppText variant="caption" className="text-center text-ink-muted">
         Vous avez déjà un compte ?{' '}
-        <AppText className="font-sans-bold text-brand-600">Se connecter</AppText>
+        <AppText className="font-sans-bold text-sm text-brand-600">Se connecter</AppText>
       </AppText>
     </Pressable>
   );

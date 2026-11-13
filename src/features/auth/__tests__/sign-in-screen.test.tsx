@@ -46,7 +46,8 @@ describe('<SignInScreen />', () => {
 
   it('un seul champ pour l’e-mail OU le téléphone', () => {
     render(<SignInScreen />);
-    expect(screen.getByText('E-mail ou téléphone')).toBeOnTheScreen();
+    // Pas d'étiquette au-dessus du champ (comme à l'inscription) : le texte indicatif le dit.
+    expect(screen.getByPlaceholderText('E-mail ou téléphone')).toBeOnTheScreen();
     expect(screen.getByLabelText('E-mail ou numéro de téléphone')).toBeOnTheScreen();
   });
 

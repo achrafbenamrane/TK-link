@@ -52,6 +52,19 @@ Un nouveau gabarit se propose comme variante, il ne s’écrit pas en ligne.
 - **Radii :** `rounded-card` (18) pour les conteneurs, `rounded-control` (12) pour les champs et
   boutons. **Espacement :** l’échelle Tailwind, gouttière d’écran `px-5` via `<Screen>`.
 
+## Les écrans d’entrée (profil, connexion, inscription, mot de passe oublié)
+
+Retour du 13/11/2026 : « beaucoup de charge, et rien n’est aligné ». Chaque écran posait son
+en-tête et son titre à sa façon, et l’inscription tassait tout pour tenir sans défilement. La règle :
+
+- **En-tête :** `<BrandBar>` — retour · logo **centré sur l’écran** · Nuit/Jour (icônes seules sous
+  380 px de large). Jamais un logo calé entre deux voisins de largeurs différentes.
+- **Titre :** `<ScreenIntro>` — titre `text-2xl` et phrase centrés, à la même hauteur sur chaque
+  écran (contenu aligné en haut, `pt-6`, pas centré verticalement).
+- **Champs :** 48 px (`TextField` par défaut), `gap-3` ; un formulaire long **défile** et se range
+  en groupes titrés plutôt que de rétrécir. Pas de texte sous 12 px.
+- **Boutons :** l’action principale pleine, l’alternative en `variant="outline"`.
+
 ## Aperçu navigateur
 
 `npm run web` ouvre l’app dans un navigateur (carte remplacée par un bouchon, rendu serveur coupé) :

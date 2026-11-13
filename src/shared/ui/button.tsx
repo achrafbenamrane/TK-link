@@ -5,12 +5,14 @@ import { useColors } from '@/shared/theme/theme-provider';
 
 import { AppText } from './text';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'destructive';
+type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
 type Size = 'md' | 'sm';
 
 const containerClasses: Record<Variant, string> = {
   primary: 'bg-brand-500 active:bg-brand-600',
   secondary: 'bg-brand-50 active:bg-brand-100',
+  // Le bouton « J’ai déjà un compte » des maquettes : un filet rose, pas d’aplat.
+  outline: 'border border-brand-500 bg-transparent active:bg-brand-50',
   ghost: 'bg-transparent active:bg-surface-muted',
   destructive: 'bg-danger active:opacity-90',
 };
@@ -18,6 +20,7 @@ const containerClasses: Record<Variant, string> = {
 const labelClasses: Record<Variant, string> = {
   primary: 'text-ink-inverse',
   secondary: 'text-brand-700',
+  outline: 'text-brand-600',
   ghost: 'text-brand-600',
   destructive: 'text-ink-inverse',
 };

@@ -20,7 +20,17 @@ const OPTIONS = [
  * (il ne suit plus le téléphone) ; le réglage est conservé d'un lancement à
  * l'autre.
  */
-export function ThemeToggle({ testID = 'theme-toggle' }: { testID?: string }) {
+export function ThemeToggle({
+  testID = 'theme-toggle',
+  compact = false,
+}: {
+  testID?: string;
+  /**
+   * Les icônes seules (lune, soleil) — pour les écrans étroits, où « Nuit | Jour » en toutes
+   * lettres venait buter contre le logo centré de l'en-tête.
+   */
+  compact?: boolean;
+}) {
   const colors = useColors();
   const mode = useThemeStore(selectThemeMode);
   const setMode = useThemeStore((s) => s.setMode);
@@ -47,6 +57,7 @@ export function ThemeToggle({ testID = 'theme-toggle' }: { testID?: string }) {
             onPress={() => setMode(option.key)}
             className={cn(
               'flex-row items-center gap-1 rounded-pill px-2 py-1',
+              compact && 'px-2.5',
               active && 'border border-brand-500 bg-brand-50',
             )}
           >
@@ -55,14 +66,16 @@ export function ThemeToggle({ testID = 'theme-toggle' }: { testID?: string }) {
               size={12}
               color={active ? colors.brand600 : colors.inkFaint}
             />
-            <AppText
-              className={cn(
-                'text-xs',
-                active ? 'font-sans-bold text-brand-600' : 'font-sans-medium text-ink-faint',
-              )}
-            >
-              {option.label}
-            </AppText>
+            {compact ? null : (
+              <AppText
+                className={cn(
+                  'text-xs',
+                  active ? 'font-sans-bold text-brand-600' : 'font-sans-medium text-ink-faint',
+                )}
+              >
+                {option.label}
+              </AppText>
+            )}
           </Pressable>
         );
       })}

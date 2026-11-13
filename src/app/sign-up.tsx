@@ -110,7 +110,7 @@ export default function SignUpRoute() {
             initialAccepted: true,
           }
         : {})}
-      renderAvatar={() => <AvatarPicker size={48} />}
+      renderAvatar={() => <AvatarPicker size={80} />}
       onProfile={onProfile}
       onSignedUp={toOnboarding}
       onSignIn={toSignIn}

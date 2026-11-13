@@ -30,6 +30,7 @@ export function AvatarPicker({ size = 92 }: { size?: number }) {
   const setAvatar = useOnboardingStore((s) => s.setAvatar);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const badge = Math.max(22, Math.round(size * 0.3));
 
   return (
     <>
@@ -45,8 +46,13 @@ export function AvatarPicker({ size = 92 }: { size?: number }) {
         >
           <AvatarView avatar={avatar} size={size} />
         </View>
-        <View className="absolute -bottom-0.5 -right-0.5 h-8 w-8 items-center justify-center rounded-pill border-2 border-surface bg-brand-500">
-          <Feather name="plus" size={16} color={colors.inkInverse} />
+        {/* Le « + » garde la proportion de la maquette (un petit tiers de l'avatar) : à taille fixe,
+            il mangeait la moitié d'un petit avatar. */}
+        <View
+          className="absolute -bottom-0.5 -right-0.5 items-center justify-center rounded-pill border-2 border-surface bg-brand-500"
+          style={{ width: badge, height: badge }}
+        >
+          <Feather name="plus" size={Math.round(badge * 0.5)} color={colors.inkInverse} />
         </View>
       </Pressable>
 

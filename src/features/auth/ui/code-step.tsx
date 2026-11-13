@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
-import { AppText, Button } from '@/shared/ui';
+import { AppText, Button, ScreenIntro } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { friendlyAuthError } from '../model/auth-errors';
@@ -115,113 +115,111 @@ export function CodeStep({
   };
 
   return (
-    <View testID={`${testIDPrefix}-step`} className="gap-4">
-      <View className="gap-1.5">
-        <AppText variant="title">{title}</AppText>
-        <AppText variant="caption" className="text-ink-muted">
-          {description ?? (
+    <View testID={`${testIDPrefix}-step`}>
+      <ScreenIntro
+        title={title}
+        subtitle={
+          description ?? (
             <>
               Nous avons envoyé un code à {OTP_LENGTH} chiffres à{' '}
-              <AppText className="font-sans-bold text-ink" style={{ fontSize: 12 }}>
-                {sentTo}
-              </AppText>
-              .
+              <AppText className="font-sans-bold text-sm text-ink">{sentTo}</AppText>.
             </>
-          )}
-        </AppText>
-      </View>
-
-      <TextInput
-        testID={`${testIDPrefix}-input`}
-        value={code}
-        onChangeText={change}
-        keyboardType="number-pad"
-        // Le clavier propose le code reçu par SMS au-dessus des touches.
-        textContentType="oneTimeCode"
-        autoComplete="sms-otp"
-        maxLength={OTP_LENGTH}
-        autoFocus
-        placeholder="••••••"
-        placeholderTextColor={colors.inkFaint}
-        accessibilityLabel={`Code à ${OTP_LENGTH} chiffres`}
-        editable={!submitting}
-        className="h-14 rounded-control border border-line bg-surface-muted text-center font-sans-bold text-ink"
-        style={{ fontSize: 26, letterSpacing: 10 }}
+          )
+        }
       />
+      <View className="gap-4">
+        <TextInput
+          testID={`${testIDPrefix}-input`}
+          value={code}
+          onChangeText={change}
+          keyboardType="number-pad"
+          // Le clavier propose le code reçu par SMS au-dessus des touches.
+          textContentType="oneTimeCode"
+          autoComplete="sms-otp"
+          maxLength={OTP_LENGTH}
+          autoFocus
+          placeholder="••••••"
+          placeholderTextColor={colors.inkFaint}
+          accessibilityLabel={`Code à ${OTP_LENGTH} chiffres`}
+          editable={!submitting}
+          className="h-14 rounded-control border border-line bg-surface-muted text-center font-sans-bold text-ink"
+          style={{ fontSize: 26, letterSpacing: 10 }}
+        />
 
-      {demo ? (
-        <AppText
-          testID={`${testIDPrefix}-demo`}
-          variant="caption"
-          className="text-center text-ink-faint"
-        >
-          Démonstration : aucun message n’est envoyé. Saisissez {DEMO_CODE}.
-        </AppText>
-      ) : null}
-
-      {error ? (
-        <View className="flex-row items-start gap-2 rounded-control border border-brand-200 bg-brand-50 p-3">
-          <Feather name="alert-circle" size={15} color={colors.brand600} />
+        {demo ? (
           <AppText
-            testID={`${testIDPrefix}-error`}
+            testID={`${testIDPrefix}-demo`}
             variant="caption"
-            className="flex-1 text-brand-600"
+            className="text-center text-ink-faint"
           >
-            {error}
+            Démonstration : aucun message n’est envoyé. Saisissez {DEMO_CODE}.
           </AppText>
-        </View>
-      ) : null}
+        ) : null}
 
-      {resent && !error ? (
-        <AppText
-          testID={`${testIDPrefix}-resent`}
-          variant="caption"
-          className="text-center text-success"
-        >
-          Un nouveau code vient d’être envoyé.
-        </AppText>
-      ) : null}
+        {error ? (
+          <View className="flex-row items-start gap-2 rounded-control border border-brand-200 bg-brand-50 p-3">
+            <Feather name="alert-circle" size={15} color={colors.brand600} />
+            <AppText
+              testID={`${testIDPrefix}-error`}
+              variant="caption"
+              className="flex-1 text-brand-600"
+            >
+              {error}
+            </AppText>
+          </View>
+        ) : null}
 
-      <Button
-        testID={`${testIDPrefix}-submit`}
-        label={submitLabel}
-        loading={submitting}
-        disabled={code.length !== OTP_LENGTH}
-        onPress={() => void submit(code)}
-      />
+        {resent && !error ? (
+          <AppText
+            testID={`${testIDPrefix}-resent`}
+            variant="caption"
+            className="text-center text-success"
+          >
+            Un nouveau code vient d’être envoyé.
+          </AppText>
+        ) : null}
 
-      <Pressable
-        testID={`${testIDPrefix}-resend`}
-        accessibilityRole="button"
-        accessibilityLabel="Renvoyer le code"
-        accessibilityState={{ disabled: wait > 0 }}
-        disabled={wait > 0}
-        onPress={() => void resend()}
-        className="py-1"
-      >
-        <AppText
-          variant="caption"
-          className={
-            wait > 0 ? 'text-center text-ink-faint' : 'text-center font-sans-bold text-brand-600'
-          }
-        >
-          {wait > 0 ? `Renvoyer le code dans ${wait} s` : 'Renvoyer le code'}
-        </AppText>
-      </Pressable>
+        <Button
+          testID={`${testIDPrefix}-submit`}
+          label={submitLabel}
+          loading={submitting}
+          disabled={code.length !== OTP_LENGTH}
+          onPress={() => void submit(code)}
+        />
 
-      {onBack ? (
         <Pressable
-          testID={`${testIDPrefix}-back`}
+          testID={`${testIDPrefix}-resend`}
           accessibilityRole="button"
-          accessibilityLabel={backLabel}
-          onPress={onBack}
+          accessibilityLabel="Renvoyer le code"
+          accessibilityState={{ disabled: wait > 0 }}
+          disabled={wait > 0}
+          onPress={() => void resend()}
           className="py-1"
         >
-          <AppText variant="caption" className="text-center text-ink-muted">
-            {backLabel}
+          <AppText
+            variant="caption"
+            className={
+              wait > 0 ? 'text-center text-ink-faint' : 'text-center font-sans-bold text-brand-600'
+            }
+          >
+            {wait > 0 ? `Renvoyer le code dans ${wait} s` : 'Renvoyer le code'}
           </AppText>
         </Pressable>
-      ) : null}
+
+        {onBack ? (
+          <Pressable
+            testID={`${testIDPrefix}-back`}
+            accessibilityRole="button"
+            accessibilityLabel={backLabel}
+            onPress={onBack}
+            className="py-1"
+          >
+            <AppText variant="caption" className="text-center text-ink-muted">
+              {backLabel}
+            </AppText>
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }

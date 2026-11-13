@@ -116,7 +116,7 @@ export function SocialButton({
       onPress={onPress}
       className={cn(
         'flex-row items-center justify-center rounded-control border',
-        variant === 'full' ? 'h-12 gap-3 px-5' : 'h-10 flex-1',
+        variant === 'full' ? 'h-12 gap-3 px-5' : 'h-12 flex-1',
         provider === 'apple'
           ? appleDark
             ? 'border-black bg-black'
@@ -168,7 +168,7 @@ export function SocialSection({
   if (!available.google && !available.apple) return null;
 
   return (
-    <View testID="auth-social" className="gap-2.5">
+    <View testID="auth-social" className="gap-3">
       <View className="flex-row items-center gap-3">
         <View className="h-px flex-1 bg-line" />
         <AppText variant="caption" className="text-ink-muted">
@@ -198,8 +198,7 @@ export function SocialSection({
         <AppText
           testID="auth-social-legal"
           variant="caption"
-          className="text-center text-ink-faint"
-          style={{ fontSize: 11 }}
+          className="text-center text-xs text-ink-faint"
         >
           En continuant, vous acceptez les CGU et la politique de confidentialité.
         </AppText>

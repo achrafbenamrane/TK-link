@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { isPhoneAuthEnabled } from '@/shared/lib/env';
-import { AppText, Button, Screen, TextField, Wordmark } from '@/shared/ui';
+import { AppText, BrandBar, Button, Screen, ScreenIntro, TextField } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { friendlyAuthError } from '../model/auth-errors';
@@ -155,29 +155,25 @@ export function SignInScreen({
 
   return (
     <Screen testID="sign-in-screen">
+      <BrandBar />
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerClassName="flex-grow justify-center py-8"
+          contentContainerClassName="flex-grow pb-6 pt-6"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View className="mb-8">
-            <Wordmark size={34} />
-            <AppText variant="caption" className="mt-1">
-              Content de vous revoir.
-            </AppText>
-          </View>
+          <ScreenIntro
+            title="Content de vous revoir"
+            subtitle="Connectez-vous pour retrouver votre espace et vos offres Flash."
+          />
 
           <DemoNotice />
 
           <View className="gap-3">
             <View className="gap-1.5">
-              <AppText variant="caption" className="font-sans-semibold text-ink-muted">
-                {isPhoneAuthEnabled ? 'E-mail ou téléphone' : 'Adresse e-mail'}
-              </AppText>
               <View className="flex-row">
                 <TextField
                   testID="auth-identifier"
@@ -186,9 +182,7 @@ export function SignInScreen({
                     setIdentifier(v);
                     setFieldErrors((e) => ({ ...e, identifier: undefined }));
                   }}
-                  placeholder={
-                    isPhoneAuthEnabled ? 'vous@exemple.fr ou 06 12 34 56 78' : 'vous@exemple.fr'
-                  }
+                  placeholder={isPhoneAuthEnabled ? 'E-mail ou téléphone' : 'Adresse e-mail'}
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoComplete="username"
@@ -212,9 +206,6 @@ export function SignInScreen({
             </View>
 
             <View className="gap-1.5">
-              <AppText variant="caption" className="font-sans-semibold text-ink-muted">
-                Mot de passe
-              </AppText>
               <View className="flex-row">
                 <TextField
                   testID="auth-password"
@@ -223,7 +214,7 @@ export function SignInScreen({
                     setPassword(v);
                     setFieldErrors((e) => ({ ...e, password: undefined }));
                   }}
-                  placeholder="8 caractères minimum"
+                  placeholder="Mot de passe"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoComplete="current-password"
@@ -255,40 +246,41 @@ export function SignInScreen({
                   {fieldErrors.password}
                 </AppText>
               ) : null}
-              {onForgotPassword ? (
-                <Pressable
-                  testID="auth-forgot"
-                  accessibilityRole="button"
-                  accessibilityLabel="Mot de passe oublié"
-                  hitSlop={8}
-                  onPress={onForgotPassword}
-                  className="self-end"
-                >
-                  <AppText variant="caption" className="font-sans-semibold text-brand-600">
-                    Mot de passe oublié ?
-                  </AppText>
-                </Pressable>
-              ) : null}
             </View>
 
-            {serverError ? (
-              <View className="flex-row items-start gap-2 rounded-control border border-brand-200 bg-brand-50 p-3">
-                <Feather name="alert-circle" size={15} color={colors.brand600} />
-                <AppText testID="auth-error" variant="caption" className="flex-1 text-brand-600">
-                  {serverError}
+            {onForgotPassword ? (
+              <Pressable
+                testID="auth-forgot"
+                accessibilityRole="button"
+                accessibilityLabel="Mot de passe oublié"
+                hitSlop={8}
+                onPress={onForgotPassword}
+                className="self-end py-1"
+              >
+                <AppText variant="caption" className="font-sans-semibold text-brand-600">
+                  Mot de passe oublié ?
                 </AppText>
-              </View>
+              </Pressable>
             ) : null}
+          </View>
 
-            <View className="mt-1">
-              <Button
-                testID="auth-submit"
-                label="Se connecter"
-                loading={submitting}
-                disabled={busy !== null}
-                onPress={submit}
-              />
+          {serverError ? (
+            <View className="mt-4 flex-row items-start gap-2 rounded-control border border-brand-200 bg-brand-50 p-3">
+              <Feather name="alert-circle" size={15} color={colors.brand600} />
+              <AppText testID="auth-error" variant="caption" className="flex-1 text-brand-600">
+                {serverError}
+              </AppText>
             </View>
+          ) : null}
+
+          <View className="mt-6 gap-6">
+            <Button
+              testID="auth-submit"
+              label="Se connecter"
+              loading={submitting}
+              disabled={busy !== null}
+              onPress={submit}
+            />
 
             <SocialSection
               verb="Continuer avec"
@@ -297,43 +289,43 @@ export function SignInScreen({
               legal
               onSelect={(p) => !working && void social(p)}
             />
+          </View>
 
-            {onCreateAccount ? (
+          {onCreateAccount ? (
+            <Pressable
+              testID="auth-toggle"
+              accessibilityRole="button"
+              accessibilityLabel="Créer un compte"
+              onPress={onCreateAccount}
+              className="mt-auto pt-6"
+            >
+              <AppText variant="caption" className="text-center text-ink-muted">
+                Pas encore de compte ?{' '}
+                <AppText className="font-sans-bold text-sm text-brand-600">Créer un compte</AppText>
+              </AppText>
+            </Pressable>
+          ) : null}
+
+          {/* L'entrée des COMMERÇANTS. La navigation reste à la route, comme
+              pour « Créer un compte » : l'écran ne connaît pas les URL. */}
+          {onMerchantSignUp ? (
+            <View className="mt-2 border-t border-line pt-4">
               <Pressable
-                testID="auth-toggle"
-                accessibilityRole="button"
-                accessibilityLabel="Créer un compte"
-                onPress={onCreateAccount}
-                className="py-3"
+                testID="auth-merchant"
+                accessibilityRole="link"
+                accessibilityLabel="Inscrire ma boutique sur TK LINK"
+                onPress={onMerchantSignUp}
+                className="py-2"
               >
                 <AppText variant="caption" className="text-center text-ink-muted">
-                  Pas encore de compte ?{' '}
-                  <AppText className="font-sans-bold text-brand-600">Créer un compte</AppText>
+                  Vous êtes commerçant ?{' '}
+                  <AppText className="font-sans-bold text-sm text-brand-600">
+                    Inscrire ma boutique
+                  </AppText>
                 </AppText>
               </Pressable>
-            ) : null}
-
-            {/* L'entrée des COMMERÇANTS. La navigation reste à la route, comme
-                pour « Créer un compte » : l'écran ne connaît pas les URL. */}
-            {onMerchantSignUp ? (
-              <View className="mt-1 border-t border-line pt-4">
-                <Pressable
-                  testID="auth-merchant"
-                  accessibilityRole="link"
-                  accessibilityLabel="Inscrire ma boutique sur TK LINK"
-                  onPress={onMerchantSignUp}
-                  className="py-2"
-                >
-                  <AppText variant="caption" className="text-center text-ink-muted">
-                    Vous êtes commerçant ?{' '}
-                    <AppText className="font-sans-bold text-brand-600">
-                      Inscrire ma boutique
-                    </AppText>
-                  </AppText>
-                </Pressable>
-              </View>
-            ) : null}
-          </View>
+            </View>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
