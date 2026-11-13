@@ -137,8 +137,9 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
 
 - Disque presque plein sur ce poste (cf. mémoire) : vérifier `df -h` avant export ou build.
 - Stripe et notifications exigent une nouvelle APK (quota EAS gratuit mensuel).
-- Les fonctions Edge n’ont été ni typées par Deno ni lancées sur ce poste (Deno absent) :
-  relecture seulement, à éprouver au déploiement.
+- Les fonctions Edge n’ont jamais été lancées sur ce poste (Deno absent). Depuis le 13/11/2026 elles
+  sont typées par `npm run typecheck:edge` (tsc, dans `verify`) et relues deux fois ; reste à les
+  éprouver au déploiement.
 - Le back-office n’est protégé que par un mot de passe partagé : à rendre long et unique AVANT d’y
   mettre la clé de service (landing/DEPLOY.md).
 - Uber Direct et fal.ai : rien ne s’éprouve sans les clés ; le code est testé sur des réponses

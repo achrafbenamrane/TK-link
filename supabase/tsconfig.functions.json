@@ -1,0 +1,19 @@
+{
+  // Les fonctions Edge (Deno), typées par tsc : `npm run typecheck:edge`, dans `verify`.
+  // Elles n'avaient jamais été compilées sur ce poste (Deno absent) — relecture du 13/11/2026.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": [],
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "paths": {
+      "jsr:@supabase/supabase-js@2": ["./../node_modules/@supabase/supabase-js"]
+    }
+  },
+  "include": ["functions/**/*.ts", "deno-shim.d.ts"]
+}

@@ -49,7 +49,7 @@ Notably, `expo-router` no longer sits on react-navigation — never import
 ## Commands
 
 ```bash
-npm run verify        # format:check + lint + typecheck + test + docs:lint + secrets + a11y — the local gate
+npm run verify        # format:check + lint + typecheck (+ edge functions) + test + docs:lint + secrets + a11y — the local gate
 npm test              # Jest (watch: npm run test:watch)
 npm run lint:fix      # ESLint with autofix
 npm run typecheck     # tsc --noEmit
