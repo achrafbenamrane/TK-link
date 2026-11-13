@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
+import { claimReward, fetchMyLoyalty, fetchProgram, type LoyaltyError } from '../lib/loyalty-api';
 import type { ProgramUnit, Tier } from '../lib/tiers';
 
 /**
@@ -161,6 +162,20 @@ type State = {
     code: string,
   ) => { ok: true; reward: Reward } | { ok: false; reason: 'inconnu' | 'deja_utilisee' };
   resetDemo: () => void;
+  /**
+   * Relit sur le serveur MA fidélité chez les commerces du serveur (points, paliers réclamés,
+   * récompenses, programmes) et remplace la copie locale pour eux. Les enseignes de démonstration
+   * n'y sont pas : leur fidélité reste locale.
+   */
+  syncServer: () => Promise<void>;
+  /** Le programme d'un commerce du serveur, pour l'afficher avant d'y avoir des points. */
+  loadProgram: (merchantId: string) => Promise<void>;
+  /** Réclame un palier chez un commerce du serveur (le serveur vérifie le solde). */
+  claimOnServer: (
+    merchantId: string,
+    rank: number,
+    merchantName?: string,
+  ) => Promise<{ ok: true } | { ok: false; code: LoyaltyError }>;
 };
 
 /** Un code lisible, sans caractères qui se confondent (0/O, 1/I). */
@@ -263,6 +278,45 @@ export const useMerchantLoyaltyStore = create<State>()(
       },
 
       resetDemo: () => set({ cards: seedCards(), programs: {}, rewards: [] }),
+
+      syncServer: async () => {
+        const res = await fetchMyLoyalty();
+        if (!res.ok) return;
+        const { cards, rewards, programs } = res.value;
+        set((s) => {
+          const names = new Map(s.rewards.map((r) => [r.id, r.merchantName]));
+          return {
+            cards: { ...s.cards, ...cards },
+            programs: { ...s.programs, ...programs },
+            // Les récompenses du serveur remplacent celles de ces commerces ; les locales restent.
+            rewards: [
+              ...rewards.map((r) => ({ ...r, merchantName: names.get(r.id) ?? '' })),
+              ...s.rewards.filter((r) => !rewards.some((x) => x.merchantId === r.merchantId)),
+            ].sort((a, b) => b.at - a.at),
+          };
+        });
+      },
+
+      loadProgram: async (merchantId) => {
+        const program = await fetchProgram(merchantId);
+        if (program) set((s) => ({ programs: { ...s.programs, [merchantId]: program } }));
+      },
+
+      claimOnServer: async (merchantId, rank, merchantName = '') => {
+        const res = await claimReward(merchantId, rank);
+        if (!res.ok) return res;
+        await get().syncServer();
+        if (merchantName) {
+          set((s) => ({
+            rewards: s.rewards.map((r) =>
+              r.merchantId === merchantId && r.rank === rank && !r.merchantName
+                ? { ...r, merchantName }
+                : r,
+            ),
+          }));
+        }
+        return { ok: true as const };
+      },
     }),
     {
       name: 'tklink-merchant-loyalty-v1',

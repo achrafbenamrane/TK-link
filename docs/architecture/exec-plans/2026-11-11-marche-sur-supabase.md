@@ -78,6 +78,11 @@ Reprise le 13/11/2026 dans [2026-11-13-rapport-avancement.md](2026-11-13-rapport
 
 ### Étape 4 — Fidélité et tickets rattachés aux commandes du serveur
 
+- [x] 13/11/2026 : migration 0017 (programme, points crédités par le serveur à la remise, paliers
+      réclamés contre un code, validés par le commerçant) ; app : fidélité des commerces du serveur
+      lue et réclamée au serveur, paliers du commerçant enregistrés au serveur. Reste : partage d’une
+      récompense, tickets (reçus) des commandes du serveur
+
 ## Risques
 
 - Données locales existantes (offres publiées sur un appareil) : elles ne migrent pas vers le

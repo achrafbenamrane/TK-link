@@ -1,13 +1,16 @@
 import { Feather } from '@expo/vector-icons';
-import { useMemo } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, Share, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
+import { isSupabaseConfigured } from '@/shared/lib/env';
 import { BackButton } from '@/shared/ui/back-button';
 import { useColors } from '@/shared/theme/theme-provider';
 
+import { isServerShop } from '../lib/loyalty-api';
 import { rewardTicket } from '../lib/tiers';
 import { selectRewards, useMerchantLoyaltyStore, type Reward } from '../model/merchant-store';
 
@@ -33,6 +36,15 @@ export function RewardsScreen() {
   const colors = useColors();
   const rewards = useMerchantLoyaltyStore(selectRewards);
   const shareReward = useMerchantLoyaltyStore((s) => s.shareReward);
+  const syncServer = useMerchantLoyaltyStore((s) => s.syncServer);
+
+  // Les récompenses des commerces du serveur (migration 0017), relues à chaque passage : une
+  // récompense validée au comptoir passe « Utilisée » ici aussi.
+  useFocusEffect(
+    useCallback(() => {
+      if (isSupabaseConfigured) void syncServer();
+    }, [syncServer]),
+  );
 
   const [available, history] = useMemo(
     () => [
@@ -121,18 +133,22 @@ export function RewardsScreen() {
             >
               {r.code}
             </AppText>
-            <Pressable
-              testID={`reward-share-${r.id}`}
-              accessibilityRole="button"
-              accessibilityLabel={`Partager ${r.label}`}
-              onPress={() => share(r)}
-              className="flex-row items-center gap-2 rounded-control border border-line px-4 py-2.5 active:bg-surface-muted"
-            >
-              <Feather name="share-2" size={15} color={colors.inkMuted} />
-              <AppText className="font-sans-semibold text-ink-muted" style={{ fontSize: 13 }}>
-                Partager cette récompense
-              </AppText>
-            </Pressable>
+            {/* Le partage n'existe pas encore sur le serveur : on ne le propose pas pour une
+                récompense d'un commerce du serveur, plutôt qu'un partage qui ne tiendrait pas. */}
+            {isServerShop(r.merchantId) ? null : (
+              <Pressable
+                testID={`reward-share-${r.id}`}
+                accessibilityRole="button"
+                accessibilityLabel={`Partager ${r.label}`}
+                onPress={() => share(r)}
+                className="flex-row items-center gap-2 rounded-control border border-line px-4 py-2.5 active:bg-surface-muted"
+              >
+                <Feather name="share-2" size={15} color={colors.inkMuted} />
+                <AppText className="font-sans-semibold text-ink-muted" style={{ fontSize: 13 }}>
+                  Partager cette récompense
+                </AppText>
+              </Pressable>
+            )}
           </View>
         ))}
 

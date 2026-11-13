@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { TiersSettingsScreen } from '@/features/loyalty';
 import { selectOffers, useMerchantStore } from '@/features/merchant';
 import { getDeal, LOCAL_MERCHANT_DEAL_IDS, LOCAL_MERCHANT_ID } from '@/features/shop';
+import { isSupabaseConfigured } from '@/shared/lib/env';
 
 /**
  * Le barème de fidélité du commerçant — CDC §8.3.
@@ -29,5 +30,12 @@ export default function TiersRoute() {
     return [...own, ...catalogue];
   }, [published]);
 
-  return <TiersSettingsScreen merchantId={LOCAL_MERCHANT_ID} products={products} />;
+  return (
+    <TiersSettingsScreen
+      merchantId={LOCAL_MERCHANT_ID}
+      products={products}
+      // Avec un serveur, le programme est celui du commerce connecté, enregistré sur le serveur.
+      server={isSupabaseConfigured}
+    />
+  );
 }

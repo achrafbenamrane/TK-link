@@ -169,6 +169,18 @@ publiés en temps réel (sous RLS). Le back-office répond depuis `/admin` → M
 serveur `landing/app/admin/api/support/route.js` (clé de service côté Vercel : voir
 [landing/DEPLOY.md](../../landing/DEPLOY.md), et changer d’abord le mot de passe du back-office).
 
+## Fidélité par commerce (0017)
+
+Mêmes règles que l’app (`src/features/loyalty`), tenues par le serveur pour les commerces du
+serveur : programme par commerce (`loyalty_programs`, unité figée une fois enregistrée, 1 à 4
+paliers croissants, `save_loyalty_program`), points crédités par un déclencheur quand une commande
+passe « récupérée » ou « livrée » (`loyalty_ledger`, une fois par commande, 1 € d’articles ou 1 achat
+= 1 point, rien sur la livraison), palier réclamé une fois contre un code (`claim_reward` →
+`loyalty_rewards`, `TK-XXXXXX`), validé par le seul titulaire du commerce (`redeem_reward`). Aucune
+écriture directe. Côté app : `loyalty/lib/loyalty-api.ts` ; le store local sert de copie pour les
+commerces du serveur (UUID) et garde la fidélité locale des enseignes de démonstration. Le partage
+d’une récompense n’existe pas encore sur le serveur (bouton masqué pour ces commerces).
+
 ## Notifications (0016)
 
 L’app enregistre le jeton Expo du téléphone (`register_push_token`, retiré à la déconnexion par

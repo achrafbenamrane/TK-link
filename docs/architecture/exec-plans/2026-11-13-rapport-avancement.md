@@ -101,6 +101,12 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
 - [x] App : « Ma boutique » → Visuels IA (création, suivi, montrer/cacher) ; visuels montrés sur la
       vitrine (f2f09b5, 5a7c649)
 
+### 7 — Ce que le rapport ne disait pas, mais que le pilote exige
+
+- [x] Fidélité sur le serveur (0017) : sans elle, une commande payée ne rapportait aucun point
+- [x] Dossiers pros validés ou refusés depuis `/admin` (plus de requête SQL à taper)
+- [x] Scanner le QR de retrait au comptoir
+
 ## Risques
 
 - Disque presque plein sur ce poste (cf. mémoire) : vérifier `df -h` avant export ou build.

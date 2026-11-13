@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
@@ -7,6 +7,11 @@ import { AppText, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
 import { useColors } from '@/shared/theme/theme-provider';
 
+import {
+  fetchMyProgram,
+  redeemReward as redeemOnServer,
+  saveProgram as saveOnServer,
+} from '../lib/loyalty-api';
 import { PROGRAM_UNITS, UNIT_LABEL, type ProgramUnit, type Tier } from '../lib/tiers';
 import { programOf, selectPrograms, useMerchantLoyaltyStore } from '../model/merchant-store';
 
@@ -22,6 +27,12 @@ type Props = {
    * reste possible.
    */
   products?: RewardProduct[];
+  /**
+   * Le programme vit sur le SERVEUR (migration 0017) : relu à l'ouverture, enregistré pour le
+   * commerce connecté, et les codes de récompense validés par le serveur. Sans serveur, il reste
+   * sur l'appareil (démonstration).
+   */
+  server?: boolean;
 };
 
 /** Un palier en cours de saisie : les nombres y sont du texte, comme au clavier. */
@@ -48,7 +59,7 @@ const REWARD_MAX = 60;
  * Les avantages DÉJÀ RÉCLAMÉS ne sont pas repris : un client qui a obtenu sa
  * boisson ne la rend pas parce que le barème a changé.
  */
-export function TiersSettingsScreen({ merchantId, products = [] }: Props) {
+export function TiersSettingsScreen({ merchantId, products = [], server = false }: Props) {
   const colors = useColors();
   const programs = useMerchantLoyaltyStore(selectPrograms);
   const saveProgram = useMerchantLoyaltyStore((s) => s.saveProgram);
@@ -67,8 +78,48 @@ export function TiersSettingsScreen({ merchantId, products = [] }: Props) {
   const redeemReward = useMerchantLoyaltyStore((s) => s.redeemReward);
   const [code, setCode] = useState('');
   const [redeemMsg, setRedeemMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const redeem = () => {
+  // Le programme enregistré sur le serveur remplace la copie de l'appareil (unité comprise).
+  useEffect(() => {
+    if (!server) return;
+    let alive = true;
+    void fetchMyProgram().then((saved) => {
+      if (!alive || !saved) return;
+      useMerchantLoyaltyStore.setState((st) => ({
+        programs: { ...st.programs, [merchantId]: saved },
+      }));
+      setUnit(saved.unit);
+      setDrafts(
+        saved.tiers.map((t) => ({
+          cost: String(t.cost),
+          reward: t.reward,
+          productId: t.productId,
+        })),
+      );
+    });
+    return () => {
+      alive = false;
+    };
+  }, [server, merchantId]);
+
+  const redeem = async () => {
+    if (server) {
+      const res = await redeemOnServer(code);
+      setRedeemMsg(
+        res.ok
+          ? { ok: true, text: `Validée : ${res.value.label}` }
+          : {
+              ok: false,
+              text:
+                res.code === 'network'
+                  ? 'Pas de connexion. Réessayez.'
+                  : 'Code inconnu chez vous, ou récompense déjà utilisée.',
+            },
+      );
+      if (res.ok) setCode('');
+      return;
+    }
     const res = redeemReward(merchantId, code);
     setRedeemMsg(
       res.ok
@@ -113,7 +164,7 @@ export function TiersSettingsScreen({ merchantId, products = [] }: Props) {
     setPickerOpen(null);
   };
 
-  const save = () => {
+  const save = async () => {
     const found: (string | undefined)[] = [];
     let previous = 0;
 
@@ -137,6 +188,20 @@ export function TiersSettingsScreen({ merchantId, products = [] }: Props) {
       ...(d.productId ? { productId: d.productId } : {}),
     }));
 
+    if (server) {
+      const res = await saveOnServer({ unit: locked ? program.unit : unit, tiers: next });
+      if (!res.ok) {
+        setSaveError(
+          res.code === 'network'
+            ? 'Pas de connexion : vos paliers ne sont pas enregistrés. Réessayez.'
+            : res.code === 'no_shop'
+              ? 'Déposez d’abord le dossier de votre commerce.'
+              : 'Ces paliers n’ont pas pu être enregistrés. Vérifiez-les et réessayez.',
+        );
+        return;
+      }
+    }
+    setSaveError(null);
     saveProgram(merchantId, { unit, tiers: next });
     setErrors([]);
     Alert.alert(
@@ -348,11 +413,17 @@ export function TiersSettingsScreen({ merchantId, products = [] }: Props) {
           </View>
         ))}
 
+        {saveError ? (
+          <AppText testID="tiers-save-error" variant="caption" className="text-danger">
+            {saveError}
+          </AppText>
+        ) : null}
+
         <Pressable
           testID="tiers-save"
           accessibilityRole="button"
           accessibilityLabel="Enregistrer les paliers"
-          onPress={save}
+          onPress={() => void save()}
           className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-4 active:bg-brand-600"
         >
           <Feather name="check" size={17} color={colors.inkInverse} />
@@ -403,7 +474,7 @@ export function TiersSettingsScreen({ merchantId, products = [] }: Props) {
             accessibilityRole="button"
             accessibilityLabel="Valider la récompense"
             disabled={code.trim().length === 0}
-            onPress={redeem}
+            onPress={() => void redeem()}
             className={cn(
               'items-center rounded-control bg-surface-inverse py-3',
               code.trim().length === 0 && 'opacity-40',

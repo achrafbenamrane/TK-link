@@ -1,11 +1,13 @@
 import { Feather } from '@expo/vector-icons';
-import { useMemo, useRef } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen, ThemeToggle } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
+import { isServerShop, type LoyaltyError } from '../lib/loyalty-api';
 import { nextTier, pointsToGo, tierProgress, tierState, UNIT_LABEL } from '../lib/tiers';
 import {
   programOf,
@@ -25,6 +27,17 @@ type Props = {
   /** Ouvre l'inventaire de récompenses (QR, partage) — fourni par la route. */
   onOpenRewards?: () => void;
   onBack: () => void;
+};
+
+const CLAIM_ERROR: Record<LoyaltyError, string> = {
+  not_enough_points: 'Pas encore assez de points pour ce palier.',
+  already_claimed: 'Ce palier est déjà débloqué : retrouvez-le dans « Mes récompenses ».',
+  no_such_tier: 'Ce palier a changé : la page se met à jour.',
+  reward_refused: 'Récompense refusée.',
+  invalid_program: 'Programme indisponible.',
+  no_shop: 'Commerce introuvable.',
+  network: 'Pas de connexion. Réessayez.',
+  unknown: 'Une erreur est survenue. Réessayez.',
 };
 
 const initials = (name: string) =>
@@ -75,8 +88,35 @@ export function MerchantLoyaltyScreen({
   const colors = useColors();
   const cards = useMerchantLoyaltyStore(selectCards);
   const programs = useMerchantLoyaltyStore(selectPrograms);
-  const { tiers, unit } = programOf(programs, merchantId);
   const claim = useMerchantLoyaltyStore((s) => s.claim);
+  const claimOnServer = useMerchantLoyaltyStore((s) => s.claimOnServer);
+  const syncServer = useMerchantLoyaltyStore((s) => s.syncServer);
+  const loadProgram = useMerchantLoyaltyStore((s) => s.loadProgram);
+  const [claimError, setClaimError] = useState<LoyaltyError | null>(null);
+
+  // UN COMMERCE DU SERVEUR (rapport d'avancement du 13/11/2026) : les points, les paliers et les
+  // récompenses viennent du serveur, relus à chaque passage ; un programme pas encore enregistré
+  // n'est PAS remplacé par celui de démonstration.
+  const server = isServerShop(merchantId);
+  useFocusEffect(
+    useCallback(() => {
+      if (!server) return;
+      void syncServer();
+      void loadProgram(merchantId);
+    }, [server, merchantId, syncServer, loadProgram]),
+  );
+  const noProgram = server && programs[merchantId] === undefined;
+  const { tiers, unit } = programOf(programs, merchantId);
+
+  const onClaim = async (rank: number) => {
+    setClaimError(null);
+    if (!server) {
+      claim(merchantId, rank, merchantName);
+      return;
+    }
+    const res = await claimOnServer(merchantId, rank, merchantName);
+    if (!res.ok) setClaimError(res.code);
+  };
 
   const scrollRef = useRef<ScrollView>(null);
   const historyY = useRef(0);
@@ -257,8 +297,19 @@ export function MerchantLoyaltyScreen({
             Mes récompenses
           </AppText>
         </View>
+        {noProgram ? (
+          <AppText testID="loyalty-no-program" variant="caption">
+            Ce commerce n’a pas encore créé son programme de fidélité. Vos points s’accumulent déjà
+            à chaque commande.
+          </AppText>
+        ) : null}
+        {claimError ? (
+          <AppText testID="loyalty-claim-error" variant="caption" className="text-danger">
+            {CLAIM_ERROR[claimError]}
+          </AppText>
+        ) : null}
         <View className="gap-2">
-          {tiers.map((tier) => {
+          {(noProgram ? [] : tiers).map((tier) => {
             const state = tierState(tier, card.points, card.claimed);
             return (
               <View
@@ -323,7 +374,7 @@ export function MerchantLoyaltyScreen({
                       testID={`tier-claim-${tier.rank}`}
                       accessibilityRole="button"
                       accessibilityLabel={`Utiliser ${tier.reward}`}
-                      onPress={() => claim(merchantId, tier.rank, merchantName)}
+                      onPress={() => void onClaim(tier.rank)}
                       className="rounded-pill bg-brand-500 px-4 py-1.5 active:bg-brand-600"
                     >
                       <AppText className="font-sans-bold text-white" style={{ fontSize: 12 }}>
