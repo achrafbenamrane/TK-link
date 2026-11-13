@@ -361,11 +361,15 @@ export const useShopStore = create<ShopState>()(
  * plutôt que planifié par un minuteur : ça survit à la fermeture de l'app, là
  * où un setTimeout serait perdu.
  *
+ * Une livraison passe par « En livraison » (le coursier partenaire, Uber Direct, l'a prise) avant
+ * « Livrée » ; un Touch & Collect reste « Prête » jusqu'au retrait.
+ *
  * À SUPPRIMER quand le back-end poussera les vrais statuts.
  */
 export const DEMO_PAID_AFTER_S = 10;
 export const DEMO_PREPARING_AFTER_S = 25;
 export const DEMO_SHIPPING_AFTER_S = 60;
+export const DEMO_ON_THE_WAY_AFTER_S = 120;
 export const DEMO_DELIVERED_AFTER_S = 240;
 
 export function demoStatusFor(order: Order): Order['status'] {
@@ -377,6 +381,9 @@ export function demoStatusFor(order: Order): Order['status'] {
   // La fin du parcours dépend du mode de retrait — CDC §12.
   if (elapsed >= DEMO_DELIVERED_AFTER_S) {
     return order.fulfilment === 'touch-collect' ? 'recuperee' : 'livree';
+  }
+  if (elapsed >= DEMO_ON_THE_WAY_AFTER_S && order.fulfilment === 'livraison') {
+    return 'en_livraison';
   }
   if (elapsed >= DEMO_SHIPPING_AFTER_S) return 'prete';
   if (elapsed >= DEMO_PREPARING_AFTER_S) return 'preparation';

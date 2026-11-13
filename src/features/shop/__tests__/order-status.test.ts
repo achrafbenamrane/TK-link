@@ -138,9 +138,9 @@ describe('Touch & Collect vs livraison — CDC §12', () => {
     expect(canTransition('prete', 'livree', 'touch-collect')).toBe(false);
   });
 
-  it('une commande livrée passe par le livreur, jamais par « récupérée »', () => {
+  it('une commande livrée passe par le coursier partenaire, jamais par « récupérée »', () => {
     // « Prête » ne mène plus directement chez le client en livraison : elle
-    // mène au livreur. C'est l'étape la plus attendue du parcours.
+    // mène au coursier (Uber Direct). C'est l'étape la plus attendue du parcours.
     expect(nextStatuses('prete', 'livraison')).toContain('en_livraison');
     expect(nextStatuses('prete', 'livraison')).not.toContain('recuperee');
     expect(canTransition('prete', 'recuperee', 'livraison')).toBe(false);

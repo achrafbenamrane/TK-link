@@ -128,7 +128,7 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 export function nextStatuses(status: OrderStatus, fulfilment: Fulfilment): OrderStatus[] {
   const all = TRANSITIONS[status];
   if (status !== 'prete') return all;
-  // En livraison, « prête » mène au livreur — pas directement chez le client.
+  // En livraison, « prête » mène au coursier partenaire — pas directement chez le client.
   const end: OrderStatus = fulfilment === 'touch-collect' ? 'recuperee' : 'en_livraison';
   return all.filter((s) => s === end || s === 'annulee' || s === 'litige');
 }

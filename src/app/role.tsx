@@ -1,9 +1,7 @@
 import { useRouter } from 'expo-router';
 
 import { useAuthStore } from '@/features/auth';
-import { useCourierStore } from '@/features/courier';
 import { DEFAULT_TIERS, useMerchantLoyaltyStore } from '@/features/loyalty';
-import { useMessagesStore } from '@/features/messages';
 import { defaultHours, useMerchantStore } from '@/features/merchant';
 import { RoleScreen, useOnboardingStore } from '@/features/onboarding';
 import { useReferralStore } from '@/features/referral';
@@ -14,12 +12,11 @@ import type { Role } from '@/shared/lib/roles';
 /**
  * LE CHOIX DU PROFIL — avant l'inscription et la connexion.
  *
- * La route range le rôle puis ouvre l'inscription de ce profil : le client et
- * le commerçant partagent le formulaire (variantes), le livreur enchaîne ensuite
- * sur ses justificatifs, le grossiste sur le portail web.
+ * La route range le rôle puis ouvre l'inscription de ce profil : un seul
+ * formulaire, avec une variante par profil.
  *
  * « Démo » ouvre l'app d'un profil déjà REMPLI — commandes, fidélité, offres,
- * boutique, missions, avec leurs images et leurs textes — pour montrer au client ce
+ * boutique, avec leurs images et leurs textes — pour montrer au client ce
  * que chacun voit. Ce sont des données d'exemple, posées dans les stores locaux ;
  * aucun serveur n'est touché. Le compte étant obligatoire, la démo ouvre aussi une
  * session LOCALE (sans serveur, sans jeton) au nom de ce profil d'exemple.
@@ -30,7 +27,6 @@ const DEMO_IDENTITY: Record<Role, string> = {
   consommateur: 'neo.demo@tklink.fr',
   commercant: 'contact@petit-toulousain.fr',
   grossiste: 'contact@grossiste-occitan.fr',
-  livreur: 'alex.martin.demo@tklink.fr',
 };
 
 const MIN = 60_000;
@@ -70,40 +66,12 @@ function demoOrder(
   };
 }
 
-/**
- * L'historique du livreur de démonstration : une journée bien remplie et la veille, pour que le
- * résumé du jour montre de vrais chiffres et leur évolution. Gains : le forfait de 3 € plus la
- * majoration kilométrique sur les longues courses.
- */
-function demoCourierHistory(now: number) {
-  const shops = ['Sushi Tokyo', 'Boulangerie des Halles', 'Pizzeria Napoli', 'Le Petit Toulousain'];
-  const today0 = new Date(now).setHours(0, 0, 0, 0);
-  const lines = (count: number, dayStart: number, endHour: number) =>
-    Array.from({ length: count }, (_, i) => {
-      const km = 1 + ((i * 7) % 40) / 10;
-      const gain = Math.round((3 + Math.max(0, km - 2) * 0.8) * 100) / 100;
-      return {
-        orderId: `demo_h${dayStart}_${i}`,
-        merchantName: shops[i % shops.length] ?? 'Commerçant',
-        // Les livraisons d'aujourd'hui sont déjà passées ; celles d'hier réparties sur la journée.
-        at: Math.min(now - (i + 1) * 20 * 60_000, dayStart + (endHour - i * 0.5) * 3600_000),
-        distanceKm: km,
-        gainEur: gain,
-        gainComplet: false,
-        proofUri: 'demo',
-      };
-    });
-  return [...lines(12, today0, 20), ...lines(10, today0 - 24 * 3600_000, 20)];
-}
-
 function seedDemo(role: Role) {
   const now = Date.now();
 
   // --- Le profil ----------------------------------------------------------
   const onboarding = useOnboardingStore.getState();
-  onboarding.setFirstName(
-    role === 'commercant' ? 'Karim' : role === 'livreur' ? 'Alex Martin' : 'Neo',
-  );
+  onboarding.setFirstName(role === 'commercant' ? 'Karim' : 'Neo');
   onboarding.setInterests(['restauration', 'high-tech', 'maison']);
   onboarding.setRole(role);
   onboarding.complete();
@@ -491,23 +459,6 @@ function seedDemo(role: Role) {
               dimanche: { open: false, from: '09:00', to: '18:00' },
             },
           },
-  });
-
-  // --- Messages : les conversations d'exemple du livreur --------------------
-  if (role === 'livreur') useMessagesStore.getState().seedDemo();
-
-  // --- Livreur : compte validé, en ligne, quelques courses livrées ----------
-  useCourierStore.setState({
-    status: 'valide',
-    vehicle: 'scooter',
-    zone: 'Toulouse centre',
-    identity: { givenName: 'Alex', familyName: 'Martin', verifiedAt: now },
-    selfieUri: 'demo',
-    deviceEnrolled: true,
-    online: role === 'livreur',
-    active: null,
-    declined: [],
-    history: demoCourierHistory(now),
   });
 }
 

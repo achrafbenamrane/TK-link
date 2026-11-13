@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { z } from 'zod';
 
-import { ROLES, type Role } from '@/shared/lib/roles';
+import { RoleSchema, type Role } from '@/shared/lib/roles';
 import { forgetStoredSession, supabase } from '@/shared/lib/supabase';
 
 import { classifyAuthError, type AuthErrorCode, type AuthErrorInput } from './auth-errors';
@@ -233,7 +233,7 @@ export type ServerProfile = {
   lastName: string;
   accountType: Role;
   accountTypeDeclared: boolean;
-  /** L'accueil (centres d'intérêt, dossier pro ou livreur) a déjà été fait par ce compte. */
+  /** L'accueil (centres d'intérêt ou dossier pro) a déjà été fait par ce compte. */
   onboarded: boolean;
   /** Les centres d'intérêt choisis à l'accueil (identifiants de catégories). */
   interests: string[];
@@ -242,7 +242,8 @@ export type ServerProfile = {
 const ProfileRowSchema = z.object({
   first_name: z.string().nullable(),
   last_name: z.string().nullable(),
-  account_type: z.enum(ROLES),
+  // Un ancien compte livreur (rôle retiré le 13/11/2026) se relit en client : voir `RoleSchema`.
+  account_type: RoleSchema,
   account_type_declared: z.boolean(),
   // Migration 0009 : absentes tant qu'elle n'est pas appliquée — on lit alors « pas encore fait ».
   onboarded_at: z.string().nullable().optional(),
@@ -309,7 +310,7 @@ export async function declareAccountType(type: Role): Promise<Outcome<{ accountT
   try {
     const { data, error } = await supabase.rpc('declare_account_type', { p_type: type });
     if (error) return fail(error);
-    const parsed = z.enum(ROLES).safeParse(data);
+    const parsed = RoleSchema.safeParse(data);
     return parsed.success ? { ok: true, accountType: parsed.data } : { ok: false, code: 'unknown' };
   } catch (error) {
     return fail(error);

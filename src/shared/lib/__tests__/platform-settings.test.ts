@@ -20,19 +20,19 @@ describe('paramètres de plateforme — CDC V1.0 §12.3 et V1.1', () => {
   it('porte les valeurs arrêtées le 24/10/2026, quand Farid a laissé le développeur trancher', () => {
     // Le CDC (V1.0 §14) interdit d'INVENTER ce qu'il laisse ouvert ; ici ce n'est pas une invention :
     // le client a délégué la décision. Les valeurs restent des défauts, réglables par le Super Admin.
-    expect(PLATFORM_SETTINGS.courierBaseZoneKm).toBe(3);
-    expect(PLATFORM_SETTINGS.importantParcelMinEur).toBe(100);
+    expect(PLATFORM_SETTINGS.deliveryBaseZoneKm).toBe(3);
+    expect(PLATFORM_SETTINGS.deliveryPerKmEur).toBe(0.8);
     expect(PLATFORM_SETTINGS.cartHoldSeconds).toBe(600);
     expect(PLATFORM_SETTINGS.deliveryFeeEur).toBe(3);
   });
 
-  it('la livraison payée par le client couvre le forfait du livreur : elle ne coûte rien à TK LINK', () => {
-    expect(PLATFORM_SETTINGS.deliveryFeeEur).toBe(PLATFORM_SETTINGS.courierBaseFeeEur);
+  it('plus aucun réglage de livreur : les livraisons sont confiées à Uber Direct (13/11/2026)', () => {
+    for (const key of Object.keys(PLATFORM_SETTINGS)) expect(key).not.toMatch(/courier|parcel/i);
   });
 
   it('tout est arbitré aujourd’hui ; un paramètre vidé redeviendrait « ouvert »', () => {
     expect(isSettled('freeOperations')).toBe(true);
     expect(isSettled('cartHoldSeconds')).toBe(true);
-    expect(isSettled('courierBaseZoneKm')).toBe(true);
+    expect(isSettled('deliveryBaseZoneKm')).toBe(true);
   });
 });

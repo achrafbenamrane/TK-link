@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 
-import { CourierEarningsScreen } from '@/features/courier';
 import { selectOffers, useMerchantStore, WholesalerOrdersScreen } from '@/features/merchant';
 import { selectRole, useOnboardingStore } from '@/features/onboarding';
 import { LOCAL_MERCHANT_DEAL_IDS, MerchantOrdersScreen, OrdersScreen } from '@/features/shop';
@@ -25,7 +24,6 @@ export default function CommandesRoute() {
     [published],
   );
 
-  if (role === 'livreur') return <CourierEarningsScreen />;
   // Le grossiste reçoit les commandes des COMMERÇANTS : ce n'est ni l'écran du client ni celui du commerce.
   if (role === 'grossiste') return <WholesalerOrdersScreen />;
   return role === 'commercant' ? (

@@ -214,7 +214,7 @@ export const OrderSchema = z.object({
   /**
    * Point de livraison quand le client a choisi « Ma position actuelle »
    * (`addressId` vaut alors 'position'). Conservé sur la commande seulement :
-   * le livreur en a besoin, mais la position n’est jamais gardée ailleurs.
+   * le coursier en a besoin, mais la position n’est jamais gardée ailleurs.
    * `.optional()` : les commandes déjà stockées n’ont pas ce champ.
    */
   position: z
@@ -285,7 +285,7 @@ export const AddressSchema = z.object({
   street: z.string().min(3, 'Indiquez la rue et le numéro'),
   zip: z.string().regex(/^\d{5}$/, 'Le code postal doit contenir 5 chiffres'),
   city: z.string().min(2, 'Indiquez la ville'),
-  /** Étage, digicode, instructions livreur. */
+  /** Étage, digicode, instructions pour le coursier. */
   notes: z.string().optional(),
   isDefault: z.boolean(),
   /**

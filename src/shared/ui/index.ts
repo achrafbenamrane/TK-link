@@ -12,5 +12,3 @@ export { Skeleton, type SkeletonProps } from './skeleton';
 export { TextField, type TextFieldProps } from './text-field';
 export { ThemeToggle } from './theme-toggle';
 export { Wordmark } from './wordmark';
-export { QrScanner, type QrScannerProps } from './qr-scanner';
-export { RouteMap, type RouteMapProps, type RoutePoint } from './route-map';

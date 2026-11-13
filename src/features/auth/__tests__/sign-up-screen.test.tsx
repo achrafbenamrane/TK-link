@@ -135,7 +135,7 @@ describe('<SignUpScreen /> — consommateur', () => {
   });
 
   it('ne propose plus « Continuer sans compte » : le compte est obligatoire', () => {
-    for (const role of ['consommateur', 'grossiste', 'livreur'] as const) {
+    for (const role of ['consommateur', 'grossiste'] as const) {
       const { unmount } = render(<SignUpScreen role={role} />);
       expect(screen.getByTestId('signup-alternatives')).toBeOnTheScreen();
       expect(screen.queryByTestId('signup-skip')).toBeNull();

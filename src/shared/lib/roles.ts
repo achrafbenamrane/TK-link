@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /**
  * Les rôles TKLINK — CDC §3, §4, §5, §20.
  *
@@ -5,14 +7,27 @@
  * dépendent (onboarding, auth, shop) et qu’une feature ne peut pas en importer
  * une autre. C’est le vocabulaire commun du produit, pas un détail d’écran.
  *
- * Le livreur (« TK Deliver », CDC V1.1 §4) y est depuis le 03/10/2026 : le client a
- * remis le parcours livreur en 12 étapes, dans la même charte que les autres
- * rôles. Il a ses propres onglets (Missions · Revenus · Compte) ; il ne publie
- * rien et n'achète rien.
+ * Le livreur (« TK Deliver ») n’en fait plus partie depuis le 13/11/2026 : les
+ * livraisons sont confiées à Uber Direct, commandé par le serveur. TK LINK n’a plus
+ * de livreurs à lui ; le code du parcours livreur reste dans l’historique git.
  */
 
-export const ROLES = ['consommateur', 'commercant', 'grossiste', 'livreur'] as const;
+export const ROLES = ['consommateur', 'commercant', 'grossiste'] as const;
 export type Role = (typeof ROLES)[number];
+
+/**
+ * Lire un rôle venu du DISQUE ou du SERVEUR.
+ *
+ * Un téléphone installé avant le 13/11/2026 peut avoir gardé `role: 'livreur'`, et le serveur
+ * accepte encore ce type de compte (ses migrations ne changent pas). Un `z.enum(ROLES)` strict
+ * ferait échouer toute la relecture du profil : la personne perdrait son prénom, son avatar et ses
+ * centres d’intérêt. L’ancien livreur redevient donc un CLIENT — le rôle sans aucun droit
+ * particulier — et le reste de son profil est gardé.
+ */
+export const RoleSchema = z.preprocess(
+  (value) => (value === 'livreur' ? 'consommateur' : value),
+  z.enum(ROLES),
+);
 
 /**
  * Les rôles qu'on peut CHOISIR dans l'application mobile.
@@ -24,14 +39,13 @@ export type Role = (typeof ROLES)[number];
  * du §3.2 en ont besoin : ce qui disparaît, c'est la possibilité de s'inscrire
  * comme grossiste depuis le téléphone, pas le rôle lui-même.
  */
-export const APP_ROLES = ['consommateur', 'commercant', 'livreur'] as const;
+export const APP_ROLES = ['consommateur', 'commercant'] as const;
 export type AppRole = (typeof APP_ROLES)[number];
 
 export const ROLE_LABEL: Record<Role, string> = {
   consommateur: 'Consommateur',
   commercant: 'Commerçant',
   grossiste: 'Grossiste',
-  livreur: 'Livreur',
 };
 
 /** Ce que le rôle vient faire ici — sert l’étape de choix à l’onboarding. */
@@ -39,14 +53,12 @@ export const ROLE_TAGLINE: Record<Role, string> = {
   consommateur: 'Je cherche les bons plans près de chez moi',
   commercant: 'J’achète mes lots en gros ; je vends depuis l’espace pro web',
   grossiste: 'Je propose des lots aux commerçants',
-  livreur: 'Je livre les commandes près de chez moi',
 };
 
 export const ROLE_ICON: Record<Role, string> = {
   consommateur: 'user',
   commercant: 'shopping-bag',
   grossiste: 'truck',
-  livreur: 'navigation',
 };
 
 /**
@@ -63,7 +75,7 @@ export const ROLE_ICON: Record<Role, string> = {
 export function audienceOf(role: Role): Role | null {
   if (role === 'consommateur') return 'commercant';
   if (role === 'commercant') return 'grossiste';
-  // Le grossiste publie, le livreur livre : ni l'un ni l'autre ne consulte d'offres.
+  // Le grossiste publie : il ne consulte pas d'offres.
   return null;
 }
 

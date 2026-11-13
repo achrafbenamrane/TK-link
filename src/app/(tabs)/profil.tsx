@@ -7,7 +7,6 @@ import {
 import { useRouter } from 'expo-router';
 
 import { useAuthStore } from '@/features/auth';
-import { CourierAccountScreen, useCourierStore } from '@/features/courier';
 import { useMerchantLoyaltyStore } from '@/features/loyalty';
 import { useMerchantStore } from '@/features/merchant';
 import { useReceiptsStore } from '@/features/receipts';
@@ -32,7 +31,7 @@ import { canPublishOffers, ROLE_LABEL } from '@/shared/lib/roles';
  */
 /**
  * SE DÉCONNECTER : l'app revient comme pour un NOUVEL utilisateur. Le profil, les
- * commandes, la fidélité, les offres, la boutique, le livreur et le parrainage
+ * commandes, la fidélité, les offres, la boutique et le parrainage
  * repartent de zéro (en démonstration, tout vit sur l'appareil), et l'ouverture
  * rejoue le logo animé avant le choix du profil.
  *
@@ -49,7 +48,7 @@ export function useSignOut() {
 }
 
 /**
- * Ce que l'appareil garde d'un compte : profil, panier, commandes, fidélité, boutique, livreur,
+ * Ce que l'appareil garde d'un compte : profil, panier, commandes, fidélité, boutique,
  * parrainage, tickets. Remis à zéro à la déconnexion, et quand un AUTRE compte se connecte sur cet
  * appareil (voir `AccountOwnerGuard` dans le layout racine) : il n'hérite de rien.
  */
@@ -64,33 +63,11 @@ export function resetLocalData(): void {
   });
   useMerchantStore.getState().resetDemo();
   useMerchantLoyaltyStore.setState({ cards: {}, programs: {}, rewards: [] });
-  useCourierStore.getState().reset();
   useReferralStore.setState({ myCode: '', referredBy: null, credit: 'aucun' });
   useReceiptsStore.setState({ receipts: [] });
 }
 
 export default function ProfilRoute() {
-  const role = useOnboardingStore(selectRole);
-  if (role === 'livreur') return <CourierAccountRoute />;
-  return <DefaultProfil />;
-}
-
-function CourierAccountRoute() {
-  const router = useRouter();
-  const firstName = useOnboardingStore(selectFirstName);
-  const signOut = useSignOut();
-  return (
-    <CourierAccountScreen
-      name={firstName}
-      onOpenSetup={() => router.push('/devenir-livreur')}
-      onOpenAccount={() => router.push('/account')}
-      onSignOut={signOut}
-      {...(isDemoBuild ? { onOpenDemoSettings: () => router.push('/reglages-demo') } : {})}
-    />
-  );
-}
-
-function DefaultProfil() {
   const role = useOnboardingStore(selectRole);
   const router = useRouter();
   const firstName = useOnboardingStore(selectFirstName);

@@ -1,4 +1,3 @@
-import { deliveryCode } from '@/shared/lib/handover';
 import { fireEvent, render, screen } from '@/shared/testing/render';
 
 import { routeIssue } from '../lib/issues';
@@ -157,23 +156,28 @@ describe('<OrderDetailScreen /> — retours client', () => {
   });
 });
 
-describe('<OrderDetailScreen /> — le code de remise du client', () => {
-  it('une livraison en route montre au client le code à six chiffres à donner au livreur', () => {
+describe('<OrderDetailScreen /> — une livraison part avec un coursier partenaire', () => {
+  // Depuis le 13/11/2026, TK LINK n'a plus de livreurs : la course est confiée à Uber Direct.
+  it('suit Prête → En livraison → Livrée, avec le coursier Uber Direct', () => {
     useShopStore.setState({ orders: [order({ fulfilment: 'livraison', status: 'en_livraison' })] });
     render(<OrderDetailScreen />);
-    expect(screen.getByTestId('order-delivery-code-value')).toHaveTextContent(
-      new RegExp(`^${deliveryCode('o1')}$`),
-    );
+    expect(screen.getByText('Prête, en attente du coursier')).toBeTruthy();
+    expect(screen.getAllByText('En livraison').length).toBeGreaterThan(0);
+    expect(screen.getByText('Un coursier Uber Direct vous l’apporte')).toBeTruthy();
+    expect(screen.getAllByText('Livrée').length).toBeGreaterThan(0);
   });
 
-  it('pas de code pour un Touch & Collect, ni avant que la commande soit prête', () => {
-    useShopStore.setState({ orders: [order({ fulfilment: 'touch-collect', status: 'prete' })] });
-    const { unmount } = render(<OrderDetailScreen />);
-    expect(screen.queryByTestId('order-delivery-code')).toBeNull();
-    unmount();
-
-    useShopStore.setState({ orders: [order({ fulfilment: 'livraison', status: 'preparation' })] });
+  it('plus de code de remise à donner à un livreur TK LINK', () => {
+    useShopStore.setState({ orders: [order({ fulfilment: 'livraison', status: 'en_livraison' })] });
     render(<OrderDetailScreen />);
     expect(screen.queryByTestId('order-delivery-code')).toBeNull();
+    expect(screen.queryByText(/livreur/i)).toBeNull();
+  });
+
+  it('un Touch & Collect se termine en boutique, sans coursier', () => {
+    useShopStore.setState({ orders: [order({ fulfilment: 'touch-collect', status: 'prete' })] });
+    render(<OrderDetailScreen />);
+    expect(screen.getByText('À retirer en boutique, présentez votre QR code')).toBeTruthy();
+    expect(screen.queryByText(/coursier/i)).toBeNull();
   });
 });

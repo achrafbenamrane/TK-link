@@ -535,6 +535,24 @@ describe('profil serveur', () => {
     });
   });
 
+  it('un ancien compte livreur (rôle retiré le 13/11/2026) se relit en compte client', async () => {
+    // Le serveur accepte encore `livreur` (ses migrations ne changent pas) : l'app ne le propose
+    // plus, et ne doit pas pour autant refuser de relire le profil de ces comptes.
+    profileQuery({
+      data: {
+        first_name: 'Alex',
+        last_name: 'Martin',
+        account_type: 'livreur',
+        account_type_declared: true,
+      },
+      error: null,
+    });
+    expect(await service.fetchMyProfile('u1')).toMatchObject({
+      ok: true,
+      profile: { firstName: 'Alex', accountType: 'consommateur', accountTypeDeclared: true },
+    });
+  });
+
   it('l’accueil fait : enregistré sur le compte, avec les centres d’intérêt et la date', async () => {
     const eq = jest.fn().mockResolvedValue({ error: null });
     const update = jest.fn().mockReturnValue({ eq });
@@ -601,12 +619,20 @@ describe('profil serveur', () => {
 
 describe('type de compte d’un compte Google ou Apple', () => {
   it('le déclare côté serveur, par la fonction SQL `declare_account_type`', async () => {
-    rpc.mockResolvedValue({ data: 'livreur', error: null });
-    expect(await service.declareAccountType('livreur')).toEqual({
+    rpc.mockResolvedValue({ data: 'grossiste', error: null });
+    expect(await service.declareAccountType('grossiste')).toEqual({
       ok: true,
-      accountType: 'livreur',
+      accountType: 'grossiste',
     });
-    expect(rpc).toHaveBeenCalledWith('declare_account_type', { p_type: 'livreur' });
+    expect(rpc).toHaveBeenCalledWith('declare_account_type', { p_type: 'grossiste' });
+  });
+
+  it('un compte déjà déclaré livreur (rôle retiré) revient comme client', async () => {
+    rpc.mockResolvedValue({ data: 'livreur', error: null });
+    expect(await service.declareAccountType('consommateur')).toEqual({
+      ok: true,
+      accountType: 'consommateur',
+    });
   });
 
   it('rend le type EFFECTIF : une seconde déclaration ne remplace pas la première', async () => {
@@ -619,9 +645,9 @@ describe('type de compte d’un compte Google ou Apple', () => {
 
   it('une réponse qui n’est pas un type connu est un échec, jamais un type inventé', async () => {
     rpc.mockResolvedValue({ data: 'pirate', error: null });
-    expect(await service.declareAccountType('livreur')).toEqual({ ok: false, code: 'unknown' });
+    expect(await service.declareAccountType('grossiste')).toEqual({ ok: false, code: 'unknown' });
     rpc.mockResolvedValue({ data: null, error: null });
-    expect(await service.declareAccountType('livreur')).toEqual({ ok: false, code: 'unknown' });
+    expect(await service.declareAccountType('grossiste')).toEqual({ ok: false, code: 'unknown' });
   });
 
   it('hors ligne, PostgREST REND l’erreur sans lever : classée « réseau »', async () => {
@@ -637,7 +663,7 @@ describe('type de compte d’un compte Google ou Apple', () => {
       status: 0,
       statusText: '',
     });
-    expect(await service.declareAccountType('livreur')).toEqual({ ok: false, code: 'network' });
+    expect(await service.declareAccountType('grossiste')).toEqual({ ok: false, code: 'network' });
   });
 
   it('un refus du serveur ou une exception levée est un échec classé', async () => {
@@ -648,9 +674,9 @@ describe('type de compte d’un compte Google ou Apple', () => {
         message: 'Could not find the function public.declare_account_type(p_type)',
       },
     });
-    expect(await service.declareAccountType('livreur')).toEqual({ ok: false, code: 'unknown' });
+    expect(await service.declareAccountType('grossiste')).toEqual({ ok: false, code: 'unknown' });
     rpc.mockRejectedValue(new TypeError('Network request failed'));
-    expect(await service.declareAccountType('livreur')).toEqual({ ok: false, code: 'network' });
+    expect(await service.declareAccountType('grossiste')).toEqual({ ok: false, code: 'network' });
   });
 });
 

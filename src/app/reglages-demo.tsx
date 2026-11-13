@@ -1,6 +1,6 @@
 import { DemoSettingsScreen } from '@/features/demo';
 
-/** Les réglages de démonstration : livraison, zone de base du livreur, colis important. */
+/** Les réglages de démonstration : frais de livraison et zone de base du barème. */
 export default function DemoSettingsRoute() {
   return <DemoSettingsScreen />;
 }

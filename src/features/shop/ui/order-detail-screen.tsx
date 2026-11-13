@@ -5,7 +5,6 @@ import { Pressable, ScrollView, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { cn } from '@/shared/lib/cn';
-import { deliveryCode } from '@/shared/lib/handover';
 import { AppText, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -55,7 +54,10 @@ function hintFor(status: OrderStatus, fulfilment: Fulfilment): string {
     case 'prete':
       return fulfilment === 'touch-collect'
         ? 'À retirer en boutique, présentez votre QR code'
-        : 'Confiée au livreur';
+        : 'Prête, en attente du coursier';
+    // La course est confiée à un coursier partenaire (Uber Direct), plus à un livreur TK LINK.
+    case 'en_livraison':
+      return 'Un coursier Uber Direct vous l’apporte';
     case 'recuperee':
       return 'Récupérée en boutique. Merci !';
     default:
@@ -281,38 +283,9 @@ export function OrderDetailScreen() {
             />
           </View>
           <AppText variant="caption" className="text-center text-xs text-ink-faint">
-            Présentez ce code au commerçant ou au livreur.
+            Présentez ce code au commerçant.
           </AppText>
         </View>
-
-        {/* La remise au livreur : le code que le client lui donne (ou son QR) prouve la remise. */}
-        {order.fulfilment === 'livraison' &&
-        (order.status === 'prete' || order.status === 'en_livraison') ? (
-          <View
-            testID="order-delivery-code"
-            className="mt-4 items-center gap-3 rounded-card border border-brand-500 bg-surface p-5"
-          >
-            <AppText className="font-sans-bold text-ink">Code de remise</AppText>
-            <AppText variant="caption" className="text-center">
-              À donner au livreur quand il arrive, ou à lui faire scanner.
-            </AppText>
-            <AppText
-              testID="order-delivery-code-value"
-              className="font-display text-ink"
-              style={{ fontSize: 30, letterSpacing: 6 }}
-            >
-              {deliveryCode(order.id)}
-            </AppText>
-            <View className="rounded-card bg-white p-3">
-              <QRCode
-                value={JSON.stringify({ v: 1, id: order.id, d: deliveryCode(order.id) })}
-                size={130}
-                color={colors.ink}
-                backgroundColor="#FFFFFF"
-              />
-            </View>
-          </View>
-        ) : null}
 
         {/* Point d'entrée UNIQUE — CDC V1.1. */}
         <View className="mt-4">

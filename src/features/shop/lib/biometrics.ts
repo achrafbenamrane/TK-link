@@ -9,8 +9,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
  * l'OS répond uniquement « oui, c'est le propriétaire du téléphone » ou « non ».
  *
  * Conséquence produit : ceci prouve la PRÉSENCE DU PROPRIÉTAIRE, pas l'IDENTITÉ
- * d'une personne. Pour vérifier qu'un livreur est bien Untel (cf. l'identification
- * biométrique des livreurs évoquée en réunion), il faut un parcours KYC
+ * d'une personne. Pour vérifier qu'une personne est bien Untel, il faut un parcours KYC
  * (pièce d'identité + selfie) ou un lecteur d'empreintes dédié — pas ceci.
  */
 

@@ -1,6 +1,6 @@
 import { clientDeliveryFee, deliveryDistanceKm } from '../lib/delivery';
 
-const pricing = { deliveryFeeEur: 3, courierPerKmEur: 0.8, courierBaseZoneKm: 3 };
+const pricing = { deliveryFeeEur: 3, deliveryPerKmEur: 0.8, deliveryBaseZoneKm: 3 };
 
 describe('frais de livraison payés par le client', () => {
   it('le forfait dans la zone de base, 0,80 €/km au-delà', () => {
@@ -13,11 +13,10 @@ describe('frais de livraison payés par le client', () => {
 
   it('distance inconnue ou zone retirée : le forfait seul, jamais de majoration inventée', () => {
     expect(clientDeliveryFee(null, pricing)).toBe(3);
-    expect(clientDeliveryFee(12, { ...pricing, courierBaseZoneKm: null })).toBe(3);
+    expect(clientDeliveryFee(12, { ...pricing, deliveryBaseZoneKm: null })).toBe(3);
   });
 
-  it('applique le même barème que le gain du livreur (3 € + 0,80 €/km au-delà de 3 km)', () => {
-    // Le test miroir côté livreur (`courierGain`) pose les mêmes chiffres : 12 km → 10,20 €.
+  it('le barème arrêté le 24/10/2026 : 3 € + 0,80 €/km au-delà de 3 km', () => {
     expect(clientDeliveryFee(12, pricing)).toBe(10.2);
     expect(clientDeliveryFee(2, pricing)).toBe(3);
   });

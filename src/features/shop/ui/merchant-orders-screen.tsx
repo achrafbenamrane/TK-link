@@ -3,7 +3,6 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { pickupPin } from '@/shared/lib/handover';
 import { AppText, PrepTicket, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -25,7 +24,7 @@ type Props = {
    */
   dealIds?: string[];
   onBack?: () => void;
-  /** Ouvre la validation de la remise au livreur (commande prête en livraison). */
+  /** Ouvre la remise au coursier partenaire (commande prête en livraison). */
   onHandover?: (orderId: string) => void;
 };
 
@@ -41,12 +40,15 @@ type Props = {
  * réclamation : d'où « Ouvrir un litige », qui décide ensuite du remboursement.
  * Mêmes libellés que l'espace pro web — un commerçant qui passe de son comptoir
  * à son ordinateur doit retrouver les mêmes mots.
+ *
+ * Une livraison part avec un coursier partenaire (Uber Direct) depuis le
+ * 13/11/2026 : TK LINK n'a plus de livreurs à lui.
  */
 const ACTION_LABEL: Partial<Record<OrderStatus, string>> = {
   preparation: 'En préparation',
   prete: 'C’est prêt',
   recuperee: 'Remise au client',
-  en_livraison: 'Remise au livreur',
+  en_livraison: 'Remise au coursier',
   livree: 'Livrée',
   refusee: 'Refuser',
   annulee: 'Annuler',
@@ -292,16 +294,14 @@ function OrderCard({
                 id: order.id,
                 t: order.total,
                 n: order.items.length,
-                // Le code de remise au livreur : celui qui scanne l'étiquette le reçoit avec.
-                p: pickupPin(order.id),
               })}
             />
           ) : null}
         </View>
       ) : null}
 
-      {/* Remise au livreur : le code que le livreur saisit au comptoir (V1.1,
-          « scan QR ou code PIN »). */}
+      {/* Remise au coursier partenaire (Uber Direct) : il vient chercher la commande au
+          comptoir ; la confier la passe « En livraison ». */}
       {order.fulfilment === 'livraison' && order.status === 'prete' ? (
         <View
           testID={`merchant-order-${order.id}-handover`}
@@ -309,32 +309,25 @@ function OrderCard({
         >
           <View className="flex-1">
             <AppText className="font-sans-bold text-ink" style={{ fontSize: 13 }}>
-              Remise au livreur
+              Remise au coursier
             </AppText>
             <AppText variant="caption" className="text-ink-faint">
-              À lui donner, ou le QR de l’étiquette.
+              Un coursier Uber Direct vient la chercher au comptoir.
             </AppText>
           </View>
           {onHandover ? (
             <Pressable
               testID={`merchant-order-${order.id}-handover-open`}
               accessibilityRole="button"
-              accessibilityLabel="Valider la remise au livreur"
+              accessibilityLabel="Remettre la commande au coursier"
               onPress={() => onHandover(order.id)}
-              className="mr-3 rounded-control bg-brand-500 px-3 py-2"
+              className="rounded-control bg-brand-500 px-3 py-2"
             >
               <AppText className="font-sans-bold text-white" style={{ fontSize: 12 }}>
-                Valider
+                Remettre
               </AppText>
             </Pressable>
           ) : null}
-          <AppText
-            className="font-display text-ink"
-            style={{ fontSize: 22, letterSpacing: 4 }}
-            testID={`merchant-order-${order.id}-pin`}
-          >
-            {pickupPin(order.id)}
-          </AppText>
         </View>
       ) : null}
 

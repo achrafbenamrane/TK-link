@@ -7,18 +7,33 @@ import {
   normalizeSiret,
   ROLES,
   ROLE_LABEL,
+  RoleSchema,
   sirenOf,
   wholesaleOrderBlock,
 } from '../roles';
 
 describe('rôles — CDC §3', () => {
   it('expose exactement les trois rôles de l’app', () => {
-    // Le livreur est une app distincte (CDC §3.4) : il n’a rien à faire ici.
-    expect([...ROLES]).toEqual(['consommateur', 'commercant', 'grossiste', 'livreur']);
+    // Le livreur a été retiré le 13/11/2026 : les livraisons partent chez Uber Direct.
+    expect([...ROLES]).toEqual(['consommateur', 'commercant', 'grossiste']);
   });
 
   it('libelle chaque rôle', () => {
     for (const r of ROLES) expect(ROLE_LABEL[r].length).toBeGreaterThan(0);
+  });
+});
+
+describe('relecture d’un rôle (disque, serveur)', () => {
+  it('un ancien livreur redevient un client', () => {
+    expect(RoleSchema.parse('livreur')).toBe('consommateur');
+  });
+
+  it('les rôles actuels se relisent tels quels', () => {
+    for (const r of ROLES) expect(RoleSchema.parse(r)).toBe(r);
+  });
+
+  it('un rôle inconnu reste refusé : on ne devine pas', () => {
+    expect(RoleSchema.safeParse('admin').success).toBe(false);
   });
 });
 

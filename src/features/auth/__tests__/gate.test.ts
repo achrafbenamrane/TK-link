@@ -79,14 +79,7 @@ describe('la porte d’entrée — un compte est obligatoire', () => {
     const fresh = { onboardingCompleted: false };
 
     it('laisse finir l’inscription, la connexion, le mot de passe oublié et l’accueil', () => {
-      for (const here of [
-        'sign-up',
-        'sign-in',
-        'forgot-password',
-        'onboarding',
-        'devenir-livreur',
-        'dossier-pro',
-      ]) {
+      for (const here of ['sign-up', 'sign-in', 'forgot-password', 'onboarding', 'dossier-pro']) {
         expect(at(here, fresh)).toBeNull();
       }
     });
@@ -95,8 +88,6 @@ describe('la porte d’entrée — un compte est obligatoire', () => {
       expect(at('', { ...fresh, role: 'consommateur' })).toBe('/onboarding');
       expect(at('', { ...fresh, role: 'commercant' })).toBe('/dossier-pro');
       expect(at('', { ...fresh, role: 'grossiste' })).toBe('/dossier-pro');
-      expect(at('commandes', { ...fresh, role: 'livreur' })).toBe('/devenir-livreur');
-      expect(at('role', { ...fresh, role: 'livreur' })).toBe('/devenir-livreur');
     });
   });
 
@@ -129,7 +120,7 @@ describe('après le logo animé', () => {
     expect(homeFor({ auth: 'authenticated', onboardingCompleted: false, role: 'grossiste' })).toBe(
       '/dossier-pro',
     );
-    expect(homeFor({ auth: 'authenticated', onboardingCompleted: true, role: 'livreur' })).toBe(
+    expect(homeFor({ auth: 'authenticated', onboardingCompleted: true, role: 'commercant' })).toBe(
       '/',
     );
   });
@@ -138,7 +129,6 @@ describe('après le logo animé', () => {
     expect(firstRunRoute('consommateur')).toBe('/onboarding');
     expect(firstRunRoute('commercant')).toBe('/dossier-pro');
     expect(firstRunRoute('grossiste')).toBe('/dossier-pro');
-    expect(firstRunRoute('livreur')).toBe('/devenir-livreur');
   });
 
   it('après l’inscription, un compte qui a déjà fait l’accueil entre directement', () => {
@@ -146,6 +136,6 @@ describe('après le logo animé', () => {
     expect(afterSignUpRoute('consommateur', true)).toBe('/');
     expect(afterSignUpRoute('grossiste', true)).toBe('/');
     expect(afterSignUpRoute('consommateur', false)).toBe('/onboarding');
-    expect(afterSignUpRoute('livreur', false)).toBe('/devenir-livreur');
+    expect(afterSignUpRoute('commercant', false)).toBe('/dossier-pro');
   });
 });

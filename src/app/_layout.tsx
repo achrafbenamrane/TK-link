@@ -33,6 +33,7 @@ import { receiptForOrder, useReceiptsStore } from '@/features/receipts';
 import { orderToTransaction, producesReceipt, selectOrders, useShopStore } from '@/features/shop';
 import { useWelcomeStore } from '@/features/welcome';
 import { isSupabaseConfigured } from '@/shared/lib/env'; // fail fast on invalid environment (has safe defaults)
+import { forgetRetiredStores } from '@/shared/lib/retired-stores';
 import { registerSupabaseAutoRefresh } from '@/shared/lib/supabase';
 import { logger } from '@/shared/lib/logger';
 import { ErrorScreen } from '@/shared/ui';
@@ -222,6 +223,11 @@ export default function RootLayout() {
       stopListening();
       stopRefresh();
     };
+  }, []);
+
+  // Ce que les fonctions retirées (le livreur, 13/11/2026) avaient écrit sur ce téléphone.
+  useEffect(() => {
+    void forgetRetiredStores();
   }, []);
 
   const onboardingHydrated = useOnboardingStore(selectHydrated);

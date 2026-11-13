@@ -474,7 +474,7 @@ describe('profil serveur', () => {
       ok: true,
       profile: { ...undeclared, accountType: 'commercant', accountTypeDeclared: true },
     });
-    expect(await state().syncProfile('livreur')).toEqual({
+    expect(await state().syncProfile('grossiste')).toEqual({
       firstName: 'Sofia',
       lastName: 'Rey',
       accountType: 'commercant',
@@ -488,16 +488,16 @@ describe('profil serveur', () => {
 
   it('pas encore déclaré (compte Google ou Apple) : le profil choisi dans l’app est déclaré', async () => {
     svc.fetchMyProfile.mockResolvedValue({ ok: true, profile: undeclared });
-    svc.declareAccountType.mockResolvedValue({ ok: true, accountType: 'livreur' });
-    expect(await state().syncProfile('livreur')).toEqual({
+    svc.declareAccountType.mockResolvedValue({ ok: true, accountType: 'grossiste' });
+    expect(await state().syncProfile('grossiste')).toEqual({
       firstName: 'Sofia',
       lastName: 'Rey',
-      accountType: 'livreur',
+      accountType: 'grossiste',
       declared: true,
       onboarded: false,
       interests: [],
     });
-    expect(svc.declareAccountType).toHaveBeenCalledWith('livreur');
+    expect(svc.declareAccountType).toHaveBeenCalledWith('grossiste');
   });
 
   it('se connecter ne déclare rien (declare: false) : le type reste en blanc, et le dit', async () => {
@@ -530,16 +530,16 @@ describe('profil serveur', () => {
   it('le type EFFECTIF rendu par le serveur l’emporte (déclaré entre-temps ailleurs)', async () => {
     svc.fetchMyProfile.mockResolvedValue({ ok: true, profile: undeclared });
     svc.declareAccountType.mockResolvedValue({ ok: true, accountType: 'commercant' });
-    expect(await state().syncProfile('livreur')).toMatchObject({ accountType: 'commercant' });
+    expect(await state().syncProfile('grossiste')).toMatchObject({ accountType: 'commercant' });
   });
 
   it('la déclaration échoue (réseau) : on garde le profil local, pas la valeur par défaut', async () => {
     svc.fetchMyProfile.mockResolvedValue({ ok: true, profile: undeclared });
     svc.declareAccountType.mockResolvedValue({ ok: false, code: 'network' });
-    expect(await state().syncProfile('livreur')).toEqual({
+    expect(await state().syncProfile('grossiste')).toEqual({
       firstName: 'Sofia',
       lastName: 'Rey',
-      accountType: 'livreur',
+      accountType: 'grossiste',
       declared: false,
       onboarded: false,
       interests: [],
@@ -548,9 +548,9 @@ describe('profil serveur', () => {
 
   it('lecture impossible, ou aucun profil : null, et rien n’est déclaré', async () => {
     svc.fetchMyProfile.mockResolvedValueOnce({ ok: false, code: 'network' });
-    expect(await state().syncProfile('livreur')).toBeNull();
+    expect(await state().syncProfile('grossiste')).toBeNull();
     svc.fetchMyProfile.mockResolvedValueOnce({ ok: true, profile: null });
-    expect(await state().syncProfile('livreur')).toBeNull();
+    expect(await state().syncProfile('grossiste')).toBeNull();
     expect(svc.declareAccountType).not.toHaveBeenCalled();
   });
 });

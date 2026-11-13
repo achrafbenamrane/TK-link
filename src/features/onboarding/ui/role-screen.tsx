@@ -21,23 +21,22 @@ const TITLE: Record<Role, string> = {
   consommateur: 'Client',
   commercant: 'Commerçant',
   grossiste: 'Grossiste',
-  livreur: 'Livreur',
 };
 
 const HINT: Record<Role, string> = {
   consommateur: 'Je cherche les ventes flash près de chez moi',
   commercant: 'Je publie mes invendus en vente flash',
   grossiste: 'Je propose mes lots aux commerçants',
-  livreur: 'Je livre les commandes de mon quartier',
 };
 
 /**
  * « QUI ÊTES-VOUS ? » — le premier choix du parcours, avant l'inscription et la
  * connexion.
  *
- * TK LINK a quatre profils qui ne voient pas la même application : le client
- * (ventes flash), le commerçant (commandes, Flash), le grossiste (lots) et le
- * livreur (missions). Le demander d'abord évite d'inscrire quelqu'un dans le
+ * TK LINK a trois profils qui ne voient pas la même application : le client
+ * (ventes flash), le commerçant (commandes, Flash) et le grossiste (lots). Le
+ * livreur n'en fait plus partie depuis le 13/11/2026 : les livraisons sont
+ * confiées à Uber Direct. Le demander d'abord évite d'inscrire quelqu'un dans le
  * mauvais espace, puis de le lui faire changer. Le choix peut se refaire plus
  * tard depuis le compte.
  */

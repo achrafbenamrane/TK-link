@@ -128,7 +128,7 @@ function AddressForm({
       </View>
       <Field
         testID="address-notes"
-        label="Instructions livreur (facultatif)"
+        label="Instructions pour le coursier (facultatif)"
         placeholder="Digicode 1234, 3ᵉ étage"
         value={draft.notes ?? ''}
         onChangeText={set('notes')}

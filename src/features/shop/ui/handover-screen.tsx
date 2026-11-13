@@ -1,4 +1,4 @@
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 
@@ -7,27 +7,12 @@ import { AppText, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
 import { useColors } from '@/shared/theme/theme-provider';
 
+import { canTransition } from '../lib/order-status';
 import { getDeal, getMerchant } from '../model/catalog';
 import { useShopStore } from '../model/store';
 
-export type HandoverCourier = {
-  name: string;
-  vehicle: string;
-  verified: boolean;
-  present: boolean;
-};
-
 type Props = {
   orderId: string;
-  /** Le livreur qui se présente — fourni par la route (feature `courier`). */
-  courier: HandoverCourier;
-  /**
-   * Quand le livreur a confirmé son identité par empreinte sur son téléphone (ms) — fourni par
-   * la route. Absent : le commerçant attend, ou simule le geste en démonstration.
-   */
-  courierValidatedAt?: number | null | undefined;
-  /** Build de démonstration : un geste simule la pose du doigt du livreur. Absent en production. */
-  demo?: boolean;
   onBack: () => void;
 };
 
@@ -38,31 +23,22 @@ const clock = (ms: number) => {
 };
 
 /**
- * « VALIDATION LIVREUR » — l'écran du commerçant au moment de la remise, tel que
- * le client l'a dessiné : étapes Commande prête → Remise au livreur → Terminée, la
- * commande, le livreur (véhicule, compte vérifié, présent), et la validation
- * biométrique faite SUR L'APPAREIL DU LIVREUR (V1.1 : biométrie locale).
+ * « REMISE AU COURSIER » — l'écran du commerçant quand une commande en livraison part.
  *
- * Le commerçant ne manipule aucune empreinte : il voit le résultat. Ici, sans
- * serveur ni second téléphone, un geste simule la pose du doigt du livreur.
+ * Depuis le 13/11/2026, TK LINK n'a plus de livreurs à lui : la course est confiée à un coursier
+ * partenaire (Uber Direct). Plus d'identité de livreur, de véhicule ni d'empreinte à vérifier ici :
+ * le commerçant remet la commande, et elle passe « En livraison ». La suite (suivi, « Livrée »)
+ * viendra du partenaire.
+ *
+ * Étapes : Commande prête → Remise au coursier → En livraison.
  */
-export function HandoverScreen({
-  orderId,
-  courier,
-  courierValidatedAt,
-  demo = false,
-  onBack,
-}: Props) {
+export function HandoverScreen({ orderId }: Props) {
   const colors = useColors();
   const order = useShopStore((s) => s.orders.find((o) => o.id === orderId));
   const setOrderStatus = useShopStore((s) => s.setOrderStatus);
   const reportIssue = useShopStore((s) => s.reportIssue);
 
-  const [arrivedAt] = useState(() => Date.now());
-  const [simulatedAt, setSimulatedAt] = useState<number | null>(null);
   const [handedAt, setHandedAt] = useState<number | null>(null);
-  // Le livreur a posé son doigt sur SON téléphone (même appareil en démo), ou on simule le geste.
-  const validated = simulatedAt ?? courierValidatedAt ?? null;
 
   if (!order) {
     return (
@@ -79,19 +55,21 @@ export function HandoverScreen({
   const merchant = deal ? getMerchant(deal.merchantId) : undefined;
   const articles = order.items.reduce((n, l) => n + l.qty, 0);
   const done = handedAt !== null || order.status === 'en_livraison' || order.status === 'livree';
+  // La machine à états tranche : seule une commande en livraison, prête, peut partir.
+  const canHand = !done && canTransition(order.status, 'en_livraison', order.fulfilment);
   const step = done ? 3 : 2;
 
   const hand = () => {
-    if (!validated) return;
+    if (!canHand) return;
     const res = setOrderStatus(order.id, 'en_livraison');
-    // La machine à états peut refuser (commande pas « prête ») : on n'affiche « remis » que si c'est acté.
+    // On n'annonce « remise » que si la machine à états l'a actée.
     if (res.ok) setHandedAt(Date.now());
   };
 
   const steps = [
     { n: 1, label: 'Commande prête' },
-    { n: 2, label: 'Remise au livreur' },
-    { n: 3, label: 'Terminée' },
+    { n: 2, label: 'Remise au coursier' },
+    { n: 3, label: 'En livraison' },
   ];
 
   return (
@@ -100,7 +78,7 @@ export function HandoverScreen({
         <View className="gap-1 pt-2">
           <BackButton fallbackHref="/commandes" />
           <AppText variant="display" className="text-2xl">
-            Validation livreur
+            Remise au coursier
           </AppText>
         </View>
 
@@ -181,82 +159,41 @@ export function HandoverScreen({
           </View>
         </View>
 
-        {/* Le livreur */}
-        <View className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-3.5">
+        {/* Le partenaire de livraison */}
+        <View
+          testID="handover-partner"
+          className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-3.5"
+        >
           <View className="h-14 w-14 items-center justify-center rounded-pill border-2 border-brand-500 bg-surface-muted">
-            <Feather name="user" size={24} color={colors.inkMuted} />
+            <Feather name="truck" size={24} color={colors.inkMuted} />
           </View>
           <View className="flex-1 gap-0.5">
             <AppText className="font-sans-bold text-ink" style={{ fontSize: 16 }}>
-              {courier.name}
+              Coursier Uber Direct
             </AppText>
-            <View className="flex-row items-center gap-1.5">
-              <Feather name="navigation" size={12} color={colors.inkFaint} />
-              <AppText variant="caption">{courier.vehicle}</AppText>
-            </View>
-            {courier.verified ? (
-              <View className="flex-row items-center gap-1">
-                <Feather name="shield" size={12} color={colors.accentDeep} />
-                <AppText variant="caption" className="text-accent-deep">
-                  Compte vérifié
-                </AppText>
-              </View>
-            ) : null}
+            <AppText variant="caption">
+              Le coursier partenaire vient chercher la commande au comptoir : remettez-la-lui, puis
+              confirmez ici.
+            </AppText>
           </View>
-          {courier.present ? (
-            <View className="rounded-control border border-success px-2.5 py-1">
-              <AppText className="font-sans-semibold text-success" style={{ fontSize: 11.5 }}>
-                Présent
-              </AppText>
-            </View>
-          ) : null}
         </View>
 
-        {/* Validation biométrique — faite sur l'appareil du livreur */}
-        <Pressable
-          testID="handover-biometric"
-          accessibilityRole="button"
-          accessibilityLabel="Simuler la pose du doigt du livreur"
-          // Sans démonstration, seule l'empreinte posée sur le téléphone du livreur valide.
-          disabled={validated !== null || done || !demo}
-          onPress={() => setSimulatedAt(Date.now())}
-          className="items-center gap-3 rounded-card border border-brand-500 bg-surface-muted px-4 py-5"
-        >
-          <View className="h-36 w-36 items-center justify-center rounded-pill border border-brand-200 bg-brand-50">
-            <View className="h-28 w-28 items-center justify-center rounded-pill border-2 border-brand-500">
-              <Ionicons name="finger-print" size={64} color={colors.brand500} />
-            </View>
-          </View>
-          <AppText className="font-sans-bold text-ink" style={{ fontSize: 16 }}>
-            Validation automatique
-          </AppText>
-          <AppText variant="caption" className="text-center">
-            Le livreur pose son doigt sur son appareil. Si l’identité est confirmée, la remise du
-            colis est validée automatiquement.
-          </AppText>
-          {validated === null && !done && demo ? (
-            <AppText variant="caption" className="text-brand-600" style={{ fontSize: 11.5 }}>
-              Démo — touchez pour simuler la pose du doigt
-            </AppText>
-          ) : null}
-        </Pressable>
-
-        {validated !== null || done ? (
+        {done ? (
           <View
-            testID="handover-validated"
+            testID="handover-done"
             className="flex-row items-center gap-3 rounded-card border border-success bg-surface-muted p-3.5"
           >
             <View className="h-10 w-10 items-center justify-center rounded-pill bg-success">
               <Feather name="check" size={20} color="#FFFFFF" />
             </View>
             <View className="flex-1">
-              <AppText className="font-sans-bold text-success">Identité validée</AppText>
+              <AppText className="font-sans-bold text-success">Remise au coursier</AppText>
               <AppText variant="caption" className="text-ink-faint">
-                Livreur autorisé à récupérer le colis.
+                La commande est en livraison : le client peut la suivre.
               </AppText>
             </View>
             <AppText variant="caption" className="text-ink-muted">
-              {validated ? clock(validated) : ''}
+              {handedAt ? clock(handedAt) : ''}
             </AppText>
           </View>
         ) : null}
@@ -264,45 +201,19 @@ export function HandoverScreen({
         <Pressable
           testID="handover-confirm"
           accessibilityRole="button"
-          accessibilityState={{ disabled: validated === null || done }}
-          disabled={validated === null || done}
+          accessibilityState={{ disabled: !canHand }}
+          disabled={!canHand}
           onPress={hand}
           className={cn(
             'flex-row items-center justify-center gap-2.5 rounded-control bg-brand-500 py-4',
-            (validated === null || done) && 'opacity-40',
+            !canHand && 'opacity-40',
           )}
         >
           <Feather name="box" size={18} color="#FFFFFF" />
           <AppText className="font-sans-bold text-white" style={{ fontSize: 16 }}>
-            {done ? 'Colis remis' : 'Remettre le colis'}
+            {done ? 'Commande remise' : 'Remettre au coursier'}
           </AppText>
         </Pressable>
-
-        {/* Traçabilité */}
-        <View className="flex-row items-center justify-between rounded-card border border-line bg-surface p-3.5">
-          {[
-            { label: 'Livreur arrivé', at: arrivedAt, ok: true },
-            { label: 'ID vérifiée', at: validated, ok: validated !== null },
-            { label: 'Colis remis', at: handedAt, ok: handedAt !== null || done },
-          ].map((t) => (
-            <View key={t.label} className="flex-1 items-center gap-1">
-              <View
-                className={cn(
-                  'h-6 w-6 items-center justify-center rounded-pill',
-                  t.ok ? 'bg-success' : 'border border-line bg-surface-muted',
-                )}
-              >
-                {t.ok ? <Feather name="check" size={13} color="#FFFFFF" /> : null}
-              </View>
-              <AppText className="text-ink" style={{ fontSize: 11 }}>
-                {t.label}
-              </AppText>
-              <AppText variant="caption" className="text-ink-faint" style={{ fontSize: 10.5 }}>
-                {t.at ? clock(t.at) : 'En attente'}
-              </AppText>
-            </View>
-          ))}
-        </View>
 
         <Pressable
           testID="handover-report"

@@ -41,30 +41,21 @@ export type PlatformSettings = {
    */
   cartHoldSeconds: number | null;
   /**
-   * Frais de livraison facturés au client, en euros. CDC V1.1 : le coût de la
-   * livraison « s'affiche avant validation, jamais de frais caché ». Le CDC ne
-   * chiffre que la rémunération du livreur (3 € + 0,80 €/km), pas ce que paie le
-   * client : tant que Farid ne l'a pas arrêté, la livraison reste offerte, et ce
-   * réglage est le seul endroit à changer.
+   * Frais de livraison facturés au client, en euros (le forfait). CDC V1.1 : le coût
+   * de la livraison « s'affiche avant validation, jamais de frais caché ».
+   *
+   * Depuis le 13/11/2026, la course est confiée à Uber Direct (plus de livreurs
+   * TK LINK, donc plus de rémunération de livreur ni de « colis important » à régler
+   * ici) : le devis du partenaire remplacera ce barème quand le serveur le demandera.
    */
   deliveryFeeEur: number;
+  /** Majoration par km au-delà de la zone de base, en euros — barème du 24/10/2026. */
+  deliveryPerKmEur: number;
   /**
-   * Rémunération du livreur — CDC V1.1 : « 3,00 € par commande, puis 0,80 €/km au-delà
-   * de la zone de base ».
+   * La zone de base, en km. `null` : aucune majoration n'est calculée, le forfait
+   * seul s'applique — on n'invente pas de kilomètres facturés.
    */
-  courierBaseFeeEur: number;
-  courierPerKmEur: number;
-  /**
-   * La zone de base, en km — **absente** : le CDC parle d'une « zone de base »
-   * sans la chiffrer. Tant qu'elle est `null`, on affiche « 3,00 € + 0,80 €/km au-delà
-   * de la zone de base » sans calculer un gain qu'on ne peut pas connaître.
-   */
-  courierBaseZoneKm: number | null;
-  /**
-   * Valeur d'un colis « important », en euros, au-delà de laquelle la remise exige
-   * la biométrie du livreur — **absente** (le CDC ne la chiffre pas).
-   */
-  importantParcelMinEur: number | null;
+  deliveryBaseZoneKm: number | null;
   /**
    * Récompense de parrainage, en euros, créditée à chacun des deux — CDC V1.1
    * (« 5 € crédités au parrain et au filleul »). Financée par TK LINK.
@@ -88,12 +79,14 @@ export type PlatformSettings = {
  * que le CDC ne chiffre pas. Elles sont arrêtées ici, EN TANT QUE VALEURS PAR DÉFAUT : le Super
  * Admin les change depuis l'onglet Réglages du back-office, sans toucher au code.
  *
- * - Zone de base du livreur : 3 km — le rayon de recherche médian du CDC (1 / 3 / 5 / 10 km) ; au-delà,
- *   0,80 €/km s'ajoute au 3,00 € de base.
- * - Colis « important » : 100 € — au-dessus, la remise exige la biométrie du livreur.
- * - Frais de livraison payés par le client : 3,00 € — exactement ce que gagne le livreur pour une
- *   course dans la zone de base, donc la livraison ne coûte rien à TK LINK. Le CDC impose seulement
- *   que ce coût soit affiché AVANT la validation, jamais caché.
+ * - Zone de base de la livraison : 3 km — le rayon de recherche médian du CDC (1 / 3 / 5 / 10 km) ;
+ *   au-delà, 0,80 €/km s'ajoute au 3,00 € de base.
+ * - Frais de livraison payés par le client : 3,00 € — à l'époque, exactement ce que gagnait le
+ *   livreur TK LINK pour une course dans la zone de base. Le CDC impose seulement que ce coût soit
+ *   affiché AVANT la validation, jamais caché.
+ *
+ * Retirés le 13/11/2026 avec les livreurs (Uber Direct) : la rémunération du livreur et le seuil
+ * du « colis important » (au-delà duquel la remise exigeait son empreinte).
  * - Réservation du stock au panier : 10 minutes (600 s) — le temps d'un paiement, pas de plus : un
  *   stock Flash bloqué plus longtemps pénaliserait les autres clients.
  *
@@ -106,10 +99,8 @@ export const PLATFORM_SETTINGS: PlatformSettings = {
   commissionB2bPct: 5,
   cartHoldSeconds: 600,
   deliveryFeeEur: 3,
-  courierBaseFeeEur: 3,
-  courierPerKmEur: 0.8,
-  courierBaseZoneKm: 3,
-  importantParcelMinEur: 100,
+  deliveryPerKmEur: 0.8,
+  deliveryBaseZoneKm: 3,
   referralRewardEur: 5,
   pointsPerEuro: 1,
   retentionYears: 10,

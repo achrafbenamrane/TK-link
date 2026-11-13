@@ -1,8 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
 
 /**
- * Prendre ou choisir une photo — partagé par la création d'un Flash (commerçant)
- * et les justificatifs du livreur : une feature n'importe pas sa voisine, et le
+ * Prendre ou choisir une photo — partagé par la création d'un Flash, le dossier pro et la
+ * vitrine (commerçant, grossiste) : une feature n'importe pas sa voisine, et le
  * module natif reste isolé en un seul endroit.
  *
  * Renvoie `null` — jamais une erreur — si la personne refuse ou annule. La

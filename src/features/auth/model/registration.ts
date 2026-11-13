@@ -30,9 +30,8 @@ export const RegistrationSchema = z
     email: z.email({ error: 'Entrez une adresse e-mail valide.' }),
     /**
      * Facultatif pour un CLIENT (décision du 24/10/2026) : l'e-mail suffit à créer le compte, le
-     * numéro sert ensuite à se connecter s'il est donné. Obligatoire pour un professionnel et un
-     * livreur, qui doivent être joignables (voir `validateRegistration`). Renseigné, il doit être
-     * valide.
+     * numéro sert ensuite à se connecter s'il est donné. Obligatoire pour un professionnel, qui
+     * doit être joignable (voir `validateRegistration`). Renseigné, il doit être valide.
      */
     phone: z
       .string()
@@ -93,8 +92,7 @@ export type RegistrationDraft = typeof EMPTY_REGISTRATION;
  * consommateur n'a aucun sens et allonge un formulaire déjà long.
  */
 export function needsSiret(role: Role): boolean {
-  // Commerçant et grossiste sont des professionnels ; le livreur (TK Deliver)
-  // s'inscrit comme une personne — ses justificatifs viennent à l'étape suivante.
+  // Commerçant et grossiste sont des professionnels.
   return role === 'commercant' || role === 'grossiste';
 }
 

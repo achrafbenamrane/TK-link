@@ -130,7 +130,7 @@ describe('store sans back-end', () => {
 });
 
 describe('un compte est obligatoire, même en démonstration', () => {
-  it.each(['consommateur', 'commercant', 'grossiste', 'livreur'] as const)(
+  it.each(['consommateur', 'commercant', 'grossiste'] as const)(
     'l’inscription (%s) ne propose plus de « Continuer sans compte »',
     async (role) => {
       render(<SignUpScreen role={role} />);

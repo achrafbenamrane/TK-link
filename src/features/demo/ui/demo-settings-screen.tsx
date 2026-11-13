@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, TextInput, View } from 'react-native';
 
-import { isImportantParcel } from '@/shared/lib/handover';
 import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
 import {
   type OverridableKey,
@@ -67,12 +66,13 @@ function Field({ field, label, hint, unit, effect, original }: FieldProps) {
 }
 
 /**
- * LES RÉGLAGES DE DÉMONSTRATION — trois valeurs que le cahier des charges ne chiffre pas, à
- * essayer devant le client : ce que paie le client à la livraison, la zone de base du livreur, le
- * montant d'un « colis important ». Chaque ligne dit ce que la valeur change dans l'app.
+ * LES RÉGLAGES DE DÉMONSTRATION — deux valeurs que le cahier des charges ne chiffre pas, à
+ * essayer devant le client : le forfait de livraison payé par le client et la zone de base au-delà
+ * de laquelle chaque km se paie. Chaque ligne dit ce que la valeur change dans l'app.
  *
  * Les valeurs d'origine ont été arrêtées le 24/10/2026 (voir `PLATFORM_SETTINGS`) ; cet écran ne
- * sert qu'à essayer d'autres montants sur cet appareil, sans toucher au code.
+ * sert qu'à essayer d'autres montants sur cet appareil, sans toucher au code. La zone de base du
+ * livreur et le « colis important » ont disparu le 13/11/2026 avec les livreurs (Uber Direct).
  */
 export function DemoSettingsScreen() {
   const settings = usePlatformSettings();
@@ -81,26 +81,17 @@ export function DemoSettingsScreen() {
   const [epoch, setEpoch] = useState(0);
 
   const fee = settings.deliveryFeeEur;
-  const zone = settings.courierBaseZoneKm;
-  const parcel = settings.importantParcelMinEur;
+  const zone = settings.deliveryBaseZoneKm;
   const sampleKm = 3.8;
-  const sampleParcel = 38.5;
 
-  const gain =
+  // Même calcul que le panier (`clientDeliveryFee`, feature `shop`, qu'une feature voisine
+  // n'importe pas) : le forfait, puis le prix du km au-delà de la zone de base.
+  const longFee =
     zone === null
-      ? `dès ${eur(settings.courierBaseFeeEur)} (la majoration ne se calcule pas sans zone de base)`
+      ? `${eur(fee)} (sans zone de base, aucune majoration)`
       : eur(
-          Math.round(
-            (settings.courierBaseFeeEur + Math.max(0, sampleKm - zone) * settings.courierPerKmEur) *
-              100,
-          ) / 100,
+          Math.round((fee + Math.max(0, sampleKm - zone) * settings.deliveryPerKmEur) * 100) / 100,
         );
-  const identity =
-    parcel === null
-      ? 'exigée pour tous les colis'
-      : isImportantParcel(sampleParcel, parcel)
-        ? 'exigée (colis important)'
-        : 'non exigée (colis courant)';
 
   return (
     <Screen testID="demo-settings-screen" padded={false}>
@@ -124,28 +115,19 @@ export function DemoSettingsScreen() {
           key={`fee-${epoch}`}
           field="deliveryFeeEur"
           label="Frais de livraison payés par le client"
-          hint="Valeur arrêtée : 3,00 €, comme le gain du livreur. Le Touch & Collect reste gratuit."
+          hint="Valeur arrêtée : 3,00 €. Le Touch & Collect reste gratuit."
           original={PLATFORM_SETTINGS.deliveryFeeEur}
           unit="€"
           effect={`Un client livré paie ${fee === 0 ? 'rien (livraison offerte)' : eur(fee)}.`}
         />
         <Field
           key={`zone-${epoch}`}
-          field="courierBaseZoneKm"
-          label="Zone de base du livreur"
-          hint="Au-delà de cette distance, le livreur touche 0,80 € par km en plus du forfait de 3 €."
+          field="deliveryBaseZoneKm"
+          label="Zone de base de la livraison"
+          hint="Au-delà de cette distance, chaque km coûte 0,80 € de plus au client."
           unit="km"
-          original={PLATFORM_SETTINGS.courierBaseZoneKm ?? 0}
-          effect={`Une course de ${String(sampleKm).replace('.', ',')} km rapporte ${gain}.`}
-        />
-        <Field
-          key={`parcel-${epoch}`}
-          field="importantParcelMinEur"
-          label="Montant d’un colis important"
-          hint="À partir de ce montant, la remise exige l’empreinte du livreur."
-          unit="€"
-          original={PLATFORM_SETTINGS.importantParcelMinEur ?? 0}
-          effect={`Pour un colis de ${eur(sampleParcel)}, l’empreinte est ${identity}.`}
+          original={PLATFORM_SETTINGS.deliveryBaseZoneKm ?? 0}
+          effect={`Une livraison à ${String(sampleKm).replace('.', ',')} km coûte ${longFee} au client.`}
         />
 
         <Button

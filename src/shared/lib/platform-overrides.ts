@@ -9,27 +9,30 @@ import { asyncStorageBackend } from './storage';
 
 /**
  * LES RÉGLAGES DE DÉMONSTRATION — pour montrer au client l'effet d'une valeur que le CDC ne
- * chiffre pas, sans toucher au code : ce que paie le client à la livraison, la zone de base du
- * livreur, le montant d'un « colis important ».
+ * chiffre pas, sans toucher au code : le forfait de livraison payé par le client et la zone de base
+ * au-delà de laquelle chaque km se paie.
  *
  * Ce n'est PAS une décision : `PLATFORM_SETTINGS` reste la source (et reste `null` là où le CDC ne
  * tranche pas). Ces ajustements se posent par-dessus, sur cet appareil seulement, et ne sont
  * proposés que dans les builds de démonstration (voir `isDemoBuild`). Le jour où le client tranche,
  * la valeur va dans `PLATFORM_SETTINGS` et ces réglages n'ont plus lieu d'être.
  */
-export const OVERRIDABLE = [
-  'deliveryFeeEur',
-  'courierBaseZoneKm',
-  'importantParcelMinEur',
-] as const;
+export const OVERRIDABLE = ['deliveryFeeEur', 'deliveryBaseZoneKm'] as const;
 export type OverridableKey = (typeof OVERRIDABLE)[number];
 
+/**
+ * Les clés retirées le 13/11/2026 avec les livreurs (`courierBaseZoneKm`, `importantParcelMinEur`)
+ * peuvent rester sur un téléphone : Zod ignore les clés inconnues, la relecture ne les garde pas et
+ * n'échoue pas pour autant — les autres ajustements survivent.
+ */
 const OverridesSchema = z.object({
   deliveryFeeEur: z.number().nonnegative().optional(),
-  courierBaseZoneKm: z.number().positive().optional(),
-  importantParcelMinEur: z.number().positive().optional(),
+  deliveryBaseZoneKm: z.number().positive().optional(),
 });
 export type Overrides = z.infer<typeof OverridesSchema>;
+
+/** Ce qui est conservé d'un lancement à l'autre (exporté pour le test de relecture). */
+export const PersistedOverridesSchema = z.object({ overrides: OverridesSchema.default({}) });
 
 type State = {
   overrides: Overrides;
@@ -56,7 +59,7 @@ export const usePlatformOverrides = create<State>()(
       storage: createJSONStorage(() => asyncStorageBackend),
       partialize: (s) => ({ overrides: s.overrides }),
       merge: (persisted, current) => {
-        const parsed = z.object({ overrides: OverridesSchema }).safeParse(persisted);
+        const parsed = PersistedOverridesSchema.safeParse(persisted);
         return parsed.success ? { ...current, ...parsed.data } : current;
       },
     },

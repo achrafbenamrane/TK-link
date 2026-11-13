@@ -1,4 +1,3 @@
-import { demoConversations } from '../lib/demo';
 import { PersistedSchema } from '../model/schema';
 import { selectUnreadTotal, useMessagesStore } from '../model/store';
 
@@ -55,28 +54,8 @@ describe('messagerie — store', () => {
     expect(selectUnreadTotal(get())).toBe(0);
   });
 
-  it('seedDemo n’insère les exemples que s’il n’y a aucune conversation', () => {
-    get().seedDemo();
-    expect(get().conversations.map((c) => c.id)).toEqual([
-      'demo_commerce',
-      'demo_client',
-      'support',
-    ]);
-    expect(selectUnreadTotal(get())).toBe(1);
-
-    get().send('support', 'Une question');
-    get().seedDemo();
-    expect(get().conversations).toHaveLength(3);
-    expect(get().conversations.find((c) => c.id === 'support')?.messages).toHaveLength(2);
-
-    useMessagesStore.setState({ conversations: [] });
-    get().ensureConversation(seed);
-    get().seedDemo();
-    expect(get().conversations).toHaveLength(1);
-  });
-
   it('reset vide tout', () => {
-    get().seedDemo();
+    get().ensureConversation(seed);
     get().reset();
     expect(get().conversations).toEqual([]);
   });
@@ -97,11 +76,5 @@ describe('messagerie — store', () => {
     expect(
       PersistedSchema.safeParse({ conversations: [{ id: 'x', title: 'X', kind: 'nope' }] }).success,
     ).toBe(false);
-  });
-
-  it('les conversations d’exemple respectent le schéma et sont déterministes', () => {
-    const demo = demoConversations(1_700_000_000_000);
-    expect(PersistedSchema.parse({ conversations: demo }).conversations).toEqual(demo);
-    expect(demoConversations(1_700_000_000_000)).toEqual(demo);
   });
 });

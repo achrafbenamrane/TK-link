@@ -98,9 +98,9 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
 
   // Le coût de la livraison est dans le total AVANT le paiement — CDC V1.1 : jamais
   // de frais révélé après coup. Le Touch & Collect est gratuit.
-  // Barème du livreur : forfait, puis 0,80 €/km au-delà de la zone de base. La distance n'est connue
-  // que pour « Ma position actuelle » (les adresses du carnet n'ont pas de coordonnées) : sinon, le
-  // forfait seul — la même mesure que celle du livreur, pour que client et livreur soient d'accord.
+  // Barème de livraison : forfait, puis 0,80 €/km au-delà de la zone de base. La distance n'est
+  // connue que pour « Ma position actuelle » (les adresses du carnet n'ont pas de coordonnées) :
+  // sinon, le forfait seul. Le devis Uber Direct le remplacera quand le serveur le demandera.
   const firstMerchant = lines[0] ? getMerchant(lines[0].deal.merchantId) : undefined;
   const deliveryKm = deliveryDistanceKm(
     firstMerchant?.coord,
@@ -371,7 +371,7 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
                     Livrer à {POSITION_LABEL}
                   </AppText>
                   <AppText variant="caption" className="text-xs text-ink-faint">
-                    Le livreur vous retrouvera là où vous êtes.
+                    Le coursier vous retrouvera là où vous êtes.
                   </AppText>
                 </View>
               </View>
@@ -446,7 +446,7 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
           </View>
           {surcharge > 0 && deliveryKm !== null ? (
             <AppText testID="cart-delivery-detail" variant="caption" className="text-ink-faint">
-              {`${settings.deliveryFeeEur.toFixed(2)}€ + ${settings.courierPerKmEur.toFixed(2)}€ par km au-delà de ${settings.courierBaseZoneKm ?? 0} km (${deliveryKm.toFixed(1).replace('.', ',')} km)`}
+              {`${settings.deliveryFeeEur.toFixed(2)}€ + ${settings.deliveryPerKmEur.toFixed(2)}€ par km au-delà de ${settings.deliveryBaseZoneKm ?? 0} km (${deliveryKm.toFixed(1).replace('.', ',')} km)`}
             </AppText>
           ) : null}
           {discount > 0 ? (

@@ -23,7 +23,7 @@ export const ISSUE_LABEL: Record<IssueKind, string> = {
 export const ISSUE_HINT: Record<IssueKind, string> = {
   non_recue: 'La commande n’est pas arrivée ou n’a pas pu être retirée.',
   non_conforme: 'Il manque un article, ou il ne correspond pas à l’offre.',
-  autre: 'Un souci avec le commerçant, le livreur ou le paiement.',
+  autre: 'Un souci avec le commerçant, la livraison ou le paiement.',
 };
 
 /** Où part l'incident. */

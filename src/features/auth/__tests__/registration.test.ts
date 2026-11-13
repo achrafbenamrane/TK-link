@@ -32,7 +32,7 @@ describe('validateRegistration — CDC §5', () => {
       expect(errors[field]).toBeDefined();
     }
     expect(errors.phone).toBeUndefined();
-    expect(validateRegistration(EMPTY_REGISTRATION, 'livreur').phone).toBeDefined();
+    expect(validateRegistration(EMPTY_REGISTRATION, 'commercant').phone).toBeDefined();
   });
 
   it('laisse la localisation facultative — « selon consentement » (CDC §2.2)', () => {
@@ -118,9 +118,9 @@ describe('toProfile', () => {
   });
 });
 
-describe('livreur (TK Deliver)', () => {
-  it('s’inscrit comme une personne : ni SIRET ni nom de commerce', () => {
-    expect(needsSiret('livreur')).toBe(false);
+describe('le SIRET selon le profil', () => {
+  it('seuls les professionnels donnent un SIRET', () => {
+    expect(needsSiret('consommateur')).toBe(false);
     expect(needsSiret('commercant')).toBe(true);
     expect(needsSiret('grossiste')).toBe(true);
   });
@@ -147,11 +147,13 @@ describe('le numéro de téléphone selon le profil', () => {
     );
   });
 
-  it('un livreur, un commerçant et un grossiste doivent donner un numéro', () => {
-    for (const role of ['livreur', 'commercant', 'grossiste'] as const) {
+  it('un commerçant et un grossiste doivent donner un numéro', () => {
+    for (const role of ['commercant', 'grossiste'] as const) {
       expect(needsPhone(role)).toBe(true);
       expect(validateRegistration(filled, role).phone).toBe('Indiquez votre numéro de téléphone.');
     }
-    expect(validateRegistration({ ...filled, phone: '06 12 34 56 78' }, 'livreur')).toEqual({});
+    expect(
+      validateRegistration({ ...filled, phone: '06 12 34 56 78' }, 'grossiste').phone,
+    ).toBeUndefined();
   });
 });

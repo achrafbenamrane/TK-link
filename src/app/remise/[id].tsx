@@ -1,36 +1,18 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { useCourierStore, VEHICLE_LABEL } from '@/features/courier';
 import { HandoverScreen } from '@/features/shop';
-import { isDemoBuild } from '@/shared/lib/env';
 
 /**
- * La validation de la remise au livreur, côté commerçant. La route met en
- * relation le livreur (feature `courier`) et la commande (`shop`).
- *
- * Sans serveur, le livreur qui se présente est celui de CET appareil s'il s'est
- * inscrit ; sinon un livreur d'exemple, pour montrer l'écran.
+ * La remise d'une commande en livraison au coursier partenaire (Uber Direct), côté commerçant.
+ * TK LINK n'a plus de livreurs à lui depuis le 13/11/2026 : la commande passe « En livraison »
+ * quand le commerçant la confie au coursier.
  */
 export default function HandoverRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const vehicle = useCourierStore((s) => s.vehicle);
-  const status = useCourierStore((s) => s.status);
-  const active = useCourierStore((s) => s.active);
-
-  const real = status === 'valide' && vehicle;
   return (
     <HandoverScreen
       orderId={id ?? ''}
-      courier={{
-        name: real ? 'Votre livreur' : 'Alex Martin',
-        vehicle: real ? VEHICLE_LABEL[vehicle] : 'Vélo électrique',
-        verified: true,
-        present: true,
-      }}
-      // L'empreinte posée par le livreur sur son téléphone : elle s'affiche ici sans autre geste.
-      courierValidatedAt={active?.mission.orderId === id ? (active.identityAt ?? null) : null}
-      demo={isDemoBuild}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/commandes'))}
     />
   );

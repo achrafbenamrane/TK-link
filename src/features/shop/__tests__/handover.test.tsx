@@ -29,71 +29,59 @@ const order: Order = {
   issue: null,
 };
 
-const courier = { name: 'Alex Martin', vehicle: 'Vélo électrique', verified: true, present: true };
-
-describe('<HandoverScreen /> — validation livreur', () => {
+/**
+ * Depuis le 13/11/2026, TK LINK n'a plus de livreurs : le commerçant confie la commande à un
+ * coursier partenaire (Uber Direct). Plus d'identité, de véhicule ni d'empreinte à vérifier.
+ */
+describe('<HandoverScreen /> — remise au coursier partenaire', () => {
   beforeEach(() => useShopStore.setState({ orders: [order] }));
 
-  it('ne laisse pas remettre le colis avant la validation du livreur', () => {
-    render(<HandoverScreen orderId={order.id} courier={courier} onBack={jest.fn()} />);
-    expect(screen.getByText('Alex Martin')).toBeTruthy();
-    expect(screen.getByText('Compte vérifié')).toBeTruthy();
-    expect(screen.queryByTestId('handover-validated')).toBeNull();
-
-    fireEvent.press(screen.getByTestId('handover-confirm'));
-    expect(useShopStore.getState().orders[0]?.status).toBe('prete');
+  it('présente le coursier partenaire, sans livreur TK LINK ni empreinte', () => {
+    render(<HandoverScreen orderId={order.id} onBack={jest.fn()} />);
+    expect(screen.getByTestId('handover-partner')).toHaveTextContent(/Coursier Uber Direct/);
+    expect(screen.queryByTestId('handover-biometric')).toBeNull();
+    expect(screen.queryByText(/livreur/i)).toBeNull();
+    expect(screen.queryByTestId('handover-done')).toBeNull();
   });
 
-  it('une fois l’identité validée, remettre le colis passe la commande en livraison', () => {
-    render(<HandoverScreen demo orderId={order.id} courier={courier} onBack={jest.fn()} />);
-    fireEvent.press(screen.getByTestId('handover-biometric'));
-    expect(screen.getByTestId('handover-validated')).toBeTruthy();
-
+  it('remettre la commande la passe « En livraison »', () => {
+    render(<HandoverScreen orderId={order.id} onBack={jest.fn()} />);
     fireEvent.press(screen.getByTestId('handover-confirm'));
+
     expect(useShopStore.getState().orders[0]?.status).toBe('en_livraison');
-    expect(screen.getAllByText('Colis remis').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('handover-done')).toBeTruthy();
+    expect(screen.getByTestId('handover-confirm')).toHaveTextContent(/Commande\s+remise/);
   });
 
-  it('l’empreinte posée par le livreur sur SON téléphone valide la remise, sans autre geste', () => {
-    render(
-      <HandoverScreen
-        orderId={order.id}
-        courier={courier}
-        courierValidatedAt={Date.now()}
-        onBack={jest.fn()}
-      />,
-    );
-    expect(screen.getByTestId('handover-validated')).toBeTruthy();
-
+  it('une commande déjà partie s’affiche comme remise, sans second geste', () => {
+    useShopStore.setState({ orders: [{ ...order, status: 'en_livraison' }] });
+    render(<HandoverScreen orderId={order.id} onBack={jest.fn()} />);
+    expect(screen.getByTestId('handover-done')).toBeTruthy();
     fireEvent.press(screen.getByTestId('handover-confirm'));
     expect(useShopStore.getState().orders[0]?.status).toBe('en_livraison');
   });
 });
 
 describe('<HandoverScreen /> — remise refusée par la machine à états', () => {
-  it('n’annonce pas « Colis remis » si la commande n’est pas prête', () => {
+  it('n’annonce rien si la commande n’est pas prête', () => {
     useShopStore.setState({ orders: [{ ...order, status: 'preparation' }] });
-    render(
-      <HandoverScreen
-        orderId={order.id}
-        courier={courier}
-        courierValidatedAt={Date.now()}
-        onBack={jest.fn()}
-      />,
-    );
+    render(<HandoverScreen orderId={order.id} onBack={jest.fn()} />);
     fireEvent.press(screen.getByTestId('handover-confirm'));
     expect(useShopStore.getState().orders[0]?.status).toBe('preparation');
-    // Le bouton n'a pas basculé sur « Colis remis » : la remise n'est pas actée.
-    expect(screen.getByTestId('handover-confirm')).toHaveTextContent(/Remettre\s+le\s+colis/);
+    expect(screen.queryByTestId('handover-done')).toBeNull();
+    expect(screen.getByTestId('handover-confirm')).toHaveTextContent(/Remettre\s+au\s+coursier/);
   });
-});
 
-describe('<HandoverScreen /> — en production', () => {
-  it('ne se valide pas d’un simple geste : seule l’empreinte du livreur le fait', () => {
-    useShopStore.setState({ orders: [order] });
-    render(<HandoverScreen orderId={order.id} courier={courier} onBack={jest.fn()} />);
-    fireEvent.press(screen.getByTestId('handover-biometric'));
-    expect(screen.queryByTestId('handover-validated')).toBeNull();
-    expect(screen.queryByText(/touchez pour simuler/)).toBeNull();
+  it('un Touch & Collect ne part jamais chez un coursier', () => {
+    useShopStore.setState({ orders: [{ ...order, fulfilment: 'touch-collect' }] });
+    render(<HandoverScreen orderId={order.id} onBack={jest.fn()} />);
+    fireEvent.press(screen.getByTestId('handover-confirm'));
+    expect(useShopStore.getState().orders[0]?.status).toBe('prete');
+  });
+
+  it('une commande inconnue le dit', () => {
+    useShopStore.setState({ orders: [] });
+    render(<HandoverScreen orderId="inconnue" onBack={jest.fn()} />);
+    expect(screen.getByText('Commande introuvable')).toBeTruthy();
   });
 });

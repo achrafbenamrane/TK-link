@@ -154,7 +154,6 @@ export function SignUpScreen({
   );
 
   const pro = needsSiret(role);
-  const courier = role === 'livreur';
   const proCopy = PRO_TITLE[role === 'grossiste' ? 'grossiste' : 'commercant'];
   const modeLabel = role === 'grossiste' ? WHOLESALE_MODE_LABEL : MODE_LABEL;
   const dense = pro;
@@ -472,14 +471,12 @@ export function SignUpScreen({
 
           <View className="mb-1.5 items-center gap-0.5">
             <AppText variant="display" className="text-center" style={{ fontSize: 21 }}>
-              {pro ? proCopy.title : courier ? 'Créer mon compte livreur' : 'Créer mon compte'}
+              {pro ? proCopy.title : 'Créer mon compte'}
             </AppText>
             <AppText variant="caption" className="text-center" style={{ fontSize: 12 }}>
               {pro
                 ? proCopy.subtitle
-                : courier
-                  ? 'Rejoignez TK Deliver pour livrer les commandes de votre quartier.'
-                  : 'Inscris-toi pour accéder aux meilleures offres Flash autour de toi.'}
+                : 'Inscris-toi pour accéder aux meilleures offres Flash autour de toi.'}
             </AppText>
           </View>
 

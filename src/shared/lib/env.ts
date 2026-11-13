@@ -111,7 +111,7 @@ export const isPhoneAuthEnabled: boolean = env.EXPO_PUBLIC_AUTH_PHONE === 'on';
 /**
  * Cette build est-elle une DÉMONSTRATION ? Vrai partout sauf en production.
  *
- * Tout ce qui sert à montrer l'app au client (missions d'exemple, vitrine d'exemple, boutons
+ * Tout ce qui sert à montrer l'app au client (vitrine d'exemple, réglages d'essai, boutons
  * « simuler la validation ») passe par ce drapeau, posé par les ROUTES : une build de production n'en
  * montre aucun, et un vrai commerçant ne peut pas valider par erreur un IBAN d'exemple. Le bouton
  * « Démo » et l'inscription pré-remplie demandent EN PLUS l'absence de serveur : voir

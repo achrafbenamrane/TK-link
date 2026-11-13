@@ -83,7 +83,7 @@ export default function SignUpRoute() {
 
   // Le compte existe. Son type fait foi côté serveur : déclaré à l'inscription par e-mail, déclaré
   // MAINTENANT pour Google et Apple (`syncProfile`) — ou déjà fixé, si ce compte existait. Puis un
-  // livreur, un commerçant et un fournisseur déposent leurs justificatifs ; le client choisit ses
+  // commerçant et un fournisseur déposent leurs justificatifs ; le client choisit ses
   // centres d'intérêt. Un compte Google ou Apple DÉJÀ inscrit, lui, reprend son accueil et entre.
   const toOnboarding = useCallback(async () => {
     const profile = await syncProfile(role);

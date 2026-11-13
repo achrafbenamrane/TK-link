@@ -7,7 +7,7 @@ import type { Role } from '@/shared/lib/roles';
  *
  * L'app ne se parcourt plus sans compte : tant qu'aucune session n'existe, seuls le logo animé, le
  * choix du profil, l'inscription, la connexion et le mot de passe oublié sont ouverts. Une fois
- * connecté, le parcours d'accueil (centres d'intérêt, dossier pro, dossier livreur) se termine
+ * connecté, le parcours d'accueil (centres d'intérêt, dossier pro) se termine
  * avant d'entrer dans l'app.
  *
  * Une règle PURE : le layout lui donne l'état, elle répond « reste là » (`null`) ou « va là ».
@@ -30,7 +30,7 @@ export type EntryState = {
 };
 
 /** Les étapes d'accueil, une par profil. */
-export type FirstRunRoute = '/devenir-livreur' | '/dossier-pro' | '/onboarding';
+export type FirstRunRoute = '/dossier-pro' | '/onboarding';
 
 /** Les seules destinations de la porte. */
 export type EntryRoute = '/' | '/welcome' | '/role' | '/sign-in' | FirstRunRoute;
@@ -52,7 +52,6 @@ export const PUBLIC_ROUTES: ReadonlySet<string> = new Set([
  */
 export const SETUP_ROUTES: ReadonlySet<string> = new Set([
   'onboarding',
-  'devenir-livreur',
   'dossier-pro',
   'sign-up',
   'sign-in',
@@ -61,7 +60,6 @@ export const SETUP_ROUTES: ReadonlySet<string> = new Set([
 
 /** La première étape d'accueil d'un profil, juste après l'inscription. */
 export function firstRunRoute(role: Role): FirstRunRoute {
-  if (role === 'livreur') return '/devenir-livreur';
   if (needsSiret(role)) return '/dossier-pro';
   return '/onboarding';
 }

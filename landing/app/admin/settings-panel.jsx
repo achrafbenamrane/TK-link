@@ -19,9 +19,9 @@ import {
  * inscrite dans le code » (§6.2). Changer ce nombre ici change aussi ce que l'espace commerçant
  * affiche (même navigateur) : c'est la preuve que la valeur vit à un seul endroit.
  *
- * Les trois paramètres que le CDC n'a pas chiffrés (zone de base du livreur, colis important,
- * durée de réservation du panier) restent VIDES tant que le client ne les a pas arrêtés : on les
- * affiche « à définir », jamais avec un chiffre plausible (§14).
+ * Les paramètres que le CDC n'a pas chiffrés (zone de base de la livraison, durée de réservation
+ * du panier) peuvent être VIDÉS tant que le client ne les a pas arrêtés : on les affiche « à
+ * définir », jamais avec un chiffre plausible (§14).
  */
 export default function SettingsPanel({ settings, onSaved, notify }) {
   const [inputs, setInputs] = useState(() =>

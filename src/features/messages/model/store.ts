@@ -4,14 +4,17 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { makeId } from '@/shared/lib/id';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
-import { demoConversations } from '../lib/demo';
 import { PersistedSchema, type Conversation, type ConversationKind } from './schema';
 
 /**
- * Messagerie du livreur — locale à l’appareil, sans serveur.
+ * Messagerie — locale à l’appareil, sans serveur.
+ *
+ * ⚠️ AUCUN ÉCRAN NE L’OUVRE depuis le 13/11/2026 : elle servait le livreur, retiré au profit
+ * d’Uber Direct. Le store, la liste et le fil restent pour la messagerie du support TK LINK (étape 5
+ * du plan du 13/11/2026), qui les reprendra avec un serveur.
  *
  * ⚠️ Envoyer un message ne simule JAMAIS de réponse : sans back-end, rien ne
- * répond. `receive` existe pour les tests et l’amorçage de démonstration.
+ * répond. `receive` existe pour les tests.
  */
 
 export type ConversationSeed = {
@@ -28,10 +31,8 @@ type State = {
   /** Ajoute un message de moi ; faux si le texte est vide ou la conversation inconnue. */
   send: (conversationId: string, text: string) => boolean;
   markRead: (conversationId: string) => void;
-  /** Ajoute un message reçu (tests, démonstration). */
+  /** Ajoute un message reçu (tests). */
   receive: (conversationId: string, text: string) => void;
-  /** Insère les conversations d’exemple, seulement s’il n’y en a aucune. */
-  seedDemo: () => void;
   reset: () => void;
 };
 
@@ -90,22 +91,6 @@ export const useMessagesStore = create<State>()(
               ? { ...c, unread: c.unread + 1, messages: [...c.messages, message] }
               : c,
           ),
-        }));
-      },
-
-      seedDemo: () => {
-        if (get().conversations.length > 0) return;
-        const demo = demoConversations();
-        demo.forEach((c) =>
-          get().ensureConversation({
-            id: c.id,
-            title: c.title,
-            subtitle: c.subtitle,
-            kind: c.kind,
-          }),
-        );
-        set((s) => ({
-          conversations: s.conversations.map((c) => demo.find((d) => d.id === c.id) ?? c),
         }));
       },
 

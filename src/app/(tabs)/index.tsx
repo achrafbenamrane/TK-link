@@ -2,13 +2,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import {
-  availableMissions,
-  CourierHomeScreen,
-  useCourierStore,
-  type CourierTarget,
-} from '@/features/courier';
-import { missionConversation, useMessagesStore } from '@/features/messages';
 import { programOf, useMerchantLoyaltyStore } from '@/features/loyalty';
 import {
   liveOffers,
@@ -33,13 +26,12 @@ import {
   LOCAL_MERCHANT_ID,
   selectOrders,
   summarizeOrder,
-  useMissionOffers,
   useShopStore,
   type Deal,
 } from '@/features/shop';
 import { CATEGORY_INFO } from '@/shared/lib/categories';
 import { AppText } from '@/shared/ui';
-import { isDemoBuild, isSupabaseConfigured } from '@/shared/lib/env';
+import { isSupabaseConfigured } from '@/shared/lib/env';
 
 /**
  * ACCUEIL — ce que l'utilisateur voit dépend de CE QU'IL EST (CDC §3.1, §3.2).
@@ -194,61 +186,6 @@ function MerchantHome() {
   );
 }
 
-/** L'accueil du livreur : son tableau de bord — résumé du jour, raccourcis, disponibilité. */
-function CourierHome() {
-  const router = useRouter();
-  const avatar = useOnboardingStore(selectAvatar);
-  const firstName = useOnboardingStore(selectFirstName);
-  const missions = useMissionOffers();
-  const declined = useCourierStore((s) => s.declined);
-  const activeOrderId = useCourierStore((s) => s.active?.mission.orderId);
-  const ensureConversation = useMessagesStore((s) => s.ensureConversation);
-
-  // Les missions proposées, d'exemple tant qu'aucune vraie course n'existe (démonstration).
-  const pending = availableMissions({
-    missions,
-    showExamples: isDemoBuild,
-    declined,
-    activeOrderId: activeOrderId ?? undefined,
-  }).length;
-
-  const open = (target: CourierTarget) => {
-    switch (target) {
-      case 'missions':
-        router.push('/missions');
-        return;
-      case 'history':
-        router.push('/commandes');
-        return;
-      case 'support': {
-        const seed = missionConversation('support', null);
-        ensureConversation(seed);
-        router.push({ pathname: '/conversation/[id]', params: { id: seed.id } });
-        return;
-      }
-      case 'account':
-        router.push('/profil');
-        return;
-      case 'security':
-        router.push('/empreinte');
-        return;
-      case 'setup':
-        router.push('/devenir-livreur');
-    }
-  };
-
-  return (
-    <CourierHomeScreen
-      name={firstName || 'Livreur'}
-      renderAvatar={() => <AvatarView avatar={avatar} size={52} />}
-      pendingCount={pending}
-      onOpen={open}
-      // Démonstration au client : un compte d'exemple activable en un geste.
-      showExamples={isDemoBuild}
-    />
-  );
-}
-
 /** L'accueil du grossiste : son tableau de bord fournisseur, pas la vitrine des ventes Flash. */
 function WholesalerHome() {
   const router = useRouter();
@@ -282,6 +219,5 @@ function WholesalerHome() {
 export default function AccueilRoute() {
   const role = useOnboardingStore(selectRole);
   if (role === 'grossiste') return <WholesalerHome />;
-  if (role === 'livreur') return <CourierHome />;
   return role === 'commercant' ? <MerchantHome /> : <ConsumerHome />;
 }

@@ -3,18 +3,25 @@ import { fireEvent, render, screen } from '@/shared/testing/render';
 import { RoleScreen } from '../ui/role-screen';
 
 describe('<RoleScreen /> — le profil se choisit avant l’inscription', () => {
-  it('propose les quatre profils de TK LINK', () => {
+  it('propose les trois profils de TK LINK', () => {
     render(<RoleScreen onPick={jest.fn()} onSignIn={jest.fn()} />);
-    for (const role of ['consommateur', 'commercant', 'grossiste', 'livreur']) {
+    for (const role of ['consommateur', 'commercant', 'grossiste']) {
       expect(screen.getByTestId(`role-${role}`)).toBeTruthy();
     }
+  });
+
+  it('ne propose plus de devenir livreur : les livraisons passent par Uber Direct', () => {
+    render(<RoleScreen onPick={jest.fn()} onSignIn={jest.fn()} onDemo={jest.fn()} />);
+    expect(screen.queryByTestId('role-livreur')).toBeNull();
+    expect(screen.queryByTestId('role-demo-livreur')).toBeNull();
+    expect(screen.queryByText(/livreur/i)).toBeNull();
   });
 
   it('renvoie le profil touché', () => {
     const onPick = jest.fn();
     render(<RoleScreen onPick={onPick} onSignIn={jest.fn()} />);
-    fireEvent.press(screen.getByTestId('role-livreur'));
-    expect(onPick).toHaveBeenCalledWith('livreur');
+    fireEvent.press(screen.getByTestId('role-commercant'));
+    expect(onPick).toHaveBeenCalledWith('commercant');
   });
 
   it('laisse se connecter sans choisir', () => {
@@ -33,6 +40,6 @@ describe('<RoleScreen /> — le profil se choisit avant l’inscription', () => 
 
   it('sans démo fournie, aucun bouton « Démo »', () => {
     render(<RoleScreen onPick={jest.fn()} onSignIn={jest.fn()} />);
-    expect(screen.queryByTestId('role-demo-livreur')).toBeNull();
+    expect(screen.queryByTestId('role-demo-commercant')).toBeNull();
   });
 });

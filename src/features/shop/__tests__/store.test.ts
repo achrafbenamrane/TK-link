@@ -133,7 +133,17 @@ describe('progression de commande (démo)', () => {
     expect(at(15)).toBe('payee');
     expect(at(40)).toBe('preparation');
     expect(at(90)).toBe('prete');
+    // Confiée au coursier partenaire (Uber Direct) : la livraison est en route.
+    expect(at(150)).toBe('en_livraison');
     expect(at(300)).toBe('livree');
+  });
+
+  it('un Touch & Collect reste « prête » jusqu’au retrait : pas de coursier', () => {
+    useShopStore.setState({
+      orders: [{ ...orderAgedBy(150), fulfilment: 'touch-collect' as const }],
+    });
+    useShopStore.getState().syncOrderStatuses();
+    expect(useShopStore.getState().orders[0]?.status).toBe('prete');
   });
 
   it('se termine « récupérée » en Touch & Collect — CDC V1.0 §5.3', () => {

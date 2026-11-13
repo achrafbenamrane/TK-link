@@ -73,10 +73,8 @@ describe('réglages de la plateforme — web = app', () => {
       referralRewardEur: PLATFORM_SETTINGS.referralRewardEur,
       pointsPerEuro: PLATFORM_SETTINGS.pointsPerEuro,
       deliveryFeeEur: PLATFORM_SETTINGS.deliveryFeeEur,
-      courierBaseFeeEur: PLATFORM_SETTINGS.courierBaseFeeEur,
-      courierPerKmEur: PLATFORM_SETTINGS.courierPerKmEur,
-      courierBaseZoneKm: PLATFORM_SETTINGS.courierBaseZoneKm,
-      importantParcelMinEur: PLATFORM_SETTINGS.importantParcelMinEur,
+      deliveryPerKmEur: PLATFORM_SETTINGS.deliveryPerKmEur,
+      deliveryBaseZoneKm: PLATFORM_SETTINGS.deliveryBaseZoneKm,
       cartHoldSeconds: PLATFORM_SETTINGS.cartHoldSeconds,
     });
   });
@@ -85,7 +83,11 @@ describe('réglages de la plateforme — web = app', () => {
     const nullable = platform.FIELDS.filter((f) => f.nullable)
       .map((f) => f.key)
       .sort();
-    expect(nullable).toEqual(['cartHoldSeconds', 'courierBaseZoneKm', 'importantParcelMinEur']);
+    expect(nullable).toEqual(['cartHoldSeconds', 'deliveryBaseZoneKm']);
+  });
+
+  it('plus aucun réglage de livreur : les livraisons sont confiées à Uber Direct (13/11/2026)', () => {
+    expect(platform.FIELDS.map((f) => f.key).join(' ')).not.toMatch(/courier|parcel/i);
   });
 
   it('valide une saisie : virgule française, bornes, vide = « à définir »', () => {
@@ -94,11 +96,15 @@ describe('réglages de la plateforme — web = app', () => {
     );
     expect(platform.validateSettings(inputs)).toMatchObject({ ok: true });
     expect(
-      platform.validateSettings({ ...inputs, courierBaseZoneKm: '' }).values.courierBaseZoneKm,
+      platform.validateSettings({ ...inputs, deliveryBaseZoneKm: '' }).values.deliveryBaseZoneKm,
     ).toBeNull();
 
-    const r = platform.validateSettings({ ...inputs, courierPerKmEur: '0,9', freeOperations: '8' });
-    expect(r.values).toMatchObject({ courierPerKmEur: 0.9, freeOperations: 8 });
+    const r = platform.validateSettings({
+      ...inputs,
+      deliveryPerKmEur: '0,9',
+      freeOperations: '8',
+    });
+    expect(r.values).toMatchObject({ deliveryPerKmEur: 0.9, freeOperations: 8 });
   });
 
   it('refuse l’invalide, champ par champ', () => {

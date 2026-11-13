@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { isCategory, type Category } from '@/shared/lib/categories';
-import { ROLES } from '@/shared/lib/roles';
+import { RoleSchema } from '@/shared/lib/roles';
 
 /**
  * Contrat de l'accueil des nouveaux utilisateurs.
@@ -84,8 +84,14 @@ export const OnboardingSchema = z.object({
   /** Le prénom donné à l'inscription (CDC V1.0 §2.2) — pas un nom d'utilisateur à part. */
   firstName: z.string().max(24).default(''),
   avatar: AvatarSchema.default({ preset: 0 }),
-  /** Rôle — CDC §2.1. Un consommateur par défaut ; l'espace commerçant se choisit à la porte dédiée. */
-  role: z.enum(ROLES).default('consommateur'),
+  /**
+   * Rôle — CDC §2.1. Un consommateur par défaut ; l'espace commerçant se choisit à la porte dédiée.
+   *
+   * Un `role: 'livreur'` enregistré avant le 13/11/2026 (rôle retiré, Uber Direct) se relit en
+   * client (`RoleSchema`) ; une valeur illisible retombe sur le client plutôt que de faire échouer
+   * toute la relecture — le prénom, l'avatar et les centres d'intérêt seraient perdus avec elle.
+   */
+  role: RoleSchema.default('consommateur').catch('consommateur'),
   /**
    * SIRET du professionnel — CDC §2.2. Vide tant qu'il n'est pas renseigné : le
    * CDC ne l'exige qu'au moment de commander chez un grossiste, pas à
