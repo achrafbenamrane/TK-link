@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(138);
+select plan(140);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -1218,6 +1218,25 @@ select results_eq(
   $$ select stock_left from public.flash_offers where title = 'Pain de campagne' $$,
   $$ values (current_setting('tklink.stock')::integer) $$,
   'its stock is given back'
+);
+
+-- ──────────────────────────────────────────────── décision sur un litige (migration 0021)
+
+-- 78) Une décision est complète ou n'est pas : issue, motif ET date, ensemble.
+set local request.jwt.claims to '{}';
+select throws_ok(
+  $$ update public.flash_orders set dispute_outcome = 'refund'
+      where id = current_setting('tklink.order')::uuid $$,
+  '23514',
+  null,
+  'a dispute decision without a reason and a date is refused'
+);
+select lives_ok(
+  $$ update public.flash_orders
+        set dispute_outcome = 'refund', dispute_note = 'Payé hors délai : remboursé.',
+            dispute_decided_at = now()
+      where id = current_setting('tklink.order')::uuid $$,
+  'a reasoned, dated decision is kept with the order'
 );
 
 select * from finish();

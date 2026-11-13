@@ -465,6 +465,21 @@
 }
 
 /* La parole du plaignant, citée telle quelle : c'est elle qu'on instruit. */
+/* Litiges : où retrouver le paiement dans Stripe pour le rembourser. */
+.tkadmin-hint {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #5b6559;
+}
+.tkadmin-hint code {
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: #eef2ec;
+  word-break: break-all;
+}
+
 .tkadmin-quote {
   margin: 0;
   padding: 12px 16px;

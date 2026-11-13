@@ -144,6 +144,27 @@ export default function AdminPage() {
   const [appFilter, setAppFilter] = useState('commercant');
   /** L'issue de chaque litige : `{ [id]: { outcome, note } }`. */
   const [rulings, setRulings] = useState({});
+  /**
+   * Les litiges : les commandes du SERVEUR en « litige » (et celles déjà tranchées) dès que le
+   * back-office a sa clé de service, sinon ceux de la démonstration. `liveDisputes` : vrai quand
+   * chaque décision part au serveur (migration 0021).
+   */
+  const [disputes, setDisputes] = useState(DISPUTES);
+  const [liveDisputes, setLiveDisputes] = useState(false);
+  const loadDisputes = async () => {
+    const data = await fetch('/admin/api/disputes', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .catch(() => null);
+    if (!data?.disputes) return;
+    setDisputes(data.disputes);
+    setRulings(data.rulings ?? {});
+    setLiveDisputes(true);
+  };
+  useEffect(() => {
+    // Synchronisation avec le serveur du back-office ; l'état n'est posé qu'à la réponse.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- lecture initiale des litiges
+    void loadDisputes();
+  }, []);
   const [ruling, setRuling] = useState(null);
   const [note, setNote] = useState('');
 
@@ -224,18 +245,34 @@ export default function AdminPage() {
     notify(`${app.shop} revient dans les demandes en attente.`);
   };
 
-  const settle = (dispute, outcome) => {
+  const settle = async (dispute, outcome) => {
     // Une décision de litige engage de l'argent : elle s'accompagne toujours
     // d'une note, faute de quoi personne ne saura, dans un mois, pourquoi
     // 89 € ont été rendus.
     if (!note.trim()) return;
+    if (liveDisputes) {
+      const res = await fetch('/admin/api/disputes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: dispute.id, outcome, note: note.trim() }),
+      }).catch(() => null);
+      if (!res?.ok) {
+        notify(
+          res?.status === 409
+            ? `Le litige ${dispute.order} a déjà été tranché (ou remboursé dans Stripe).`
+            : `La décision sur ${dispute.order} n’a pas pu être enregistrée. Réessayez.`,
+        );
+        await loadDisputes();
+        return;
+      }
+    }
     setRulings((r) => ({ ...r, [dispute.id]: { outcome, note: note.trim() } }));
     setRuling(null);
     setNote('');
     notify(`Litige ${dispute.order} tranché.`);
   };
 
-  const openDisputes = DISPUTES.filter((d) => !rulings[d.id]);
+  const openDisputes = disputes.filter((d) => !rulings[d.id]);
 
   const pending = apps.filter((a) => !decisions[a.id]);
 
@@ -825,12 +862,12 @@ export default function AdminPage() {
               </span>
             </div>
 
-            {DISPUTES.length === 0 ? (
+            {disputes.length === 0 ? (
               <p className="tkadmin-empty">Aucun litige. C’est le meilleur des tableaux vides.</p>
             ) : null}
 
             <div className="tkadmin-apps">
-              {DISPUTES.map((dispute) => {
+              {disputes.map((dispute) => {
                 const verdict = rulings[dispute.id];
                 return (
                   <article key={dispute.id} className="tkadmin-app">
@@ -873,6 +910,20 @@ export default function AdminPage() {
 
                     <p className="tkadmin-quote">« {dispute.message} »</p>
 
+                    {dispute.paymentIntent ? (
+                      <p className="tkadmin-hint">
+                        Paiement Stripe <code>{dispute.paymentIntent}</code>
+                        {dispute.stripeAccount ? (
+                          <>
+                            {' '}
+                            sur le compte <code>{dispute.stripeAccount}</code>
+                          </>
+                        ) : null}
+                        . Pour rembourser : Stripe → Connect → ce compte → Paiements. Le webhook
+                        passe ensuite la commande « remboursée ».
+                      </p>
+                    ) : null}
+
                     {verdict ? (
                       <div className="tkadmin-outcome">
                         <p>
@@ -882,19 +933,23 @@ export default function AdminPage() {
                           </b>{' '}
                           — {verdict.note}
                         </p>
-                        <button
-                          type="button"
-                          className="tkadmin-btn tkadmin-btn-ghost"
-                          onClick={() =>
-                            setRulings((r) => {
-                              const next = { ...r };
-                              delete next[dispute.id];
-                              return next;
-                            })
-                          }
-                        >
-                          Rouvrir le litige
-                        </button>
+                        {/* Une décision réelle a déjà changé la commande (statut, points) : elle ne
+                            se « rouvre » pas d'un clic. Seule la démonstration le permet. */}
+                        {liveDisputes ? null : (
+                          <button
+                            type="button"
+                            className="tkadmin-btn tkadmin-btn-ghost"
+                            onClick={() =>
+                              setRulings((r) => {
+                                const next = { ...r };
+                                delete next[dispute.id];
+                                return next;
+                              })
+                            }
+                          >
+                            Rouvrir le litige
+                          </button>
+                        )}
                       </div>
                     ) : ruling === dispute.id ? (
                       <div className="tkadmin-refuse">
@@ -919,7 +974,7 @@ export default function AdminPage() {
                                     : 'tkadmin-btn tkadmin-btn-ghost'
                               }
                               disabled={!note.trim()}
-                              onClick={() => settle(dispute, o.key)}
+                              onClick={() => void settle(dispute, o.key)}
                             >
                               {o.label}
                             </button>

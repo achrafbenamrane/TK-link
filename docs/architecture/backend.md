@@ -207,6 +207,18 @@ c’est envoyer le code. `share_reward` (titulaire seul, une fois) passe la réc
 elle quitte l’inventaire de qui l’offre, reste dans son historique — et `redeem_reward` accepte une
 récompense disponible OU partagée. Les points, eux, ne se transfèrent jamais (CDC V1.1).
 
+## Litiges (0021)
+
+Une commande passe « litige » quand l’argent et la commande ne disent plus la même chose (payée
+après l’expiration de sa réservation, course Uber échouée après paiement). Le back-office (`/admin`
+→ Litiges, route `admin/api/disputes`, clé de service) les liste avec le dernier message du client
+au support et l’identifiant du paiement Stripe, et les tranche : **rembourser** → « remboursement en
+cours », puis remboursement dans Stripe (Connect → le compte du commerce → Paiements) et le webhook
+passe la commande « remboursée » ; **donner raison au commerçant** ou **geste commercial** → la
+commande est honorée (« récupérée » / « livrée »). Chaque décision est motivée et datée
+(`dispute_outcome`, `dispute_note`, `dispute_decided_at`, les trois ou aucun), écrite sous condition
+(toujours en litige). Le back-office n’a aucune clé Stripe.
+
 ## Parrainage (0019)
 
 CDC V1.1 : 5 € au parrain ET au filleul, financés par TK LINK, débloqués au premier achat réel du

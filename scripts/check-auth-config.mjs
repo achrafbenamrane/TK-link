@@ -226,7 +226,7 @@ try {
   warn('Impossible de sonder les commandes.');
 }
 
-// Les migrations 0013 à 0020. Une table ou une fonction ABSENTE répond 404 (PostgREST) ; présente,
+// Les migrations 0013 à 0021. Une table ou une fonction ABSENTE répond 404 (PostgREST) ; présente,
 // elle répond 200 (lecture publique) ou 401/403 (réservée aux comptes) — rien n'est écrit.
 const probes = [
   {
@@ -276,6 +276,13 @@ const probes = [
     // Réservée au serveur : présente, elle refuse la clé publique ; absente, 404.
     body: { p_order: '00000000-0000-0000-0000-000000000000' },
     what: 'une réservation peut être annulée pendant que sa page de paiement reste ouverte',
+  },
+  {
+    migration: '0021_dispute_decisions',
+    path: 'flash_orders?select=dispute_note&limit=1',
+    // Colonne absente : 400 ; présente : refusée à la clé publique (401) — rien n’est lu.
+    missing: (s) => s === 400 || s === 404,
+    what: 'les décisions sur les litiges ne sont pas enregistrées (onglet Litiges du back-office)',
   },
 ];
 for (const probe of probes) {
