@@ -201,15 +201,18 @@ export function AccountScreen({ onSignOut, onAccountDeleted, onSignIn }: Props =
         ) : null}
 
         <View className="gap-3 pt-2">
+          {/* Se déconnecter : l'action courante. Supprimer le compte : obligatoire (stores) et
+              confirmée par une alerte, mais pas le bouton le plus voyant de l'écran — l'aplat rouge
+              l'était, devant « Se déconnecter ». */}
           <Button
             testID="account-sign-out"
-            variant="secondary"
+            variant="outline"
             label="Se déconnecter"
             onPress={leave}
           />
           <Button
             testID="account-delete"
-            variant="destructive"
+            variant="destructive-ghost"
             label="Supprimer mon compte"
             loading={deleting}
             onPress={confirmDelete}

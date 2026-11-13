@@ -22,6 +22,7 @@ import {
   type ServerOrder,
 } from '../lib/orders-api';
 import { parsePickupQr } from '../lib/pickup';
+import { orderRef } from '../lib/order-summary';
 import type { Order } from '../model/schema';
 import { selectShopServerOrders, useServerOrdersStore } from '../model/server-orders';
 import { selectOrders, useShopStore } from '../model/store';
@@ -279,7 +280,7 @@ function OrderCard({
             {order.items.reduce((n, l) => n + l.qty, 0) > 1 ? 's' : ''} · {money(order.total)}
           </AppText>
           <AppText variant="caption" className="mt-0.5 text-ink-faint">
-            {FULFILMENT_LABEL[order.fulfilment]} · commande {order.id.slice(0, 6).toUpperCase()}
+            {FULFILMENT_LABEL[order.fulfilment]} · {orderRef(order.id)}
           </AppText>
         </View>
         <View className={cn('rounded-pill px-2.5 py-1', tone.split(' ')[0])}>
@@ -325,7 +326,7 @@ function OrderCard({
           {ticketOpen ? (
             <PrepTicket
               testID={`merchant-order-${order.id}-ticket`}
-              reference={`Commande ${order.id.slice(0, 6).toUpperCase()}`}
+              reference={`Commande ${orderRef(order.id)}`}
               subtitle={FULFILMENT_LABEL[order.fulfilment]}
               lines={order.items.map((l) => ({ label: l.title, qty: l.qty }))}
               qrValue={JSON.stringify({

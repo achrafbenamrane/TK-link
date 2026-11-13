@@ -46,12 +46,23 @@ export function toneOf(status: OrderStatus): OrderSummary['tone'] {
   }
 }
 
+/**
+ * LA RÉFÉRENCE D'UNE COMMANDE — « #TKL-4A1B2C », celle qu'on lit à voix haute au comptoir.
+ *
+ * Un seul format pour le client, le commerçant et la facture : la même commande s'écrivait
+ * « #DEMO_O » au suivi, « #TKL-4A1B2C » au tableau de bord et « demo_ord_4a1b2c » (coupée en deux
+ * lignes) sur la facture.
+ */
+export function orderRef(id: string): string {
+  return `#TKL-${id.slice(-6).toUpperCase()}`;
+}
+
 export function summarizeOrder(order: Order): OrderSummary {
   const [first, ...rest] = order.items;
   const base = first?.title ?? 'Commande';
   return {
     id: order.id,
-    ref: `#TKL-${order.id.slice(-6).toUpperCase()}`,
+    ref: orderRef(order.id),
     title: rest.length > 0 ? `${base} +${rest.length}` : base,
     modeLabel: FULFILMENT_LABEL[order.fulfilment],
     statusLabel: ORDER_STATUS_LABEL[order.status],

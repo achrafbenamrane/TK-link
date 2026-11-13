@@ -35,7 +35,7 @@ export function seedWholesaleLots(nowMs: number = Date.now()): PublishedOffer[] 
     },
     {
       id: 'lot_gobelets',
-      title: 'Gobelets compostables — 2 000 pièces',
+      title: 'Gobelets compostables — 2\u00a0000 pièces',
       category: 'services',
       priceCents: 5900,
       oldPriceCents: 8900,

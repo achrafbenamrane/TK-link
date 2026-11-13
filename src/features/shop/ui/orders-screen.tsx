@@ -15,6 +15,7 @@ import {
   type OrderStatus,
   type StatusTone,
 } from '../lib/order-status';
+import { orderRef } from '../lib/order-summary';
 import { selectMyServerOrders, useServerOrdersStore } from '../model/server-orders';
 import { selectOrders, useShopStore } from '../model/store';
 
@@ -111,7 +112,7 @@ export function OrdersScreen() {
                 key={order.id}
                 testID={`order-${order.id}`}
                 accessibilityRole="button"
-                accessibilityLabel={`Commande ${order.id.slice(0, 6).toUpperCase()}, ${s.label}`}
+                accessibilityLabel={`Commande ${orderRef(order.id)}, ${s.label}`}
                 onPress={() =>
                   router.push({ pathname: '/commande/[id]', params: { id: order.id } })
                 }
@@ -119,9 +120,7 @@ export function OrdersScreen() {
               >
                 <View className="flex-row items-center justify-between">
                   <View>
-                    <AppText variant="label">
-                      Commande #{order.id.slice(0, 6).toUpperCase()}
-                    </AppText>
+                    <AppText variant="label">Commande {orderRef(order.id)}</AppText>
                     <AppText variant="caption" className="text-ink-faint">
                       {formatDate(order.createdAt)} · {FULFILMENT_LABEL[order.fulfilment]}
                     </AppText>

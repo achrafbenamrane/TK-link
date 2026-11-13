@@ -8,6 +8,7 @@ import { BackButton } from '@/shared/ui/back-button';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { canTransition } from '../lib/order-status';
+import { orderRef } from '../lib/order-summary';
 import { getDeal, getMerchant } from '../model/catalog';
 import { useShopStore } from '../model/store';
 
@@ -129,9 +130,7 @@ export function HandoverScreen({ orderId }: Props) {
               <Feather name="shopping-bag" size={20} color={colors.brand500} />
             </View>
             <View className="flex-1 gap-1">
-              <AppText className="font-sans-bold text-ink">
-                Commande #{order.id.slice(0, 6).toUpperCase()}
-              </AppText>
+              <AppText className="font-sans-bold text-ink">Commande {orderRef(order.id)}</AppText>
               <View className="flex-row items-center gap-4">
                 <View className="flex-row items-center gap-1">
                   <Feather name="clock" size={12} color={colors.inkFaint} />

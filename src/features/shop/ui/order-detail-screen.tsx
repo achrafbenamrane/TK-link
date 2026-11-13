@@ -16,6 +16,7 @@ import {
   type Fulfilment,
   type OrderStatus,
 } from '../lib/order-status';
+import { orderRef } from '../lib/order-summary';
 import type { Order } from '../model/schema';
 import { useShopStore } from '../model/store';
 import { getDeal, getMerchant } from '../model/catalog';
@@ -221,9 +222,7 @@ export function OrderDetailScreen() {
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/commandes'))}
         />
         <View className="flex-1">
-          <AppText className="font-sans-bold text-ink">
-            Commande #{order.id.slice(0, 6).toUpperCase()}
-          </AppText>
+          <AppText className="font-sans-bold text-ink">Commande {orderRef(order.id)}</AppText>
           <AppText variant="caption" className="text-xs text-ink-faint">
             {formatDateTime(order.createdAt)} · {itemCount} article{itemCount > 1 ? 's' : ''}
           </AppText>

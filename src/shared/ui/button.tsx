@@ -5,7 +5,7 @@ import { useColors } from '@/shared/theme/theme-provider';
 
 import { AppText } from './text';
 
-type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'destructive-ghost';
 type Size = 'md' | 'sm';
 
 const containerClasses: Record<Variant, string> = {
@@ -15,6 +15,8 @@ const containerClasses: Record<Variant, string> = {
   outline: 'border border-brand-500 bg-transparent active:bg-brand-50',
   ghost: 'bg-transparent active:bg-surface-muted',
   destructive: 'bg-danger active:opacity-90',
+  // Une action irréversible mais rare (supprimer son compte) : présente, jamais la plus voyante.
+  'destructive-ghost': 'bg-transparent active:bg-surface-muted',
 };
 
 const labelClasses: Record<Variant, string> = {
@@ -23,6 +25,7 @@ const labelClasses: Record<Variant, string> = {
   outline: 'text-brand-600',
   ghost: 'text-brand-600',
   destructive: 'text-ink-inverse',
+  'destructive-ghost': 'text-danger',
 };
 
 const sizeClasses: Record<Size, string> = {
@@ -66,7 +69,11 @@ export function Button({
         <ActivityIndicator
           size="small"
           color={
-            variant === 'primary' || variant === 'destructive' ? colors.inkInverse : colors.brand600
+            variant === 'primary' || variant === 'destructive'
+              ? colors.inkInverse
+              : variant === 'destructive-ghost'
+                ? colors.danger
+                : colors.brand600
           }
         />
       ) : (

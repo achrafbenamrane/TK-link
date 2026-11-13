@@ -8,6 +8,7 @@ import { AppText, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
 import { useColors } from '@/shared/theme/theme-provider';
 
+import { orderRef } from '../lib/order-summary';
 import type { Order } from '../model/schema';
 import { useShopStore } from '../model/store';
 
@@ -37,7 +38,7 @@ function InvoiceCard({ order }: { order: Order }) {
       testID={`invoice-${order.id}`}
       accessibilityRole="button"
       accessibilityState={{ expanded: open }}
-      accessibilityLabel={`Facture ${order.id}, ${order.total.toFixed(2)} euros`}
+      accessibilityLabel={`Facture ${orderRef(order.id)}, ${order.total.toFixed(2)} euros`}
       onPress={() => setOpen((v) => !v)}
       className="mb-3 overflow-hidden rounded-card border border-line bg-surface"
     >
@@ -46,10 +47,13 @@ function InvoiceCard({ order }: { order: Order }) {
           <Feather name="maximize" size={18} color={colors.ink} />
         </View>
         <View className="flex-1">
-          <AppText className="font-sans-bold text-ink">Facture {order.id}</AppText>
+          {/* La référence seule (l'écran s'appelle déjà « Mes factures ») : « Facture #TKL-4A1B2C »
+              se coupait au tiret sur 360 px. Espace insécable entre le nombre et « article ». */}
+          <AppText className="font-sans-bold text-ink" numberOfLines={1}>
+            {orderRef(order.id)}
+          </AppText>
           <AppText variant="caption" className="text-ink-faint">
-            {formatDate(order.createdAt)} · {order.items.length} article
-            {order.items.length > 1 ? 's' : ''}
+            {`${formatDate(order.createdAt)} · ${order.items.length}\u00a0article${order.items.length > 1 ? 's' : ''}`}
           </AppText>
         </View>
         <AppText className="font-display text-base text-ink">{formatEuros(order.total)}</AppText>
