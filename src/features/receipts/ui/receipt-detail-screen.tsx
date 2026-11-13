@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
-import { AppText, Button, Screen } from '@/shared/ui';
+import { AppText, Button, HeaderBackButton, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { CATEGORY_LABEL, formatMoney } from '../lib/receipts';
@@ -71,16 +71,7 @@ export function ReceiptDetailScreen({ id, onBack }: Props) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-5 pb-10">
         {/* Bandeau */}
         <View className="flex-row items-center justify-between py-2">
-          <Pressable
-            testID="receipt-back"
-            accessibilityRole="button"
-            accessibilityLabel="Retour"
-            hitSlop={10}
-            onPress={onBack}
-            className="h-9 w-9 items-center justify-center rounded-pill bg-surface-muted"
-          >
-            <Feather name="chevron-left" size={22} color={colors.ink} />
-          </Pressable>
+          <HeaderBackButton testID="receipt-back" onPress={onBack} />
           <Pressable
             testID="receipt-pin"
             accessibilityRole="button"

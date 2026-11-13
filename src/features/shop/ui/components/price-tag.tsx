@@ -75,7 +75,9 @@ export function PriceTag({
         </View>
       ) : null}
 
-      <View className="flex-row items-baseline" style={{ gap: size * 0.22 }}>
+      {/* `flex-wrap` : dans une carte étroite (favoris, deux par ligne), le prix barré passe à la
+          ligne au lieu de glisser sous le bouton d'ajout. */}
+      <View className="flex-row flex-wrap items-baseline" style={{ columnGap: size * 0.22 }}>
         <AppText
           testID={`${testID}-promo`}
           className="font-display text-success"

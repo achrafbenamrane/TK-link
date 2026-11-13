@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import type { ComponentProps, ReactNode } from 'react';
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText, Screen, ThemeToggle } from '@/shared/ui';
@@ -107,6 +107,9 @@ export function MerchantDashboardScreen({
   onOpen,
 }: Props) {
   const colors = useColors();
+  // Sous 400 px de large : trois raccourcis par ligne (à quatre, « Statistiques » se coupait en
+  // « Statistique / s »), et la bascule Nuit/Jour en icônes, pour laisser son nom au commerce.
+  const narrow = useWindowDimensions().width < 400;
   const [now] = useState(() => Date.now());
   const offers = useMerchantStore(selectOffers);
   const used = useMerchantStore(selectUsed);
@@ -178,7 +181,7 @@ export function MerchantDashboardScreen({
                 <Feather name="settings" size={20} color={colors.ink} />
               </Pressable>
             </View>
-            <ThemeToggle />
+            <ThemeToggle compact={narrow} />
           </View>
         </View>
 
@@ -242,12 +245,14 @@ export function MerchantDashboardScreen({
               accessibilityRole="button"
               accessibilityLabel={t.label}
               onPress={() => onOpen(t.key)}
-              className="w-[23%] items-center gap-1.5 rounded-card border border-line bg-surface-muted px-1 py-3 active:opacity-70"
+              className={cn(
+                'items-center gap-1.5 rounded-card border border-line bg-surface-muted px-1 py-3 active:opacity-70',
+                narrow ? 'w-[31.5%]' : 'w-[23%]',
+              )}
             >
               <Feather name={t.icon} size={22} color={colors.brand500} />
               <AppText
-                className="text-center font-sans-semibold text-ink"
-                style={{ fontSize: 11 }}
+                className="text-center font-sans-semibold text-xs text-ink"
                 numberOfLines={2}
               >
                 {t.label}
@@ -265,7 +270,12 @@ export function MerchantDashboardScreen({
                 <View
                   key={o.id}
                   testID={`dashboard-flash-${o.id}`}
-                  className="w-[48%] flex-row items-center gap-2.5 rounded-card border border-line bg-surface-muted p-2.5"
+                  className={cn(
+                    'flex-row items-center gap-2.5 rounded-card border border-line bg-surface-muted p-2.5',
+                    // Deux par ligne sur un écran large ; une seule sous 400 px, sinon le titre, le
+                    // stock et la pastille « Actif » se coupent tous en deux.
+                    narrow ? 'w-full' : 'w-[48%]',
+                  )}
                 >
                   <View className="h-14 w-14 items-center justify-center overflow-hidden rounded-control bg-surface-sunken">
                     {o.photoUri ? (
@@ -279,38 +289,24 @@ export function MerchantDashboardScreen({
                     )}
                   </View>
                   <View className="flex-1 gap-0.5">
-                    <AppText
-                      className="font-sans-semibold text-ink"
-                      style={{ fontSize: 12 }}
-                      numberOfLines={2}
-                    >
+                    <AppText className="font-sans-semibold text-sm text-ink" numberOfLines={2}>
                       {o.title}
                     </AppText>
                     <View className="flex-row items-center gap-1">
                       <Feather name="clock" size={10} color={colors.brand600} />
-                      <AppText
-                        variant="caption"
-                        className="text-brand-600"
-                        style={{ fontSize: 10.5 }}
-                      >
+                      <AppText variant="caption" className="text-xs text-brand-600">
                         {timeLabel(secondsLeft(o, now))}
                       </AppText>
                     </View>
-                    <AppText className="font-sans-bold text-ink" style={{ fontSize: 13 }}>
+                    <AppText className="font-sans-bold text-sm text-ink">
                       {formatCents(o.priceCents)}
                     </AppText>
                     <View className="flex-row items-center justify-between">
-                      <AppText
-                        variant="caption"
-                        className="text-ink-faint"
-                        style={{ fontSize: 10 }}
-                      >
+                      <AppText variant="caption" className="text-xs text-ink-faint">
                         Stock : {o.stockLeft}
                       </AppText>
-                      <View className="rounded-sm border border-success px-1">
-                        <AppText className="text-success" style={{ fontSize: 9 }}>
-                          Actif
-                        </AppText>
+                      <View className="rounded-sm border border-success px-1.5">
+                        <AppText className="text-xs text-success">Actif</AppText>
                       </View>
                     </View>
                   </View>
@@ -329,42 +325,37 @@ export function MerchantDashboardScreen({
                 <View
                   key={o.id}
                   testID={`dashboard-order-${o.id}`}
-                  className={cn(
-                    'flex-row items-center gap-2 px-3 py-2.5',
-                    i > 0 && 'border-t border-line',
-                  )}
+                  className={cn('gap-1 px-3.5 py-3', i > 0 && 'border-t border-line')}
                 >
-                  <AppText
-                    className="text-ink-muted"
-                    style={{ fontSize: 10, width: 74 }}
-                    numberOfLines={1}
-                  >
-                    {o.ref}
-                  </AppText>
-                  <AppText
-                    className="flex-1 font-sans-semibold text-ink"
-                    style={{ fontSize: 12 }}
-                    numberOfLines={1}
-                  >
-                    {o.title}
-                  </AppText>
-                  <View className="flex-row items-center gap-1">
+                  {/* Deux lignes : ce qui a été commandé et où en est la commande, puis la
+                      référence et le mode. Sur une seule, le titre était réduit à « Cassoul… ». */}
+                  <View className="flex-row items-center gap-2">
+                    <AppText
+                      className="flex-1 font-sans-semibold text-sm text-ink"
+                      numberOfLines={1}
+                    >
+                      {o.title}
+                    </AppText>
+                    <View className={cn('rounded-sm border px-1.5 py-0.5', TONE_CLASS[o.tone])}>
+                      <AppText
+                        className={cn(
+                          'font-sans-semibold text-xs',
+                          TONE_CLASS[o.tone].split(' ')[1],
+                        )}
+                      >
+                        {o.statusLabel}
+                      </AppText>
+                    </View>
+                  </View>
+                  <View className="flex-row items-center gap-1.5">
+                    <AppText className="text-xs text-ink-faint">{o.ref}</AppText>
+                    <AppText className="text-xs text-ink-faint">·</AppText>
                     <Feather
                       name={o.modeLabel === 'Livraison' ? 'truck' : 'shopping-bag'}
-                      size={11}
+                      size={12}
                       color={colors.inkMuted}
                     />
-                    <AppText className="text-ink-muted" style={{ fontSize: 10 }}>
-                      {o.modeLabel}
-                    </AppText>
-                  </View>
-                  <View className={cn('rounded-sm border px-1.5 py-0.5', TONE_CLASS[o.tone])}>
-                    <AppText
-                      className={cn('font-sans-semibold', TONE_CLASS[o.tone].split(' ')[1])}
-                      style={{ fontSize: 9.5 }}
-                    >
-                      {o.statusLabel}
-                    </AppText>
+                    <AppText className="text-xs text-ink-muted">{o.modeLabel}</AppText>
                   </View>
                 </View>
               ))}

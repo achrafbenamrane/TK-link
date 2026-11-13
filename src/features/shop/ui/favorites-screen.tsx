@@ -49,7 +49,7 @@ function FavoriteCard({ deal }: { deal: Deal }) {
           <Countdown
             seconds={deal.endsInSeconds}
             endsAt={deal.endsAt}
-            className="text-ink-inverse"
+            className="text-xs text-ink-inverse"
           />
         </View>
 
@@ -66,7 +66,7 @@ function FavoriteCard({ deal }: { deal: Deal }) {
 
         {low ? (
           <View className="absolute bottom-1.5 left-1.5 rounded-pill bg-brand-500 px-2 py-0.5">
-            <AppText className="font-sans-bold text-ink-inverse" style={{ fontSize: 9 }}>
+            <AppText className="font-sans-bold text-xs text-ink-inverse">
               Plus que {deal.stockLeft}
             </AppText>
           </View>
@@ -75,12 +75,12 @@ function FavoriteCard({ deal }: { deal: Deal }) {
 
       {/* Texte + prix */}
       <View className="gap-1 p-2.5">
-        <AppText className="font-sans-semibold text-ink" style={{ fontSize: 13 }} numberOfLines={2}>
+        <AppText className="font-sans-semibold text-sm text-ink" numberOfLines={2}>
           {deal.title}
         </AppText>
 
-        <View className="flex-row items-end justify-between">
-          <View className="flex-1">
+        <View className="flex-row items-end justify-between gap-2">
+          <View className="min-w-0 flex-1">
             <PriceTag price={deal.price} oldPrice={deal.oldPrice} size={19} />
           </View>
 

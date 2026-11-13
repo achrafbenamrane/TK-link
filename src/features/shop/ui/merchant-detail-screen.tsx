@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Share, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { AppText, Screen, ThemeToggle } from '@/shared/ui';
+import { AppText, HeaderBackButton, Screen, ThemeToggle } from '@/shared/ui';
 import { ShopVideo } from '@/shared/ui/shop-video';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -57,7 +57,18 @@ const initials = (name: string) =>
     .join('');
 
 /** Une carte « Flash du moment » — deux par ligne, comme la maquette du client. */
-function FlashTile({ deal, onOpen, onAdd }: { deal: Deal; onOpen: () => void; onAdd: () => void }) {
+function FlashTile({
+  deal,
+  onOpen,
+  onAdd,
+  wide = false,
+}: {
+  deal: Deal;
+  onOpen: () => void;
+  onAdd: () => void;
+  /** Seule de sa boutique : pleine largeur, visuel plus haut. */
+  wide?: boolean;
+}) {
   const colors = useColors();
   const modes = deal.fulfilments ?? [...FULFILMENTS];
   // La jauge d'essence : vert, jaune, rouge (`lib/stock.ts`).
@@ -79,21 +90,19 @@ function FlashTile({ deal, onOpen, onAdd }: { deal: Deal; onOpen: () => void; on
         style={{ flexShrink: 0 }}
       >
         <Feather name="clock" size={10} color={colors.brand500} />
-        <Countdown seconds={deal.endsInSeconds} endsAt={deal.endsAt} className="text-ink" />
+        <Countdown seconds={deal.endsInSeconds} endsAt={deal.endsAt} className="text-sm text-ink" />
       </View>
-      <AppText className="font-sans-bold text-ink" style={{ fontSize: 13 }} numberOfLines={1}>
+      <AppText className="font-sans-bold text-sm text-ink" numberOfLines={wide ? 2 : 1}>
         {deal.title}
       </AppText>
-      <AppText
-        variant="caption"
-        className="text-ink-faint"
-        style={{ fontSize: 11 }}
-        numberOfLines={1}
-      >
+      <AppText variant="caption" className="text-xs text-ink-faint" numberOfLines={1}>
         {deal.unit ?? deal.description}
       </AppText>
       <View
-        className="h-20 w-full items-center justify-center overflow-hidden rounded-control"
+        className={cn(
+          'w-full items-center justify-center overflow-hidden rounded-control',
+          wide ? 'h-40' : 'h-20',
+        )}
         style={{ backgroundColor: deal.tint }}
       >
         <ProductImage deal={deal} emojiSize={36} />
@@ -114,7 +123,7 @@ function FlashTile({ deal, onOpen, onAdd }: { deal: Deal; onOpen: () => void; on
           accessibilityLabel={stockAccessibilityLabel(deal.stockLeft, deal.stockTotal)}
           className={cn('rounded-control border px-2 py-0.5', toneClass.border)}
         >
-          <AppText className={cn('font-sans-semibold', toneClass.text)} style={{ fontSize: 10.5 }}>
+          <AppText className={cn('font-sans-semibold text-xs', toneClass.text)}>
             Stock : {deal.stockLeft}
           </AppText>
         </View>
@@ -244,15 +253,7 @@ export function MerchantDetailScreen({
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="gap-4 px-5 pb-10">
         {/* Retour · favori · Nuit/Jour */}
         <View className="flex-row items-center gap-3 pt-2">
-          <Pressable
-            testID="merchant-back"
-            accessibilityRole="button"
-            accessibilityLabel="Retour"
-            hitSlop={10}
-            onPress={onBack}
-          >
-            <Feather name="arrow-left" size={24} color={colors.ink} />
-          </Pressable>
+          <HeaderBackButton testID="merchant-back" onPress={onBack} />
           <View className="flex-1" />
           {hero ? (
             <Pressable
@@ -446,11 +447,15 @@ export function MerchantDetailScreen({
                   <FlashTile
                     key={d.id}
                     deal={d}
+                    wide={shownDeals.length === 1}
                     onOpen={() => onOpenDeal(d.id)}
                     onAdd={() => addToCart(d.id)}
                   />
                 ))}
-                {shownDeals.slice(row * 2, row * 2 + 2).length === 1 ? (
+                {/* Une seule Flash : elle prend toute la largeur. Une demi-tuile laissait un trou à
+                    droite et tronquait son titre. En grille, la dernière tuile impaire garde sa
+                    demi-largeur, alignée sur celles du dessus. */}
+                {shownDeals.length > 1 && shownDeals.slice(row * 2, row * 2 + 2).length === 1 ? (
                   <View className="flex-1" />
                 ) : null}
               </View>

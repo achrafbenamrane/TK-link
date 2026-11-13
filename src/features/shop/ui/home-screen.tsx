@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { FlatList, Pressable, View } from 'react-native';
+import { FlatList, Pressable, useWindowDimensions, View } from 'react-native';
 
 import { AppText, Screen, TextField, ThemeToggle, Wordmark } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
@@ -107,6 +107,9 @@ export function HomeScreen({
   examples = true,
 }: HomeScreenProps = {}) {
   const colors = useColors();
+  // Sous 400 px (la plupart des Android), l'en-tête d'une ligne de la maquette B déborde : les
+  // bascules Liste/Carte et Nuit/Jour passent en icônes seules.
+  const narrow = useWindowDimensions().width < 400;
   const [category, setCategory] = useState<Category | null>(null);
   const [query, setQuery] = useState('');
   const [view, setView] = useState<HomeView>(initialView);
@@ -187,16 +190,12 @@ export function HomeScreen({
           <Wordmark size={18} />
           <View className="mt-0.5 flex-row items-start gap-1">
             <Feather name="map-pin" size={11} color={colors.accent} />
-            <AppText
-              variant="caption"
-              className="flex-1 text-accent-deep"
-              style={{ fontSize: 10.5 }}
-            >
+            <AppText variant="caption" className="flex-1 text-xs text-accent-deep">
               Toulouse Centre
             </AppText>
           </View>
         </View>
-        <ViewSwitch value={view} onChange={setView} compact />
+        <ViewSwitch value={view} onChange={setView} compact iconOnly={narrow} />
         <PreferencesButton />
         <CartButton />
       </View>
@@ -251,7 +250,7 @@ export function HomeScreen({
                   className="min-w-0 border-0 bg-transparent px-0"
                   style={{ minWidth: 0 }}
                 />
-                <ThemeToggle />
+                <ThemeToggle compact={narrow} />
               </View>
 
               {/* L'espace de communication TK LINK : visible quelle que soit la catégorie choisie —
@@ -264,11 +263,15 @@ export function HomeScreen({
               {/* Rien dans le rayon : on montre tout, mais on ne le cache pas. */}
               {radiusRelaxed ? <RadiusNotice km={preferences.radiusKm} /> : null}
 
-              <View className="mb-3 mt-4 flex-row items-end justify-between px-5">
+              <View className="mb-3 mt-4 flex-row items-baseline justify-between gap-3 px-5">
                 <AppText variant="title" className="text-lg">
                   Ça part maintenant
                 </AppText>
-                <AppText variant="caption" className="text-ink-faint">
+                <AppText
+                  variant="caption"
+                  className="flex-1 text-right text-xs text-ink-faint"
+                  numberOfLines={1}
+                >
                   {forYouCount > 0 && forYouCount < deals.length
                     ? `${forYouCount} pour vous · ${deals.length} en tout`
                     : `${deals.length} invendu${deals.length > 1 ? 's' : ''} à sauver`}

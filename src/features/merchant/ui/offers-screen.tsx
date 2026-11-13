@@ -4,7 +4,7 @@ import { Alert, Pressable, ScrollView, View } from 'react-native';
 
 import { CATEGORY_INFO } from '@/shared/lib/categories';
 import { cn } from '@/shared/lib/cn';
-import { AppText, Screen } from '@/shared/ui';
+import { AppText, HeaderBackButton, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import {
@@ -189,17 +189,7 @@ export function MerchantOffersScreen({
     <Screen testID="merchant-offers" padded={false}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-10">
         <View className="flex-row items-center gap-3 px-5 pb-3 pt-2">
-          {onBack ? (
-            <Pressable
-              testID="merchant-back"
-              accessibilityRole="button"
-              accessibilityLabel="Retour"
-              hitSlop={10}
-              onPress={onBack}
-            >
-              <Feather name="chevron-left" size={26} color={colors.ink} />
-            </Pressable>
-          ) : null}
+          {onBack ? <HeaderBackButton testID="merchant-back" onPress={onBack} /> : null}
           <View className="flex-1">
             <AppText variant="display" className="text-2xl">
               {copy.title}

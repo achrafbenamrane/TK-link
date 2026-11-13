@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@/shared/testing/render';
 import { useThemeStore } from '@/shared/theme/theme-store';
-import { BrandBar, Button, ScreenIntro, ThemeToggle } from '@/shared/ui';
+import { BrandBar, Button, HeaderBackButton, ScreenIntro, ThemeToggle } from '@/shared/ui';
 
 /**
  * Les briques des écrans d'entrée (profil, connexion, inscription, mot de passe oublié) : un seul
@@ -65,5 +65,14 @@ describe('<Button variant="outline" />', () => {
     fireEvent.press(screen.getByTestId('b'));
     expect(onPress).toHaveBeenCalledTimes(1);
     expect(screen.getByText('J’ai déjà un compte')).toBeTruthy();
+  });
+});
+
+describe('<HeaderBackButton />', () => {
+  it('un seul bouton retour pour toute l’app : « Retour » par défaut, la navigation à l’appelant', () => {
+    const onPress = jest.fn();
+    render(<HeaderBackButton testID="x-back" onPress={onPress} />);
+    fireEvent.press(screen.getByLabelText('Retour'));
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 });

@@ -117,7 +117,8 @@ export function ProfileScreen({
     <Screen testID="profile-screen">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-10">
         <View className="pb-4 pt-2">
-          <AppText variant="display">Profil</AppText>
+          {/* Le titre de l’onglet : « Compte » dans la barre, « Compte » ici. */}
+          <AppText variant="display">Compte</AppText>
         </View>
 
         {/* L'identité RÉELLE : l'avatar choisi, le nom saisi.

@@ -1,11 +1,11 @@
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, type ComponentProps } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { cn } from '@/shared/lib/cn';
-import { AppText, Screen } from '@/shared/ui';
+import { AppText, HeaderBackButton, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import {
@@ -215,15 +215,10 @@ export function OrderDetailScreen() {
   return (
     <Screen padded={false} testID="order-detail-screen">
       <View className="flex-row items-center gap-3 px-4 pb-3 pt-1">
-        <Pressable
+        <HeaderBackButton
           testID="order-back"
-          accessibilityRole="button"
-          accessibilityLabel="Retour"
-          hitSlop={10}
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/commandes'))}
-        >
-          <Feather name="chevron-left" size={26} color={colors.ink} />
-        </Pressable>
+        />
         <View className="flex-1">
           <AppText className="font-sans-bold text-ink">
             Commande #{order.id.slice(0, 6).toUpperCase()}

@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { AppText, Screen, ThemeToggle } from '@/shared/ui';
+import { AppText, HeaderBackButton, Screen, ThemeToggle } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { isServerShop, type LoyaltyError } from '../lib/loyalty-api';
@@ -137,15 +137,7 @@ export function MerchantLoyaltyScreen({
       >
         {/* Retour · Nuit/Jour */}
         <View className="flex-row items-center justify-between pt-2">
-          <Pressable
-            testID="loyalty-back"
-            accessibilityRole="button"
-            accessibilityLabel="Retour"
-            hitSlop={10}
-            onPress={onBack}
-          >
-            <Feather name="arrow-left" size={24} color={colors.ink} />
-          </Pressable>
+          <HeaderBackButton testID="loyalty-back" onPress={onBack} />
           <ThemeToggle />
         </View>
 

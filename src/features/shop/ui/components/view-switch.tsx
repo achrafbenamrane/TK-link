@@ -12,6 +12,12 @@ type Props = {
   onChange: (value: HomeView) => void;
   /** Version en ligne dans l'en-tête (maquette B) : plus petite, sans pleine largeur. */
   compact?: boolean;
+  /**
+   * Les icônes seules (liste, carte). Sur un Android de 360 px, l'en-tête de la maquette B — avatar,
+   * logo et ville, bascule, filtres, panier — ne tient pas avec « Liste | Carte » en toutes lettres :
+   * la bascule passait par-dessus la ville.
+   */
+  iconOnly?: boolean;
 };
 
 const OPTIONS: { key: HomeView; label: string; icon: 'list' | 'map' }[] = [
@@ -24,7 +30,7 @@ const OPTIONS: { key: HomeView; label: string; icon: 'list' | 'map' }[] = [
  * les deux états sont visibles en permanence, donc on sait toujours où l'on est
  * et ce qui se passera au tap — un bouton unique oblige à deviner.
  */
-export function ViewSwitch({ value, onChange, compact = false }: Props) {
+export function ViewSwitch({ value, onChange, compact = false, iconOnly = false }: Props) {
   const colors = useColors();
   return (
     <View
@@ -59,14 +65,16 @@ export function ViewSwitch({ value, onChange, compact = false }: Props) {
               size={compact ? 13 : 15}
               color={active ? colors.brand600 : colors.inkMuted}
             />
-            <AppText
-              className={cn(
-                compact ? 'text-xs' : 'text-sm',
-                active ? 'font-sans-bold text-brand-600' : 'font-sans-medium text-ink-muted',
-              )}
-            >
-              {option.label}
-            </AppText>
+            {iconOnly ? null : (
+              <AppText
+                className={cn(
+                  compact ? 'text-xs' : 'text-sm',
+                  active ? 'font-sans-bold text-brand-600' : 'font-sans-medium text-ink-muted',
+                )}
+              >
+                {option.label}
+              </AppText>
+            )}
           </Pressable>
         );
       })}

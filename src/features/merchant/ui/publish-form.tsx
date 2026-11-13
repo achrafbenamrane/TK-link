@@ -5,7 +5,7 @@ import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 
 import { CATEGORIES, CATEGORY_INFO, type Category } from '@/shared/lib/categories';
 import { cn } from '@/shared/lib/cn';
-import { AppText, ThemeToggle } from '@/shared/ui';
+import { AppText, HeaderBackButton, ThemeToggle } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { commissionCents, formatCents, netCents, parseEurosToCents } from '../lib/billing';
@@ -232,15 +232,7 @@ export function PublishForm({
     >
       {/* Titre · Étape n/3 · Nuit/Jour */}
       <View className="flex-row items-center gap-2 pt-2">
-        <Pressable
-          testID="merchant-publish-back"
-          accessibilityRole="button"
-          accessibilityLabel="Retour"
-          hitSlop={10}
-          onPress={onCancel}
-        >
-          <Feather name="arrow-left" size={22} color={colors.ink} />
-        </Pressable>
+        <HeaderBackButton testID="merchant-publish-back" onPress={onCancel} />
         <View className="flex-1 flex-row items-center gap-1.5">
           <AppText variant="display" style={{ fontSize: 16 }} numberOfLines={1}>
             {pageTitle ?? 'Nouveau Flash'}

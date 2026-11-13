@@ -8,7 +8,7 @@ import { cn } from '@/shared/lib/cn';
 import { isSupabaseConfigured } from '@/shared/lib/env';
 import { haptic } from '@/shared/lib/haptics';
 import { usePlatformSettings } from '@/shared/lib/platform-overrides';
-import { AppText, Button } from '@/shared/ui';
+import { AppText, Button, HeaderBackButton } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { authenticate } from '../lib/biometrics';
@@ -216,15 +216,10 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
 
   const Header = (
     <View className="flex-row items-center gap-3 px-5 pb-3" style={{ paddingTop: insets.top + 6 }}>
-      <Pressable
+      <HeaderBackButton
         testID="cart-back"
-        accessibilityRole="button"
-        accessibilityLabel="Retour"
         onPress={() => (router.canGoBack() ? router.back() : router.push('/'))}
-        className="h-10 w-10 items-center justify-center rounded-pill bg-surface-muted"
-      >
-        <Feather name="chevron-left" size={22} color={colors.ink} />
-      </Pressable>
+      />
       <AppText variant="display" style={{ fontSize: 22 }}>
         Panier
       </AppText>

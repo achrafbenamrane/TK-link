@@ -91,7 +91,10 @@ export default function TabsLayout() {
           paddingBottom: insets.bottom,
           paddingTop: 6,
         },
-        tabBarLabelStyle: { fontFamily: 'Manrope_600SemiBold', fontSize: 11 },
+        // 10 px, la taille d'origine de la barre (et celle d'iOS) : cinq onglets sur un Android de
+        // 360 px laissent 62 px au libellé, et « Commandes » en 11 px en demande 66 — il devenait
+        // « Command… » chez le commerçant (mesuré le 13/11/2026).
+        tabBarLabelStyle: { fontFamily: 'Manrope_600SemiBold', fontSize: 10 },
       }}
     >
       <Tabs.Screen

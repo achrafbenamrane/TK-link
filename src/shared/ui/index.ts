@@ -1,6 +1,7 @@
 export { AppText, type AppTextProps } from './text';
 export { BrandBar, type BrandBarProps } from './brand-bar';
 export { Button, type ButtonProps } from './button';
+export { HeaderBackButton } from './header-back-button';
 export { Checkbox, type CheckboxProps } from './checkbox';
 export { Card, type CardProps } from './card';
 export { EmptyState, type EmptyStateProps } from './empty-state';

@@ -4,7 +4,7 @@ import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { Linking, Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { AppText, PrepTicket, QrScanner, Screen } from '@/shared/ui';
+import { AppText, HeaderBackButton, PrepTicket, QrScanner, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import {
@@ -137,17 +137,7 @@ export function MerchantOrdersScreen({ dealIds, onBack, onHandover, server = fal
     <Screen testID="merchant-orders" padded={false}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-10">
         <View className="flex-row items-center gap-3 px-5 pb-3 pt-2">
-          {onBack ? (
-            <Pressable
-              testID="merchant-orders-back"
-              accessibilityRole="button"
-              accessibilityLabel="Retour"
-              hitSlop={10}
-              onPress={onBack}
-            >
-              <Feather name="chevron-left" size={26} color={colors.ink} />
-            </Pressable>
-          ) : null}
+          {onBack ? <HeaderBackButton testID="merchant-orders-back" onPress={onBack} /> : null}
           <View className="flex-1">
             <AppText variant="display" className="text-2xl">
               Commandes reçues
@@ -264,6 +254,12 @@ function OrderCard({
   serverActions?: ReactNode;
 }) {
   const options = serverActions ? [] : merchantActions(order.status, order.fulfilment);
+  // La machine à états liste le chemin nominal EN TÊTE. Tout le reste — refuser, rembourser — est
+  // une sortie de route : la mettre en avant inviterait à la prendre, même quand c'est la seule
+  // action restante sur une commande déjà close.
+  const first = options[0];
+  const primary = first && first !== 'annulee' && first !== 'remboursee' ? first : null;
+  const exits = primary ? options.slice(1) : options;
   const tone = toneOf(order.status);
   const colors = useColors();
   const [ticketOpen, setTicketOpen] = useState(false);
@@ -379,37 +375,41 @@ function OrderCard({
       {/* Le geste suivant. Les transitions viennent de la machine à états du
           §11 : on ne propose jamais un chemin illégal. */}
       {options.length > 0 ? (
-        <View className="mt-3 flex-row flex-wrap gap-2">
-          {options.map((status, index) => {
-            // La machine à états liste le chemin nominal EN TÊTE. Tout le
-            // reste — refuser, rembourser — est une sortie de route : la
-            // mettre en avant inviterait à la prendre, même quand c'est la
-            // seule action restante sur une commande déjà close.
-            const secondary = index > 0 || status === 'annulee' || status === 'remboursee';
-            return (
-              <Pressable
-                key={status}
-                testID={`merchant-order-${order.id}-${status}`}
-                accessibilityRole="button"
-                accessibilityLabel={ACTION_LABEL[status] ?? ORDER_STATUS_LABEL[status]}
-                onPress={() => onAdvance(status)}
-                className={cn(
-                  'rounded-control px-4 py-2.5',
-                  secondary ? 'border border-line' : 'bg-brand-500 active:bg-brand-600',
-                )}
-              >
-                <AppText
-                  className={cn(
-                    'font-sans-bold',
-                    secondary ? 'text-ink-muted' : 'text-ink-inverse',
-                  )}
-                  style={{ fontSize: 13 }}
+        <View className="mt-3 gap-2">
+          {/* Le chemin nominal en pleine largeur ; les sorties de route (refuser, annuler,
+              rembourser) dessous, côte à côte et à parts égales. Toutes dans une seule rangée
+              qui revenait à la ligne, elles s'empilaient en escalier. */}
+          {primary ? (
+            <Pressable
+              testID={`merchant-order-${order.id}-${primary}`}
+              accessibilityRole="button"
+              accessibilityLabel={ACTION_LABEL[primary] ?? ORDER_STATUS_LABEL[primary]}
+              onPress={() => onAdvance(primary)}
+              className="h-11 items-center justify-center rounded-control bg-brand-500 px-4 active:bg-brand-600"
+            >
+              <AppText className="font-sans-bold text-sm text-ink-inverse">
+                {ACTION_LABEL[primary] ?? ORDER_STATUS_LABEL[primary]}
+              </AppText>
+            </Pressable>
+          ) : null}
+          {exits.length > 0 ? (
+            <View className="flex-row gap-2">
+              {exits.map((status) => (
+                <Pressable
+                  key={status}
+                  testID={`merchant-order-${order.id}-${status}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={ACTION_LABEL[status] ?? ORDER_STATUS_LABEL[status]}
+                  onPress={() => onAdvance(status)}
+                  className="h-11 flex-1 items-center justify-center rounded-control border border-line px-3 active:opacity-70"
                 >
-                  {ACTION_LABEL[status] ?? ORDER_STATUS_LABEL[status]}
-                </AppText>
-              </Pressable>
-            );
-          })}
+                  <AppText className="font-sans-bold text-sm text-ink-muted" numberOfLines={1}>
+                    {ACTION_LABEL[status] ?? ORDER_STATUS_LABEL[status]}
+                  </AppText>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
         </View>
       ) : null}
     </View>

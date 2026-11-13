@@ -5,7 +5,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cn } from '@/shared/lib/cn';
-import { AppText } from '@/shared/ui';
+import { AppText, HeaderBackButton } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { distanceKm } from '../lib/geo';
@@ -78,15 +78,7 @@ export function ProductScreen({ dealId }: Props) {
           className="flex-row items-center justify-between px-4 pb-2"
           style={{ paddingTop: insets.top + 6 }}
         >
-          <Pressable
-            testID="product-back"
-            accessibilityRole="button"
-            accessibilityLabel="Retour"
-            onPress={goBack}
-            className="h-10 w-10 items-center justify-center rounded-pill bg-surface-muted"
-          >
-            <Feather name="chevron-left" size={22} color={colors.ink} />
-          </Pressable>
+          <HeaderBackButton testID="product-back" onPress={goBack} />
           <Pressable
             testID="product-fav"
             accessibilityRole="button"

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
-import { AppText, PrepTicket, Screen } from '@/shared/ui';
+import { AppText, HeaderBackButton, PrepTicket, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { formatCents } from '../lib/billing';
@@ -50,16 +50,7 @@ export function WholesalerOrdersScreen({ onBack }: { onBack?: () => void }) {
     <Screen testID="wholesaler-orders" padded={false}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="gap-3 px-5 pb-10">
         <View className="flex-row items-center gap-3 pt-2">
-          {onBack ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Retour"
-              hitSlop={10}
-              onPress={onBack}
-            >
-              <Feather name="chevron-left" size={26} color={colors.ink} />
-            </Pressable>
-          ) : null}
+          {onBack ? <HeaderBackButton testID="wholesaler-orders-back" onPress={onBack} /> : null}
           <View className="flex-1">
             <AppText variant="display" className="text-2xl">
               Commandes des commerçants

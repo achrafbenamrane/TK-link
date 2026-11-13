@@ -65,6 +65,19 @@ en-tête et son titre à sa façon, et l’inscription tassait tout pour tenir s
   en groupes titrés plutôt que de rétrécir. Pas de texte sous 12 px.
 - **Boutons :** l’action principale pleine, l’alternative en `variant="outline"`.
 
+## Partout : 360 px d’abord, un seul bouton retour
+
+Les maquettes sont dessinées sur un iPhone de 390 px ; la plupart des Android font **360 px**. Un
+écran se vérifie à 360 px (aperçu navigateur), sinon il déborde chez le client.
+
+- **Retour :** `<HeaderBackButton>` (rond de 40 px, chevron) — jamais une flèche dessinée à la main.
+  `<BackButton>` l’emploie et gère la navigation.
+- **Rangées d’en-tête chargées** (accueil, tableau de bord) : sous 400 px
+  (`useWindowDimensions`), les bascules passent en icônes seules (`ThemeToggle compact`,
+  `ViewSwitch iconOnly`) et les grilles perdent une colonne plutôt que de couper les mots.
+- **Une action principale par carte**, pleine largeur ; les sorties (refuser, annuler) dessous, à
+  parts égales.
+
 ## Aperçu navigateur
 
 `npm run web` ouvre l’app dans un navigateur (carte remplacée par un bouchon, rendu serveur coupé) :

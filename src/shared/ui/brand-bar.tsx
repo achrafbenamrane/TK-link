@@ -1,9 +1,7 @@
-import { Feather } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
-import { Pressable, useWindowDimensions, View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 
-import { useColors } from '@/shared/theme/theme-provider';
-
+import { HeaderBackButton } from './header-back-button';
 import { ThemeToggle } from './theme-toggle';
 import { Wordmark } from './wordmark';
 
@@ -30,7 +28,6 @@ export function BrandBar({
   backTestID = 'brand-bar-back',
   right,
 }: BrandBarProps) {
-  const colors = useColors();
   // Sous 380 px de large (la plupart des Android), « Nuit | Jour » en toutes lettres touche le logo.
   const narrow = useWindowDimensions().width < 380;
   return (
@@ -39,16 +36,7 @@ export function BrandBar({
         <Wordmark size={24} />
       </View>
       {onBack ? (
-        <Pressable
-          testID={backTestID}
-          accessibilityRole="button"
-          accessibilityLabel={backLabel}
-          hitSlop={8}
-          onPress={onBack}
-          className="h-10 w-10 items-center justify-center rounded-pill border border-line bg-surface-muted active:opacity-70"
-        >
-          <Feather name="chevron-left" size={20} color={colors.ink} />
-        </Pressable>
+        <HeaderBackButton testID={backTestID} accessibilityLabel={backLabel} onPress={onBack} />
       ) : (
         <View className="h-10 w-10" />
       )}
