@@ -43,6 +43,7 @@ export { MerchantOrdersScreen } from './ui/merchant-orders-screen';
 export { HandoverScreen } from './ui/handover-screen';
 export { MerchantDetailScreen } from './ui/merchant-detail-screen';
 export { useShopStore, selectCartCount, selectCartSubtotal } from './model/store';
+export { selectShopServerOrders, useServerOrdersStore } from './model/server-orders';
 export { getDeal, getMerchant, MERCHANTS } from './model/catalog';
 /** Le contrat d'une offre affichable — sert aux routes qui en fabriquent une
  *  à partir d'une autre feature (les ventes flash du commerçant, CDC §9). */

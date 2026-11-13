@@ -6,6 +6,7 @@ import { BackButton } from '@/shared/ui/back-button';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { COMMISSION_PCT, commissionCents, formatCents, netCents } from '../lib/billing';
+import { PaymentsSetupCard } from './payments-setup-card';
 
 /** Une vente conclue, résumée par la route. */
 export type PayoutLine = {
@@ -18,6 +19,8 @@ export type PayoutLine = {
 type Props = {
   /** Les ventes honorées (retirées ou livrées) — la base de ce qui sera versé. */
   sales: PayoutLine[];
+  /** Avec un serveur : l'inscription du commerce chez Stripe, pour être payé dans l'app. */
+  server?: boolean;
 };
 
 /**
@@ -32,7 +35,7 @@ type Props = {
  * ESTIMATION. Les dates et les montants définitifs viendront du PSP ; on ne les
  * invente pas.
  */
-export function PayoutsScreen({ sales }: Props) {
+export function PayoutsScreen({ sales, server = false }: Props) {
   const colors = useColors();
   const gross = sales.reduce((sum, s) => sum + s.totalCents, 0);
   const fee = commissionCents(gross);
@@ -48,6 +51,8 @@ export function PayoutsScreen({ sales }: Props) {
         <AppText variant="caption" className="mb-4">
           Ce qui vous revient sur vos ventes honorées.
         </AppText>
+
+        {server ? <PaymentsSetupCard /> : null}
 
         <View
           testID="payouts-summary"
