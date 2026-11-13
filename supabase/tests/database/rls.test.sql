@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(92);
+select plan(102);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -804,6 +804,89 @@ select results_eq(
   $$ values ('00000000-0000-0000-0000-0000000000a3'::text) $$,
   'notifications follow the account signed in on the device'
 );
+
+-- ─────────────────────────────────────────────────────── fidélité par commerce (migration 0017)
+
+-- 58) Rien ne s'écrit directement : programme, points et récompenses passent par le serveur.
+select ok(
+  not has_table_privilege('authenticated', 'public.loyalty_programs', 'insert')
+  and not has_table_privilege('authenticated', 'public.loyalty_ledger', 'insert')
+  and not has_table_privilege('authenticated', 'public.loyalty_rewards', 'insert'),
+  'loyalty is written by the server only'
+);
+
+-- 59) La commande de a1 retirée plus haut (test 43, 4,00 € d'articles) l'a crédité de 4 points.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select results_eq(
+  $$ select coalesce(sum(points), 0)::integer from public.loyalty_ledger $$,
+  $$ values (4) $$,
+  'a picked-up order credits the buyer, 1 point per euro of goods'
+);
+reset role;
+
+-- 60) Le commerçant (a2) enregistre son programme ; des paliers incohérents sont refusés.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select lives_ok(
+  $$ select public.save_loyalty_program('euros',
+       '[{"rank":1,"cost":3,"reward":"1 café"},{"rank":2,"cost":50,"reward":"1 brioche"}]'::jsonb) $$,
+  'a merchant saves their loyalty program'
+);
+select throws_ok(
+  $$ select public.save_loyalty_program('euros',
+       '[{"rank":1,"cost":50,"reward":"x"},{"rank":2,"cost":10,"reward":"y"}]'::jsonb) $$,
+  '22023',
+  'invalid_program',
+  'tiers must have increasing costs'
+);
+reset role;
+
+-- 61) a1 réclame le palier 1 (atteint) ; pas le 2 (pas assez de points) ; pas deux fois le 1.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select ok(
+  public.claim_reward((select id from public.shops where siret = '73282932000074'), 1)
+    ~ '^TK-[A-Z2-9]{6}$',
+  'a reached tier becomes a reward with a readable code'
+);
+select throws_ok(
+  $$ select public.claim_reward((select id from public.shops where siret = '73282932000074'), 2) $$,
+  'P0001',
+  'not_enough_points',
+  'a tier out of reach cannot be claimed'
+);
+select throws_ok(
+  $$ select public.claim_reward((select id from public.shops where siret = '73282932000074'), 1) $$,
+  'P0001',
+  'already_claimed',
+  'a tier is claimed once'
+);
+reset role;
+
+-- 62) Seul le commerçant de CE commerce valide la récompense, et une seule fois.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select throws_ok(
+  $$ select public.redeem_reward('TK-AAAAAA') $$,
+  'P0001',
+  'reward_refused',
+  'another account cannot redeem a reward'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select lives_ok(
+  $$ select public.redeem_reward((select code from public.loyalty_rewards limit 1)) $$,
+  'the shop owner redeems the reward at the counter'
+);
+select throws_ok(
+  $$ select public.redeem_reward((select code from public.loyalty_rewards limit 1)) $$,
+  'P0001',
+  'reward_refused',
+  'a reward is redeemed once'
+);
+reset role;
 
 select * from finish();
 rollback;
