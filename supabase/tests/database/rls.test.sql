@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(102);
+select plan(106);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -864,6 +864,40 @@ select throws_ok(
 );
 reset role;
 
+-- 61 bis) Partager une récompense (migration 0018) : seul son titulaire, une fois ; elle reste
+-- valable chez le commerçant (le test 62 la valide ensuite). L'identifiant est lu en
+-- administrateur : sous l'identité de a3, la récompense de a1 est invisible et la sous-requête
+-- rendrait null — le refus ne prouverait rien.
+set local request.jwt.claims to '{}';
+select set_config('tklink.reward', (select id::text from public.loyalty_rewards limit 1), true);
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select throws_ok(
+  $$ select public.share_reward(current_setting('tklink.reward')::uuid) $$,
+  'P0001',
+  'reward_not_shareable',
+  'nobody shares a reward that is not theirs'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select ok(
+  public.share_reward((select id from public.loyalty_rewards limit 1)) ~ '^TK-[A-Z2-9]{6}$',
+  'the owner shares a reward and gets its code to send'
+);
+select results_eq(
+  $$ select status from public.loyalty_rewards $$,
+  $$ values ('partagee'::text) $$,
+  'a shared reward leaves the inventory of the one who shared it'
+);
+select throws_ok(
+  $$ select public.share_reward((select id from public.loyalty_rewards limit 1)) $$,
+  'P0001',
+  'reward_not_shareable',
+  'a reward is shared once'
+);
+reset role;
+
 -- 62) Seul le commerçant de CE commerce valide la récompense, et une seule fois.
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
@@ -878,7 +912,7 @@ set local role authenticated;
 set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
 select lives_ok(
   $$ select public.redeem_reward((select code from public.loyalty_rewards limit 1)) $$,
-  'the shop owner redeems the reward at the counter'
+  'the shop owner redeems the reward at the counter, even a shared one'
 );
 select throws_ok(
   $$ select public.redeem_reward((select code from public.loyalty_rewards limit 1)) $$,

@@ -1,3 +1,5 @@
+import { Share } from 'react-native';
+
 import { fireEvent, render, screen, waitFor } from '@/shared/testing/render';
 
 import { supabase } from '@/shared/lib/supabase';
@@ -5,6 +7,7 @@ import { supabase } from '@/shared/lib/supabase';
 import { classifyLoyaltyError, fetchMyLoyalty } from '../lib/loyalty-api';
 import { useMerchantLoyaltyStore } from '../model/merchant-store';
 import { MerchantLoyaltyScreen } from '../ui/merchant-loyalty-screen';
+import { RewardsScreen } from '../ui/rewards-screen';
 import { TiersSettingsScreen } from '../ui/tiers-settings-screen';
 
 /**
@@ -86,6 +89,7 @@ describe('lecture du serveur', () => {
   it('reconnaît les refus du serveur', () => {
     expect(classifyLoyaltyError({ message: 'not_enough_points' })).toBe('not_enough_points');
     expect(classifyLoyaltyError({ message: 'already_claimed' })).toBe('already_claimed');
+    expect(classifyLoyaltyError({ message: 'reward_not_shareable' })).toBe('reward_not_shareable');
   });
 });
 
@@ -135,5 +139,54 @@ describe('le commerçant, avec un serveur', () => {
     fireEvent.press(screen.getByTestId('reward-redeem-submit'));
     expect(await screen.findByTestId('reward-redeem-result')).toHaveTextContent('Validée : 1 café');
     expect(rpc).toHaveBeenLastCalledWith('redeem_reward', { p_code: 'TK-ABCDEF' });
+  });
+});
+
+describe('partager une récompense d’un commerce du serveur (migration 0018)', () => {
+  const reward = (status: string) => ({
+    id: '77777777-7777-4777-8777-777777777777',
+    shop_id: SHOP,
+    rank: 1,
+    label: '1 café',
+    code: 'TK-ABCDEF',
+    status,
+    created_at: '2026-11-13T12:05:00Z',
+  });
+
+  it('une récompense partagée se relit, et se range dans l’historique', async () => {
+    serve({ loyalty_ledger: [], loyalty_rewards: [reward('partagee')], loyalty_programs: [] });
+    const res = await fetchMyLoyalty();
+    expect(res.ok && res.value.rewards[0]).toMatchObject({ status: 'partagee' });
+  });
+
+  it('après le partage, le serveur la marque « partagée » ; elle quitte l’inventaire', async () => {
+    serve({ loyalty_ledger: [], loyalty_rewards: [reward('disponible')], loyalty_programs: [] });
+    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+    rpc.mockResolvedValueOnce({ data: 'TK-ABCDEF', error: null });
+    render(<RewardsScreen />);
+
+    fireEvent.press(await screen.findByTestId('reward-share-77777777-7777-4777-8777-777777777777'));
+    await waitFor(() =>
+      expect(rpc).toHaveBeenCalledWith('share_reward', {
+        p_reward: '77777777-7777-4777-8777-777777777777',
+      }),
+    );
+    expect(share).toHaveBeenCalledWith({ message: expect.stringContaining('TK-ABCDEF') });
+    await waitFor(() =>
+      expect(useMerchantLoyaltyStore.getState().rewards[0]?.status).toBe('partagee'),
+    );
+    share.mockRestore();
+  });
+
+  it('si le serveur refuse, la récompense reste dans l’inventaire', async () => {
+    serve({ loyalty_ledger: [], loyalty_rewards: [reward('disponible')], loyalty_programs: [] });
+    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+    rpc.mockResolvedValueOnce({ data: null, error: { message: 'reward_not_shareable' } });
+    render(<RewardsScreen />);
+
+    fireEvent.press(await screen.findByTestId('reward-share-77777777-7777-4777-8777-777777777777'));
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith('share_reward', expect.anything()));
+    expect(useMerchantLoyaltyStore.getState().rewards[0]?.status).toBe('disponible');
+    share.mockRestore();
   });
 });

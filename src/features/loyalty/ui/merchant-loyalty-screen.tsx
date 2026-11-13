@@ -34,6 +34,7 @@ const CLAIM_ERROR: Record<LoyaltyError, string> = {
   already_claimed: 'Ce palier est déjà débloqué : retrouvez-le dans « Mes récompenses ».',
   no_such_tier: 'Ce palier a changé : la page se met à jour.',
   reward_refused: 'Récompense refusée.',
+  reward_not_shareable: 'Cette récompense ne peut plus être partagée.',
   invalid_program: 'Programme indisponible.',
   no_shop: 'Commerce introuvable.',
   network: 'Pas de connexion. Réessayez.',

@@ -106,6 +106,13 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
 - [x] Fidélité sur le serveur (0017) : sans elle, une commande payée ne rapportait aucun point
 - [x] Dossiers pros validés ou refusés depuis `/admin` (plus de requête SQL à taper)
 - [x] Scanner le QR de retrait au comptoir
+- [x] Factures des commandes du serveur (« Mes factures » ne lisait que les commandes locales)
+- [x] Partager une récompense d’un commerce du serveur (0018, à appliquer) ; tests pgTAP 61 bis
+- [ ] Parrainage sur le serveur — **décision attendue** : en Direct charges, la part de TK LINK ne
+      peut pas être négative, donc un crédit de 5 € ne peut être offert qu’à hauteur de la commission
+      et de la livraison d’une commande (≈ 0,35 € sur 7 €). Soit le crédit se consomme sur plusieurs
+      commandes, soit les paiements passent en « charges séparées et virements » (TK LINK encaisse,
+      puis vire au commerçant son dû)
 
 ### Mise en service
 
@@ -115,8 +122,11 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
       au-delà du stock, aucun statut ni point ni « payé » écrit par un client, pas de message « au nom
       de TK LINK », commerçant sans saut d’étape ni encaissement auto-déclaré, aucune fuite entre
       comptes
+- [ ] Migration 0018 (partage des récompenses) à appliquer dans le SQL Editor ; `npm run auth:check`
+      la sonde
 - [ ] Clés Stripe (test), Uber Direct, fal.ai ; fonctions Edge déployées ; webhooks déclarés
-- [ ] Mise à jour OTA, puis essai sur deux téléphones
+- [x] Mises à jour OTA publiées (dernière : 109b19ac, design à 360 px, 13/11/2026)
+- [ ] Essai sur deux téléphones
 - [ ] Nouvelle APK (notifications) avec `google-services.json`
 
 ## Risques

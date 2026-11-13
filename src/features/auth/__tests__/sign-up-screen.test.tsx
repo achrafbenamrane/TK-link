@@ -23,6 +23,10 @@ jest.mock('@/shared/lib/storage', () => ({
   },
 }));
 
+// Le formulaire entier (douze champs pour un pro) se rend à chaque test : sous la charge de la suite
+// complète, un parcours Google + numéro a dépassé les 5 s par défaut (13/11/2026), seul il en prend 1.
+jest.setTimeout(15_000);
+
 const fill = (testID: string, value: string) =>
   fireEvent.changeText(screen.getByTestId(testID), value);
 

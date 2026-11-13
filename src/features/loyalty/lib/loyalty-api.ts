@@ -24,6 +24,7 @@ export type LoyaltyError =
   | 'already_claimed'
   | 'no_such_tier'
   | 'reward_refused'
+  | 'reward_not_shareable'
   | 'invalid_program'
   | 'no_shop'
   | 'network'
@@ -34,6 +35,7 @@ const KNOWN: readonly LoyaltyError[] = [
   'already_claimed',
   'no_such_tier',
   'reward_refused',
+  'reward_not_shareable',
   'invalid_program',
   'no_shop',
 ];
@@ -71,7 +73,8 @@ const RewardRowSchema = z.object({
   rank: z.number().int(),
   label: z.string(),
   code: z.string(),
-  status: z.enum(['disponible', 'utilisee']),
+  // « partagee » depuis la migration 0018 : offerte à quelqu'un, elle reste dans l'historique.
+  status: z.enum(['disponible', 'partagee', 'utilisee']),
   created_at: z.string(),
 });
 
@@ -97,7 +100,7 @@ export type ServerLoyalty = {
     rank: number;
     label: string;
     code: string;
-    status: 'disponible' | 'utilisee';
+    status: 'disponible' | 'partagee' | 'utilisee';
     at: number;
   }[];
   programs: Record<string, Program>;
@@ -191,6 +194,20 @@ export async function fetchProgram(shopId: string): Promise<Program | null> {
 export async function claimReward(shopId: string, rank: number): Promise<Result<string>> {
   try {
     const { data, error } = await supabase.rpc('claim_reward', { p_shop: shopId, p_rank: rank });
+    if (error) return { ok: false, code: classifyLoyaltyError(error) };
+    return typeof data === 'string' ? { ok: true, value: data } : { ok: false, code: 'unknown' };
+  } catch (error) {
+    return { ok: false, code: classifyLoyaltyError(error) };
+  }
+}
+
+/**
+ * Partage MA récompense (migration 0018) : elle quitte mon inventaire, son code reste valable chez
+ * le commerçant — c'est un code qu'il valide, pas une personne.
+ */
+export async function shareRewardOnServer(rewardId: string): Promise<Result<string>> {
+  try {
+    const { data, error } = await supabase.rpc('share_reward', { p_reward: rewardId });
     if (error) return { ok: false, code: classifyLoyaltyError(error) };
     return typeof data === 'string' ? { ok: true, value: data } : { ok: false, code: 'unknown' };
   } catch (error) {

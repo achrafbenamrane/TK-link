@@ -4,7 +4,13 @@ import { z } from 'zod';
 
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
-import { claimReward, fetchMyLoyalty, fetchProgram, type LoyaltyError } from '../lib/loyalty-api';
+import {
+  claimReward,
+  fetchMyLoyalty,
+  fetchProgram,
+  shareRewardOnServer,
+  type LoyaltyError,
+} from '../lib/loyalty-api';
 import type { ProgramUnit, Tier } from '../lib/tiers';
 
 /**
@@ -176,6 +182,11 @@ type State = {
     rank: number,
     merchantName?: string,
   ) => Promise<{ ok: true } | { ok: false; code: LoyaltyError }>;
+  /**
+   * Partage une récompense d'un commerce du serveur : le serveur la marque « partagée » (elle
+   * quitte cet inventaire), son code reste valable chez le commerçant.
+   */
+  shareOnServer: (rewardId: string) => Promise<{ ok: true } | { ok: false; code: LoyaltyError }>;
 };
 
 /** Un code lisible, sans caractères qui se confondent (0/O, 1/I). */
@@ -300,6 +311,17 @@ export const useMerchantLoyaltyStore = create<State>()(
       loadProgram: async (merchantId) => {
         const program = await fetchProgram(merchantId);
         if (program) set((s) => ({ programs: { ...s.programs, [merchantId]: program } }));
+      },
+
+      shareOnServer: async (rewardId) => {
+        const res = await shareRewardOnServer(rewardId);
+        if (!res.ok) return res;
+        set((s) => ({
+          rewards: s.rewards.map((r) =>
+            r.id === rewardId ? { ...r, status: 'partagee' as const } : r,
+          ),
+        }));
+        return { ok: true as const };
       },
 
       claimOnServer: async (merchantId, rank, merchantName = '') => {

@@ -36,6 +36,7 @@ export function RewardsScreen() {
   const colors = useColors();
   const rewards = useMerchantLoyaltyStore(selectRewards);
   const shareReward = useMerchantLoyaltyStore((s) => s.shareReward);
+  const shareOnServer = useMerchantLoyaltyStore((s) => s.shareOnServer);
   const syncServer = useMerchantLoyaltyStore((s) => s.syncServer);
 
   // Les récompenses des commerces du serveur (migration 0017), relues à chaque passage : une
@@ -61,7 +62,12 @@ export function RewardsScreen() {
       });
       // On ne retire la récompense de l'inventaire que si le partage a eu lieu :
       // fermer la fenêtre de partage ne doit pas faire perdre un avantage.
-      if (res.action !== Share.dismissedAction) shareReward(r.id);
+      if (res.action === Share.dismissedAction) return;
+      // Une récompense d'un commerce du serveur se marque « partagée » sur le serveur (migration
+      // 0018). S'il ne répond pas, elle reste ici : le code envoyé reste valable de toute façon, et
+      // le premier qui le présente au comptoir l'utilise.
+      if (isServerShop(r.merchantId)) await shareOnServer(r.id);
+      else shareReward(r.id);
     } catch {
       // partage indisponible (web) : la récompense reste là
     }
@@ -136,22 +142,18 @@ export function RewardsScreen() {
             >
               {r.code}
             </AppText>
-            {/* Le partage n'existe pas encore sur le serveur : on ne le propose pas pour une
-                récompense d'un commerce du serveur, plutôt qu'un partage qui ne tiendrait pas. */}
-            {isServerShop(r.merchantId) ? null : (
-              <Pressable
-                testID={`reward-share-${r.id}`}
-                accessibilityRole="button"
-                accessibilityLabel={`Partager ${r.label}`}
-                onPress={() => share(r)}
-                className="flex-row items-center gap-2 rounded-control border border-line px-4 py-2.5 active:bg-surface-muted"
-              >
-                <Feather name="share-2" size={15} color={colors.inkMuted} />
-                <AppText className="font-sans-semibold text-ink-muted" style={{ fontSize: 13 }}>
-                  Partager cette récompense
-                </AppText>
-              </Pressable>
-            )}
+            <Pressable
+              testID={`reward-share-${r.id}`}
+              accessibilityRole="button"
+              accessibilityLabel={`Partager ${r.label}`}
+              onPress={() => share(r)}
+              className="flex-row items-center gap-2 rounded-control border border-line px-4 py-2.5 active:bg-surface-muted"
+            >
+              <Feather name="share-2" size={15} color={colors.inkMuted} />
+              <AppText className="font-sans-semibold text-ink-muted" style={{ fontSize: 13 }}>
+                Partager cette récompense
+              </AppText>
+            </Pressable>
           </View>
         ))}
 

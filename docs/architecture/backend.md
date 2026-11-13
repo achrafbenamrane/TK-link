@@ -178,8 +178,12 @@ passe « récupérée » ou « livrée » (`loyalty_ledger`, une fois par comman
 = 1 point, rien sur la livraison), palier réclamé une fois contre un code (`claim_reward` →
 `loyalty_rewards`, `TK-XXXXXX`), validé par le seul titulaire du commerce (`redeem_reward`). Aucune
 écriture directe. Côté app : `loyalty/lib/loyalty-api.ts` ; le store local sert de copie pour les
-commerces du serveur (UUID) et garde la fidélité locale des enseignes de démonstration. Le partage
-d’une récompense n’existe pas encore sur le serveur (bouton masqué pour ces commerces).
+commerces du serveur (UUID) et garde la fidélité locale des enseignes de démonstration.
+
+**Partage d’une récompense (0018).** Le commerçant valide un CODE, pas une personne : partager,
+c’est envoyer le code. `share_reward` (titulaire seul, une fois) passe la récompense « partagée » —
+elle quitte l’inventaire de qui l’offre, reste dans son historique — et `redeem_reward` accepte une
+récompense disponible OU partagée. Les points, eux, ne se transfèrent jamais (CDC V1.1).
 
 ## Notifications (0016)
 
