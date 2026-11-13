@@ -45,6 +45,10 @@ export type OrdersError =
   | 'not_your_order'
   | 'invalid_transition'
   | 'pickup_refused'
+  /** Le coursier a déjà pris le colis : la course ne s’annule plus depuis l’app. */
+  | 'not_cancellable'
+  /** Uber a refusé l’annulation (le coursier vient de prendre le colis…). */
+  | 'cancel_refused'
   | 'network'
   | 'unknown';
 
@@ -65,6 +69,8 @@ const KNOWN: readonly OrdersError[] = [
   'not_your_order',
   'invalid_transition',
   'pickup_refused',
+  'not_cancellable',
+  'cancel_refused',
 ];
 
 /** Une erreur PostgREST (motif levé par la fonction SQL) ou un code de fonction Edge. */
@@ -105,6 +111,7 @@ const ServerOrderSchema = z.object({
   delivery_lng: z.number().nullable(),
   reserved_until: z.string(),
   uber_tracking_url: z.string().nullable(),
+  uber_status: z.string().nullable().default(null),
   created_at: z.string(),
   flash_order_items: z
     .array(
@@ -126,12 +133,18 @@ export type ServerOrder = Order & {
   reservedUntil: number;
   /** Lien de suivi de la course Uber Direct, une fois commandée. */
   trackingUrl: string | null;
+  /**
+   * Où en est la course Uber Direct (`pending`, `pickup`, `pickup_complete`…), `null` sans course
+   * active — jamais commandée, ou annulée par le commerçant.
+   */
+  uberStatus: string | null;
   deliveryAddress: string | null;
 };
 
 const ORDER_COLUMNS =
   'id, shop_id, fulfilment, status, subtotal_cents, discount_cents, delivery_fee_cents, total_cents, ' +
-  'delivery_address, delivery_lat, delivery_lng, reserved_until, uber_tracking_url, created_at, ' +
+  'delivery_address, delivery_lat, delivery_lng, reserved_until, uber_tracking_url, uber_status, ' +
+  'created_at, ' +
   'flash_order_items(offer_id, title, qty, unit_price_cents)';
 
 /** Pas d’emoji par article sur le serveur : celui de l’offre si on la connaît, sinon un sac. */
@@ -168,6 +181,7 @@ export function toServerOrder(
     shopId: row.shop_id,
     reservedUntil: Date.parse(row.reserved_until),
     trackingUrl: row.uber_tracking_url,
+    uberStatus: row.uber_status,
     deliveryAddress: row.delivery_address,
   };
 }
@@ -333,6 +347,15 @@ export async function dispatchCourier(orderId: string): Promise<Result<string | 
   if (!res.ok) return { ok: false, code: classifyOrdersError(res.code) };
   const url = res.data?.trackingUrl;
   return { ok: true, value: typeof url === 'string' ? url : null };
+}
+
+/**
+ * Annule la course Uber Direct tant que le coursier n’a pas pris le colis (fonction `uber-cancel`).
+ * La commande reste « prête » : on peut rappeler un coursier.
+ */
+export async function cancelCourier(orderId: string): Promise<Result<null>> {
+  const res = await callEdge<unknown>('uber-cancel', { orderId });
+  return res.ok ? { ok: true, value: null } : { ok: false, code: classifyOrdersError(res.code) };
 }
 
 /** Touch & Collect : le commerçant valide le code (QR) du client — la commande est remise. */

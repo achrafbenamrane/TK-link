@@ -172,3 +172,24 @@ export async function verifyUberSignature(
   for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ given.charCodeAt(i);
   return diff === 0;
 }
+
+/**
+ * Une course qu'on peut encore ANNULER : commandée pour une commande « prête », et le coursier n'a
+ * pas encore pris le colis (`pending` : coursier cherché ; `pickup` : en route vers le commerce).
+ * Après la prise en charge, le colis voyage : on ne l'arrête plus depuis l'app — c'est un litige que
+ * TK LINK tranche.
+ */
+export const CANCELLABLE_UBER_STATUSES = ['pending', 'pickup'];
+
+export function isCourierCancellable(order: {
+  status: string;
+  uber_delivery_id: string | null;
+  uber_status: string | null;
+}): boolean {
+  return (
+    order.status === 'prete' &&
+    typeof order.uber_delivery_id === 'string' &&
+    order.uber_delivery_id.length > 0 &&
+    CANCELLABLE_UBER_STATUSES.includes(order.uber_status ?? '')
+  );
+}

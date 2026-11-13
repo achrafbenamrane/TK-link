@@ -136,11 +136,13 @@ le QR du client). Le code de retrait vit dans `private.order_pickup_codes` : seu
 (`order_pickup_code`), une fois payé. Le statut « payée » sera posé par le webhook Stripe (à
 venir). `flash_orders` est publiée dans Supabase Realtime (sous RLS) pour le suivi en direct.
 
-**Livraison : Uber Direct** (13/11/2026, à la place des livreurs TK LINK). Trois fonctions Edge :
+**Livraison : Uber Direct** (13/11/2026, à la place des livreurs TK LINK). Quatre fonctions Edge :
 `uber-quote` (l’acheteur demande le prix de la livraison de sa commande réservée : il fixe
 `delivery_fee_cents`), `uber-dispatch` (le commerçant commande la course quand c’est prêt ; une
-seule course par commande) et `uber-webhook` (Uber fait avancer la commande : en livraison, livrée,
-ou litige si la course échoue après paiement). La logique pure (adresses, statuts, signature) est
+seule course par commande), `uber-cancel` (le commerçant annule la course tant que le coursier n’a
+pas pris le colis ; l’identifiant de course est effacé, si bien que l’annulation n’est pas prise
+pour un échec, et la commande reste « prête » pour rappeler un coursier) et `uber-webhook` (Uber
+fait avancer la commande : en livraison, livrée, ou litige si la course échoue après paiement). La logique pure (adresses, statuts, signature) est
 dans `supabase/functions/_shared/uber.ts`, testée par `supabase/__tests__/uber.test.ts`.
 
 Mise en route, une fois le compte Uber Direct ouvert (direct.uber.com → Developer) :
@@ -151,6 +153,7 @@ npx supabase secrets set UBER_CUSTOMER_ID=… UBER_CLIENT_ID=… UBER_CLIENT_SEC
 npx supabase functions deploy uber-quote
 npx supabase functions deploy uber-dispatch
 npx supabase functions deploy uber-webhook
+npx supabase functions deploy uber-cancel
 ```
 
 Puis, dans le tableau de bord Uber Direct → Webhooks : l’adresse

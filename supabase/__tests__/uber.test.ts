@@ -1,6 +1,7 @@
 import { createHmac } from 'crypto';
 
 import {
+  isCourierCancellable,
   orderStatusFor,
   parseDelivery,
   parseQuote,
@@ -133,5 +134,27 @@ describe('signature des webhooks', () => {
     expect(await verifyUberSignature(body, good, 'autre')).toBe(false);
     expect(await verifyUberSignature(body, null, key)).toBe(false);
     expect(await verifyUberSignature(body, good, '')).toBe(false);
+  });
+});
+
+describe('annuler une course (fonction uber-cancel)', () => {
+  const order = (o: Partial<Parameters<typeof isCourierCancellable>[0]>) => ({
+    status: 'prete',
+    uber_delivery_id: 'del_1',
+    uber_status: 'pending',
+    ...o,
+  });
+
+  it('tant que le coursier n’a pas pris le colis', () => {
+    expect(isCourierCancellable(order({}))).toBe(true);
+    expect(isCourierCancellable(order({ uber_status: 'pickup' }))).toBe(true);
+  });
+
+  it('plus après la prise en charge, ni sans course, ni hors « prête »', () => {
+    expect(isCourierCancellable(order({ uber_status: 'pickup_complete' }))).toBe(false);
+    expect(isCourierCancellable(order({ uber_status: 'delivered' }))).toBe(false);
+    expect(isCourierCancellable(order({ uber_delivery_id: null }))).toBe(false);
+    expect(isCourierCancellable(order({ uber_status: null }))).toBe(false);
+    expect(isCourierCancellable(order({ status: 'en_livraison' }))).toBe(false);
   });
 });

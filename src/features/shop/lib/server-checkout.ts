@@ -70,6 +70,8 @@ export const CHECKOUT_ERROR: Record<OrdersError, string> = {
   not_your_order: 'Commande introuvable.',
   invalid_transition: 'Action impossible pour cette commande.',
   pickup_refused: 'Code de retrait incorrect.',
+  not_cancellable: 'Le coursier a déjà pris la commande : elle ne s’annule plus ici.',
+  cancel_refused: 'Uber n’a pas pu annuler la course. Réessayez dans un instant.',
   network: 'Pas de connexion. Rien n’a été débité : réessayez.',
   unknown: 'La commande n’a pas pu aboutir. Rien n’a été débité : réessayez.',
 };

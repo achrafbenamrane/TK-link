@@ -117,12 +117,72 @@ it('remise en boutique : le code du client est vérifié par le serveur', async 
 });
 
 it('livraison prête : le coursier est en route, rien à faire au comptoir', () => {
-  seed([order({ fulfilment: 'livraison', status: 'prete', delivery_address: 'x' })]);
+  seed([
+    order({
+      fulfilment: 'livraison',
+      status: 'prete',
+      delivery_address: 'x',
+      uber_status: 'pickup',
+    }),
+  ]);
   render(<MerchantOrdersScreen server />);
   expect(screen.getByTestId(`merchant-order-${ID}-server`)).toHaveTextContent(
     /Coursier Uber Direct en route/,
   );
   expect(screen.queryByTestId(`merchant-order-${ID}-dispatch`)).toBeNull();
+});
+
+it('course pas encore prise : « Annuler la course » se confirme, puis passe par Uber', async () => {
+  seed([
+    order({
+      fulfilment: 'livraison',
+      status: 'prete',
+      delivery_address: 'x',
+      uber_status: 'pending',
+    }),
+  ]);
+  edge.mockResolvedValue({ ok: true, data: { cancelled: true } });
+  render(<MerchantOrdersScreen server />);
+
+  const cancel = screen.getByTestId(`merchant-order-${ID}-cancel-courier`);
+  fireEvent.press(cancel);
+  // Premier appui : on demande confirmation, rien ne part.
+  expect(edge).not.toHaveBeenCalled();
+  expect(cancel).toHaveTextContent(/Confirmer/);
+  fireEvent.press(cancel);
+  await waitFor(() => expect(edge).toHaveBeenCalledWith('uber-cancel', { orderId: ID }));
+});
+
+it('course annulée : la commande reste prête, et on peut rappeler un coursier', async () => {
+  seed([
+    order({ fulfilment: 'livraison', status: 'prete', delivery_address: 'x', uber_status: null }),
+  ]);
+  edge.mockResolvedValue({ ok: true, data: { trackingUrl: null } });
+  render(<MerchantOrdersScreen server />);
+
+  expect(screen.queryByTestId(`merchant-order-${ID}-cancel-courier`)).toBeNull();
+  fireEvent.press(screen.getByTestId(`merchant-order-${ID}-dispatch`));
+  await waitFor(() => expect(edge).toHaveBeenCalledWith('uber-dispatch', { orderId: ID }));
+  expect(screen.getByTestId(`merchant-order-${ID}-dispatch`)).toHaveTextContent(/Rappeler/);
+});
+
+it('Uber refuse l’annulation : le commerçant le sait', async () => {
+  seed([
+    order({
+      fulfilment: 'livraison',
+      status: 'prete',
+      delivery_address: 'x',
+      uber_status: 'pickup',
+    }),
+  ]);
+  edge.mockResolvedValue({ ok: false, code: 'cancel_refused', status: 409 });
+  render(<MerchantOrdersScreen server />);
+
+  fireEvent.press(screen.getByTestId(`merchant-order-${ID}-cancel-courier`));
+  fireEvent.press(screen.getByTestId(`merchant-order-${ID}-cancel-courier`));
+  expect(await screen.findByTestId(`merchant-order-${ID}-error`)).toHaveTextContent(
+    /n’a pas pu annuler/,
+  );
 });
 
 it('le numéro du commerce manque : le commerçant sait quoi corriger', async () => {

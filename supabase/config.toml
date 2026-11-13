@@ -28,6 +28,9 @@ verify_jwt = false
 [functions.uber-dispatch]
 verify_jwt = false
 
+[functions.uber-cancel]
+verify_jwt = false
+
 [functions.uber-webhook]
 verify_jwt = false
 

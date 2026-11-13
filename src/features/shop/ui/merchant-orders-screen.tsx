@@ -16,6 +16,7 @@ import {
 } from '../lib/order-status';
 import {
   advanceOrder,
+  cancelCourier,
   confirmPickup,
   dispatchCourier,
   type OrdersError,
@@ -426,6 +427,8 @@ const SERVER_ERROR: Partial<Record<OrdersError, string>> = {
   phone_required: 'Le numéro du client manque : contactez le support TK LINK.',
   delivery_unavailable: 'Uber Direct refuse cette course (adresse hors zone).',
   network: 'Pas de connexion. Réessayez.',
+  not_cancellable: 'Le coursier a déjà pris la commande : la course ne s’annule plus ici.',
+  cancel_refused: 'Uber n’a pas pu annuler la course. Réessayez dans un instant.',
 };
 
 /**
@@ -441,6 +444,8 @@ function ServerActions({ order, onDone }: { order: ServerOrder; onDone: () => vo
   const [code, setCode] = useState('');
   const [scanning, setScanning] = useState(false);
   const [wrongQr, setWrongQr] = useState(false);
+  // Annuler une course se confirme d'un second appui : le coursier est peut-être déjà en route.
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   // Le QR du client contient sa commande et son code : on vérifie que c'est CETTE commande, puis le
   // serveur vérifie le code. Un QR d'une autre commande ou étranger à TK LINK est refusé sur place.
@@ -472,6 +477,10 @@ function ServerActions({ order, onDone }: { order: ServerOrder; onDone: () => vo
   };
 
   const delivery = order.fulfilment === 'livraison';
+  // Une course active : commandée, pas annulée. Annulable tant que le coursier n'a pas le colis.
+  const courierActive = delivery && order.status === 'prete' && Boolean(order.uberStatus);
+  const courierCancellable =
+    courierActive && (order.uberStatus === 'pending' || order.uberStatus === 'pickup');
   const paid = order.status === 'payee' || order.status === 'acceptee';
   const step: { id: string; label: string; act: () => void } | null = paid
     ? {
@@ -479,11 +488,14 @@ function ServerActions({ order, onDone }: { order: ServerOrder; onDone: () => vo
         label: 'En préparation',
         act: () => void run(() => advanceOrder(order.id, 'preparation')),
       }
-    : order.status === 'preparation'
+    : order.status === 'preparation' || (delivery && order.status === 'prete' && !courierActive)
       ? delivery
         ? {
             id: 'dispatch',
-            label: 'C’est prêt · appeler un coursier',
+            label:
+              order.status === 'prete'
+                ? 'Rappeler un coursier'
+                : 'C’est prêt · appeler un coursier',
             act: () => void run(() => dispatchCourier(order.id)),
           }
         : {
@@ -497,7 +509,7 @@ function ServerActions({ order, onDone }: { order: ServerOrder; onDone: () => vo
 
   return (
     <View className="mt-3 gap-2" testID={`merchant-order-${order.id}-server`}>
-      {delivery && (order.status === 'prete' || order.status === 'en_livraison') ? (
+      {courierActive || (delivery && order.status === 'en_livraison') ? (
         <View className="flex-row items-center justify-between rounded-control bg-surface-muted px-3.5 py-3">
           <View className="flex-1">
             <AppText className="font-sans-bold text-ink" style={{ fontSize: 13 }}>
@@ -521,6 +533,31 @@ function ServerActions({ order, onDone }: { order: ServerOrder; onDone: () => vo
             </Pressable>
           ) : null}
         </View>
+      ) : null}
+
+      {courierCancellable ? (
+        <Pressable
+          testID={`merchant-order-${order.id}-cancel-courier`}
+          accessibilityRole="button"
+          accessibilityLabel={
+            confirmCancel ? 'Confirmer l’annulation de la course' : 'Annuler la course'
+          }
+          accessibilityState={{ disabled: busy, busy }}
+          disabled={busy}
+          onPress={() => {
+            if (!confirmCancel) {
+              setConfirmCancel(true);
+              return;
+            }
+            setConfirmCancel(false);
+            void run(() => cancelCourier(order.id));
+          }}
+          className="h-11 items-center justify-center rounded-control border border-line px-4 active:opacity-70"
+        >
+          <AppText className="font-sans-semibold text-sm text-danger">
+            {confirmCancel ? 'Confirmer : annuler la course' : 'Annuler la course'}
+          </AppText>
+        </Pressable>
       ) : null}
 
       {asking && scanning ? (
