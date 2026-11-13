@@ -95,6 +95,8 @@ type ProfileScreenProps = {
    * que les stores exigent facile à trouver (Apple 5.1.1(v)). Rendu par la route.
    */
   onOpenAccount?: () => void;
+  /** « Aide et support » : écrire à TK LINK et suivre ses demandes (feature `support`). */
+  onOpenSupport?: () => void;
 };
 
 export function ProfileScreen({
@@ -104,6 +106,7 @@ export function ProfileScreen({
   onOpenDemoSettings,
   onOpenTiers,
   onOpenAccount,
+  onOpenSupport,
   renderAvatar,
   name,
   subtitle,
@@ -246,6 +249,14 @@ export function ProfileScreen({
               icon={<Feather name="map-pin" size={17} color={colors.ink} />}
               label="Adresses de livraison"
               onPress={() => router.push('/adresses')}
+            />
+          ) : null}
+          {onOpenSupport ? (
+            <Row
+              testID="profile-support"
+              icon={<Feather name="help-circle" size={17} color={colors.ink} />}
+              label="Aide et support"
+              onPress={onOpenSupport}
             />
           ) : null}
           {onOpenDemoSettings ? (

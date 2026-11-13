@@ -19,5 +19,6 @@ describe('magasins des fonctions retirées', () => {
   it('ne fait rien de mal quand il n’y a rien à effacer', async () => {
     await expect(forgetRetiredStores()).resolves.toBeUndefined();
     expect(RETIRED_STORE_KEYS).toContain('tklink-courier-v1');
+    expect(RETIRED_STORE_KEYS).toContain('tklink-messages-v1');
   });
 });

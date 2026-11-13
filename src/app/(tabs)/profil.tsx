@@ -82,6 +82,7 @@ export default function ProfilRoute() {
       subtitle={ROLE_LABEL[role]}
       onSignOut={signOut}
       onOpenAccount={() => router.push('/account')}
+      onOpenSupport={() => router.push('/aide')}
       {...(isDemoBuild ? { onOpenDemoSettings: () => router.push('/reglages-demo') } : {})}
       // Les paliers de fidélité sont ceux d'un COMMERÇANT ; un grossiste vend des lots, pas des points.
       {...(role === 'commercant' ? { onOpenTiers: () => router.push('/paliers') } : {})}

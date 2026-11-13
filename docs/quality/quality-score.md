@@ -92,10 +92,11 @@ e-mails par Resend, Apple sur Android par sa page web. Landmines connues :
 
 Les livraisons sont confiées à **Uber Direct** : le rôle livreur, ses écrans, ses missions, FranceConnect
 (qui ne servait qu'à lui), le scan QR (`expo-camera`) et la carte d'itinéraire ont été supprimés de l'app.
-Un `role: 'livreur'` relu du disque ou du serveur devient client (`RoleSchema`, testé). Reste à faire
-ailleurs : le back-office (`landing/app/admin`) liste encore des livreurs d'exemple ; `expo-camera`
-(dépendance et plugin) n'est plus utilisé et peut partir à la prochaine APK ; la messagerie
-(`features/messages`) n'a plus de route et attend le support TK LINK.
+Un `role: 'livreur'` relu du disque ou du serveur devient client (`RoleSchema`, testé). Depuis : le
+back-office n'a plus de livreurs d'exemple ; la messagerie locale (`features/messages`) est
+remplacée par le support TK LINK sur le serveur (`features/support`, « Profil → Aide et support »),
+et son ancien magasin local est effacé au démarrage. Reste : `expo-camera` (dépendance et plugin)
+n'est plus utilisé et peut partir à la prochaine APK.
 
 ## Réglages de démonstration
 

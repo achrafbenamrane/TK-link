@@ -132,6 +132,19 @@ enforces).
 - **À vérifier sur téléphone, pas en navigateur :** les fenêtres Google et Apple, le retour de la page
   Apple vers l’app (Android), la session qui survit à la fermeture de l’app.
 
+## CUJ-008 — Écrire au support TK LINK
+
+- **Flow :** aucun — couvert par `support/__tests__/` ; à dérouler sur téléphone avec la migration
+  `0014_support` appliquée et le back-office relié (`landing/DEPLOY.md`).
+- **Journey :** Profil → « Aide et support » → « Nouvelle demande » → choisir « Une commande », un
+  sujet, un message → « Envoyer à TK LINK » → la conversation s’ouvre (« Bien reçu ») → dans
+  `/admin` → Messages, la demande est en tête (sans réponse) → répondre → sur le téléphone, la
+  réponse arrive en direct, signée « Équipe TK LINK », la demande passe « En cours » → « Marquer
+  résolu » puis « Fermer » dans `/admin` : l’app ne propose plus de répondre.
+- **Edge cases agents must try :** sujet de deux lettres (refusé), message vide, six demandes dans
+  la journée (la sixième est refusée, message clair), réseau coupé à l’envoi, serveur sans la
+  migration (« pas encore activé »), un client puis un commerçant (chacun ne voit que ses demandes).
+
 ## Template for new CUJs
 
 ```

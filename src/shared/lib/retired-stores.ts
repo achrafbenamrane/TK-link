@@ -10,10 +10,13 @@ import { appStorage } from './storage';
  *   Direct). Il gardait le nom vérifié du livreur, l'adresse de son selfie et ses courses : des
  *   données personnelles que plus aucun écran ne montre.
  *
+ * - `tklink-messages-v1` — la messagerie locale du livreur, retirée le 13/11/2026 avec lui ; le
+ *   support TK LINK vit désormais sur le serveur (feature `support`, migration 0014).
+ *
  * Les profils, eux, ne sont PAS effacés : un ancien livreur garde son prénom, son avatar et ses
  * centres d'intérêt, et devient client (voir `RoleSchema` dans `roles.ts`).
  */
-export const RETIRED_STORE_KEYS = ['tklink-courier-v1'] as const;
+export const RETIRED_STORE_KEYS = ['tklink-courier-v1', 'tklink-messages-v1'] as const;
 
 /** Efface ces magasins. Sans effet s'ils n'existent pas ; un échec n'empêche jamais l'app de démarrer. */
 export async function forgetRetiredStores(): Promise<void> {
