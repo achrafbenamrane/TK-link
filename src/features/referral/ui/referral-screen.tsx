@@ -1,20 +1,24 @@
 import { Feather } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, TextInput, View } from 'react-native';
 
+import { isSupabaseConfigured } from '@/shared/lib/env';
+import { formatEuros } from '@/shared/lib/money';
 import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
 import { AppText, Button, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
 import { useColors } from '@/shared/theme/theme-provider';
 
-import { selectCredit, selectReferredBy, useReferralStore } from '../model/store';
+import { type ApplyResult, selectCredit, selectReferredBy, useReferralStore } from '../model/store';
 
-const REASON_TEXT = {
+const REASON_TEXT: Record<Exclude<ApplyResult, { ok: true }>['reason'], string> = {
   invalide: 'Ce code n’est pas valide. Il ressemble à TK-ABC234.',
   son_propre_code: 'C’est votre propre code : il faut celui d’un proche.',
   deja_parraine: 'Vous avez déjà un parrain.',
   deja_client: 'Le parrainage s’adresse aux nouveaux clients : vous avez déjà commandé.',
-} as const;
+  indisponible: 'Le parrainage ne répond pas. Vérifiez votre connexion et réessayez.',
+};
 
 type Props = {
   /** A-t-on déjà passé une commande ? Fourni par la route (la boutique n'est pas importée ici). */
@@ -24,26 +28,41 @@ type Props = {
 /**
  * PARRAINER ET ÊTRE PARRAINÉ — CDC V1.1.
  *
- * Un code (et un lien) à partager ; la récompense — financée par TK LINK — est
- * débloquée pour les deux après le premier achat réel du filleul. Le côté
- * parrain dépend du serveur : l'écran explique la règle, sans compteur inventé.
+ * Un code (et un lien) à partager ; la récompense — financée par TK LINK — est débloquée pour les
+ * deux après le premier achat réel du filleul.
+ *
+ * Avec le serveur (migration 0019), tout vient de lui : mon code, mon parrain, mon crédit restant et
+ * mes filleuls. Le crédit s'y déduit à la réservation, À HAUTEUR DE LA PART DE TK LINK sur chaque
+ * commande (Stripe « Direct charges » : TK LINK n'offre que ce qu'il aurait prélevé) — l'écran le dit,
+ * pour que personne n'attende 5 € d'un coup. Sans la migration, l'écran garde le parrainage local.
  */
 export function ReferralScreen({ hasOrdered }: Props) {
   const colors = useColors();
-  const myCode = useReferralStore((s) => s.myCode);
+  const localCode = useReferralStore((s) => s.myCode);
   const ensureCode = useReferralStore((s) => s.ensureCode);
   const applyCode = useReferralStore((s) => s.applyCode);
+  const applyOnServer = useReferralStore((s) => s.applyOnServer);
+  const syncServer = useReferralStore((s) => s.syncServer);
+  const server = useReferralStore((s) => s.server);
   const credit = useReferralStore(selectCredit);
-  const referredBy = useReferralStore(selectReferredBy);
+  const localReferredBy = useReferralStore(selectReferredBy);
 
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     ensureCode();
   }, [ensureCode]);
+  useFocusEffect(
+    useCallback(() => {
+      if (isSupabaseConfigured) void syncServer();
+    }, [syncServer]),
+  );
 
-  const reward = PLATFORM_SETTINGS.referralRewardEur;
+  const reward = server ? server.creditCents / 100 : PLATFORM_SETTINGS.referralRewardEur;
+  const myCode = server?.code ?? localCode;
+  const referredBy = server ? server.referrerCode : localReferredBy;
   const link = `https://tklink.fr/invite/${myCode}`;
 
   const share = async () => {
@@ -56,8 +75,10 @@ export function ReferralScreen({ hasOrdered }: Props) {
     }
   };
 
-  const submit = () => {
-    const res = applyCode(input, hasOrdered);
+  const submit = async () => {
+    setSending(true);
+    const res = server ? await applyOnServer(input) : applyCode(input, hasOrdered);
+    setSending(false);
     if (res.ok) {
       setError(null);
       setInput('');
@@ -65,6 +86,19 @@ export function ReferralScreen({ hasOrdered }: Props) {
       setError(REASON_TEXT[res.reason]);
     }
   };
+
+  // Ce que dit la ligne « Parrain » : en attente du premier achat, crédit restant, ou utilisé.
+  const status = server
+    ? !server.unlocked
+      ? `Passez votre première commande : ${reward} € seront crédités à vous et à votre parrain dès qu’elle sera récupérée ou livrée.`
+      : server.balanceCents > 0
+        ? `Crédit débloqué. Il se déduit de vos prochaines commandes.`
+        : 'Votre crédit de parrainage a été utilisé.'
+    : credit === 'a_debloquer'
+      ? `Passez votre première commande : ${reward} € seront crédités sur la suivante.`
+      : credit === 'disponible'
+        ? `${reward} € de crédit disponibles : ils s’appliquent à votre prochaine commande.`
+        : 'Votre crédit de parrainage a été utilisé.';
 
   return (
     <Screen testID="referral-screen" padded={false}>
@@ -79,8 +113,7 @@ export function ReferralScreen({ hasOrdered }: Props) {
             Parrainage
           </AppText>
           <AppText variant="caption">
-            {reward} € crédités à vous et à votre filleul, après son premier achat. Offert par TK
-            LINK.
+            {`${reward} € crédités à vous et à votre filleul, après son premier achat. Offert par TK LINK.`}
           </AppText>
         </View>
 
@@ -110,6 +143,32 @@ export function ReferralScreen({ hasOrdered }: Props) {
           </Pressable>
         </View>
 
+        {/* Mon crédit et mes filleuls — le serveur seul les connaît. */}
+        {server && (server.balanceCents > 0 || server.invited > 0) ? (
+          <View
+            testID="referral-balance"
+            className="gap-1.5 rounded-card border border-line bg-surface p-4"
+          >
+            <View className="flex-row items-baseline justify-between gap-3">
+              <AppText variant="label">Votre crédit</AppText>
+              <AppText
+                testID="referral-balance-amount"
+                className="font-display text-xl text-brand-600"
+              >
+                {formatEuros(server.balanceCents / 100)}
+              </AppText>
+            </View>
+            {server.invited > 0 ? (
+              <AppText testID="referral-invited" variant="caption" className="text-ink-muted">
+                {`${server.invited} proche${server.invited > 1 ? 's' : ''} invité${server.invited > 1 ? 's' : ''} · ${server.invitedUnlocked} premier${server.invitedUnlocked > 1 ? 's' : ''} achat${server.invitedUnlocked > 1 ? 's' : ''}`}
+              </AppText>
+            ) : null}
+            <AppText variant="caption" className="text-ink-faint">
+              {`Il se déduit à chaque commande, à hauteur de la part de TK LINK (${PLATFORM_SETTINGS.commissionB2cPct} % du montant) : il sert donc sur plusieurs commandes.`}
+            </AppText>
+          </View>
+        ) : null}
+
         <View className="gap-2.5 rounded-card border border-line bg-surface p-4">
           <AppText variant="label">J’ai un code de parrainage</AppText>
 
@@ -117,11 +176,7 @@ export function ReferralScreen({ hasOrdered }: Props) {
             <View testID="referral-status" className="gap-1">
               <AppText className="font-sans-semibold text-ink">Parrain : {referredBy}</AppText>
               <AppText variant="caption" className="text-ink-faint">
-                {credit === 'a_debloquer'
-                  ? `Passez votre première commande : ${reward} € seront crédités sur la suivante.`
-                  : credit === 'disponible'
-                    ? `${reward} € de crédit disponibles : ils s’appliquent à votre prochaine commande.`
-                    : 'Votre crédit de parrainage a été utilisé.'}
+                {status}
               </AppText>
             </View>
           ) : (
@@ -149,15 +204,18 @@ export function ReferralScreen({ hasOrdered }: Props) {
               <Button
                 testID="referral-apply"
                 label="Valider le code"
+                loading={sending}
                 disabled={input.trim().length === 0}
-                onPress={submit}
+                onPress={() => void submit()}
               />
             </>
           )}
         </View>
 
         <AppText variant="caption" className="text-center text-ink-faint">
-          Le crédit se déduit au moment du paiement. Le suivi de vos filleuls est géré par TK LINK.
+          {server
+            ? 'Le crédit se déduit au moment de réserver ; il revient si la réservation est annulée.'
+            : 'Le crédit se déduit au moment du paiement. Le suivi de vos filleuls est géré par TK LINK.'}
         </AppText>
       </ScrollView>
     </Screen>

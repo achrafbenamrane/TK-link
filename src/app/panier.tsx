@@ -1,5 +1,9 @@
+import { useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
+
 import { earnedPoints, programOf, useMerchantLoyaltyStore } from '@/features/loyalty';
 import { selectCredit, useReferralStore } from '@/features/referral';
+import { isSupabaseConfigured } from '@/shared/lib/env';
 import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
 import { CartScreen, pointsByMerchant, selectOrders, useShopStore } from '@/features/shop';
 
@@ -9,15 +13,27 @@ import { CartScreen, pointsByMerchant, selectOrders, useShopStore } from '@/feat
  * fidélité — il signale la commande passée, et la route crédite le programme de
  * chaque commerçant concerné (CDC §8.2 : les points restent liés au commerce
  * qui les a générés).
+ *
+ * Le parrainage aussi se compose ici : le crédit LOCAL (démonstration) pour une commande locale,
+ * le crédit du SERVEUR (migration 0019, relu à chaque ouverture du panier) pour une commande du
+ * serveur — c'est le serveur qui le déduit, le panier en montre l'estimation.
  */
 export default function PanierRoute() {
   const earn = useMerchantLoyaltyStore((s) => s.earn);
   const credit = useReferralStore(selectCredit);
+  const serverReferral = useReferralStore((s) => s.server);
+  const syncReferral = useReferralStore((s) => s.syncServer);
+  useFocusEffect(
+    useCallback(() => {
+      if (isSupabaseConfigured) void syncReferral();
+    }, [syncReferral]),
+  );
 
   return (
     <CartScreen
       // Le crédit de parrainage, une fois débloqué, se déduit du prochain paiement.
       credit={credit === 'disponible' ? PLATFORM_SETTINGS.referralRewardEur : 0}
+      serverCredit={serverReferral ? serverReferral.balanceCents / 100 : 0}
       onOrdered={(orderId) => {
         // Le crédit qui vient de servir est consommé AVANT que ce premier achat
         // n'en débloque un autre.

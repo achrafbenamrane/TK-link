@@ -4,6 +4,13 @@ import { z } from 'zod';
 
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
+import {
+  applyReferralCodeOnServer,
+  fetchReferralSummary,
+  type ReferralError,
+  type ServerReferral,
+} from '../lib/referral-api';
+
 /**
  * PARRAINAGE — CDC V1.1, Utilisateur > Process (VALIDÉ) : « un lien ou code
  * d'invitation permet de partager l'application ; une récompense financée par TK
@@ -43,7 +50,20 @@ export function normaliseCode(input: string): string {
 
 export type ApplyResult =
   | { ok: true }
-  | { ok: false; reason: 'invalide' | 'son_propre_code' | 'deja_parraine' | 'deja_client' };
+  | {
+      ok: false;
+      reason: 'invalide' | 'son_propre_code' | 'deja_parraine' | 'deja_client' | 'indisponible';
+    };
+
+const SERVER_REASON: Record<ReferralError, Exclude<ApplyResult, { ok: true }>['reason']> = {
+  invalid_code: 'invalide',
+  own_code: 'son_propre_code',
+  already_referred: 'deja_parraine',
+  already_customer: 'deja_client',
+  unavailable: 'indisponible',
+  network: 'indisponible',
+  unknown: 'indisponible',
+};
 
 type State = {
   myCode: string;
@@ -62,6 +82,15 @@ type State = {
   /** À appeler quand le crédit a servi à payer une commande. */
   consumeCredit: () => void;
   reset: () => void;
+  /**
+   * Le parrainage du SERVEUR (migration 0019), relu par `syncServer` ; `null` sans serveur, ou tant
+   * que la migration n'est pas appliquée — l'écran garde alors le parrainage local. Jamais persisté :
+   * le serveur fait foi.
+   */
+  server: ServerReferral | null;
+  syncServer: () => Promise<void>;
+  /** Saisit le code d'un parrain sur le serveur (qui vérifie tout), puis relit le parrainage. */
+  applyOnServer: (code: string) => Promise<ApplyResult>;
 };
 
 export const useReferralStore = create<State>()(
@@ -99,7 +128,25 @@ export const useReferralStore = create<State>()(
         if (get().credit === 'disponible') set({ credit: 'utilise' });
       },
 
-      reset: () => set({ referredBy: null, credit: 'aucun' }),
+      reset: () => set({ referredBy: null, credit: 'aucun', server: null }),
+
+      server: null,
+
+      syncServer: async () => {
+        const res = await fetchReferralSummary();
+        if (res.ok) set({ server: res.value });
+        // Migration absente : on revient au parrainage local. Hors ligne : on garde la dernière lecture.
+        else if (res.code === 'unavailable') set({ server: null });
+      },
+
+      applyOnServer: async (code) => {
+        const wanted = normaliseCode(code);
+        if (!CODE_RE.test(wanted)) return { ok: false as const, reason: 'invalide' as const };
+        const res = await applyReferralCodeOnServer(wanted);
+        if (!res.ok) return { ok: false as const, reason: SERVER_REASON[res.code] };
+        await get().syncServer();
+        return { ok: true as const };
+      },
     }),
     {
       name: 'tklink-referral-v1',

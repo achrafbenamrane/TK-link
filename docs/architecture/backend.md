@@ -185,6 +185,21 @@ c’est envoyer le code. `share_reward` (titulaire seul, une fois) passe la réc
 elle quitte l’inventaire de qui l’offre, reste dans son historique — et `redeem_reward` accepte une
 récompense disponible OU partagée. Les points, eux, ne se transfèrent jamais (CDC V1.1).
 
+## Parrainage (0019)
+
+CDC V1.1 : 5 € au parrain ET au filleul, financés par TK LINK, débloqués au premier achat réel du
+filleul. Chaque compte a son code (`my_referral_code`, `TK-XXXXXX`) ; un nouveau client (aucune
+commande payée) saisit celui d’un parrain, une fois (`apply_referral_code`). Sa première commande
+« récupérée » ou « livrée » crédite les deux comptes (déclencheur, `referral_credit_cents` = 500).
+Le crédit est un grand livre (`referral_credits` : parrain, filleul, utilisation, restitution) écrit
+par le serveur seul. **Il se déduit à la réservation (`reserve_flash`), borné à la commission de TK
+LINK** : en Stripe « Direct charges », le prélèvement de TK LINK ne peut pas être négatif, donc TK
+LINK n’offre que ce qu’il aurait prélevé (≈ 0,35 € sur 7 €) et le crédit sert sur plusieurs
+commandes. Une réservation annulée ou une commande remboursée rend le crédit. Passer en « charges
+séparées et virements » permettrait de tout déduire d’un coup : seule la borne de `reserve_flash`
+changerait. Côté app : `referral/lib/referral-api.ts`, `shop/lib/discount.ts` (même borne dans le
+panier) ; sans la migration, l’app garde le parrainage local.
+
 ## Notifications (0016)
 
 L’app enregistre le jeton Expo du téléphone (`register_push_token`, retiré à la déconnexion par

@@ -108,11 +108,11 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
 - [x] Scanner le QR de retrait au comptoir
 - [x] Factures des commandes du serveur (« Mes factures » ne lisait que les commandes locales)
 - [x] Partager une récompense d’un commerce du serveur (0018, à appliquer) ; tests pgTAP 61 bis
-- [ ] Parrainage sur le serveur — **décision attendue** : en Direct charges, la part de TK LINK ne
-      peut pas être négative, donc un crédit de 5 € ne peut être offert qu’à hauteur de la commission
-      et de la livraison d’une commande (≈ 0,35 € sur 7 €). Soit le crédit se consomme sur plusieurs
-      commandes, soit les paiements passent en « charges séparées et virements » (TK LINK encaisse,
-      puis vire au commerçant son dû)
+- [x] Parrainage sur le serveur (0019), dans les limites du Stripe actuel : en Direct charges, la
+      part de TK LINK ne peut pas être négative, donc le crédit se déduit à hauteur de la commission
+      de chaque commande (≈ 0,35 € sur 7 €) et sert sur plusieurs commandes. **Décision ouverte** :
+      tout déduire d’un coup exige de passer en « charges séparées et virements » (TK LINK encaisse,
+      puis vire au commerçant son dû) — seule la borne de `reserve_flash` changerait
 
 ### Mise en service
 
@@ -124,6 +124,7 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
       comptes
 - [x] 13/11/2026 : migration 0018 (partage des récompenses) appliquée ; `npm run auth:check` voit
       0007 à 0018 en place
+- [ ] Migration 0019 (parrainage) à appliquer dans le SQL Editor ; tests pgTAP 63–68
 - [ ] Clés Stripe (test), Uber Direct, fal.ai ; fonctions Edge déployées ; webhooks déclarés
 - [x] Mises à jour OTA publiées (dernière : be16f769 — factures serveur, partage des récompenses,
       13/11/2026)

@@ -226,7 +226,7 @@ try {
   warn('Impossible de sonder les commandes.');
 }
 
-// Les migrations 0013 à 0018. Une table ou une fonction ABSENTE répond 404 (PostgREST) ; présente,
+// Les migrations 0013 à 0019. Une table ou une fonction ABSENTE répond 404 (PostgREST) ; présente,
 // elle répond 200 (lecture publique) ou 401/403 (réservée aux comptes) — rien n'est écrit.
 const probes = [
   {
@@ -264,6 +264,11 @@ const probes = [
     // Réservée aux comptes : présente, elle refuse la clé publique (401) ; absente, 404.
     body: { p_reward: '00000000-0000-0000-0000-000000000000' },
     what: 'partager une récompense de fidélité ne la retire pas de l’inventaire',
+  },
+  {
+    migration: '0019_referrals',
+    rpc: 'referral_summary',
+    what: 'le parrainage reste sur le téléphone : aucun crédit sur les vraies commandes',
   },
 ];
 for (const probe of probes) {

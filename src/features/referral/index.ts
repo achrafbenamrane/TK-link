@@ -9,4 +9,6 @@ export {
   selectReferredBy,
   makeReferralCode,
   type CreditState,
+  type ApplyResult,
 } from './model/store';
+export { type ServerReferral } from './lib/referral-api';

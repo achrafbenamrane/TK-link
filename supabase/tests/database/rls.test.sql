@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(106);
+select plan(123);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -919,6 +919,151 @@ select throws_ok(
   'P0001',
   'reward_refused',
   'a reward is redeemed once'
+);
+reset role;
+
+-- ─────────────────────────────────────────────────────────── parrainage (migration 0019)
+
+-- 63) Rien ne s'écrit directement : codes, parrainages et crédit passent par le serveur.
+select ok(
+  not has_table_privilege('authenticated', 'public.referral_codes', 'insert')
+  and not has_table_privilege('authenticated', 'public.referrals', 'insert')
+  and not has_table_privilege('authenticated', 'public.referral_credits', 'insert'),
+  'referrals are written by the server only'
+);
+
+-- 64) a1 obtient son code ; il ne se parraine pas lui-même.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select ok(
+  public.my_referral_code() ~ '^TK-[A-HJ-NP-Z2-9]{6}$',
+  'every account gets a readable referral code'
+);
+select throws_ok(
+  $$ select public.apply_referral_code(public.my_referral_code()) $$,
+  'P0001',
+  'own_code',
+  'nobody refers themselves'
+);
+reset role;
+
+-- 65) a3 a son code aussi ; a1, qui a déjà acheté, ne peut plus être parrainé.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select ok(public.my_referral_code() is not null, 'a second account gets its own code');
+reset role;
+set local request.jwt.claims to '{}';
+select set_config('tklink.code_a1',
+  (select code from public.referral_codes where user_id = '00000000-0000-0000-0000-0000000000a1'), true);
+select set_config('tklink.code_a3',
+  (select code from public.referral_codes where user_id = '00000000-0000-0000-0000-0000000000a3'), true);
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select throws_ok(
+  $$ select public.apply_referral_code(current_setting('tklink.code_a3')) $$,
+  'P0001',
+  'already_customer',
+  'referral invites new customers only'
+);
+reset role;
+
+-- 66) a3 (rien acheté) saisit le code de a1 — une fois ; un code inconnu est refusé.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select throws_ok(
+  $$ select public.apply_referral_code('TK-ZZZZZZ') $$,
+  'P0001',
+  'invalid_code',
+  'an unknown code is refused'
+);
+select lives_ok(
+  $$ select public.apply_referral_code(lower(current_setting('tklink.code_a1'))) $$,
+  'a new customer enters a referrer code'
+);
+select throws_ok(
+  $$ select public.apply_referral_code(current_setting('tklink.code_a1')) $$,
+  'P0001',
+  'already_referred',
+  'a customer has one referrer'
+);
+select results_eq(
+  $$ select (s ->> 'unlocked')::boolean, (s ->> 'balance_cents')::integer
+       from public.referral_summary() s $$,
+  $$ values (false, 0) $$,
+  'the credit waits for a first real purchase'
+);
+reset role;
+
+-- 67) La première commande récupérée de a3 crédite a3 ET a1 de 5 €.
+set local request.jwt.claims to '{}';
+insert into public.flash_offers
+  (shop_id, title, category, price_cents, old_price_cents, stock_total, stock_left, duration_minutes)
+values ((select id from public.shops where siret = '73282932000074'),
+        'Pain de campagne', 'restauration', 700, 1000, 10, 10, 60);
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select lives_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object(
+         'offer_id', (select id from public.flash_offers where title = 'Pain de campagne'), 'qty', 1)),
+       'touch-collect') $$,
+  'the referee places a first order'
+);
+reset role;
+set local request.jwt.claims to '{}';
+update public.flash_orders set status = 'payee', paid_at = now()
+ where customer_id = '00000000-0000-0000-0000-0000000000a3' and status = 'paiement_attente';
+update public.flash_orders set status = 'recuperee'
+ where customer_id = '00000000-0000-0000-0000-0000000000a3' and status = 'payee';
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select results_eq(
+  $$ select (s ->> 'unlocked')::boolean, (s ->> 'balance_cents')::integer
+       from public.referral_summary() s $$,
+  $$ values (true, 500) $$,
+  'the referee is credited after a first real purchase'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select results_eq(
+  $$ select (s ->> 'balance_cents')::integer, (s ->> 'invited')::integer,
+            (s ->> 'invited_unlocked')::integer
+       from public.referral_summary() s $$,
+  $$ values (500, 1, 1) $$,
+  'the referrer is credited too'
+);
+reset role;
+
+-- 68) Le crédit se déduit à hauteur de la commission (Direct charges) ; annuler le rend.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select lives_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object(
+         'offer_id', (select id from public.flash_offers where title = 'Pain de campagne'), 'qty', 1)),
+       'touch-collect') $$,
+  'the referee orders again'
+);
+select results_eq(
+  $$ select commission_cents, discount_cents, total_cents
+       from public.flash_orders where status = 'paiement_attente' $$,
+  $$ values (35, 35, 665) $$,
+  'the credit pays up to TK LINK''s commission, never more'
+);
+select results_eq(
+  $$ select (s ->> 'balance_cents')::integer from public.referral_summary() s $$,
+  $$ values (465) $$,
+  'the used credit leaves the balance'
+);
+select lives_ok(
+  $$ select public.cancel_order((select id from public.flash_orders where status = 'paiement_attente')) $$,
+  'the referee cancels the reservation'
+);
+select results_eq(
+  $$ select (s ->> 'balance_cents')::integer from public.referral_summary() s $$,
+  $$ values (500) $$,
+  'a cancelled reservation gives the credit back'
 );
 reset role;
 

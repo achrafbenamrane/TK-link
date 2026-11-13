@@ -12,6 +12,7 @@ import { formatEuros } from '@/shared/lib/money';
 import { AppText, Button, HeaderBackButton } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
+import { cartDiscount } from '../lib/discount';
 import { authenticate } from '../lib/biometrics';
 import { POSITION_LABEL, POSITION_UNAVAILABLE_MESSAGE } from '../lib/destination';
 import { clientDeliveryFee, deliveryDistanceKm } from '../lib/delivery';
@@ -41,9 +42,15 @@ type Props = {
    * le panier ignore tout du parrainage, comme de la fidélité.
    */
   credit?: number;
+  /**
+   * Crédit de parrainage du SERVEUR, en euros (migration 0019) — pour une commande du serveur. Le
+   * serveur le déduit à la réservation, borné à la commission de TK LINK (Stripe « Direct charges ») ;
+   * le panier en montre la même estimation.
+   */
+  serverCredit?: number;
 };
 
-export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
+export function CartScreen({ onOrdered, credit = 0, serverCredit = 0 }: Props = {}) {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -133,9 +140,16 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
       : clientDeliveryFee(deliveryKm, settings);
   const surcharge =
     fulfilment === 'touch-collect' || deliveryOnPayment ? 0 : deliveryFee - settings.deliveryFeeEur;
-  // Le crédit se déduit AVANT le paiement, borné aux articles. Le serveur ne sait pas encore
-  // l'appliquer (réduction financée par TK LINK) : pas de crédit sur une commande du serveur.
-  const discount = serverMode ? 0 : Math.round(Math.min(Math.max(0, credit), subtotal) * 100) / 100;
+  // Le crédit se déduit AVANT le paiement. Une commande locale : borné aux articles. Une commande du
+  // serveur : borné à la commission de TK LINK, comme le calcule `reserve_flash` (0019) — en Direct
+  // charges, TK LINK ne peut offrir que ce qu'il aurait prélevé.
+  const discount = cartDiscount({
+    serverMode,
+    subtotal,
+    credit,
+    serverCredit,
+    commissionPct: settings.commissionB2cPct,
+  });
   const total = subtotal + deliveryFee - discount;
 
   // Les points suivent les produits payés : livraison et frais exclus (CDC V1.1).
@@ -522,9 +536,18 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
           ) : null}
           {discount > 0 ? (
             <View className="flex-row items-center justify-between" testID="cart-credit">
-              <AppText variant="caption" className="text-ink-muted">
-                Crédit de parrainage
-              </AppText>
+              <View className="flex-1">
+                <AppText variant="caption" className="text-ink-muted">
+                  Crédit de parrainage
+                </AppText>
+                {serverMode ? (
+                  <AppText variant="caption" className="text-xs text-ink-faint">
+                    {
+                      'Pris sur la part de TK\u00a0LINK : le reste servira aux prochaines commandes.'
+                    }
+                  </AppText>
+                ) : null}
+              </View>
               <AppText className="font-sans-bold text-sm text-brand-600">
                 −{formatEuros(discount)}
               </AppText>
