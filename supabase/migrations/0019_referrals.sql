@@ -18,9 +18,14 @@
 --      en « charges séparées et virements » permettrait de tout déduire d'un coup : c'est une décision
 --      ouverte (docs/architecture/exec-plans/2026-11-13-rapport-avancement.md), et seule la borne
 --      changerait ici.
---   5. UNE RÉSERVATION ANNULÉE (ou une commande remboursée) REND LE CRÉDIT qu'elle avait pris.
---   6. LE CLIENT N'ÉCRIT RIEN DIRECTEMENT : un grand livre (`referral_credits`) écrit par le serveur
---      seul ; le solde en est la somme.
+--   5. LE SOLDE SE DÉDUIT DES COMMANDES, il n'est pas tenu à part : crédits débloqués, moins la part
+--      de parrainage (`flash_orders.referral_credit_cents`) des commandes qui ne sont ni annulées, ni
+--      refusées, ni remboursées. Une réservation annulée rend donc son crédit d'elle-même — et une
+--      réservation annulée puis payée quand même (page Stripe restée ouverte → « litige ») le reprend
+--      d'elle-même : aucune écriture « utilisation / restitution » qu'un changement de statut
+--      pourrait désynchroniser (relecture du 13/11/2026).
+--   6. LE CLIENT N'ÉCRIT RIEN DIRECTEMENT : les crédits (`referral_credits`) sont écrits par le
+--      serveur seul.
 
 insert into private.platform_config (key, value) values
   -- Crédit de parrainage, en centimes, pour le parrain comme pour le filleul (CDC V1.1).
@@ -28,6 +33,15 @@ insert into private.platform_config (key, value) values
 on conflict (key) do nothing;
 
 -- ─────────────────────────────────────────────────────────────────────────────────── tables
+
+-- La part de la réduction d'une commande qui vient du crédit de parrainage (le reste de
+-- `discount_cents` est libre pour d'autres réductions, le Flash boosté par exemple).
+alter table public.flash_orders
+  add column referral_credit_cents integer not null default 0;
+-- Contrainte de TABLE (elle lit deux colonnes) : jamais plus que la réduction elle-même.
+alter table public.flash_orders
+  add constraint flash_orders_referral_credit_check
+  check (referral_credit_cents >= 0 and referral_credit_cents <= discount_cents);
 
 create table public.referral_codes (
   user_id uuid primary key references auth.users (id) on delete cascade,
@@ -46,31 +60,29 @@ create table public.referrals (
 
 create index referrals_referrer_idx on public.referrals (referrer_id);
 
--- Le grand livre du crédit : + au déblocage (parrain, filleul) et à la restitution, − à l'utilisation.
+-- Les crédits débloqués : un pour le filleul, un pour le parrain, par parrainage.
+-- `referee_id` passe à null si le filleul supprime son compte : le crédit du parrain reste acquis.
+-- (Aucune contrainte « non nul » sur cette colonne : elle bloquerait la suppression de compte.)
 create table public.referral_credits (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
-  amount_cents integer not null check (amount_cents <> 0),
-  kind text not null check (kind in ('parrain', 'filleul', 'utilisation', 'restitution')),
+  amount_cents integer not null check (amount_cents > 0),
+  kind text not null check (kind in ('parrain', 'filleul')),
   referee_id uuid references auth.users (id) on delete set null,
-  order_id uuid references public.flash_orders (id) on delete set null,
-  created_at timestamptz not null default now(),
-  check (
-    (kind in ('parrain', 'filleul') and amount_cents > 0 and referee_id is not null)
-    or (kind = 'utilisation' and amount_cents < 0 and order_id is not null)
-    or (kind = 'restitution' and amount_cents > 0 and order_id is not null)
-  )
+  created_at timestamptz not null default now()
 );
 
 create index referral_credits_user_idx on public.referral_credits (user_id);
--- Un parrainage crédite chaque côté une fois ; une commande prend le crédit une fois, le rend une fois.
+-- Pour la suppression d'un compte (la clé étrangère est relue sans parcourir toute la table).
+create index referral_credits_referee_idx on public.referral_credits (referee_id)
+  where referee_id is not null;
+-- Un parrainage crédite chaque côté une fois.
 create unique index referral_credits_unlock_once
-  on public.referral_credits (user_id, referee_id, kind) where kind in ('parrain', 'filleul');
-create unique index referral_credits_order_once
-  on public.referral_credits (order_id, kind) where kind in ('utilisation', 'restitution');
+  on public.referral_credits (user_id, referee_id, kind);
 
 -- ─────────────────────────────────────────────────────────────────────────────────── outils
 
+-- Le solde : les crédits débloqués, moins ce que les commandes encore valables en ont pris.
 create or replace function private.referral_balance(p_user uuid)
   returns integer
   language sql
@@ -78,9 +90,15 @@ create or replace function private.referral_balance(p_user uuid)
   security definer
   set search_path = ''
 as $$
-  select coalesce(sum(c.amount_cents), 0)::integer
-    from public.referral_credits c
-   where c.user_id = p_user
+  select (
+    coalesce((select sum(c.amount_cents) from public.referral_credits c where c.user_id = p_user), 0)
+    - coalesce((
+        select sum(o.referral_credit_cents) from public.flash_orders o
+         where o.customer_id = p_user
+           and o.referral_credit_cents > 0
+           and o.status not in ('annulee', 'refusee', 'remboursee')
+      ), 0)
+  )::integer
 $$;
 
 -- Les statuts d'une commande qui a été PAYÉE (comme `isInvoiceable` dans l'app).
@@ -168,7 +186,12 @@ begin
   ) then
     raise exception 'already_customer' using errcode = 'P0001';
   end if;
-  insert into public.referrals (referee_id, referrer_id) values (v_uid, v_referrer);
+  -- Deux saisies simultanées : la seconde voit la première et répond « déjà parrainé ».
+  insert into public.referrals (referee_id, referrer_id) values (v_uid, v_referrer)
+  on conflict (referee_id) do nothing;
+  if not found then
+    raise exception 'already_referred' using errcode = 'P0001';
+  end if;
 end;
 $$;
 
@@ -186,6 +209,8 @@ begin
   if v_uid is null then
     raise exception 'not_authenticated' using errcode = '42501';
   end if;
+  -- Les réservations expirées rendent leur crédit avant qu'on l'affiche.
+  perform private.release_expired_reservations();
   select * into v_referral from public.referrals r where r.referee_id = v_uid;
   return jsonb_build_object(
     'code', public.my_referral_code(),
@@ -204,7 +229,7 @@ begin
 end;
 $$;
 
--- ─────────────────────────────────────────────────────── déblocage et restitution (déclencheurs)
+-- ─────────────────────────────────────────────────────────────── déblocage (déclencheur)
 
 -- La première commande honorée du filleul crédite les deux comptes.
 create or replace function private.unlock_referral()
@@ -239,34 +264,6 @@ create trigger flash_orders_unlock_referral
   for each row
   when (new.status in ('recuperee', 'livree') and old.status not in ('recuperee', 'livree'))
   execute function private.unlock_referral();
-
--- Une réservation annulée (par le client ou expirée) ou une commande remboursée rend le crédit pris.
-create or replace function private.restore_referral_credit()
-  returns trigger
-  language plpgsql
-  security definer
-  set search_path = ''
-as $$
-declare
-  v_used integer;
-begin
-  select -c.amount_cents into v_used
-    from public.referral_credits c
-   where c.order_id = new.id and c.kind = 'utilisation';
-  if coalesce(v_used, 0) > 0 then
-    insert into public.referral_credits (user_id, amount_cents, kind, order_id)
-    values (new.customer_id, v_used, 'restitution', new.id)
-    on conflict do nothing;
-  end if;
-  return new;
-end;
-$$;
-
-create trigger flash_orders_restore_referral_credit
-  after update of status on public.flash_orders
-  for each row
-  when (new.status in ('annulee', 'remboursee') and old.status is distinct from new.status)
-  execute function private.restore_referral_credit();
 
 -- ─────────────────────────────────────────────── réserver : la réservation de 0012, plus le crédit
 
@@ -308,6 +305,10 @@ begin
   end if;
 
   perform private.release_expired_reservations();
+
+  -- Un verrou par compte (0019) : deux réservations simultanées du même compte passent l'une après
+  -- l'autre — ni deux fois le même crédit, ni une réservation de trop au-delà du plafond.
+  perform pg_advisory_xact_lock(hashtextextended('referral:' || v_uid::text, 0));
 
   if (select count(*) from public.flash_orders o
        where o.customer_id = v_uid and o.status = 'paiement_attente')
@@ -352,28 +353,23 @@ begin
 
   v_commission := round(v_subtotal * private.config('commission_bps') / 10000)::integer;
 
-  -- 2) Le crédit de parrainage (0019), sous un verrou par compte : deux réservations simultanées ne
-  --    dépensent pas deux fois le même crédit. Borné à la commission (Direct charges, voir en-tête).
-  perform pg_advisory_xact_lock(hashtextextended('referral:' || v_uid::text, 0));
+  -- 2) Le crédit de parrainage (0019), borné à la commission (Direct charges, voir en-tête).
   v_discount := least(greatest(private.referral_balance(v_uid), 0), v_commission);
 
   -- 3) La commande, ses lignes au prix du serveur, et le stock décrémenté (les offres sont verrouillées).
   insert into public.flash_orders (
     customer_id, shop_id, fulfilment, subtotal_cents, commission_cents, discount_cents,
+    referral_credit_cents,
     delivery_address, delivery_lat, delivery_lng, delivery_phone, reserved_until
   ) values (
     v_uid, v_shop, p_fulfilment, v_subtotal, v_commission, v_discount,
+    v_discount,
     case when p_fulfilment = 'livraison' then btrim(p_address) end,
     case when p_fulfilment = 'livraison' then p_lat end,
     case when p_fulfilment = 'livraison' then p_lng end,
     nullif(btrim(coalesce(p_phone, '')), ''),
     now() + make_interval(mins => private.config('reservation_minutes')::integer)
   ) returning id into v_order;
-
-  if v_discount > 0 then
-    insert into public.referral_credits (user_id, amount_cents, kind, order_id)
-    values (v_uid, -v_discount, 'utilisation', v_order);
-  end if;
 
   insert into public.flash_order_items (order_id, offer_id, title, qty, unit_price_cents)
   select v_order, f.id, f.title, l.qty, f.price_cents
@@ -429,4 +425,3 @@ grant execute on function public.referral_summary() to authenticated;
 revoke execute on function private.referral_balance(uuid) from public;
 revoke execute on function private.order_was_paid(text) from public;
 revoke execute on function private.unlock_referral() from public;
-revoke execute on function private.restore_referral_credit() from public;

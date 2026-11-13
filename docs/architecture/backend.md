@@ -45,6 +45,12 @@ enforced by `0001_security_baseline`:
   can't ship without RLS).
 - A `private` schema holds `security definer` helpers (never API-exposed), with
   `search_path = ''` pinned.
+- **Un solde d’argent ne se tient pas par écritures « utilisation / restitution »** qu’un changement
+  de statut pourrait désynchroniser : on le déduit de l’état des commandes (0019 : crédits
+  débloqués − part de parrainage des commandes ni annulées, ni refusées, ni remboursées).
+- **Une colonne remise à null par une clé étrangère (`on delete set null`) n’est exigée non nulle
+  nulle part** — sinon la suppression de compte échoue (pgTAP test 73 le vérifie sur tout le
+  schéma).
 
 ### Adding a per-user table (copy `0003_notes`)
 
@@ -194,11 +200,14 @@ CDC V1.1 : 5 € au parrain ET au filleul, financés par TK LINK, débloqués au
 filleul. Chaque compte a son code (`my_referral_code`, `TK-XXXXXX`) ; un nouveau client (aucune
 commande payée) saisit celui d’un parrain, une fois (`apply_referral_code`). Sa première commande
 « récupérée » ou « livrée » crédite les deux comptes (déclencheur, `referral_credit_cents` = 500).
-Le crédit est un grand livre (`referral_credits` : parrain, filleul, utilisation, restitution) écrit
-par le serveur seul. **Il se déduit à la réservation (`reserve_flash`), borné à la commission de TK
+Les crédits débloqués (`referral_credits` : parrain, filleul) sont écrits par le serveur seul ; le
+solde s’en déduit, moins la part de parrainage (`flash_orders.referral_credit_cents`) des commandes
+ni annulées, ni refusées, ni remboursées. **Il se déduit à la réservation (`reserve_flash`), borné à la commission de TK
 LINK** : en Stripe « Direct charges », le prélèvement de TK LINK ne peut pas être négatif, donc TK
 LINK n’offre que ce qu’il aurait prélevé (≈ 0,35 € sur 7 €) et le crédit sert sur plusieurs
-commandes. Une réservation annulée ou une commande remboursée rend le crédit. Passer en « charges
+commandes. Une réservation annulée (ou expirée) et une commande remboursée rendent donc le crédit d’elles-mêmes ;
+une réservation annulée puis payée quand même (litige) le reprend. Un remboursement ne retire pas
+le crédit débloqué par la première commande (à confirmer avec le client). Passer en « charges
 séparées et virements » permettrait de tout déduire d’un coup : seule la borne de `reserve_flash`
 changerait. Côté app : `referral/lib/referral-api.ts`, `shop/lib/discount.ts` (même borne dans le
 panier) ; sans la migration, l’app garde le parrainage local.

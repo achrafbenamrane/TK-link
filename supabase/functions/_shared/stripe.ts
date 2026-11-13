@@ -171,7 +171,9 @@ export function checkoutParams(input: {
     mode: 'payment',
     line_items: lines,
     payment_intent_data: {
-      application_fee_amount: fee,
+      // Rien à prélever (crédit de parrainage égal à la commission, Touch & Collect) : on n'envoie pas
+      // de frais du tout plutôt qu'un « 0 » que Stripe pourrait refuser.
+      ...(fee > 0 ? { application_fee_amount: fee } : {}),
       description: `TK LINK — ${shopName}`,
       metadata: { order_id: order.id },
     },

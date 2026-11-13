@@ -218,3 +218,29 @@ describe('les versements d’un commerce, lus chez Stripe', () => {
     expect(parsePayouts({})).toEqual([]);
   });
 });
+
+describe('un crédit de parrainage égal à la commission (migration 0019)', () => {
+  it('Touch & Collect : TK LINK ne prélève rien, et la page n’envoie pas de frais', () => {
+    const order = {
+      id: 'o-1',
+      subtotal_cents: 700,
+      commission_cents: 35,
+      discount_cents: 35,
+      delivery_fee_cents: 0,
+      total_cents: 665,
+    };
+    const fee = applicationFeeCents(order);
+    expect(fee).toBe(0);
+    const params = checkoutParams({
+      order,
+      items: [{ title: 'Pain de campagne', unit_price_cents: 700, qty: 1 }],
+      shopName: 'Le Petit',
+      fee: fee as number,
+      returnUrl: 'https://tklink.vercel.app/stripe/paiement',
+      nowS: 1763078400,
+    });
+    expect(params.payment_intent_data).not.toHaveProperty('application_fee_amount');
+    // Une seule ligne, au total du serveur : 6,65 €.
+    expect(checkoutTotal(params)).toBe(665);
+  });
+});

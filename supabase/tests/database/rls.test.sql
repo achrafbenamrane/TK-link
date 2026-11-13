@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(123);
+select plan(132);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -1066,6 +1066,102 @@ select results_eq(
   'a cancelled reservation gives the credit back'
 );
 reset role;
+
+-- 69) Une deuxième commande honorée du filleul ne crédite plus personne ; elle garde le crédit pris.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select lives_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object(
+         'offer_id', (select id from public.flash_offers where title = 'Pain de campagne'), 'qty', 1)),
+       'touch-collect') $$,
+  'the referee orders a second time with credit'
+);
+reset role;
+set local request.jwt.claims to '{}';
+update public.flash_orders set status = 'payee', paid_at = now()
+ where customer_id = '00000000-0000-0000-0000-0000000000a3' and status = 'paiement_attente';
+update public.flash_orders set status = 'recuperee'
+ where customer_id = '00000000-0000-0000-0000-0000000000a3' and status = 'payee';
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select results_eq(
+  $$ select (s ->> 'balance_cents')::integer, (s ->> 'invited_unlocked')::integer
+       from public.referral_summary() s $$,
+  $$ values (500, 1) $$,
+  'a referral is credited once, not at every order'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select results_eq(
+  $$ select (s ->> 'balance_cents')::integer from public.referral_summary() s $$,
+  $$ values (465) $$,
+  'an honoured order keeps the credit it used'
+);
+reset role;
+
+-- 70) Remboursée, la commande rend le crédit qu'elle avait pris.
+set local request.jwt.claims to '{}';
+update public.flash_orders set status = 'remboursee'
+ where customer_id = '00000000-0000-0000-0000-0000000000a3'
+   and status = 'recuperee' and referral_credit_cents > 0;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select results_eq(
+  $$ select (s ->> 'balance_cents')::integer from public.referral_summary() s $$,
+  $$ values (500) $$,
+  'a refunded order gives the credit back'
+);
+
+-- 71) Une réservation expirée rend son crédit, dès la lecture suivante.
+select lives_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object(
+         'offer_id', (select id from public.flash_offers where title = 'Pain de campagne'), 'qty', 1)),
+       'touch-collect') $$,
+  'the referee reserves with credit, then lets it expire'
+);
+reset role;
+set local request.jwt.claims to '{}';
+update public.flash_orders set reserved_until = now() - interval '1 minute'
+ where customer_id = '00000000-0000-0000-0000-0000000000a3' and status = 'paiement_attente';
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
+select results_eq(
+  $$ select (s ->> 'balance_cents')::integer from public.referral_summary() s $$,
+  $$ values (500) $$,
+  'an expired reservation gives the credit back'
+);
+reset role;
+
+-- 72) Les fonctions du parrainage sont réservées aux comptes.
+select ok(
+  not has_function_privilege('anon', 'public.my_referral_code()', 'execute')
+  and not has_function_privilege('anon', 'public.apply_referral_code(text)', 'execute')
+  and not has_function_privilege('anon', 'public.referral_summary()', 'execute'),
+  'anonymous callers cannot use referrals'
+);
+
+-- 73) Garde du schéma : une colonne qu'une clé étrangère remet à null (« on delete set null ») ne doit
+-- être exigée non nulle nulle part — sinon la suppression de compte échoue (relecture de 0019).
+select is_empty(
+  $$ select f.conrelid::regclass::text, a.attname::text
+       from pg_constraint f
+       join pg_attribute a on a.attrelid = f.conrelid and a.attnum = any (f.conkey)
+       left join pg_constraint c on c.conrelid = f.conrelid and c.contype = 'c'
+      where f.contype = 'f' and f.confdeltype = 'n'
+        and f.connamespace = 'public'::regnamespace
+        and (a.attnotnull or pg_get_constraintdef(c.oid) ~ ('\m' || a.attname || ' IS NOT NULL')) $$,
+  'no column set to null by a foreign key is required elsewhere'
+);
+
+-- 74) Un filleul qui a utilisé son crédit peut supprimer son compte ; le crédit du parrain reste.
+set local request.jwt.claims to '{}';
+select lives_ok(
+  $$ delete from auth.users where id = '00000000-0000-0000-0000-0000000000a3' $$,
+  'a referee who used credit can still delete their account'
+);
 
 select * from finish();
 rollback;

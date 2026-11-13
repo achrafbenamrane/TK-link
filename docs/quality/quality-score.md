@@ -37,6 +37,12 @@ or deletes stale ones. Newest first; keep entries one line each:
 - Le navigateur n'a ni empreinte, ni caméra, ni Mapbox : la biométrie rend « indisponible »
   (le démo propose un contournement), `QrScanner` affiche son repli et `RouteMap` son dessin.
   Ce qui s'y voit n'est pas la preuve que le téléphone fonctionne.
+- `cancel_order` (0012) accepte d’annuler une réservation dont la page Stripe Checkout est encore
+  ouverte (seul `stripe_payment_intent_id` est vérifié) : le stock revient, puis le paiement arrive
+  quand même et la commande passe « litige » (relecture du 13/11/2026). Le solde de parrainage
+  (0019) reste juste, il se déduit des statuts ; le stock, lui, peut être vendu deux fois. À régler :
+  annuler via une fonction Edge qui fait d’abord expirer la session Checkout
+  (`checkout/sessions/:id/expire`), et refuser `cancel_order` si `stripe_checkout_id` est posé.
 - `assets/videos/*.mp4` sont des diaporamas de démonstration (`scripts/make-demo-videos.mjs`),
   dont l'un tiré de photos non libres : à retirer avant toute publication (voir CREDITS.md).
 
