@@ -74,8 +74,8 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
       fiche de commande relue toutes les 5 s (payer/annuler, code et QR de retrait, suivi Uber,
       « Signaler un problème » → support) ; commerçant : commandes payées du serveur, préparation,
       remise contre le code, course Uber ; « Versements » → inscription Stripe
-- [ ] Reste : crédit de parrainage côté serveur (réduction financée par TK LINK), annulation d’une
-      course Uber, scanner le QR de retrait (aujourd’hui le commerçant tape le code)
+- [ ] Reste : crédit de parrainage côté serveur (décision attendue, voir § 7), Flash boosté (même
+      obstacle), annulation d’une course Uber. Le scan du QR de retrait est fait (§ 7)
 - [ ] Onglet Versements lu depuis Stripe
 
 ### 4 — Notifications
