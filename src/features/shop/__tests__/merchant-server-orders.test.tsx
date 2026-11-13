@@ -185,6 +185,23 @@ it('Uber refuse l’annulation : le commerçant le sait', async () => {
   );
 });
 
+it('annulation en cours chez Uber : le commerçant le voit, et ne peut ni annuler ni rappeler', () => {
+  seed([
+    order({
+      fulfilment: 'livraison',
+      status: 'prete',
+      delivery_address: 'x',
+      uber_status: 'cancelling',
+    }),
+  ]);
+  render(<MerchantOrdersScreen server />);
+  expect(screen.getByTestId(`merchant-order-${ID}-server`)).toHaveTextContent(
+    /Annulation de la course/,
+  );
+  expect(screen.queryByTestId(`merchant-order-${ID}-cancel-courier`)).toBeNull();
+  expect(screen.queryByTestId(`merchant-order-${ID}-dispatch`)).toBeNull();
+});
+
 it('le numéro du commerce manque : le commerçant sait quoi corriger', async () => {
   seed([order({ fulfilment: 'livraison', status: 'preparation', delivery_address: 'x' })]);
   edge.mockResolvedValue({ ok: false, code: 'shop_phone_missing', status: 422 });

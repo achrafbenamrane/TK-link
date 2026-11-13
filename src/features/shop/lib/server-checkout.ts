@@ -74,6 +74,7 @@ export const CHECKOUT_ERROR: Record<OrdersError, string> = {
   not_cancellable: 'Cette réservation ne peut plus être annulée.',
   checkout_open: 'La page de paiement est encore ouverte : réessayez dans un instant.',
   already_paid: 'Le paiement vient d’aboutir : votre commande est payée.',
+  order_locked: 'Cette commande vient de changer. Rouvrez-la pour voir où elle en est.',
   cancel_refused: 'Uber n’a pas pu annuler la course. Réessayez dans un instant.',
   network: 'Pas de connexion. Rien n’a été débité : réessayez.',
   unknown: 'La commande n’a pas pu aboutir. Rien n’a été débité : réessayez.',

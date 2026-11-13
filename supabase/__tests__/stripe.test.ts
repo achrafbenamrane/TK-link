@@ -1,10 +1,12 @@
 import { createHmac } from 'crypto';
 
 import {
+  afterExpire,
   applicationFeeCents,
   checkoutParams,
   checkoutTotal,
   effectOf,
+  nextCheckoutStep,
   parseBalance,
   parsePayouts,
   stripeForm,
@@ -242,5 +244,41 @@ describe('un crédit de parrainage égal à la commission (migration 0019)', () 
     expect(params.payment_intent_data).not.toHaveProperty('application_fee_amount');
     // Une seule ligne, au total du serveur : 6,65 €.
     expect(checkoutTotal(params)).toBe(665);
+  });
+});
+
+describe('pages de paiement déjà ouvertes (relecture du 13/11/2026)', () => {
+  it('redemander une page : rendre l’ouverte, jamais une seconde pour une page payée', () => {
+    expect(nextCheckoutStep('open')).toBe('reuse');
+    expect(nextCheckoutStep('complete')).toBe('already_paid');
+    expect(nextCheckoutStep('expired')).toBe('new');
+    expect(nextCheckoutStep(undefined)).toBe('stripe_failed');
+  });
+
+  it('après « expirer la page » : annuler seulement si plus personne ne peut y payer', () => {
+    expect(afterExpire(200, null)).toBe('cancel');
+    expect(afterExpire(400, 'expired')).toBe('cancel');
+    expect(afterExpire(400, 'complete')).toBe('already_paid');
+    expect(afterExpire(400, 'open')).toBe('stripe_failed');
+    expect(afterExpire(0, null)).toBe('stripe_failed');
+  });
+
+  it('la page n’accepte que la carte (Apple Pay et Google Pay compris)', () => {
+    const params = checkoutParams({
+      order: {
+        id: 'o-1',
+        subtotal_cents: 700,
+        commission_cents: 35,
+        discount_cents: 0,
+        delivery_fee_cents: 0,
+        total_cents: 700,
+      },
+      items: [{ title: 'Quiche', unit_price_cents: 700, qty: 1 }],
+      shopName: 'Le Petit',
+      fee: 35,
+      returnUrl: 'https://tklink.vercel.app/stripe/paiement',
+      nowS: 1763078400,
+    });
+    expect(params.payment_method_types).toEqual(['card']);
   });
 });

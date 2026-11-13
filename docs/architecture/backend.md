@@ -146,9 +146,22 @@ venir). `flash_orders` est publiée dans Supabase Realtime (sous RLS) pour le su
 `uber-quote` (l’acheteur demande le prix de la livraison de sa commande réservée : il fixe
 `delivery_fee_cents`), `uber-dispatch` (le commerçant commande la course quand c’est prêt ; une
 seule course par commande), `uber-cancel` (le commerçant annule la course tant que le coursier n’a
-pas pris le colis ; l’identifiant de course est effacé, si bien que l’annulation n’est pas prise
-pour un échec, et la commande reste « prête » pour rappeler un coursier) et `uber-webhook` (Uber
-fait avancer la commande : en livraison, livrée, ou litige si la course échoue après paiement). La logique pure (adresses, statuts, signature) est
+pas pris le colis : la commande est d’abord prise en base, `uber_status = 'cancelling'`, puis Uber
+est appelé ; refus → la course redevient ce qu’elle était ; accord → la course est effacée et la
+commande reste « prête » pour rappeler un coursier) et `uber-webhook` (Uber fait avancer la
+commande : en livraison, livrée, ou litige si la course échoue après paiement — mais un
+« canceled » pendant `cancelling` est ignoré : une annulation voulue n’est pas un échec).
+
+**Courses et paiements : deux règles contre les races** (relecture du 13/11/2026). (1) Avant
+d’annuler chez Uber ou Stripe une chose dont le webhook fait avancer la commande, PRENDRE la
+commande en base (écriture conditionnelle dont on vérifie qu’elle a touché une ligne), puis
+appeler le fournisseur, et rendre la commande s’il refuse. (2) Une annulation côté serveur NOMME
+la page de paiement qu’elle a expirée (`cancel_order_after_checkout(p_order, p_checkout)`,
+`is not distinct from`) : une page ouverte entre-temps n’est jamais annulée dans son dos. Et
+`stripe-payment` ne rouvre jamais une page pour une commande dont la page est « complete », et
+referme celle qu’il vient d’ouvrir si la commande a changé (`order_locked`). Points ouverts : le
+`Stripe-Version` n’est pas épinglé (les formes lues sont stables, mais à épingler au déploiement) ;
+annuler une course déjà en route (`pickup`) peut coûter des frais selon le contrat Uber Direct. La logique pure (adresses, statuts, signature) est
 dans `supabase/functions/_shared/uber.ts`, testée par `supabase/__tests__/uber.test.ts`.
 
 Mise en route, une fois le compte Uber Direct ouvert (direct.uber.com → Developer) :

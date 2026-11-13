@@ -53,6 +53,8 @@ export type OrdersError =
   | 'checkout_open'
   /** Le paiement vient d’aboutir : la commande est payée, elle ne s’annule plus. */
   | 'already_paid'
+  /** La commande a changé pendant l’ouverture de la page de paiement (annulée, autre page). */
+  | 'order_locked'
   /** La réservation ne s’annule plus (déjà annulée, payée, ou expirée). */
   | 'not_cancellable'
   | 'network'
@@ -80,6 +82,7 @@ const KNOWN: readonly OrdersError[] = [
   'cancel_refused',
   'checkout_open',
   'already_paid',
+  'order_locked',
 ];
 
 /** Une erreur PostgREST (motif levé par la fonction SQL) ou un code de fonction Edge. */

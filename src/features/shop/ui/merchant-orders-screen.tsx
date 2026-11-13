@@ -513,12 +513,18 @@ function ServerActions({ order, onDone }: { order: ServerOrder; onDone: () => vo
         <View className="flex-row items-center justify-between rounded-control bg-surface-muted px-3.5 py-3">
           <View className="flex-1">
             <AppText className="font-sans-bold text-ink" style={{ fontSize: 13 }}>
-              {order.status === 'prete' ? 'Coursier Uber Direct en route' : 'En livraison'}
+              {order.uberStatus === 'cancelling'
+                ? 'Annulation de la course…'
+                : order.status === 'prete'
+                  ? 'Coursier Uber Direct en route'
+                  : 'En livraison'}
             </AppText>
             <AppText variant="caption" className="text-ink-faint">
-              {order.status === 'prete'
-                ? 'Il vient chercher la commande au comptoir.'
-                : 'Le coursier l’apporte au client.'}
+              {order.uberStatus === 'cancelling'
+                ? 'Uber confirme l’annulation : vous pourrez rappeler un coursier.'
+                : order.status === 'prete'
+                  ? 'Il vient chercher la commande au comptoir.'
+                  : 'Le coursier l’apporte au client.'}
             </AppText>
           </View>
           {order.trackingUrl ? (

@@ -1,15 +1,17 @@
 // Annule la course Uber Direct d'une commande — appelé par le COMMERÇANT, tant que le coursier n'a
 // pas pris le colis (adresse erronée, client qui préfère passer, coursier qui tarde…). La commande
-// reste « prête » : le commerçant peut rappeler un coursier ou la remettre au comptoir.
+// reste « prête » : le commerçant peut rappeler un coursier.
 //
-// Le webhook Uber (`uber-webhook`) retrouve une commande par l'identifiant de sa course : on l'efface
-// ici, si bien que l'événement « canceled » qu'Uber enverra ensuite ne met pas la commande en
-// « litige » — une annulation voulue n'est pas un échec de livraison.
+// L'ordre compte (relecture du 13/11/2026) : on PREND d'abord la commande en base
+// (`uber_status = 'cancelling'`, sous condition), puis on appelle Uber. Le webhook Uber ignore un
+// « canceled » pour une commande en cours d'annulation — sans cela, l'événement pouvait arriver entre
+// l'appel à Uber et l'écriture en base, et mettre la commande en « litige ». Uber refuse : on remet la
+// course telle qu'elle était. Uber accepte : on efface la course (identifiant, suivi, statut).
 //
 // Sécurité : l'appelant est identifié par son jeton et doit être le titulaire du commerce.
 import { adminClient, callerOf, CORS, jsonBody, reply, UUID } from '../_shared/http.ts';
 import { uberConfigured, uberRequest } from '../_shared/uber-api.ts';
-import { isCourierCancellable } from '../_shared/uber.ts';
+import { CANCELLABLE_UBER_STATUSES, isCourierCancellable } from '../_shared/uber.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -24,11 +26,12 @@ Deno.serve(async (req) => {
     return reply(400, { error: 'invalid_order' });
 
   const admin = adminClient();
-  const { data: order } = await admin
+  const { data: order, error: readError } = await admin
     .from('flash_orders')
     .select('id, shop_id, status, uber_delivery_id, uber_status')
     .eq('id', orderId)
     .maybeSingle();
+  if (readError) return reply(500, { error: 'server_error' });
   if (!order) return reply(404, { error: 'order_not_found' });
   const { data: shop } = await admin
     .from('shops')
@@ -39,17 +42,41 @@ Deno.serve(async (req) => {
   if (!isCourierCancellable(order)) return reply(409, { error: 'courier_not_cancellable' });
 
   const deliveryId = order.uber_delivery_id as string;
+  const before = order.uber_status as string;
+
+  // 1) Prendre la commande : une seule annulation à la fois, et le webhook « canceled » est ignoré.
+  const { data: claimed, error: claimError } = await admin
+    .from('flash_orders')
+    .update({ uber_status: 'cancelling', updated_at: new Date().toISOString() })
+    .eq('id', order.id)
+    .eq('uber_delivery_id', deliveryId)
+    .eq('status', 'prete')
+    .in('uber_status', CANCELLABLE_UBER_STATUSES)
+    .select('id')
+    .maybeSingle();
+  if (claimError) return reply(500, { error: 'server_error' });
+  if (!claimed) return reply(409, { error: 'courier_not_cancellable' });
+
+  // 2) Uber. Le corps vide `{}` : certains serveurs JSON refusent un POST sans corps.
   const cancelled = await uberRequest(
     'POST',
     `deliveries/${encodeURIComponent(deliveryId)}/cancel`,
+    {},
   ).catch(() => null);
-  // Uber refuse (coursier qui vient de prendre le colis…) : rien ne change ici.
+
   if (!cancelled || cancelled.status >= 300) {
+    // 3a) Refus (coursier qui vient de prendre le colis…) : la course redevient ce qu'elle était,
+    //     sauf si un événement Uber l'a déjà fait avancer.
+    await admin
+      .from('flash_orders')
+      .update({ uber_status: before, updated_at: new Date().toISOString() })
+      .eq('id', order.id)
+      .eq('uber_status', 'cancelling');
     return reply(cancelled ? 409 : 502, { error: 'cancel_refused' });
   }
 
-  // Sous condition : si un webhook a fait avancer la course entre-temps, on n'écrase rien.
-  const { error } = await admin
+  // 3b) Annulée chez Uber : plus de course. La commande reste « prête », on peut en rappeler une.
+  const { data: cleared, error } = await admin
     .from('flash_orders')
     .update({
       uber_delivery_id: null,
@@ -59,8 +86,9 @@ Deno.serve(async (req) => {
     })
     .eq('id', order.id)
     .eq('uber_delivery_id', deliveryId)
-    .eq('status', 'prete');
-  if (error) return reply(500, { error: 'server_error' });
+    .select('id')
+    .maybeSingle();
+  if (error || !cleared) return reply(500, { error: 'server_error' });
 
   return reply(200, { cancelled: true });
 });

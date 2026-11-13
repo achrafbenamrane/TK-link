@@ -169,6 +169,9 @@ export function checkoutParams(input: {
     `${returnUrl}?commande=${encodeURIComponent(order.id)}&etat=${state}`;
   return {
     mode: 'payment',
+    // La carte seule (Apple Pay et Google Pay en sont) : un moyen à règlement différé (prélèvement
+    // SEPA…) laisserait une page « complete » mais impayée, payée après l'annulation de la réservation.
+    payment_method_types: ['card'],
     line_items: lines,
     payment_intent_data: {
       // Rien à prélever (crédit de parrainage égal à la commission, Touch & Collect) : on n'envoie pas
@@ -258,4 +261,38 @@ export function parsePayouts(body: unknown): StripePayout[] {
       },
     ];
   });
+}
+
+// ──────────────────────────────────────── les pages de paiement déjà ouvertes (races, 13/11/2026)
+
+/**
+ * Une commande a déjà une page de paiement : que faire quand on en redemande une ?
+ * - `open` : la rendre (second appui, retour dans l'app) ;
+ * - `complete` : elle vient d'être payée (le webhook n'est pas encore arrivé) — surtout pas une
+ *   seconde page, on paierait deux fois ;
+ * - `expired` : en ouvrir une nouvelle ;
+ * - autre chose (Stripe injoignable, réponse inattendue) : ne rien ouvrir.
+ */
+export function nextCheckoutStep(
+  existingStatus: unknown,
+): 'reuse' | 'already_paid' | 'new' | 'stripe_failed' {
+  if (existingStatus === 'open') return 'reuse';
+  if (existingStatus === 'complete') return 'already_paid';
+  if (existingStatus === 'expired') return 'new';
+  return 'stripe_failed';
+}
+
+/**
+ * Après « expirer la page » (`POST checkout/sessions/:id/expire`) : annuler la réservation, ou non.
+ * Expirée par nous, ou déjà expirée d'elle-même (30 minutes) : on annule. Payée entre-temps : on ne
+ * touche à rien. Sinon (Stripe injoignable, page encore ouverte) : on ne sait pas — on n'annule pas.
+ */
+export function afterExpire(
+  expireHttpStatus: number,
+  sessionStatus: unknown,
+): 'cancel' | 'already_paid' | 'stripe_failed' {
+  if (expireHttpStatus >= 200 && expireHttpStatus < 300) return 'cancel';
+  if (sessionStatus === 'expired') return 'cancel';
+  if (sessionStatus === 'complete') return 'already_paid';
+  return 'stripe_failed';
 }

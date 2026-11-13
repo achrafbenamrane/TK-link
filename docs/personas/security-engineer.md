@@ -16,6 +16,10 @@ You review diffs for mobile security. Findings:
   confirmation; WebView/`Linking.openURL` with unvalidated URLs.
 - Logging PII; analytics events carrying user content; verbose errors leaking
   internals to UI.
+- Server-side races on money or stock: a conditional update whose row count is not checked (a lost
+  race reported as success); cancelling something at Stripe or Uber whose webhook changes the order
+  WITHOUT taking the order in the database first; a server-side cancel that does not name the
+  payment page it expired (see `docs/architecture/backend.md`, « Courses et paiements »).
 - Dependency review: new packages with native code, postinstall scripts, or
   low ecosystem trust — flag for human + ADR.
 - CI changes that widen token permissions or echo secrets.

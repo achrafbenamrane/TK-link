@@ -18,25 +18,27 @@ Deno.serve(async (req) => {
   const user = await callerOf(req);
   if (!user) return reply(401, { error: 'unauthorized' });
 
-  const { data: shop } = await adminClient()
+  const { data: shop, error: readError } = await adminClient()
     .from('shops')
     .select('id, stripe_account_id')
     .eq('owner_id', user.id)
     .maybeSingle();
+  if (readError) return reply(500, { error: 'server_error' });
   if (!shop) return reply(404, { error: 'no_shop' });
   const account = shop.stripe_account_id as string | null;
   if (!account) return reply(409, { error: 'not_onboarded' });
 
+  // Stripe injoignable : une réponse JSON quand même, jamais une erreur 500 en texte brut.
+  const unreachable = { status: 0, body: null };
   const [balance, payouts] = await Promise.all([
-    stripeRequest('GET', 'balance', {}, { account }),
-    stripeRequest('GET', 'payouts', { limit: 10 }, { account }),
+    stripeRequest('GET', 'balance', {}, { account }).catch(() => unreachable),
+    stripeRequest('GET', 'payouts', { limit: 10 }, { account }).catch(() => unreachable),
   ]);
-  const parsed = balance.status < 300 ? parseBalance(balance.body) : null;
-  if (!parsed) return reply(502, { error: 'stripe_failed' });
+  const parsed = balance.status >= 200 && balance.status < 300 ? parseBalance(balance.body) : null;
+  // Un compte récent a une liste de virements VIDE (200) ; un échec n'est pas « aucun virement ».
+  if (!parsed || payouts.status < 200 || payouts.status >= 300) {
+    return reply(502, { error: 'stripe_failed' });
+  }
 
-  return reply(200, {
-    ...parsed,
-    // Sans virement encore (compte récent), Stripe rend une liste vide : ce n'est pas une erreur.
-    payouts: payouts.status < 300 ? parsePayouts(payouts.body) : [],
-  });
+  return reply(200, { ...parsed, payouts: parsePayouts(payouts.body) });
 });

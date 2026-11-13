@@ -51,6 +51,11 @@ Deno.serve(async (req) => {
     .eq('uber_delivery_id', event.deliveryId)
     .in('status', WEBHOOK_UPDATABLE);
   if (event.orderId) query = query.eq('id', event.orderId);
+  // Une annulation demandée par le commerçant (`uber-cancel`, statut « cancelling ») n'est pas un
+  // échec de livraison : son « canceled » ne met pas la commande en litige.
+  if (event.status === 'canceled') {
+    query = query.or('uber_status.is.null,uber_status.neq.cancelling');
+  }
   const { error } = await query;
 
   // Une erreur de base : Uber renverra l'événement (réponse non 2xx).

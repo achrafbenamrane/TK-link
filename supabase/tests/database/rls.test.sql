@@ -1198,15 +1198,15 @@ reset role;
 
 -- 76) L'annulation après expiration de la page est réservée au serveur.
 select ok(
-  not has_function_privilege('authenticated', 'public.cancel_order_after_checkout(uuid)', 'execute')
-  and not has_function_privilege('anon', 'public.cancel_order_after_checkout(uuid)', 'execute'),
+  not has_function_privilege('authenticated', 'public.cancel_order_after_checkout(uuid, text)', 'execute')
+  and not has_function_privilege('anon', 'public.cancel_order_after_checkout(uuid, text)', 'execute'),
   'only the server cancels after expiring the payment page'
 );
 
 -- 77) Le serveur (page expirée) annule : la réservation est close, le stock revient.
 set local request.jwt.claims to '{}';
 select lives_ok(
-  $$ select public.cancel_order_after_checkout(current_setting('tklink.order')::uuid) $$,
+  $$ select public.cancel_order_after_checkout(current_setting('tklink.order')::uuid, 'cs_test_open') $$,
   'the server cancels once the payment page has expired'
 );
 select results_eq(

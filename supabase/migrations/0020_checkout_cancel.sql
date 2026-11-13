@@ -11,8 +11,11 @@
 --      puis annule par `cancel_order_after_checkout`, réservée au serveur. Si le paiement vient
 --      d'aboutir, Stripe refuse l'expiration : la commande reste payée.
 --   3. L'annulation elle-même (statut + stock rendu) vit à un seul endroit : `private.cancel_reservation`.
+--   4. ELLE VISE UNE PAGE PRÉCISE : on n'annule que si la commande porte encore la page qu'on vient
+--      d'expirer (`is not distinct from`). Si une nouvelle page s'est ouverte entre-temps, l'annulation
+--      répond `checkout_open` — sinon cette nouvelle page resterait payable (relecture du 13/11/2026).
 
-create or replace function private.cancel_reservation(p_order uuid)
+create or replace function private.cancel_reservation(p_order uuid, p_checkout text)
   returns boolean
   language plpgsql
   security definer
@@ -23,7 +26,9 @@ begin
      set status = 'annulee', updated_at = now()
    where o.id = p_order
      and o.status = 'paiement_attente'
-     and o.stripe_payment_intent_id is null;
+     and o.stripe_payment_intent_id is null
+     -- La page de paiement est celle qu'on a expirée (ou aucune) : pas une page ouverte entre-temps.
+     and o.stripe_checkout_id is not distinct from p_checkout;
   if not found then
     return false;
   end if;
@@ -57,25 +62,35 @@ begin
   if v_order.stripe_checkout_id is not null then
     raise exception 'checkout_open' using errcode = 'P0001';
   end if;
-  perform private.cancel_reservation(p_order);
+  perform private.cancel_reservation(p_order, null);
 end;
 $$;
 
--- Après expiration de la page Stripe (fonction Edge `order-cancel`, clé de service) : on annule.
-create or replace function public.cancel_order_after_checkout(p_order uuid)
+-- Après expiration de LA page Stripe `p_checkout` (fonction Edge `order-cancel`, clé de service).
+create or replace function public.cancel_order_after_checkout(p_order uuid, p_checkout text)
   returns void
   language plpgsql
   security definer
   set search_path = ''
 as $$
 begin
-  if not private.cancel_reservation(p_order) then
-    raise exception 'not_cancellable' using errcode = 'P0001';
+  if private.cancel_reservation(p_order, p_checkout) then
+    return;
   end if;
+  -- Toujours à payer, mais une autre page s'est ouverte : on ne l'annule pas dans son dos.
+  if exists (
+    select 1 from public.flash_orders o
+     where o.id = p_order
+       and o.status = 'paiement_attente'
+       and o.stripe_payment_intent_id is null
+  ) then
+    raise exception 'checkout_open' using errcode = 'P0001';
+  end if;
+  raise exception 'not_cancellable' using errcode = 'P0001';
 end;
 $$;
 
-revoke execute on function private.cancel_reservation(uuid) from public;
-revoke execute on function public.cancel_order_after_checkout(uuid) from public, anon, authenticated;
-grant execute on function public.cancel_order_after_checkout(uuid) to service_role;
+revoke execute on function private.cancel_reservation(uuid, text) from public;
+revoke execute on function public.cancel_order_after_checkout(uuid, text) from public, anon, authenticated;
+grant execute on function public.cancel_order_after_checkout(uuid, text) to service_role;
 -- `cancel_order` garde ses droits de 0012 (create or replace) : réservé aux comptes.
