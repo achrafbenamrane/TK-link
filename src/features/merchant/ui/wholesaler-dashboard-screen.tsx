@@ -1,8 +1,9 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useEffect, type ComponentProps, type ReactNode } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 
+import { cn } from '@/shared/lib/cn';
 import { AppText, Screen, ThemeToggle } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -53,6 +54,8 @@ const TILES: {
  */
 export function WholesalerDashboardScreen({ companyName, area, renderAvatar, onOpen }: Props) {
   const colors = useColors();
+  // Sous 400 px : la bascule Nuit/Jour en icônes, pour laisser son nom à l'entreprise.
+  const narrow = useWindowDimensions().width < 400;
   const offers = useMerchantStore(selectOffers).filter((o) => o.audience === 'commercants');
   const orders = useMerchantStore(selectWholesaleOrders);
   const supplier = useMerchantStore(selectSupplier);
@@ -111,7 +114,7 @@ export function WholesalerDashboardScreen({ companyName, area, renderAvatar, onO
                 </View>
               ) : null}
             </Pressable>
-            <ThemeToggle />
+            <ThemeToggle compact={narrow} />
           </View>
         </View>
 
@@ -298,7 +301,10 @@ export function WholesalerDashboardScreen({ companyName, area, renderAvatar, onO
                 <View
                   key={o.id}
                   testID={`wholesaler-offer-${o.id}`}
-                  className="w-[48%] flex-row items-center gap-2.5 rounded-card border border-line bg-surface-muted p-2.5"
+                  className={cn(
+                    'flex-row items-center gap-2.5 rounded-card border border-line bg-surface-muted p-2.5',
+                    narrow ? 'w-full' : 'w-[48%]',
+                  )}
                 >
                   <View className="h-14 w-14 items-center justify-center overflow-hidden rounded-control bg-surface-sunken">
                     {o.photoUri ? (

@@ -62,10 +62,11 @@ const STATE_CLASS: Record<string, string> = {
   retiree: 'bg-surface-sunken text-ink-faint',
 };
 
+/** Espaces insécables : « 71 h 40 min » ne se coupe pas en « 71 / h 40 min » en fin de ligne. */
 function timeLabel(seconds: number): string {
   if (seconds <= 0) return 'terminée';
-  if (seconds < 3600) return `${Math.ceil(seconds / 60)} min`;
-  return `${Math.floor(seconds / 3600)} h ${Math.round((seconds % 3600) / 60)} min`;
+  if (seconds < 3600) return `${Math.ceil(seconds / 60)} min`;
+  return `${Math.floor(seconds / 3600)} h ${Math.round((seconds % 3600) / 60)} min`;
 }
 
 /**
@@ -247,16 +248,19 @@ export function MerchantOffersScreen({
           )}
 
           {revenue > 0 ? (
-            <View className="flex-row items-center justify-between border-t border-ink-inverse/15 pt-2.5">
-              <AppText className="text-ink-inverse/70" style={{ fontSize: 12.5 }}>
-                Vendu · commission déduite
-              </AppText>
-              <AppText className="font-sans-bold text-accent" style={{ fontSize: 13 }}>
-                {formatCents(netCents(revenue))}
-                <AppText className="text-ink-inverse/50" style={{ fontSize: 11 }}>
-                  {'  '}sur {formatCents(revenue)}
+            <View className="flex-row flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-ink-inverse/15 pt-2.5">
+              {/* Le libellé à gauche, les montants à droite ; s'ils ne tiennent pas côte à côte
+                  (gros chiffres d'un grossiste), les montants passent dessous, d'un bloc — jamais
+                  un « € » seul sur sa ligne. */}
+              <AppText className="text-sm text-ink-inverse/70">Vendu · commission déduite</AppText>
+              <View className="flex-row items-baseline gap-1.5">
+                <AppText className="font-sans-bold text-sm text-accent">
+                  {formatCents(netCents(revenue))}
                 </AppText>
-              </AppText>
+                <AppText className="text-xs text-ink-inverse/50">
+                  sur {formatCents(revenue)}
+                </AppText>
+              </View>
             </View>
           ) : null}
         </View>
