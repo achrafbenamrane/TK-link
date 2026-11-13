@@ -23,24 +23,27 @@ numéro sans SMS, Resend, Apple sur Android). Journal du chantier :
 | Apple                        | iPhone : feuille **native**, nonce haché. Android : **page web d’Apple** dans le navigateur du système, avec PKCE.             |
 | Sans serveur (démonstration) | Sans `EXPO_PUBLIC_SUPABASE_*`, tout est simulé sur le téléphone ; le code est `123456` ; la session est conservée (téléphone). |
 
-- **Client, grossiste et livreur s’inscrivent par e-mail, Google ou Apple.** Le **commerçant**
+- **Client et grossiste s’inscrivent par e-mail, Google ou Apple.** Le **commerçant**
   s’inscrit par e-mail : sa maquette montre, à la place de Google et Apple, l’encart des opérations
   Flash offertes. Un professionnel remplit toujours sa fiche (entreprise, catégorie, adresse, SIRET,
   modes, numéro de contact) ; avec Google ou Apple, il n’a ni mot de passe à inventer ni e-mail à
   recopier. Le numéro tapé devient un contact du compte, puis il est associé.
-- **Le type de compte** (client, commerçant, grossiste, livreur) se déclare à l’INSCRIPTION : dans
+- **Le type de compte** (client, commerçant, grossiste) se déclare à l’INSCRIPTION : dans
   les métadonnées par e-mail, par `declare_account_type` (une seule fois) avec Google ou Apple.
   Se connecter ne déclare rien : un compte créé par Google ou Apple depuis l’écran de connexion est
   un compte client. Sur un nouvel appareil, l’app relit le type déclaré (`syncProfile`) avant de
   choisir l’accueil — à la connexion, et à chaque lancement tant que l’accueil n’est pas fini.
+  Le type `livreur` n’est plus proposé depuis le 13/11/2026 (livraisons confiées à Uber Direct) ; le
+  serveur l’accepte encore, et l’app relit un ancien compte livreur comme un compte client
+  (`RoleSchema`, `src/shared/lib/roles.ts`).
 - **L’accueil est retenu par le compte** (`profiles.onboarded_at`, `interests`, migration 0009) :
   une personne déjà inscrite qui se reconnecte — après une déconnexion, sur un autre appareil, ou
   après un nouveau mot de passe — entre directement dans l’app, avec ses centres d’intérêt.
 - **Les données locales appartiennent à un compte** : si un AUTRE compte se connecte sur l’appareil
   (session expirée sans déconnexion), le profil, le panier, les commandes et la fidélité du précédent
   repartent de zéro.
-- **Le numéro est facultatif pour un client** (l’e-mail suffit) et obligatoire pour un commerçant,
-  un grossiste ou un livreur, qui doivent être joignables. L’inscription par numéro SEUL viendra avec
+- **Le numéro est facultatif pour un client** (l’e-mail suffit) et obligatoire pour un commerçant
+  ou un grossiste, qui doivent être joignables. L’inscription par numéro SEUL viendra avec
   Prelude, quand un code SMS pourra prouver qu’il appartient à la personne.
 - **Le numéro n’est jamais bloquant** : s’il est déjà pris ou si le réseau lâche, l’app le dit et
   laisse entrer avec l’e-mail. Il se rattache aussi à la connexion suivante, ou depuis « Mon compte ».
@@ -198,7 +201,7 @@ toute la connexion (double authentification comprise) doit tenir en 5 minutes.
 | `EXPO_PUBLIC_AUTH_PHONE`           | `on` (défaut) ; `off` masque la connexion par numéro |
 
 ⚠️ Dès que les deux variables Supabase existent, la build **quitte le mode démonstration** : les
-comptes deviennent réels. Les écrans pré-remplis de démonstration (inscription, missions d’exemple)
+comptes deviennent réels. Les écrans pré-remplis de démonstration (inscription, vitrine d’exemple)
 restent tant que `EXPO_PUBLIC_APP_ENV` n’est pas `production`.
 
 ### 6. Vérifier

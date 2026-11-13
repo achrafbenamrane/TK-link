@@ -11,8 +11,9 @@ enforces).
 - **Flow :** `.maestro/flows/smoke.yaml`
 - **Journey :** ouvrir l’app → logo animé → choix du profil → **inscription
   (le compte est obligatoire, ADR-0010)** → étapes d’accueil du profil (centres
-  d’intérêt, dossier pro ou dossier livreur) → l’accueil affiche le déstockage
-  et sa recherche.
+  d’intérêt ou dossier pro) → l’accueil affiche le déstockage et sa recherche.
+  Trois profils au choix : client, commerçant, grossiste (le livreur a été
+  retiré le 13/11/2026, voir CUJ-006).
 - **Edge cases agents must try :** aucun écran de l’app n’est joignable sans
   compte (ni par le bouton retour, ni par un lien) ; relancer connecté (logo
   puis accueil directement, sans revoir le choix du profil) ; tuer l’app entre
@@ -47,13 +48,18 @@ enforces).
   §9, commission du §21 affichée avant validation) → la retrouver sur l’accueil
   client → la commander → la traiter dans « Commandes reçues » (machine à états
   du §11) → le ticket apparaît dans le portefeuille du client, convertible en
-  facture certifiée (§14).
+  facture certifiée (§14). En **livraison** : « C’est prêt » → « Remise au
+  coursier » (écran `remise/[id]`, coursier partenaire Uber Direct) → « En
+  livraison » → « Livrée ». En **Touch & Collect** : « C’est prêt » → « Remise
+  au client » → « Récupérée ».
 - **Edge cases agents must try :** publier avec un prix flash supérieur au prix
   initial (refus, sans publication), épuiser les cinq opérations gratuites (le
   bouton se verrouille, message sans prix : les packs ne sont pas tarifés), retirer une offre déjà
   commandée, annuler une commande après paiement (elle ne doit produire AUCUN
   ticket), passer une commande en « prête » puis attendre — la simulation ne
-  doit pas écraser la décision du commerçant.
+  doit pas écraser la décision du commerçant ; ouvrir la remise au coursier
+  d’une commande pas encore prête, ou d’un Touch & Collect (refusée par la
+  machine à états).
 - **Performance budget :** publication < 500 ms entre le tap et l’offre visible
   sur l’accueil, sur un Android milieu de gamme.
 
@@ -96,24 +102,15 @@ enforces).
   admin, jamais remboursement direct), noter deux fois, partager puis utiliser
   la même récompense, saisir son propre code de parrainage.
 
-## CUJ-006 — Le livreur (TK Deliver)
+## CUJ-006 — (retirée) Le livreur (TK Deliver)
 
-- **Owner :** squad produit TK LINK
-- **Flow :** aucun — couvert par `courier/__tests__/courier.test.tsx`.
-- **Journey :** « Devenir livreur » → inscription → identité par FranceConnect + selfie → vérification
-  (simulée en démo) → biométrie → accueil (résumé du jour) → « Passer disponible » →
-  onglet Missions : accepter → mission active → « Récupérer la commande » : empreinte,
-  puis code à 4 chiffres ou QR de l’étiquette → navigation → « J’arrive chez le client »
-  → validation finale par le code à 6 chiffres (ou QR) du client → « Livraison confirmée ».
-  Les onglets Carte et Messages et le bouton « Historique » font partie du parcours.
-- **Edge cases agents must try :** retrait sans empreinte (refusé, même avec le bon
-  code), empreinte non reconnue, téléphone sans empreinte enregistrée (une vraie
-  course est bloquée ; seule une mission d’exemple propose « Démo »), mauvais code de
-  remise ou mauvais code client, passer hors ligne en pleine mission, gain affiché
-  « dès 3,00 € » tant que la zone de base n’est pas définie, l’identité du livreur
-  qui s’affiche sur l’écran de remise du commerçant (même appareil en démo).
-- **À vérifier sur téléphone, pas en navigateur :** le scan du QR (caméra), la
-  biométrie réelle, la carte Mapbox, la lecture de la vidéo de la vitrine.
+> ⚠️ Décision du 13/11/2026 : les livraisons sont confiées à **Uber Direct**, commandé par le
+> serveur. TK LINK n’a plus de livreurs à lui : le rôle livreur, son inscription (FranceConnect,
+> selfie), ses onglets (Missions, Carte, Messages), ses missions et ses codes de remise ont été
+> retirés de l’app. Le code reste dans l’historique git (avant la suppression de
+> `src/features/courier/`). Un ancien compte livreur se relit en compte client, sans perdre son
+> profil (`onboarding/__tests__/rehydration.test.ts`). Ce que voit le commerçant au départ d’une
+> livraison est dans CUJ-003 ; le suivi Uber Direct aura sa CUJ quand l’intégration existera.
 
 ## CUJ-007 — Compte : inscription, connexion, mot de passe oublié
 

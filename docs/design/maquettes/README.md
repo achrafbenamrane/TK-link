@@ -33,6 +33,9 @@ owns: 'L’inventaire des maquettes reçues le 03/10/2026, la charte graphique, 
 | Livreur     | [01-process-livreur.jpg](livreur/01-process-livreur.jpg)                                       | Parcours en 12 étapes et statuts de mission                         |
 | Livreur     | [02-validation-livreur-cote-commercant.jpg](livreur/02-validation-livreur-cote-commercant.jpg) | Remise du colis au livreur, **vue depuis l’appareil du commerçant** |
 
+> **13/11/2026 — maquettes livreur sans suite.** Le rôle livreur a été retiré de l’app : les
+> livraisons sont confiées à Uber Direct. Les deux maquettes livreur restent ici pour mémoire.
+
 ## Les quatre arbitrages du 03/10/2026
 
 Tranchés par Achraf le jour de la réception, sur proposition argumentée :
@@ -110,3 +113,6 @@ fidélité ; barre **Accueil · Commandes · Flash · Fidélité · Compte**.
 commande, client, articles, adresse ; livreur, véhicule, « Compte vérifié », « Présent » ;
 **validation biométrique faite sur l’appareil du livreur** (conforme à la biométrie locale du
 CDC) ; « Identité validée » ; « Remettre le colis » ; chronologie ; **« Signaler un problème »**.
+Depuis le 13/11/2026 (Uber Direct), l’écran est devenu « Remise au coursier » : étapes Commande
+prête → Remise au coursier → En livraison ; la commande, le coursier partenaire, « Remettre au
+coursier » et « Signaler un problème » — sans identité, véhicule ni empreinte.

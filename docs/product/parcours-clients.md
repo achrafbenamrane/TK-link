@@ -1,6 +1,6 @@
 ---
-read-when: 'Vous implémentez ou modifiez un parcours (consommateur, commerçant, grossiste, livreur)'
-owns: 'Les quatre parcours en 12 étapes remis par le client le 16/08/2026, et leurs statuts'
+read-when: 'Vous implémentez ou modifiez un parcours (consommateur, commerçant, grossiste)'
+owns: 'Les parcours en 12 étapes remis par le client le 16/08/2026 (livreur retiré le 13/11/2026), et leurs statuts'
 ---
 
 # Les quatre parcours, tels que le client les a dessinés
@@ -13,6 +13,11 @@ owns: 'Les quatre parcours en 12 étapes remis par le client le 16/08/2026, et l
 >
 > Ce fichier existe parce qu’une image dans une conversation se perd. Le code doit pouvoir être
 > confronté à cette liste sans rouvrir Slack.
+
+> **13/11/2026 — le livreur est retiré.** Les livraisons sont confiées à **Uber Direct**, commandé
+> par le serveur : TK LINK n’a plus de livreurs à lui. L’app ne propose plus le profil livreur ; un
+> ancien compte livreur se relit en client. Côté commerçant, la « remise livreur » devient une
+> **remise au coursier** partenaire. Le schéma livreur reste ci-dessous pour mémoire.
 
 ## Ce que le client a tranché en même temps
 
@@ -67,6 +72,10 @@ retrait → Terminée
 **Statuts :** Offre brouillon → Offre active → Commande reçue → Acceptée → En préparation → Prête →
 Remise client / livreur → Terminée
 
+Depuis le 13/11/2026, une commande en livraison suit, dans l’app : Prête → **Remise au coursier**
+(Uber Direct) → **En livraison** → **Livrée**. Le Touch & Collect ne change pas : Prête → Remise au
+client → Récupérée.
+
 ## Grossiste / fournisseur
 
 Même ossature que le commerçant, avec quatre différences qui comptent :
@@ -82,7 +91,10 @@ Même ossature que le commerçant, avec quatre différences qui comptent :
 Le grossiste expédie, le commerçant remet en main propre : leurs statuts divergent à l’avant-dernière
 étape, et les confondre ferait mentir l’un des deux écrans.
 
-## Livreur
+## Livreur (retiré le 13/11/2026)
+
+Pour mémoire : ce parcours n’existe plus dans l’app (voir la note en tête). Son code reste dans
+l’historique git, avant la suppression de `src/features/courier/`.
 
 | #   | Étape                       | Ce qu’elle contient                                                                              |
 | --- | --------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -108,15 +120,15 @@ laisserait croire que TKLINK garde l’empreinte serait un écart grave, pas une
 
 ## Où en est chaque parcours dans l’app (audit du 05/10/2026)
 
-| Parcours     | Étapes couvertes                                                                                                                                | Écarts assumés                                                                                                                                                                      |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Consommateur | 2 à 12 : compte, intérêts, localisation, sécurisation, offres Flash, panier, paiement, suivi, ticket + points                                   | « Offre repérée » n’est pas un statut de commande (le CDC §5.2 fait foi)                                                                                                            |
-| Commerçant   | 2 à 12 : compte, dossier pro (IBAN, pièce d’identité), vérification, sécurisation, validé, boutique, Flash, commandes, remise client ou livreur | « Acceptée » n’est pas un geste (CDC V1.1 : le paiement vaut acceptation) ; impression du ticket de préparation et confirmation sécurisée des commandes sensibles : non construites |
-| Grossiste    | 2 à 12 : même dossier pro, catalogue, offre pro B2B, commandes de commerçants, bon de préparation, expédition, livraison                        | Mêmes écarts que le commerçant (« Acceptée », confirmation sécurisée)                                                                                                               |
-| Livreur      | 2 à 12 : dossier, vérification, biométrie locale, disponibilité, mission, QR ou PIN, preuve de remise                                           | Le contrôle TK LINK (étape 4) est simulé par un bouton de démonstration, comme pour les pros                                                                                        |
+| Parcours     | Étapes couvertes                                                                                                                                 | Écarts assumés                                                                                                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Consommateur | 2 à 12 : compte, intérêts, localisation, sécurisation, offres Flash, panier, paiement, suivi, ticket + points                                    | « Offre repérée » n’est pas un statut de commande (le CDC §5.2 fait foi)                                                                                                            |
+| Commerçant   | 2 à 12 : compte, dossier pro (IBAN, pièce d’identité), vérification, sécurisation, validé, boutique, Flash, commandes, remise client ou coursier | « Acceptée » n’est pas un geste (CDC V1.1 : le paiement vaut acceptation) ; impression du ticket de préparation et confirmation sécurisée des commandes sensibles : non construites |
+| Grossiste    | 2 à 12 : même dossier pro, catalogue, offre pro B2B, commandes de commerçants, bon de préparation, expédition, livraison                         | Mêmes écarts que le commerçant (« Acceptée », confirmation sécurisée)                                                                                                               |
+| Livreur      | Retiré le 13/11/2026 : les livraisons partent chez Uber Direct                                                                                   | Le suivi Uber Direct (statut, lien de suivi) reste à construire, avec le serveur                                                                                                    |
 
-Le contrôle d’identité des professionnels et des livreurs (étape 4) attend un serveur : l’app
-affiche l’état « en cours de contrôle » et un bouton **Démo** le remplace.
+Le contrôle d’identité des professionnels (étape 4) attend un serveur : l’app affiche l’état « en
+cours de contrôle » et un bouton **Démo** le remplace.
 
 ## Grossiste et commerçant ne se mélangent pas
 
@@ -128,7 +140,7 @@ qui reste propre à chacun, et que les écrans doivent garder :
 | Étape 7   | Boutique : horaires, zone, Touch & Collect | Catalogue : stocks, lots, prix pro, retrait / expédition             |
 | Offre     | Flash (15 min à 2 h), quota d’opérations   | Offre pro (2 h à 7 jours), minimum de commande, **sans quota Flash** |
 | Mots      | Touch & Collect, Livraison, ventes flash   | Retrait, Expédition, lots, commandes des commerçants                 |
-| Commandes | Prête → remise client ou livreur           | Bon de préparation → expédiée → livrée                               |
+| Commandes | Prête → remise client ou coursier          | Bon de préparation → expédiée → livrée                               |
 | Fidélité  | Paliers de fidélité                        | Aucune                                                               |
 
 ## Audit contre le CDC V1.1 (05/10/2026)
@@ -146,52 +158,17 @@ Non construits, car ils dépendent d’un serveur, de matériel ou d’un point 
 sur imprimante thermique ; filtre véhicule du moteur d’attribution ; Flash national (Chronopost,
 Colissimo) ; panier multi-commerçants ; paiement atomique côté serveur ; Stripe Connect.
 
-## Livreur — maquettes « Livraison / Livreur » (05/10/2026)
+## Livreur, maquettes et FranceConnect — retirés le 13/11/2026
 
-L'app suit les quatre écrans du client et la validation côté commerçant :
+Le 05/10/2026, l’app avait suivi les maquettes « Livraison / Livreur » du client (accueil livreur,
+mission active, navigation, validation finale par le code du client, validation côté commerçant par
+l’empreinte du livreur) ; le 14/10/2026, l’identité du livreur était passée par **FranceConnect**
+(simulé en démonstration, l’habilitation de l’État n’ayant jamais été demandée).
 
-| Maquette              | Dans l'app                                                                                                  |
-| --------------------- | ----------------------------------------------------------------------------------------------------------- |
-| 1. Accueil livreur    | Onglet Accueil : résumé du jour (gains, missions en attente, livraisons), raccourcis, « Passer disponible » |
-| 2. Mission active     | Onglet Missions : commerce, client, type / heure cible / distance, détails, instructions, frise horodatée   |
-| 3. Navigation / suivi | Itinéraire, ETA, distance, temps restant, carte, Appeler / Message / Incident, « J'arrive chez le client »  |
-| 4. Validation finale  | QR du client ou code à 6 chiffres, « Valider la remise », « Livraison confirmée »                           |
-| Validation livreur    | Côté commerçant : l'identité du livreur s'affiche dès qu'il a posé son doigt sur son téléphone              |
-
-Barre du bas : Accueil · Missions · Carte · Messages · Compte. Les messages (commerce, client,
-support) sont locaux : envoyer ne simule jamais de réponse.
-
-**Empreinte.** Elle est demandée au retrait, pour **tout** colis (le CDC ne chiffre pas le seuil
-du « colis important » : on applique la règle la plus stricte). La biométrie reste locale ; seule
-l'heure de validation est gardée. Sans empreinte enregistrée sur le téléphone, une vraie course est
-bloquée ; une mission d'exemple propose un contournement « Démo ».
-
-**Preuve de remise.** Le code à 6 chiffres du client (ou son QR) remplace la photo : c'est ce que
-montre la maquette. `expo-camera` sert au scan du QR (retrait et remise).
-
-## Identité du livreur : FranceConnect (demande du client, 14/10/2026)
-
-Le client ne veut plus que le livreur dépose une pièce d'identité : son identité est vérifiée par
-**FranceConnect**. Dans l'app, l'étape 3 du dossier livreur remplace la photo de la pièce par le
-bouton « S'identifier avec FranceConnect ». TK LINK ne reçoit ni ne garde de pièce : il retient
-seulement le prénom, le nom et la date de vérification, et n'affiche que « Alex M. ».
-
-**Ce qui est fait :** l'écran, le modèle de données, le contrat d'un fournisseur d'identité
-(`src/shared/lib/france-connect.ts`), un simulateur signalé « Démo » dans les builds de démonstration,
-et un message honnête « pas encore disponible » partout ailleurs.
-
-**Ce qui n'est PAS fait, et qui bloque le vrai service :**
-
-1. **L'habilitation** de TK LINK comme fournisseur de service FranceConnect (demande via DataPass, instruite
-   par l'État : délai et conditions à confirmer auprès de la documentation officielle FranceConnect).
-2. **Un serveur** qui garde le secret client, échange le code d'autorisation et vérifie le jeton OpenID
-   Connect. Le secret ne peut pas vivre dans l'app.
-3. **Un lien de retour** dans l'app (`tklink://franceconnect`).
-
-**À trancher avec le client :** FranceConnect ne couvre que les personnes qui ont un compte d'un des
-fournisseurs de l'État (impôts, ameli, La Poste…). Un livreur sans ces comptes, ou non résident, ne
-pourra pas s'inscrire : faut-il une autre voie de vérification pour eux ? Et le selfie reste-t-il, puisque
-FranceConnect confirme qui est la personne mais pas qu'elle tient le téléphone ?
+Tout cela a été retiré le 13/11/2026 avec le rôle livreur : Uber Direct identifie et suit ses
+coursiers. Il ne reste côté commerçant que l’écran « Remise au coursier » (`remise/[id]`), sans
+identité, véhicule ni empreinte : remettre la commande la passe « En livraison ». Les codes de remise
+(PIN de retrait, code client à 6 chiffres) et le scan QR ont disparu avec le livreur.
 
 ## Ce que les affiches ajoutent
 

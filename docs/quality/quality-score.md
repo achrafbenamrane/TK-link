@@ -42,17 +42,16 @@ or deletes stale ones. Newest first; keep entries one line each:
 
 ## Dette connue (revue du 05/10/2026) — à régler avec le serveur ou avant publication
 
-- **Codes de remise dérivés de l'identifiant de commande** (`handover.ts`) : le livreur pourrait
-  recalculer le code client sans rencontrer le client. Acceptable en démonstration (documenté), pas en
-  production : le serveur doit émettre et vérifier les deux codes (4 et 6 chiffres).
-- **Pièces d'identité et selfie** : le magasin du livreur ne garde que des adresses de fichiers ; en
-  production, ces images sont envoyées au serveur puis supprimées de l'appareil. L'IBAN, lui, est
-  déjà dans le coffre sécurisé (seul un repère masqué reste dans l'état).
+- ~~**Codes de remise dérivés de l'identifiant de commande**~~ et ~~**pièces d'identité et selfie du
+  livreur**~~ : sans objet depuis le retrait du livreur (13/11/2026, Uber Direct). `handover.ts` et le
+  magasin du livreur ont été supprimés ; l'ancien magasin `tklink-courier-v1` est effacé des
+  téléphones au démarrage (`shared/lib/retired-stores.ts`). L'IBAN des pros, lui, est dans le coffre
+  sécurisé (seul un repère masqué reste dans l'état).
 - **Récompense partagée** (`shareReward`) : elle quitte l'inventaire du donneur, mais il n'existe pas
   encore de chemin pour la récupérer chez le destinataire (il faut un compte et un serveur).
 - **Démonstration** : réglée. `isDemoBuild` (`src/shared/lib/env.ts`, faux seulement quand
   `EXPO_PUBLIC_APP_ENV=production`, posé par le profil EAS) commande, depuis les routes, le bouton « Démo »,
-  l'inscription pré-remplie, l'IBAN d'exemple, les missions et la vitrine d'exemple et les boutons
+  l'inscription pré-remplie, l'IBAN d'exemple, la vitrine d'exemple et les boutons
   « simuler la validation ». Vérifié : un Metro lancé en production n'en montre aucun.
 
 ## Authentification (24/10/2026)
@@ -89,26 +88,29 @@ e-mails par Resend, Apple sur Android par sa page web. Landmines connues :
   vide) ; elle entre seule dès que le jeton est renouvelé. La déconnexion hors ligne efface la session
   locale elle-même (supabase-js ne le fait pas dans ce cas) et n’attend pas plus de 5 s.
 
-## FranceConnect (identité du livreur)
+## Livreur retiré (13/11/2026)
 
-Branché côté écran et données, **pas côté service** : il faut l'habilitation de l'État, un serveur OpenID
-Connect et un lien de retour (détail dans `docs/product/parcours-clients.md`). Le simulateur n'existe
-qu'en build de démonstration ; ailleurs l'app dit « pas encore disponible ». Les anciens comptes livreur
-(avec une pièce déposée) n'ont pas d'identité FranceConnect : le compte les affiche « Non vérifiée ».
+Les livraisons sont confiées à **Uber Direct** : le rôle livreur, ses écrans, ses missions, FranceConnect
+(qui ne servait qu'à lui), le scan QR (`expo-camera`) et la carte d'itinéraire ont été supprimés de l'app.
+Un `role: 'livreur'` relu du disque ou du serveur devient client (`RoleSchema`, testé). Reste à faire
+ailleurs : le back-office (`landing/app/admin`) liste encore des livreurs d'exemple ; `expo-camera`
+(dépendance et plugin) n'est plus utilisé et peut partir à la prochaine APK ; la messagerie
+(`features/messages`) n'a plus de route et attend le support TK LINK.
 
 ## Réglages de démonstration
 
 Trois valeurs que le CDC ne chiffre pas ont été **arrêtées le 24/10/2026** (Farid a laissé le
-développeur trancher) : frais de livraison du client 3,00 €, zone de base du livreur 3 km, colis
-« important » 100 € ; la réservation du panier est de 10 min. Ce sont des **défauts**, dans
+développeur trancher) : frais de livraison du client 3,00 €, zone de base de la livraison 3 km ; la
+réservation du panier est de 10 min. (Le seuil du colis « important », 100 €, est parti avec le
+livreur le 13/11/2026.) Ce sont des **défauts**, dans
 `PLATFORM_SETTINGS` : le Super Admin les change depuis Réglages (web). L'écran de démonstration
 (`src/features/demo`, `src/shared/lib/platform-overrides.ts`) permet d'essayer d'autres montants sur un
 appareil, dans les builds de démonstration seulement ; une build de production ignore tout ajustement.
 
-Le client paie le même barème que le livreur : 3,00 € puis 0,80 €/km au-delà de 3 km
-(`shop/lib/delivery.ts`). Limite connue : la distance n'est connue que pour « Ma position actuelle »
+Le client paie 3,00 € puis 0,80 €/km au-delà de 3 km (`shop/lib/delivery.ts`), en attendant le devis
+Uber Direct. Limite connue : la distance n'est connue que pour « Ma position actuelle »
 (les adresses du carnet n'ont pas de coordonnées) ; elle est mesurée en ligne droite, donc plus courte
-que le trajet réel. Pour une adresse du carnet, le forfait seul s'applique, des deux côtés. Le jour où
+que le trajet réel. Pour une adresse du carnet, le forfait seul s'applique. Le jour où
 les adresses sont géocodées, la majoration s'appliquera sans autre changement.
 
 Les modales sortent de la racine du thème **sur le web** (les variables CSS ne les atteignent pas) :
