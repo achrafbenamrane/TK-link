@@ -224,6 +224,57 @@ try {
   warn('Impossible de sonder les commandes.');
 }
 
+// Les migrations 0013 à 0017. Une table ou une fonction ABSENTE répond 404 (PostgREST) ; présente,
+// elle répond 200 (lecture publique) ou 401/403 (réservée aux comptes) — rien n'est écrit.
+const probes = [
+  {
+    migration: '0013_stripe_connect',
+    path: 'shops?select=stripe_charges_enabled&limit=1',
+    // Colonne absente : 400 (PGRST204/42703), pas 404.
+    missing: (s) => s === 400 || s === 404,
+    what: 'les commerçants ne peuvent pas être payés en ligne',
+  },
+  {
+    migration: '0014_support',
+    table: 'support_tickets',
+    what: 'l’aide et le support de l’app ne fonctionnent pas',
+  },
+  {
+    migration: '0015_shop_media',
+    table: 'shop_media',
+    what: 'les visuels IA des commerces ne s’enregistrent pas',
+  },
+  {
+    migration: '0016_push_tokens',
+    rpc: 'register_push_token',
+    what: 'les téléphones ne s’enregistrent pas pour les notifications',
+  },
+  {
+    migration: '0017_loyalty',
+    table: 'loyalty_programs',
+    what: 'les commandes payées ne rapportent aucun point de fidélité',
+  },
+];
+for (const probe of probes) {
+  try {
+    const path = probe.rpc
+      ? `rpc/${probe.rpc}`
+      : probe.table
+        ? `${probe.table}?select=*&limit=1`
+        : probe.path;
+    const res = await fetch(`${url}/rest/v1/${path}`, {
+      method: probe.rpc ? 'POST' : 'GET',
+      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      ...(probe.rpc ? { body: '{}' } : {}),
+    });
+    const missing = probe.missing ? probe.missing(res.status) : res.status === 404;
+    if (missing) fail(`La migration ${probe.migration} n’est pas appliquée : ${probe.what}.`);
+    else ok(`Migration ${probe.migration} en place.`);
+  } catch {
+    warn(`Impossible de sonder la migration ${probe.migration}.`);
+  }
+}
+
 // La fonction Edge qui associe un numéro est-elle déployée ? Une requête sans session est refusée
 // (401) par une fonction présente ; une fonction absente répond 404. Rien n'est associé.
 if (phoneWanted) {
