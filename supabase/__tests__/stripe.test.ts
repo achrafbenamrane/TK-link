@@ -5,6 +5,8 @@ import {
   checkoutParams,
   checkoutTotal,
   effectOf,
+  parseBalance,
+  parsePayouts,
   stripeForm,
   verifyStripeSignature,
 } from '../functions/_shared/stripe';
@@ -175,5 +177,44 @@ describe('page de paiement Stripe Checkout', () => {
     expect(form).toContain('line_items[0][quantity]=2');
     expect(form).toContain('line_items[1][price_data][product_data][name]=Livraison Uber Direct');
     expect(form).toContain('payment_intent_data[application_fee_amount]=619');
+  });
+});
+
+describe('les versements d’un commerce, lus chez Stripe', () => {
+  it('le solde : l’euro seul, disponible et en attente', () => {
+    expect(
+      parseBalance({
+        available: [
+          { amount: 4250, currency: 'eur' },
+          { amount: 900, currency: 'usd' },
+        ],
+        pending: [{ amount: 1290, currency: 'eur' }],
+      }),
+    ).toEqual({ availableCents: 4250, pendingCents: 1290 });
+    expect(parseBalance({ error: { message: 'nope' } })).toBeNull();
+    expect(parseBalance(null)).toBeNull();
+  });
+
+  it('les virements : en euros, datés, avec un statut connu', () => {
+    const payouts = parsePayouts({
+      data: [
+        { id: 'po_1', amount: 3676, arrival_date: 1763078400, status: 'paid', currency: 'eur' },
+        {
+          id: 'po_2',
+          amount: 500,
+          arrival_date: 1763164800,
+          status: 'in_transit',
+          currency: 'eur',
+        },
+        { id: 'po_3', amount: 100, arrival_date: 1763164800, status: 'paid', currency: 'usd' },
+        { id: 'po_4', amount: 100, arrival_date: 1763164800, status: 'bizarre', currency: 'eur' },
+        { amount: 100 },
+      ],
+    });
+    expect(payouts).toEqual([
+      { id: 'po_1', amountCents: 3676, arrivalDate: 1763078400000, status: 'paid' },
+      { id: 'po_2', amountCents: 500, arrivalDate: 1763164800000, status: 'in_transit' },
+    ]);
+    expect(parsePayouts({})).toEqual([]);
   });
 });

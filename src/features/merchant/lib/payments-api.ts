@@ -1,4 +1,5 @@
 import { openBrowserAsync } from 'expo-web-browser';
+import { z } from 'zod';
 
 import { callEdge } from '@/shared/lib/edge';
 import { isSupabaseConfigured } from '@/shared/lib/env';
@@ -21,7 +22,7 @@ export type PaymentsStatus =
   | 'actif';
 
 export type PaymentsError =
-  'not_configured' | 'shop_not_validated' | 'no_shop' | 'network' | 'unknown';
+  'not_configured' | 'shop_not_validated' | 'no_shop' | 'not_onboarded' | 'network' | 'unknown';
 
 type Result<T> = { ok: true; value: T } | { ok: false; code: PaymentsError };
 
@@ -70,4 +71,40 @@ export async function openPaymentsOnboarding(): Promise<Result<null>> {
   if (typeof url !== 'string' || !url.startsWith('https://')) return { ok: false, code: 'unknown' };
   await openBrowserAsync(url).catch(() => undefined);
   return { ok: true, value: null };
+}
+
+/**
+ * CE QUE STRIPE DIT DU COMMERCE — l'onglet Versements (V1.1 : « le calendrier et les montants de
+ * paiement issus de Stripe Connect »). Fonction `stripe-balance` : le solde du compte connecté et ses
+ * derniers virements. Avant les clés Stripe, ou avant l'inscription du commerce, rien : l'écran garde
+ * son estimation.
+ */
+const PayoutSchema = z.object({
+  id: z.string(),
+  amountCents: z.number().int(),
+  arrivalDate: z.number(),
+  status: z.enum(['paid', 'pending', 'in_transit', 'canceled', 'failed']),
+});
+const StripePayoutsSchema = z.object({
+  availableCents: z.number().int(),
+  pendingCents: z.number().int(),
+  payouts: z.array(PayoutSchema),
+});
+export type StripePayouts = z.infer<typeof StripePayoutsSchema>;
+
+export async function fetchStripePayouts(): Promise<Result<StripePayouts>> {
+  const res = await callEdge<unknown>('stripe-balance');
+  if (!res.ok) {
+    const code: PaymentsError =
+      res.code === 'no_shop' || res.code === 'not_onboarded'
+        ? res.code
+        : res.code === 'stripe_not_configured' || res.code === 'not_configured'
+          ? 'not_configured'
+          : res.code === 'offline'
+            ? 'network'
+            : 'unknown';
+    return { ok: false, code };
+  }
+  const parsed = StripePayoutsSchema.safeParse(res.data);
+  return parsed.success ? { ok: true, value: parsed.data } : { ok: false, code: 'unknown' };
 }

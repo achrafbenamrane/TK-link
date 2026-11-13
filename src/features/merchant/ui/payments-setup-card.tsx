@@ -16,6 +16,7 @@ const ERROR: Record<PaymentsError, string> = {
   not_configured: 'Le paiement en ligne n’est pas encore activé par TK LINK.',
   shop_not_validated: 'Votre boutique doit d’abord être validée par TK LINK.',
   no_shop: 'Déposez d’abord le dossier de votre commerce.',
+  not_onboarded: 'Inscrivez d’abord votre commerce chez Stripe.',
   network: 'Pas de connexion. Réessayez.',
   unknown: 'Une erreur est survenue. Réessayez dans un instant.',
 };

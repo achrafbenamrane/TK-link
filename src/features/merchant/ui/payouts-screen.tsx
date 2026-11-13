@@ -7,6 +7,7 @@ import { useColors } from '@/shared/theme/theme-provider';
 
 import { COMMISSION_PCT, commissionCents, formatCents, netCents } from '../lib/billing';
 import { PaymentsSetupCard } from './payments-setup-card';
+import { StripePayoutsCard } from './stripe-payouts-card';
 
 /** Une vente conclue, résumée par la route. */
 export type PayoutLine = {
@@ -29,11 +30,10 @@ type Props = {
  * Connect — TK Link ne construit pas de moteur de trésorerie propre, il expose
  * les données déjà disponibles côté PSP ».
  *
- * Stripe n'est pas branché : l'écran montre donc ce que le commerçant peut déjà
- * vérifier lui-même — ce qu'il a vendu, la commission de TK LINK (5 %, CDC
- * §5.4), et la part qui lui revient — en disant clairement que c'est une
- * ESTIMATION. Les dates et les montants définitifs viendront du PSP ; on ne les
- * invente pas.
+ * Avec un serveur et un commerce inscrit chez Stripe, « Chez Stripe » montre le solde et les
+ * virements réels (`stripe-balance`). Dessous, toujours, ce que le commerçant peut vérifier lui-même
+ * — ce qu'il a vendu, la commission de TK LINK (5 %, CDC §5.4), et la part qui lui revient — en
+ * disant clairement que c'est une ESTIMATION. On n'invente ni date ni montant.
  */
 export function PayoutsScreen({ sales, server = false }: Props) {
   const colors = useColors();
@@ -53,6 +53,8 @@ export function PayoutsScreen({ sales, server = false }: Props) {
         </AppText>
 
         {server ? <PaymentsSetupCard /> : null}
+        {/* Le solde et les virements réels, dès que Stripe répond ; l'estimation reste dessous. */}
+        {server ? <StripePayoutsCard /> : null}
 
         <View
           testID="payouts-summary"

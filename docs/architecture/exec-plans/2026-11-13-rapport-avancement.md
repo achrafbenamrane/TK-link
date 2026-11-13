@@ -76,7 +76,8 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
       remise contre le code, course Uber ; « Versements » → inscription Stripe
 - [ ] Reste : crédit de parrainage côté serveur (décision attendue, voir § 7), Flash boosté (même
       obstacle), annulation d’une course Uber. Le scan du QR de retrait est fait (§ 7)
-- [ ] Onglet Versements lu depuis Stripe
+- [x] Onglet Versements lu depuis Stripe : fonction `stripe-balance` (solde, virements) ; l’estimation
+      reste dessous tant que Stripe ne répond pas
 
 ### 4 — Notifications
 

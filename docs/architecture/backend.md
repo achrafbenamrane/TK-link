@@ -238,7 +238,7 @@ npx supabase functions deploy ai-media-status
 
 CDC V1.1 : « Direct charges ». Le client paie le commerçant (son compte Stripe connecté) ; TK LINK
 prélève commission + livraison − réduction qu’il offre, si bien que le commerçant touche toujours
-`sous-total − commission`. Trois fonctions Edge, la logique pure dans
+`sous-total − commission`. Quatre fonctions Edge, la logique pure dans
 `supabase/functions/_shared/stripe.ts` (testée par `supabase/__tests__/stripe.test.ts`) :
 
 - `stripe-connect` (commerçant validé) : crée son compte Express au premier appel
@@ -253,6 +253,9 @@ prélève commission + livraison − réduction qu’il offre, si bien que le co
 - `stripe-webhook` : paiement réussi → « payée » (vaut acceptation) ; payé après expiration de la
   réservation → « litige » ; remboursement total → « remboursée » ; `account.updated` →
   `shops.stripe_charges_enabled`.
+- `stripe-balance` (commerçant) : l’onglet Versements lu chez Stripe — le solde du compte connecté
+  (disponible, en attente) et ses dix derniers virements. Lecture seule ; avant les clés ou
+  l’inscription, l’app garde son estimation.
 
 Mise en route (mode test possible avant l’immatriculation de la société) :
 
@@ -262,6 +265,7 @@ npx supabase secrets set STRIPE_SECRET_KEY=sk_test_… STRIPE_WEBHOOK_SECRET=whs
 npx supabase functions deploy stripe-connect
 npx supabase functions deploy stripe-payment
 npx supabase functions deploy stripe-webhook
+npx supabase functions deploy stripe-balance
 ```
 
 Dans Stripe → Développeurs → Webhooks : un point de terminaison **Connect** vers

@@ -193,3 +193,67 @@ export function checkoutTotal(params: Record<string, unknown>): number {
   }[];
   return lines.reduce((s, l) => s + l.price_data.unit_amount * l.quantity, 0);
 }
+
+// ─────────────────────────────────────────────── les versements d'un commerce (onglet Versements)
+
+/** Le solde d'un compte connecté, en euros : ce qui est disponible, et ce qui est en attente. */
+export type StripeBalance = { availableCents: number; pendingCents: number };
+
+/**
+ * `GET /v1/balance` (au nom du compte connecté) → le solde en EUR. Stripe rend une liste par devise ;
+ * on ne garde que l'euro. `null` si la réponse n'a pas la forme attendue.
+ */
+export function parseBalance(body: unknown): StripeBalance | null {
+  const b = body as { available?: unknown; pending?: unknown } | null;
+  if (!b || !Array.isArray(b.available) || !Array.isArray(b.pending)) return null;
+  const eur = (list: unknown[]) =>
+    list.reduce<number>((sum, x) => {
+      const e = x as { amount?: unknown; currency?: unknown } | null;
+      return e && e.currency === 'eur' && Number.isInteger(e.amount)
+        ? sum + (e.amount as number)
+        : sum;
+    }, 0);
+  return { availableCents: eur(b.available), pendingCents: eur(b.pending) };
+}
+
+export const PAYOUT_STATUSES = ['paid', 'pending', 'in_transit', 'canceled', 'failed'] as const;
+export type StripePayout = {
+  id: string;
+  amountCents: number;
+  /** Date d'arrivée prévue (ou effective) sur le compte bancaire, en millisecondes. */
+  arrivalDate: number;
+  status: (typeof PAYOUT_STATUSES)[number];
+};
+
+/** `GET /v1/payouts` (au nom du compte connecté) → les virements en EUR, tels que Stripe les date. */
+export function parsePayouts(body: unknown): StripePayout[] {
+  const list = (body as { data?: unknown } | null)?.data;
+  if (!Array.isArray(list)) return [];
+  return list.flatMap((x) => {
+    const p = x as {
+      id?: unknown;
+      amount?: unknown;
+      arrival_date?: unknown;
+      status?: unknown;
+      currency?: unknown;
+    } | null;
+    if (
+      !p ||
+      typeof p.id !== 'string' ||
+      !Number.isInteger(p.amount) ||
+      typeof p.arrival_date !== 'number' ||
+      p.currency !== 'eur' ||
+      !PAYOUT_STATUSES.includes(p.status as StripePayout['status'])
+    ) {
+      return [];
+    }
+    return [
+      {
+        id: p.id,
+        amountCents: p.amount as number,
+        arrivalDate: p.arrival_date * 1000,
+        status: p.status as StripePayout['status'],
+      },
+    ];
+  });
+}
