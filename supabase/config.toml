@@ -19,6 +19,42 @@ verify_jwt = false
 # Associe un numéro au compte connecté (sans code, avant Prelude).
 verify_jwt = false
 
+# Uber Direct (13/11/2026, à la place des livreurs TK LINK). Devis et course : appelés par un compte
+# connecté, vérifié dans la fonction (même raison que ci-dessus). Webhook : appelé par Uber, sans
+# jeton Supabase — authentifié par sa signature HMAC (secret UBER_WEBHOOK_SIGNING_KEY).
+[functions.uber-quote]
+verify_jwt = false
+
+[functions.uber-dispatch]
+verify_jwt = false
+
+[functions.uber-webhook]
+verify_jwt = false
+
+# Stripe Connect (CDC V1.1, « Direct charges »). Inscription du commerçant et paiement : appelés par
+# un compte connecté, vérifié dans la fonction. Webhook : appelé par Stripe, authentifié par
+# l'en-tête Stripe-Signature (secret STRIPE_WEBHOOK_SECRET).
+[functions.stripe-connect]
+verify_jwt = false
+
+[functions.stripe-payment]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+# Visuels IA des commerces (fal.ai) : appelés par un commerçant connecté, vérifié dans la fonction.
+[functions.ai-media-start]
+verify_jwt = false
+
+[functions.ai-media-status]
+verify_jwt = false
+
+# Notifications : appelée par les Database Webhooks de Supabase, authentifiée par l'en-tête
+# x-webhook-secret (secret PUSH_WEBHOOK_SECRET).
+[functions.push-events]
+verify_jwt = false
+
 # ─────────────────────────────────────────────────────────────── authentification
 #
 # Ce que l'app attend du serveur (voir docs/security/authentication.md, ADR-0010) :

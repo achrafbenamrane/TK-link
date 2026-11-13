@@ -1,0 +1,139 @@
+// Les notifications — ce qui ne dépend ni de Deno ni du réseau : QUI prévenir et QUOI lui dire quand
+// une commande change de statut ou que TK LINK répond à une demande. Testé par Jest
+// (supabase/__tests__/push.test.ts). L'envoi passe par le service Expo
+// (https://exp.host/--/api/v2/push/send), qui relaie vers Apple et Google.
+
+export const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
+
+export type PushMessage = {
+  /** Destinataire : l'acheteur, le titulaire du commerce, ou l'auteur d'une demande. */
+  to: 'customer' | 'shop_owner' | 'ticket_author';
+  title: string;
+  body: string;
+  /** Ce que l'app ouvre au toucher. */
+  data: { kind: 'order' | 'merchant_order' | 'support'; id: string };
+};
+
+type OrderRow = { id: string; status: string; fulfilment: string };
+
+/**
+ * Le message d'un changement de statut de commande, ou `null` s'il n'y a rien à dire (statut
+ * inchangé, étape que personne n'attend). « Payée » prévient le COMMERÇANT : c'est sa nouvelle
+ * commande (le paiement vaut acceptation, CDC V1.1) ; la suite prévient l'ACHETEUR.
+ */
+export function orderMessage(
+  record: OrderRow,
+  old: { status?: string } | null,
+): PushMessage | null {
+  if (old?.status === record.status) return null;
+  const order = { kind: 'order' as const, id: record.id };
+  const delivery = record.fulfilment === 'livraison';
+  switch (record.status) {
+    case 'payee':
+      return {
+        to: 'shop_owner',
+        title: 'Nouvelle commande',
+        body: delivery
+          ? 'Une commande payée à préparer, en livraison Uber Direct.'
+          : 'Une commande payée à préparer, retrait en boutique.',
+        data: { kind: 'merchant_order', id: record.id },
+      };
+    case 'preparation':
+      return {
+        to: 'customer',
+        title: 'En préparation',
+        body: 'Le commerçant prépare votre commande.',
+        data: order,
+      };
+    case 'prete':
+      return delivery
+        ? {
+            to: 'customer',
+            title: 'Commande prête',
+            body: 'Un coursier Uber Direct vient la chercher.',
+            data: order,
+          }
+        : {
+            to: 'customer',
+            title: 'Commande prête',
+            body: 'Venez la retirer : montrez votre QR code au commerçant.',
+            data: order,
+          };
+    case 'en_livraison':
+      return {
+        to: 'customer',
+        title: 'En route',
+        body: 'Votre commande est en cours de livraison.',
+        data: order,
+      };
+    case 'livree':
+      return {
+        to: 'customer',
+        title: 'Livrée',
+        body: 'Votre commande est arrivée. Bonne dégustation !',
+        data: order,
+      };
+    case 'litige':
+      return {
+        to: 'customer',
+        title: 'Un souci avec votre commande',
+        body: 'TK LINK s’en occupe et revient vers vous très vite.',
+        data: order,
+      };
+    case 'remboursee':
+      return {
+        to: 'customer',
+        title: 'Remboursement effectué',
+        body: 'Votre commande vous a été remboursée.',
+        data: order,
+      };
+    default:
+      return null;
+  }
+}
+
+/** Une réponse de TK LINK à une demande prévient son auteur ; ses propres messages, non. */
+export function supportMessage(record: {
+  ticket_id: string;
+  from_staff: boolean;
+}): PushMessage | null {
+  return record.from_staff
+    ? {
+        to: 'ticket_author',
+        title: 'TK LINK vous a répondu',
+        body: 'Ouvrez votre demande pour lire la réponse.',
+        data: { kind: 'support', id: record.ticket_id },
+      }
+    : null;
+}
+
+/** Un jeton Expo valide (« ExponentPushToken[…] » ou « ExpoPushToken[…] »). */
+export const isExpoToken = (t: unknown): t is string =>
+  typeof t === 'string' && /^Expo(nent)?PushToken\[[^\]]+\]$/.test(t);
+
+/** Les envois Expo : un par jeton, par paquets de 100 (limite du service). */
+export function expoBatches(tokens: string[], msg: PushMessage): Record<string, unknown>[][] {
+  const all = tokens.filter(isExpoToken).map((to) => ({
+    to,
+    title: msg.title,
+    body: msg.body,
+    data: msg.data,
+    sound: 'default',
+    priority: 'high',
+  }));
+  const batches: Record<string, unknown>[][] = [];
+  for (let i = 0; i < all.length; i += 100) batches.push(all.slice(i, i + 100));
+  return batches;
+}
+
+/** Les jetons qu'Expo déclare morts (application désinstallée) : à effacer. */
+export function deadTokens(sent: string[], response: unknown): string[] {
+  const data = (response as { data?: unknown } | null)?.data;
+  if (!Array.isArray(data)) return [];
+  return data.flatMap((ticket, i) => {
+    const t = ticket as { status?: string; details?: { error?: string } };
+    return t?.status === 'error' && t.details?.error === 'DeviceNotRegistered' && sent[i]
+      ? [sent[i]!]
+      : [];
+  });
+}
