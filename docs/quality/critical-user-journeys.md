@@ -97,7 +97,8 @@ enforces).
   `loyalty/__tests__/rewards.test.tsx`, `referral/__tests__/referral.test.tsx`.
 - **Journey :** commande terminée → noter le commerçant (étoiles + tags) →
   signaler un problème (point d’entrée unique : remboursement ou file Super
-  Admin) → récompenses débloquées (QR, partage) → parrainage (5 € déduits).
+  Admin) → récompenses débloquées (QR, partage) → parrainage (5 € déduits en local ; sur le
+  serveur, 0019, le crédit se déduit à hauteur de la commission de chaque commande).
 - **Edge cases agents must try :** « je n’ai rien reçu » après la remise (file
   admin, jamais remboursement direct), noter deux fois, partager puis utiliser
   la même récompense, saisir son propre code de parrainage.
@@ -144,6 +145,27 @@ enforces).
 - **Edge cases agents must try :** sujet de deux lettres (refusé), message vide, six demandes dans
   la journée (la sixième est refusée, message clair), réseau coupé à l’envoi, serveur sans la
   migration (« pas encore activé »), un client puis un commerçant (chacun ne voit que ses demandes).
+
+## CUJ-009 — Une Flash du serveur, de la réservation au retrait (argent réel)
+
+- **Owner :** squad produit TK LINK
+- **Flow :** aucun — couvert par `shop/__tests__/server-orders.test.tsx`,
+  `merchant-server-orders.test.tsx`, `discount.test.ts`, `supabase/__tests__/stripe.test.ts`,
+  `uber.test.ts` et pgTAP 36–77 ; à dérouler sur DEUX téléphones (client, commerçant) avec les clés
+  Stripe de test et Uber Direct posées, les fonctions Edge déployées et les migrations 0011–0020
+  appliquées (`npm run auth:check` d’abord).
+- **Journey :** le commerçant s’inscrit chez Stripe (Versements → « Recevoir mes paiements ») → il
+  publie une Flash → le client l’ajoute au panier, Touch & Collect → « Payer » : la page Stripe
+  s’ouvre (carte de test 4242…) → retour dans l’app, la commande est « Payée » → le commerçant la
+  voit, « En préparation », « C’est prêt » → le client montre son QR → le commerçant le scanne :
+  « Récupérée », points de fidélité crédités → la facture apparaît dans « Mes factures » →
+  Versements : « Chez Stripe » montre le solde. Même chose en livraison : devis Uber au paiement,
+  « appeler un coursier », suivi, « Livrée ».
+- **Edge cases agents must try :** annuler pendant que la page Stripe est ouverte (0020 : la page
+  expire, rien n’est débité), payer après expiration de la réservation (« litige »), dernière pièce
+  prise par un autre téléphone, « Annuler la course » avant la prise en charge puis « Rappeler un
+  coursier », filleul : première commande récupérée → 5 € aux deux comptes, la commande suivante
+  déduit au plus la commission (≈ 0,35 € sur 7 €), une réservation annulée rend le crédit.
 
 ## Template for new CUJs
 
