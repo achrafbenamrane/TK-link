@@ -60,7 +60,7 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
       `uber-dispatch` (le commerçant commande la course, une seule par commande), `uber-webhook`
       (signé HMAC : en livraison, livrée, litige). Logique pure testée (`supabase/__tests__/uber`).
       Reste : l’annulation d’une course, l’essai réel (clés Uber Direct)
-- [ ] La commande en livraison affiche le statut et le lien de suivi Uber
+- [x] La commande en livraison affiche le statut et le lien de suivi Uber (client et commerçant)
 
 ### 3 — La commande et le paiement (Stripe Connect)
 
@@ -70,9 +70,12 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
 - [x] Serveur : migration 0013 (compte Stripe du commerce), `stripe-connect`, `stripe-payment`
       (Direct charges, frais = commission + livraison − réduction), `stripe-webhook` ; pages de
       retour sur le site (`/stripe/retour`, `/stripe/relancer`)
-- [ ] App : réservation sur le serveur depuis le panier, paiement Stripe Checkout, suivi de la
-      commande ; commerçant : commandes du serveur, préparation, remise (QR), course Uber ;
-      inscription Stripe du commerçant
+- [x] App (1da23e5, ec616f4, 9845134) : panier → réservation, devis Uber, page Stripe Checkout ;
+      fiche de commande relue toutes les 5 s (payer/annuler, code et QR de retrait, suivi Uber,
+      « Signaler un problème » → support) ; commerçant : commandes payées du serveur, préparation,
+      remise contre le code, course Uber ; « Versements » → inscription Stripe
+- [ ] Reste : crédit de parrainage côté serveur (réduction financée par TK LINK), annulation d’une
+      course Uber, scanner le QR de retrait (aujourd’hui le commerçant tape le code)
 - [ ] Onglet Versements lu depuis Stripe
 
 ### 4 — Notifications
