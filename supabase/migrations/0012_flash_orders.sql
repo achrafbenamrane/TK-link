@@ -77,6 +77,9 @@ create table public.flash_orders (
   paid_at timestamptz,
   -- Paiement (Stripe) et livraison (Uber Direct) : écrits par les Edge Functions (service_role).
   stripe_payment_intent_id text unique,
+  -- La page de paiement Stripe Checkout ouverte pour cette commande (le paiement lui-même n'existe
+  -- qu'une fois la carte validée : son identifiant arrive par le webhook).
+  stripe_checkout_id text unique,
   uber_quote_id text,
   uber_delivery_id text unique,
   uber_tracking_url text check (uber_tracking_url is null or uber_tracking_url ~ '^https://'),
@@ -125,8 +128,9 @@ begin
        set status = 'annulee', updated_at = now()
      where o.status = 'paiement_attente'
        and o.reserved_until < now()
-       -- Un paiement lancé laisse une marge (le webhook Stripe peut arriver en retard).
-       and (o.stripe_payment_intent_id is null or o.reserved_until < now() - interval '45 minutes')
+       -- Un paiement lancé laisse une marge (page de paiement ouverte, webhook Stripe en retard).
+       and ((o.stripe_payment_intent_id is null and o.stripe_checkout_id is null)
+            or o.reserved_until < now() - interval '45 minutes')
     returning o.id
   ), freed as (
     select i.offer_id, sum(i.qty)::integer as qty

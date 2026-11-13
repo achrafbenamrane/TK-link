@@ -23,7 +23,10 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
   commande ; le code livreur reste dans l’historique git.
 - **Messagerie : support TK LINK.** Clients et commerçants écrivent à TK LINK ; chaque demande est
   un ticket suivi et répondu depuis le back-office.
-- Les deux modules natifs nouveaux (Stripe, notifications) partent dans **une seule** APK.
+- **Paiement par Stripe Checkout** (13/11, en cours de route) plutôt que la feuille native : même
+  Stripe Connect, même partage, mais une page Stripe sécurisée ouverte depuis l’app (carte, Apple Pay,
+  Google Pay). Aucun module natif : le paiement part par mise à jour OTA, sans nouvelle APK.
+- Seules les notifications (`expo-notifications`) exigent une nouvelle APK.
 
 ## Déjà existant — réutiliser
 
@@ -67,7 +70,9 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
 - [x] Serveur : migration 0013 (compte Stripe du commerce), `stripe-connect`, `stripe-payment`
       (Direct charges, frais = commission + livraison − réduction), `stripe-webhook` ; pages de
       retour sur le site (`/stripe/retour`, `/stripe/relancer`)
-- [ ] App : PaymentSheet dans le panier, inscription Stripe du commerçant (nouvelle APK)
+- [ ] App : réservation sur le serveur depuis le panier, paiement Stripe Checkout, suivi de la
+      commande ; commerçant : commandes du serveur, préparation, remise (QR), course Uber ;
+      inscription Stripe du commerçant
 - [ ] Onglet Versements lu depuis Stripe
 
 ### 4 — Notifications
@@ -81,13 +86,15 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
 - [x] Migration 0014 (demandes, messages, statut qui suit la conversation, quota) ; tests pgTAP
       47–52 ; `/admin` → Messages lit et répond par une route serveur (clé de service, démonstration
       sans elle)
-- [ ] App : écran « Aide » (ouvrir une demande, suivre les réponses en direct)
+- [x] App : Profil → « Aide et support » (demandes, nouvelle demande, conversation en direct) ;
+      la messagerie locale du livreur est retirée (f13bae3, CUJ-008)
 
 ### 6 — Contenu IA de la boutique
 
 - [x] Serveur : migration 0015 (`shop_media`, quota 10 images / 2 vidéos par jour),
       `ai-media-start`, `ai-media-status` (copie dans Storage) ; tests pgTAP 53–55
-- [ ] App : génération depuis l’espace commerçant, visuels sur la vitrine
+- [x] App : « Ma boutique » → Visuels IA (création, suivi, montrer/cacher) ; visuels montrés sur la
+      vitrine (f2f09b5, 5a7c649)
 
 ## Risques
 

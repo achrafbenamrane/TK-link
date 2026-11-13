@@ -41,9 +41,15 @@ export function stripeForm(params: Record<string, unknown>, prefix = ''): string
       const nested = stripeForm(v as Record<string, unknown>, key);
       if (nested) parts.push(nested);
     } else if (Array.isArray(v)) {
-      v.forEach((item, i) =>
-        parts.push(`${encodeURIComponent(`${key}[${i}]`)}=${encodeURIComponent(String(item))}`),
-      );
+      // Une liste d'objets (les lignes d'une page de paiement) : `line_items[0][quantity]=2`.
+      v.forEach((item, i) => {
+        if (item && typeof item === 'object') {
+          const nested = stripeForm(item as Record<string, unknown>, `${key}[${i}]`);
+          if (nested) parts.push(nested);
+        } else {
+          parts.push(`${encodeURIComponent(`${key}[${i}]`)}=${encodeURIComponent(String(item))}`);
+        }
+      });
     } else {
       parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(v))}`);
     }
@@ -126,4 +132,64 @@ export function effectOf(event: unknown): StripeEffect {
     default:
       return null;
   }
+}
+
+export type CheckoutItem = { title: string; qty: number; unit_price_cents: number };
+
+/**
+ * Les paramètres d'une page de paiement Stripe Checkout pour une commande (Direct charges : créée au
+ * nom du commerçant). Le détail des articles s'affiche ; une réduction offerte par TK LINK ne peut
+ * pas être une ligne négative chez Checkout : la commande se résume alors en une ligne au total.
+ * La page expire au bout de 30 minutes (minimum imposé par Stripe).
+ */
+export function checkoutParams(input: {
+  order: PayableOrder & { id: string };
+  items: CheckoutItem[];
+  shopName: string;
+  fee: number;
+  returnUrl: string;
+  email?: string | null;
+  nowS: number;
+}): Record<string, unknown> {
+  const { order, items, shopName, fee, returnUrl, email, nowS } = input;
+  const line = (name: string, cents: number, quantity: number) => ({
+    price_data: { currency: 'eur', unit_amount: cents, product_data: { name } },
+    quantity,
+  });
+  const lines =
+    order.discount_cents > 0
+      ? [line(`Commande TK LINK — ${shopName}`, order.total_cents, 1)]
+      : [
+          ...items.map((i) => line(i.title, i.unit_price_cents, i.qty)),
+          ...(order.delivery_fee_cents > 0
+            ? [line('Livraison Uber Direct', order.delivery_fee_cents, 1)]
+            : []),
+        ];
+  const back = (state: 'ok' | 'annule') =>
+    `${returnUrl}?commande=${encodeURIComponent(order.id)}&etat=${state}`;
+  return {
+    mode: 'payment',
+    line_items: lines,
+    payment_intent_data: {
+      application_fee_amount: fee,
+      description: `TK LINK — ${shopName}`,
+      metadata: { order_id: order.id },
+    },
+    metadata: { order_id: order.id },
+    client_reference_id: order.id,
+    ...(email ? { customer_email: email } : {}),
+    success_url: back('ok'),
+    cancel_url: back('annule'),
+    expires_at: nowS + 30 * 60,
+    locale: 'fr',
+  };
+}
+
+/** La somme que Checkout facturera : doit être EXACTEMENT le total de la commande. */
+export function checkoutTotal(params: Record<string, unknown>): number {
+  const lines = (params.line_items ?? []) as {
+    price_data: { unit_amount: number };
+    quantity: number;
+  }[];
+  return lines.reduce((s, l) => s + l.price_data.unit_amount * l.quantity, 0);
 }

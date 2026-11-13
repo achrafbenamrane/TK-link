@@ -211,8 +211,12 @@ prélève commission + livraison − réduction qu’il offre, si bien que le co
 - `stripe-connect` (commerçant validé) : crée son compte Express au premier appel
   (`shops.stripe_account_id`) et rend la page d’inscription Stripe (identité, IBAN — TK LINK n’en
   voit rien).
-- `stripe-payment` (acheteur) : crée le paiement de sa commande réservée sur le compte du
-  commerçant, montant et frais tirés de la commande ; une livraison exige d’abord le devis Uber.
+- `stripe-payment` (acheteur) : ouvre une page **Stripe Checkout** pour sa commande réservée, sur le
+  compte du commerçant (carte, Apple Pay, Google Pay). Les lignes et les frais viennent de la
+  commande ; la page ne facture jamais autre chose que le total du serveur ; une livraison exige
+  d’abord le devis Uber. Checkout plutôt que la feuille native : aucun module natif, le paiement
+  part par mise à jour OTA (13/11/2026). Retour par `/stripe/paiement` sur le site, qui rouvre
+  l’app.
 - `stripe-webhook` : paiement réussi → « payée » (vaut acceptation) ; payé après expiration de la
   réservation → « litige » ; remboursement total → « remboursée » ; `account.updated` →
   `shops.stripe_charges_enabled`.
@@ -221,7 +225,7 @@ Mise en route (mode test possible avant l’immatriculation de la société) :
 
 ```sh
 npx supabase secrets set STRIPE_SECRET_KEY=sk_test_… STRIPE_WEBHOOK_SECRET=whsec_… \
-  STRIPE_CONNECT_RETURN_URL=https://…/stripe/retour STRIPE_CONNECT_REFRESH_URL=https://…/stripe/relancer
+  STRIPE_CONNECT_RETURN_URL=https://…/stripe/retour STRIPE_CONNECT_REFRESH_URL=https://…/stripe/relancer   STRIPE_PAYMENT_RETURN_URL=https://…/stripe/paiement
 npx supabase functions deploy stripe-connect
 npx supabase functions deploy stripe-payment
 npx supabase functions deploy stripe-webhook
@@ -229,8 +233,8 @@ npx supabase functions deploy stripe-webhook
 
 Dans Stripe → Développeurs → Webhooks : un point de terminaison **Connect** vers
 `https://<ref>.supabase.co/functions/v1/stripe-webhook`, événements `payment_intent.succeeded`,
-`charge.refunded`, `account.updated`. La clé publiable (`pk_test_…`) ira dans l’app
-(`EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`), jamais la clé secrète.
+`charge.refunded`, `account.updated`. L’app n’a besoin d’aucune clé Stripe (la page Checkout est
+créée par le serveur).
 
 ```sql
 -- Les paiements à régler à la main (payés hors délai, course Uber échouée…)

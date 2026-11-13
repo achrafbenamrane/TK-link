@@ -1,15 +1,22 @@
-// Prépare le paiement d'une commande réservée — appelé par l'ACHETEUR, juste avant la feuille de
-// paiement Stripe (PaymentSheet) dans l'app. Rend le secret du paiement et le compte du commerçant.
+// Ouvre la page de paiement Stripe Checkout d'une commande réservée — appelé par l'ACHETEUR. Rend
+// l'adresse de la page, que l'app ouvre dans un navigateur sécurisé (carte, Apple Pay, Google Pay).
 //
-// CDC V1.1 : « Direct charges ». Le paiement est créé AU NOM du commerçant (`Stripe-Account`) ;
-// TK LINK prélève ses frais d'application (commission + livraison − réduction qu'il offre). Le
-// montant vient de la commande, calculée par le serveur (`reserve_flash`, `uber-quote`) — jamais du
+// Pourquoi Checkout plutôt que la feuille de paiement native : aucun module natif, donc le paiement
+// part par mise à jour OTA, sans nouvelle APK (décision du 13/11/2026). Même Stripe Connect.
+//
+// CDC V1.1 : « Direct charges ». La page est créée AU NOM du commerçant (`Stripe-Account`) ; TK LINK
+// prélève ses frais d'application (commission + livraison − réduction qu'il offre). Les montants
+// viennent de la commande, calculée par le serveur (`reserve_flash`, `uber-quote`) — jamais du
 // téléphone. Le webhook Stripe passe ensuite la commande à « payée » (`stripe-webhook`).
 //
-// Rejouable : une commande n'a qu'un paiement (clé d'idempotence + identifiant gardé sur la ligne).
+// Rejouable : tant que la page d'une commande est ouverte, on la rend ; sinon on en crée une autre.
 import { adminClient, callerOf, CORS, jsonBody, reply, UUID } from '../_shared/http.ts';
-import { applicationFeeCents } from '../_shared/stripe.ts';
+import { applicationFeeCents, checkoutParams, checkoutTotal } from '../_shared/stripe.ts';
 import { stripeConfigured, stripeRequest } from '../_shared/stripe-api.ts';
+
+// Où Stripe renvoie après paiement ou abandon (page du site qui rouvre l'app).
+const RETURN_URL =
+  Deno.env.get('STRIPE_PAYMENT_RETURN_URL') ?? 'https://tklink.vercel.app/stripe/paiement';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -20,21 +27,23 @@ Deno.serve(async (req) => {
   if (!user) return reply(401, { error: 'unauthorized' });
 
   const orderId = (await jsonBody(req))?.orderId;
-  if (typeof orderId !== 'string' || !UUID.test(orderId))
+  if (typeof orderId !== 'string' || !UUID.test(orderId)) {
     return reply(400, { error: 'invalid_order' });
+  }
 
   const admin = adminClient();
   const { data: order } = await admin
     .from('flash_orders')
     .select(
-      'id, customer_id, shop_id, fulfilment, status, reserved_until, subtotal_cents, discount_cents, delivery_fee_cents, total_cents, commission_cents, uber_quote_id, stripe_payment_intent_id',
+      'id, customer_id, shop_id, fulfilment, status, reserved_until, subtotal_cents, discount_cents, delivery_fee_cents, total_cents, commission_cents, uber_quote_id, stripe_checkout_id',
     )
     .eq('id', orderId)
     .maybeSingle();
   if (!order || order.customer_id !== user.id) return reply(404, { error: 'order_not_found' });
   if (order.status !== 'paiement_attente') return reply(409, { error: 'order_locked' });
-  if (Date.parse(order.reserved_until) < Date.now())
+  if (Date.parse(order.reserved_until) < Date.now()) {
     return reply(410, { error: 'reservation_expired' });
+  }
   // Une livraison se paie avec ses frais : le devis Uber doit être fait.
   if (order.fulfilment === 'livraison' && !order.uber_quote_id) {
     return reply(409, { error: 'delivery_quote_required' });
@@ -49,47 +58,59 @@ Deno.serve(async (req) => {
     return reply(409, { error: 'shop_cannot_be_paid' });
   }
 
+  // Une page déjà ouverte pour cette commande (second appui, retour dans l'app) : on la rend.
+  if (order.stripe_checkout_id) {
+    const existing = await stripeRequest(
+      'GET',
+      `checkout/sessions/${encodeURIComponent(order.stripe_checkout_id)}`,
+      {},
+      { account: shop.stripe_account_id },
+    );
+    if (existing.body?.status === 'open' && typeof existing.body.url === 'string') {
+      return reply(200, { url: existing.body.url, totalCents: order.total_cents });
+    }
+  }
+
   const fee = applicationFeeCents(order);
   if (fee === null) return reply(409, { error: 'discount_too_large' });
 
-  const intent = await stripeRequest(
-    'POST',
-    'payment_intents',
-    {
-      amount: order.total_cents,
-      currency: 'eur',
-      application_fee_amount: fee,
-      automatic_payment_methods: { enabled: true },
-      description: `TK LINK — ${shop.name}`,
-      metadata: { order_id: order.id },
-    },
-    // Même commande, même paiement : un second appel rend le paiement déjà créé.
-    {
-      account: shop.stripe_account_id,
-      idempotencyKey: `tklink-order-${order.id}-${order.total_cents}`,
-    },
-  );
-  const id = intent.body?.id;
-  const secret = intent.body?.client_secret;
-  if (intent.status >= 300 || typeof id !== 'string' || typeof secret !== 'string') {
+  const { data: items } = await admin
+    .from('flash_order_items')
+    .select('title, qty, unit_price_cents')
+    .eq('order_id', order.id);
+
+  const params = checkoutParams({
+    order,
+    items: items ?? [],
+    shopName: shop.name,
+    fee,
+    returnUrl: RETURN_URL,
+    email: user.email ?? null,
+    nowS: Math.floor(Date.now() / 1000),
+  });
+  // Garde-fou : la page ne facture jamais autre chose que le total calculé par le serveur.
+  if (checkoutTotal(params) !== order.total_cents) return reply(500, { error: 'amount_mismatch' });
+
+  const session = await stripeRequest('POST', 'checkout/sessions', params, {
+    account: shop.stripe_account_id,
+  });
+  const id = session.body?.id;
+  const url = session.body?.url;
+  if (session.status >= 300 || typeof id !== 'string' || typeof url !== 'string') {
     return reply(502, { error: 'stripe_failed' });
   }
 
-  // Le paiement est lancé : la réservation tient le temps de le finir (le webhook peut tarder).
+  // La page est ouverte : la réservation tient le temps de payer (la page vit 30 minutes).
   const { error } = await admin
     .from('flash_orders')
     .update({
-      stripe_payment_intent_id: id,
-      reserved_until: new Date(Date.now() + 15 * 60_000).toISOString(),
+      stripe_checkout_id: id,
+      reserved_until: new Date(Date.now() + 30 * 60_000).toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq('id', order.id)
     .eq('status', 'paiement_attente');
   if (error) return reply(500, { error: 'server_error' });
 
-  return reply(200, {
-    clientSecret: secret,
-    stripeAccountId: shop.stripe_account_id,
-    totalCents: order.total_cents,
-  });
+  return reply(200, { url, totalCents: order.total_cents });
 });

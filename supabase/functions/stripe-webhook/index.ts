@@ -36,14 +36,23 @@ Deno.serve(async (req) => {
   const now = new Date().toISOString();
 
   if (effect.kind === 'order_paid') {
+    // Le paiement naît sur la page Checkout : la commande se retrouve par son identifiant (porté
+    // dans les métadonnées du paiement), et garde dès lors l'identifiant du paiement (remboursements).
+    // Sans identifiant de commande (paiement créé hors de TK LINK) : rien à faire.
+    if (!effect.orderId) return new Response(null, { status: 200 });
+
     // Le cas normal : la réservation attendait son paiement.
-    let paid = admin
+    const { data, error } = await admin
       .from('flash_orders')
-      .update({ status: 'payee', paid_at: now, updated_at: now })
-      .eq('stripe_payment_intent_id', effect.paymentIntentId)
-      .eq('status', 'paiement_attente');
-    if (effect.orderId) paid = paid.eq('id', effect.orderId);
-    const { data, error } = await paid.select('id');
+      .update({
+        status: 'payee',
+        paid_at: now,
+        updated_at: now,
+        stripe_payment_intent_id: effect.paymentIntentId,
+      })
+      .eq('id', effect.orderId)
+      .eq('status', 'paiement_attente')
+      .select('id');
     if (error) return new Response(null, { status: 500 });
 
     if (!data?.length) {
@@ -51,8 +60,13 @@ Deno.serve(async (req) => {
       // la commande n'est plus garantie. « Litige » : TK LINK rembourse ou honore, à la main.
       const { error: lateError } = await admin
         .from('flash_orders')
-        .update({ status: 'litige', paid_at: now, updated_at: now })
-        .eq('stripe_payment_intent_id', effect.paymentIntentId)
+        .update({
+          status: 'litige',
+          paid_at: now,
+          updated_at: now,
+          stripe_payment_intent_id: effect.paymentIntentId,
+        })
+        .eq('id', effect.orderId)
         .eq('status', 'annulee');
       if (lateError) return new Response(null, { status: 500 });
     }

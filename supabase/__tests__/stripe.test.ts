@@ -2,6 +2,8 @@ import { createHmac } from 'crypto';
 
 import {
   applicationFeeCents,
+  checkoutParams,
+  checkoutTotal,
   effectOf,
   stripeForm,
   verifyStripeSignature,
@@ -126,5 +128,52 @@ describe('effet d’un événement', () => {
   it('les autres événements ne changent rien', () => {
     expect(effectOf({ type: 'customer.created', data: { object: { id: 'cus_1' } } })).toBeNull();
     expect(effectOf(null)).toBeNull();
+  });
+});
+
+describe('page de paiement Stripe Checkout', () => {
+  const order = {
+    id: 'o-1',
+    subtotal_cents: 400,
+    discount_cents: 0,
+    delivery_fee_cents: 599,
+    total_cents: 999,
+    commission_cents: 20,
+  };
+  const items = [{ title: 'Brioche', qty: 2, unit_price_cents: 200 }];
+  const base = {
+    order,
+    items,
+    shopName: 'Le Petit Toulousain',
+    fee: 619,
+    returnUrl: 'https://tklink.vercel.app/stripe/paiement',
+    nowS: 1_763_050_000,
+  };
+
+  it('détaille les articles et la livraison, pour exactement le total de la commande', () => {
+    const params = checkoutParams(base);
+    expect(checkoutTotal(params)).toBe(999);
+    expect(params).toMatchObject({
+      mode: 'payment',
+      payment_intent_data: { application_fee_amount: 619, metadata: { order_id: 'o-1' } },
+      success_url: 'https://tklink.vercel.app/stripe/paiement?commande=o-1&etat=ok',
+      cancel_url: 'https://tklink.vercel.app/stripe/paiement?commande=o-1&etat=annule',
+      expires_at: 1_763_050_000 + 1800,
+    });
+  });
+
+  it('une réduction offerte par TK LINK : une seule ligne au total (pas de ligne négative)', () => {
+    const discounted = { ...order, discount_cents: 300, total_cents: 699 };
+    const params = checkoutParams({ ...base, order: discounted, fee: 319 });
+    expect(checkoutTotal(params)).toBe(699);
+    expect((params.line_items as unknown[]).length).toBe(1);
+  });
+
+  it('s’encode à la façon de Stripe, lignes comprises', () => {
+    const form = decodeURIComponent(stripeForm(checkoutParams(base)));
+    expect(form).toContain('line_items[0][price_data][unit_amount]=200');
+    expect(form).toContain('line_items[0][quantity]=2');
+    expect(form).toContain('line_items[1][price_data][product_data][name]=Livraison Uber Direct');
+    expect(form).toContain('payment_intent_data[application_fee_amount]=619');
   });
 });
