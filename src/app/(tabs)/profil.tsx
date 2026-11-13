@@ -9,9 +9,10 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth';
 import { useMerchantLoyaltyStore } from '@/features/loyalty';
 import { useMerchantStore } from '@/features/merchant';
+import { usePushStore } from '@/features/notifications';
 import { useReceiptsStore } from '@/features/receipts';
 import { useReferralStore } from '@/features/referral';
-import { ProfileScreen, useShopStore } from '@/features/shop';
+import { ProfileScreen, useServerOrdersStore, useShopStore } from '@/features/shop';
 import { useWelcomeStore } from '@/features/welcome';
 import { isDemoBuild } from '@/shared/lib/env';
 import { canPublishOffers, ROLE_LABEL } from '@/shared/lib/roles';
@@ -38,12 +39,25 @@ import { canPublishOffers, ROLE_LABEL } from '@/shared/lib/roles';
  * La navigation revient à la porte du layout : le logo animé se rejoue dès que
  * `splashDone` repasse à faux, et la suite attend que la session soit fermée — la
  * session part donc EN PREMIER (son statut passe aussitôt en attente).
+ *
+ * Juste avant : ce téléphone est retiré des notifications du compte (il faut encore la session pour
+ * le faire), sinon il recevrait les commandes de la personne précédente. Borné à 2,5 s : hors
+ * ligne, la déconnexion ne reste pas bloquée.
  */
 export function useSignOut() {
   return () => {
-    void useAuthStore.getState().signOut();
-    resetLocalData();
-    useWelcomeStore.setState({ splashDone: false });
+    void (async () => {
+      await Promise.race([
+        usePushStore
+          .getState()
+          .forget()
+          .catch(() => undefined),
+        new Promise((resolve) => setTimeout(resolve, 2500)),
+      ]);
+      void useAuthStore.getState().signOut();
+      resetLocalData();
+      useWelcomeStore.setState({ splashDone: false });
+    })();
   };
 }
 
@@ -65,6 +79,8 @@ export function resetLocalData(): void {
   useMerchantLoyaltyStore.setState({ cards: {}, programs: {}, rewards: [] });
   useReferralStore.setState({ myCode: '', referredBy: null, credit: 'aucun' });
   useReceiptsStore.setState({ receipts: [] });
+  // Les commandes du serveur relues pour ce compte : le suivant ne doit pas les voir, même un instant.
+  useServerOrdersStore.setState({ mine: [], shop: [], mineError: null, shopError: null });
 }
 
 export default function ProfilRoute() {

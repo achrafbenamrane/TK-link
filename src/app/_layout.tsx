@@ -29,6 +29,7 @@ import {
   selectRole,
   useOnboardingStore,
 } from '@/features/onboarding';
+import { PushBridge } from '@/features/notifications';
 import { receiptForOrder, useReceiptsStore } from '@/features/receipts';
 import { orderToTransaction, producesReceipt, selectOrders, useShopStore } from '@/features/shop';
 import { useWelcomeStore } from '@/features/welcome';
@@ -84,6 +85,29 @@ function EntryGate() {
   }, [onboardingHydrated, welcomeHydrated, splashDone, auth, completed, role, here, router]);
 
   return null;
+}
+
+/**
+ * LES NOTIFICATIONS (rapport d'avancement du 13/11/2026) : le téléphone s'enregistre pour le compte
+ * connecté, et une notification touchée ouvre son écran — une fois passés le logo animé et la porte
+ * d'entrée, qui écraseraient sinon le lien. Rien en démonstration (pas de serveur pour envoyer).
+ */
+function Notifications() {
+  const router = useRouter();
+  const session = useAuthStore(selectSession);
+  const auth = useAuthStore(selectAuthStatus);
+  const completed = useOnboardingStore(selectCompleted);
+  const splashDone = useWelcomeStore((s) => s.splashDone);
+  const segments = useSegments();
+  const userId = session && !isDemoSession(session) ? session.user.id : null;
+  const ready =
+    isSupabaseConfigured &&
+    auth === 'authenticated' &&
+    userId !== null &&
+    completed &&
+    splashDone &&
+    (segments[0] ?? '') !== 'welcome';
+  return <PushBridge ready={ready} accountId={userId} onOpen={(route) => router.push(route)} />;
 }
 
 /**
@@ -256,6 +280,7 @@ export default function RootLayout() {
           <EntryGate />
           <AccountSync />
           <ReceiptBridge />
+          <Notifications />
           <AppStack />
         </SafeAreaProvider>
       </ThemeProvider>

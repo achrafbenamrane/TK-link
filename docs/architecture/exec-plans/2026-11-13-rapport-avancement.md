@@ -82,7 +82,9 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
 
 - [x] Serveur : migration 0016 (`push_tokens`, enregistrement par fonction), `push-events`
       (Database Webhooks : commandes et réponses du support) ; tests pgTAP 56–57
-- [ ] App : `expo-notifications`, demande d’autorisation, enregistrement du jeton (nouvelle APK)
+- [x] App : `expo-notifications` chargé sous garde (ADR-0011), jeton enregistré pour le compte
+      connecté et retiré avant la déconnexion, toucher → écran de la commande ou de la demande (même
+      app fermée). Reste : la nouvelle APK et `google-services.json` (Firebase) dans EAS
 
 ### 5 — Messagerie support et tickets
 

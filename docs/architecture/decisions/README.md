@@ -19,3 +19,4 @@ changes, anything you'd otherwise explain twice.
 - [ADR-0008 — Repo-only operating model (drop cloud CI/CD + Notion/Slack)](0008-repo-only-operating-model.md)
 - [ADR-0009 — Authentification : e-mail ou téléphone + mot de passe, Google et Apple natifs](0009-authentification.md) _(décisions 1, 3, 4 et en partie 2 remplacées par ADR-0010)_
 - [ADR-0010 — Compte obligatoire, numéro associé sans SMS, e-mails par Resend, Apple sur Android](0010-compte-obligatoire-numero-sans-sms.md)
+- [ADR-0011 — Notifications Expo, module natif chargé sous garde (OTA vers l’ancienne APK)](0011-notifications-et-module-natif-sous-garde.md)

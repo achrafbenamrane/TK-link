@@ -108,6 +108,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
+    // Notifications (expo-notifications) : Android les reçoit par Firebase Cloud Messaging, qui
+    // exige le fichier google-services.json du projet Firebase de l'app. Il n'est pas dans le dépôt :
+    // EAS le fournit au build par la variable de fichier GOOGLE_SERVICES_JSON
+    // (`eas env:create --type file`). Sans elle, l'app se construit, mais Android ne reçoit rien.
+    ...(process.env.GOOGLE_SERVICES_JSON
+      ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }
+      : {}),
     // Request the minimum. Strip library-added permissions you don't need, e.g.:
     // blockedPermissions: ['android.permission.RECORD_AUDIO'],
   },
@@ -186,6 +193,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Sign in with Apple (iOS) : le plugin ajoute la capacité `com.apple.developer.applesignin`.
     // EAS la synchronise avec l'identifiant d'app du compte Apple Developer au premier build iOS.
     'expo-apple-authentication',
+    [
+      // Notifications : une nouvelle commande (commerçant), l'avancée d'une commande (client), une
+      // réponse du support. Couleur de la petite icône Android : le rose de la charte.
+      'expo-notifications',
+      { color: '#FF1478' },
+    ],
     ...(googleIosUrlScheme
       ? ([['@react-native-google-signin/google-signin', { iosUrlScheme: googleIosUrlScheme }]] as [
           string,
