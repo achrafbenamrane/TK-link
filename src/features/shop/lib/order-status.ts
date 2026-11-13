@@ -45,6 +45,29 @@ export const ORDER_STATUSES = [
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+/**
+ * Une commande a une FACTURE dès qu'elle a été payée — y compris si elle a été remboursée ou part
+ * en litige ensuite. Une réservation jamais payée (en attente, annulée avant paiement) n'en a pas :
+ * sur le serveur, l'annulation n'existe qu'avant le paiement.
+ */
+const INVOICEABLE: ReadonlySet<OrderStatus> = new Set<OrderStatus>([
+  'payee',
+  'acceptee',
+  'preparation',
+  'prete',
+  'en_livraison',
+  'recuperee',
+  'livree',
+  'refusee',
+  'remboursement_en_cours',
+  'remboursee',
+  'litige',
+]);
+
+export function isInvoiceable(status: OrderStatus): boolean {
+  return INVOICEABLE.has(status);
+}
+
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   panier: 'Panier',
   creee: 'Commande créée',

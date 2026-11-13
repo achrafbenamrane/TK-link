@@ -1,5 +1,6 @@
 import { Feather } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -8,9 +9,11 @@ import { AppText, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
 import { useColors } from '@/shared/theme/theme-provider';
 
+import { isInvoiceable } from '../lib/order-status';
 import { orderRef } from '../lib/order-summary';
 import type { Order } from '../model/schema';
-import { useShopStore } from '../model/store';
+import { selectMyServerOrders, useServerOrdersStore } from '../model/server-orders';
+import { selectOrders, useShopStore } from '../model/store';
 
 /** Charge utile du QR : ce qu'un commerçant scanne pour retrouver la commande. */
 function invoicePayload(order: Order): string {
@@ -38,7 +41,7 @@ function InvoiceCard({ order }: { order: Order }) {
       testID={`invoice-${order.id}`}
       accessibilityRole="button"
       accessibilityState={{ expanded: open }}
-      accessibilityLabel={`Facture ${orderRef(order.id)}, ${order.total.toFixed(2)} euros`}
+      accessibilityLabel={`Facture ${orderRef(order.id)}, ${(order.total + order.deliveryFee).toFixed(2)} euros`}
       onPress={() => setOpen((v) => !v)}
       className="mb-3 overflow-hidden rounded-card border border-line bg-surface"
     >
@@ -56,7 +59,10 @@ function InvoiceCard({ order }: { order: Order }) {
             {`${formatDate(order.createdAt)} · ${order.items.length}\u00a0article${order.items.length > 1 ? 's' : ''}`}
           </AppText>
         </View>
-        <AppText className="font-display text-base text-ink">{formatEuros(order.total)}</AppText>
+        {/* Ce qui a été payé : les articles ET la livraison (le détail est dessous). */}
+        <AppText testID={`invoice-${order.id}-total`} className="font-display text-base text-ink">
+          {formatEuros(order.total + order.deliveryFee)}
+        </AppText>
         <Feather name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.inkFaint} />
       </View>
 
@@ -105,7 +111,23 @@ function InvoiceCard({ order }: { order: Order }) {
 
 export function InvoicesScreen() {
   const colors = useColors();
-  const orders = useShopStore((s) => s.orders);
+  const localOrders = useShopStore(selectOrders);
+  // Les commandes du serveur (Flash payées sur la page Stripe) ont leur facture aussi : l'écran ne
+  // montrait que les commandes locales, et restait vide pour un vrai compte. Relues à chaque passage.
+  const serverOrders = useServerOrdersStore(selectMyServerOrders);
+  const refreshServer = useServerOrdersStore((s) => s.refreshMine);
+  useFocusEffect(
+    useCallback(() => {
+      void refreshServer();
+    }, [refreshServer]),
+  );
+  const orders = useMemo(
+    () =>
+      [...serverOrders, ...localOrders]
+        .filter((o) => isInvoiceable(o.status))
+        .sort((a, b) => b.createdAt - a.createdAt),
+    [serverOrders, localOrders],
+  );
 
   return (
     <Screen testID="invoices-screen">
