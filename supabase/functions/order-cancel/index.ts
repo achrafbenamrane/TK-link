@@ -8,14 +8,14 @@
 // réessayer). Si le paiement vient d'aboutir, Stripe refuse l'expiration et la commande reste payée.
 //
 // Sécurité : l'appelant est identifié par son jeton et doit être l'acheteur de la commande.
-import { adminClient, callerOf, CORS, jsonBody, reply, UUID } from '../_shared/http.ts';
+import { adminClient, callerOf, CORS, jsonBody, reply, serve, UUID } from '../_shared/http.ts';
 import { afterExpire } from '../_shared/stripe.ts';
 import { stripeConfigured, stripeRequest } from '../_shared/stripe-api.ts';
 
 // Stripe injoignable : une réponse JSON quand même, jamais une erreur 500 en texte brut.
 const unreachable = { status: 0, body: null };
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' });
   if (!stripeConfigured()) return reply(503, { error: 'stripe_not_configured' });

@@ -8,6 +8,7 @@
 // admin API. FKs to auth.users use ON DELETE CASCADE, so the user's
 // rows (profiles, notes, subscriptions) are removed with them.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { serve } from '../_shared/http.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -21,7 +22,7 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 
   const authHeader = req.headers.get('Authorization') ?? '';

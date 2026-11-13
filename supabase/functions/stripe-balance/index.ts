@@ -6,11 +6,11 @@
 // dix derniers virements vers sa banque. Rien n'est écrit, ni chez Stripe ni en base.
 //
 // Sécurité : l'appelant est identifié par son jeton ; on ne lit que le compte de SON commerce.
-import { adminClient, callerOf, CORS, reply } from '../_shared/http.ts';
+import { adminClient, callerOf, CORS, reply, serve } from '../_shared/http.ts';
 import { parseBalance, parsePayouts } from '../_shared/stripe.ts';
 import { stripeConfigured, stripeRequest } from '../_shared/stripe-api.ts';
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' });
   if (!stripeConfigured()) return reply(503, { error: 'stripe_not_configured' });

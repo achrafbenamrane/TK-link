@@ -21,6 +21,7 @@
 // serveur Auth (401 sinon) — et jamais d'après un identifiant envoyé dans le corps. La vérification
 // « legacy secret » de la plateforme est désactivée (voir supabase/config.toml).
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { serve } from '../_shared/http.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -44,7 +45,7 @@ const reply = (status: number, body: Record<string, unknown>) =>
     headers: { ...CORS, 'Content-Type': 'application/json' },
   });
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' });
 

@@ -7,14 +7,14 @@
 //
 // Sécurité : l'appelant est identifié par son jeton ; la commande doit être la SIENNE, en livraison,
 // pas encore payée. Le prix vient d'Uber, jamais du téléphone.
-import { adminClient, callerOf, CORS, jsonBody, reply, UUID } from '../_shared/http.ts';
+import { adminClient, callerOf, CORS, jsonBody, reply, serve, UUID } from '../_shared/http.ts';
 import { uberConfigured, uberRequest } from '../_shared/uber-api.ts';
 import { parseQuote, uberAddress, uberPhone } from '../_shared/uber.ts';
 
 // Numéro de TK LINK, donné à Uber quand le commerce n'a pas renseigné le sien (secret facultatif).
 const FALLBACK_PHONE = Deno.env.get('UBER_FALLBACK_PHONE') ?? '';
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' });
   if (!uberConfigured()) return reply(503, { error: 'uber_not_configured' });

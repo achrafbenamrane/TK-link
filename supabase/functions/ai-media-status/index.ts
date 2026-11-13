@@ -4,14 +4,14 @@
 //
 // Sécurité : l'appelant doit être le titulaire du commerce du visuel. Les adresses de fal.ai
 // interrogées (avec la clé) sont celles rangées par le serveur, vérifiées sur queue.fal.run.
-import { adminClient, callerOf, CORS, jsonBody, reply, UUID } from '../_shared/http.ts';
+import { adminClient, callerOf, CORS, jsonBody, reply, serve, UUID } from '../_shared/http.ts';
 import { FAL_QUEUE, type MediaKind, parseStatus, resultUrl, storageType } from '../_shared/fal.ts';
 
 const FAL_KEY = Deno.env.get('FAL_KEY') ?? '';
 // Au-delà, une génération est déclarée ratée (fal.ai garde les requêtes, pas nous).
 const GIVE_UP_MS = 15 * 60_000;
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' });
   if (!FAL_KEY) return reply(503, { error: 'ai_not_configured' });

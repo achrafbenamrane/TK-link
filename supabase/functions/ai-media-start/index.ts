@@ -6,7 +6,7 @@
 // VALIDÉ. Le quota du jour (10 images, 2 vidéos) est vérifié par le serveur avant tout appel payant.
 // Le texte envoyé au modèle est construit ici (nom, catégorie, description nettoyée), jamais reçu
 // tel quel du téléphone. Secret : FAL_KEY (et, facultatifs, FAL_IMAGE_MODEL / FAL_VIDEO_MODEL).
-import { adminClient, callerOf, CORS, jsonBody, reply } from '../_shared/http.ts';
+import { adminClient, callerOf, CORS, jsonBody, reply, serve } from '../_shared/http.ts';
 import {
   buildPrompt,
   cleanBrief,
@@ -24,7 +24,7 @@ const MODEL: Record<MediaKind, string> = {
   video: Deno.env.get('FAL_VIDEO_MODEL') || DEFAULT_VIDEO_MODEL,
 };
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' });
   if (!FAL_KEY) return reply(503, { error: 'ai_not_configured' });

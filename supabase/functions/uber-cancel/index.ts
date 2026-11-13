@@ -9,11 +9,11 @@
 // course telle qu'elle était. Uber accepte : on efface la course (identifiant, suivi, statut).
 //
 // Sécurité : l'appelant est identifié par son jeton et doit être le titulaire du commerce.
-import { adminClient, callerOf, CORS, jsonBody, reply, UUID } from '../_shared/http.ts';
+import { adminClient, callerOf, CORS, jsonBody, reply, serve, UUID } from '../_shared/http.ts';
 import { uberConfigured, uberRequest } from '../_shared/uber-api.ts';
 import { CANCELLABLE_UBER_STATUSES, isCourierCancellable } from '../_shared/uber.ts';
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' });
   if (!uberConfigured()) return reply(503, { error: 'uber_not_configured' });

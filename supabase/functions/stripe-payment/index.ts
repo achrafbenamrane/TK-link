@@ -10,7 +10,7 @@
 // téléphone. Le webhook Stripe passe ensuite la commande à « payée » (`stripe-webhook`).
 //
 // Rejouable : tant que la page d'une commande est ouverte, on la rend ; sinon on en crée une autre.
-import { adminClient, callerOf, CORS, jsonBody, reply, UUID } from '../_shared/http.ts';
+import { adminClient, callerOf, CORS, jsonBody, reply, serve, UUID } from '../_shared/http.ts';
 import {
   applicationFeeCents,
   checkoutParams,
@@ -23,7 +23,7 @@ import { stripeConfigured, stripeRequest } from '../_shared/stripe-api.ts';
 const RETURN_URL =
   Deno.env.get('STRIPE_PAYMENT_RETURN_URL') ?? 'https://tklink.vercel.app/stripe/paiement';
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' });
   if (!stripeConfigured()) return reply(503, { error: 'stripe_not_configured' });

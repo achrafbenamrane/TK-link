@@ -20,6 +20,24 @@ export const reply = (status: number, body: Record<string, unknown>) =>
     headers: { ...CORS, 'Content-Type': 'application/json' },
   });
 
+/**
+ * LE POINT D'ENTRÉE des fonctions appelées par l'app : une exception imprévue (réseau, réponse
+ * inattendue) devient une réponse JSON `server_error` (500) AVEC les en-têtes CORS. Sans lui, Deno rend
+ * un 500 en texte brut, que l'app lit comme « hors ligne » sur le web et « inconnu » ailleurs
+ * (relecture du 13/11/2026). Les webhooks (Stripe, Uber, base de données) gardent `Deno.serve` :
+ * leur appelant attend un statut, pas du JSON.
+ */
+export function serve(handler: (req: Request) => Response | Promise<Response>): void {
+  Deno.serve(async (req) => {
+    try {
+      return await handler(req);
+    } catch (error) {
+      console.error('edge_function_error', error instanceof Error ? error.message : String(error));
+      return reply(500, { error: 'server_error' });
+    }
+  });
+}
+
 /** Le client « service_role » : contourne la RLS, à n'utiliser qu'APRÈS avoir vérifié l'appelant. */
 export const adminClient = (): SupabaseClient =>
   createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
