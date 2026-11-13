@@ -46,7 +46,11 @@ function FavoriteCard({ deal }: { deal: Deal }) {
 
         <View className="absolute left-1.5 top-1.5 flex-row items-center gap-1 rounded-pill bg-surface-inverse px-2 py-1">
           <Feather name="clock" size={9} color={colors.inkInverse} />
-          <Countdown seconds={deal.endsInSeconds} className="text-ink-inverse" />
+          <Countdown
+            seconds={deal.endsInSeconds}
+            endsAt={deal.endsAt}
+            className="text-ink-inverse"
+          />
         </View>
 
         <Pressable

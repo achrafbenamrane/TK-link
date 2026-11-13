@@ -1,4 +1,6 @@
-import { countdownParts, formatCountdown } from '../ui/components/countdown';
+import { remainingMsAt } from '@/shared/ui/ticking-text';
+
+import { countdownParts, formatCentiseconds, formatCountdown } from '../ui/components/countdown';
 
 /**
  * Le compte à rebours des affiches.
@@ -37,5 +39,28 @@ describe('countdownParts', () => {
     const total = 2 * 3600 + 7 * 60 + 9;
     const { h, m, s } = countdownParts(total);
     expect(`${h}:${m}:${s}`).toBe(formatCountdown(total));
+  });
+});
+
+describe('centièmes de seconde', () => {
+  it('toujours deux chiffres, de 99 à 00', () => {
+    expect(formatCentiseconds(899_990)).toBe('99');
+    expect(formatCentiseconds(900_000)).toBe('00');
+    expect(formatCentiseconds(1_050)).toBe('05');
+    expect(formatCentiseconds(-3)).toBe('00');
+  });
+});
+
+describe('remainingMsAt', () => {
+  it('une vraie Flash s’arrête à zéro, sans repartir', () => {
+    expect(remainingMsAt(1_000, 0, 0, 61_000)).toBe(60_000);
+    expect(remainingMsAt(70_000, 0, 0, 61_000)).toBe(0);
+  });
+
+  it('une offre d’exemple boucle sur sa durée', () => {
+    expect(remainingMsAt(10_000, 10_000, 900_000, 0)).toBe(900_000);
+    expect(remainingMsAt(10_250, 10_000, 900_000, 0)).toBe(899_750);
+    expect(remainingMsAt(10_000 + 900_000, 10_000, 900_000, 0)).toBe(900_000);
+    expect(remainingMsAt(5, 0, 0, 0)).toBe(0);
   });
 });

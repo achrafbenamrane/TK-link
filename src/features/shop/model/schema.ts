@@ -104,6 +104,11 @@ export type Deal = {
   stockTotal: number;
   stockLeft: number;
   endsInSeconds: number; // amorce du compte à rebours
+  /**
+   * Fin réelle (horodatage en ms) d'une Flash du serveur : le compte à rebours s'y arrête. Absent
+   * pour les offres d'exemple, dont le décompte boucle sur `endsInSeconds`.
+   */
+  endsAt?: number;
   description: string;
   perk?: string; // « 50 % sur le 2ᵉ »
   origin?: string;

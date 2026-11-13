@@ -1,9 +1,15 @@
-import { useEffect, useState } from 'react';
 import { View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { cn } from '@/shared/lib/cn';
 import { AppText } from '@/shared/ui';
+import { TickingText, useRemainingMs, useRemainingSeconds } from '@/shared/ui/ticking-text';
 import { useColors } from '@/shared/theme/theme-provider';
+
+const pad = (n: number): string => {
+  'worklet';
+  return n < 10 ? `0${n}` : `${n}`;
+};
 
 /**
  * Toujours HH:MM:SS, même sous l'heure.
@@ -15,9 +21,9 @@ import { useColors } from '@/shared/theme/theme-provider';
  * montrent « 00 : 28 : 45 » et « 00:15:45 », toujours trois blocs.
  */
 export function formatCountdown(total: number): string {
-  const s = Math.max(0, total);
-  const p = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-  return `${p(Math.floor(s / 3600))}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}`;
+  'worklet';
+  const s = Math.max(0, Math.floor(total));
+  return `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
 }
 
 /** Les trois nombres du compte à rebours, déjà complétés à deux chiffres. */
@@ -27,30 +33,48 @@ export function countdownParts(total: number): { h: string; m: string; s: string
 }
 
 /**
- * Le décompte lui-même, partagé par les deux présentations.
- *
- * Il boucle au lieu d'atteindre zéro : le catalogue est écrit en dur, une offre
- * de démonstration qui expire laisserait une carte morte à l'écran pendant la
- * présentation au client. Le jour où le back-end donne une vraie date de fin,
- * c'est ici — et nulle part ailleurs — que la boucle disparaît.
+ * Les centièmes de seconde, sur deux chiffres — le rapport d’avancement remis au client les annonce
+ * (« 14:59.99 ») : ils rendent l’urgence visible.
  */
-function useCountdown(seconds: number): number {
-  const [left, setLeft] = useState(seconds);
+export function formatCentiseconds(remainingMs: number): string {
+  'worklet';
+  return pad(Math.floor(Math.max(0, remainingMs) / 10) % 100);
+}
 
-  useEffect(() => {
-    // Synchronisation avec une horloge externe : le cas d'usage même d'un
-    // effet, y compris pour la remise à zéro qui l'accompagne.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- réarmement du minuteur
-    setLeft(seconds);
-    const id = setInterval(() => setLeft((v) => (v <= 0 ? seconds : v - 1)), 1000);
-    return () => clearInterval(id);
-  }, [seconds]);
+const clockOf = (ms: number): string => {
+  'worklet';
+  return formatCountdown(ms / 1000);
+};
+const centisOf = (ms: number): string => {
+  'worklet';
+  return `.${formatCentiseconds(ms)}`;
+};
+const hoursOf = (ms: number): string => {
+  'worklet';
+  return pad(Math.floor(Math.max(0, ms) / 3600000));
+};
+const minutesOf = (ms: number): string => {
+  'worklet';
+  return pad(Math.floor(Math.max(0, ms) / 60000) % 60);
+};
+const secondsOf = (ms: number): string => {
+  'worklet';
+  return pad(Math.floor(Math.max(0, ms) / 1000) % 60);
+};
+const centisBlockOf = (ms: number): string => {
+  'worklet';
+  return formatCentiseconds(ms);
+};
 
-  return left;
+function timerLabel(seconds: number): string {
+  const { h, m, s } = countdownParts(seconds);
+  return `Il reste ${h} heures, ${m} minutes et ${s} secondes`;
 }
 
 type Props = {
   seconds: number;
+  /** Fin réelle d’une Flash du serveur (ms). Sans elle, le décompte boucle (offres d’exemple). */
+  endsAt?: number | undefined;
   className?: string;
 };
 
@@ -61,27 +85,48 @@ type Props = {
  * au-delà de quatre jours) : plus large que « 00:28:45 ». Dans une pastille ou
  * une rangée flex serrée, le moteur de mise en page rogne alors le texte le plus
  * « compressible » — celui-ci, par défaut. `flexShrink: 0` l'en empêche : c'est
- * le voisin (titre, prix) qui cède. En `style` et non en classe `shrink-0` : la
- * classe n'existe nulle part ailleurs dans le projet (cf. docs/architecture/styling.md).
+ * le voisin (titre, prix) qui cède.
+ *
+ * Les centièmes suivent, un peu atténués ; ils disparaissent si l’utilisateur a demandé de réduire
+ * les animations (un chiffre qui défile en continu en est une).
  */
-export function Countdown({ seconds, className }: Props) {
-  const left = useCountdown(seconds);
+export function Countdown({ seconds, endsAt, className }: Props) {
+  const remaining = useRemainingMs(seconds, endsAt);
+  const left = useRemainingSeconds(remaining);
+  const reduced = useReducedMotion();
+  const text = cn('font-sans-semibold text-base text-ink', className);
 
   return (
-    <AppText
-      className={cn('font-sans-semibold', className)}
-      style={{ fontVariant: ['tabular-nums'], flexShrink: 0 }}
+    <View
+      className="flex-row items-baseline"
+      style={{ flexShrink: 0 }}
+      accessible
+      accessibilityRole="timer"
+      accessibilityLabel={timerLabel(left)}
     >
-      {formatCountdown(left)}
-    </AppText>
+      <TickingText
+        testID="countdown-clock"
+        remaining={remaining}
+        format={clockOf}
+        className={text}
+      />
+      {reduced ? null : (
+        <TickingText
+          testID="countdown-centis"
+          remaining={remaining}
+          format={centisOf}
+          className={cn(text, 'opacity-70')}
+        />
+      )}
+    </View>
   );
 }
 
-/** Les trois unités, dans l'ordre et avec leur légende — comme sur les affiches. */
+/** Les unités, dans l'ordre et avec leur légende — comme sur les affiches. */
 const UNITS = [
-  { key: 'h', label: 'H' },
-  { key: 'm', label: 'MIN' },
-  { key: 's', label: 'SEC' },
+  { key: 'h', label: 'H', format: hoursOf },
+  { key: 'm', label: 'MIN', format: minutesOf },
+  { key: 's', label: 'SEC', format: secondsOf },
 ] as const;
 
 /**
@@ -91,24 +136,67 @@ const UNITS = [
  * « 00 : 28 : 45 » en gros, avec H, MIN et SEC sous les nombres. Ce n'est pas
  * de la décoration : sans les légendes, « 00:15:45 » se lit aussi bien quinze
  * minutes que quinze heures, et l'urgence — le seul argument d'une vente
- * flash — se perd exactement là où elle doit porter.
+ * flash — se perd exactement là où elle doit porter. Un quatrième bloc, plus
+ * petit, égrène les centièmes (sauf si les animations sont réduites).
  *
  * La version compacte reste pour les listes, où la place manque. Celle-ci est
  * faite pour l'écran qui décide de l'achat.
  */
 export function CountdownBlocks({
   seconds,
+  endsAt,
   size = 30,
   testID,
 }: {
   seconds: number;
+  endsAt?: number | undefined;
   /** Taille des chiffres. Tout le bloc se dimensionne dessus. */
   size?: number;
   testID?: string;
 }) {
   const colors = useColors();
-  const left = useCountdown(seconds);
-  const parts = countdownParts(left);
+  const remaining = useRemainingMs(seconds, endsAt);
+  const left = useRemainingSeconds(remaining);
+  const reduced = useReducedMotion();
+
+  const block = (key: string, label: string, format: (ms: number) => string, digits: number) => (
+    <View className="items-center" style={{ gap: size * 0.12 }}>
+      <View
+        className="items-center justify-center rounded-control"
+        style={{
+          backgroundColor: colors.surfaceInverse,
+          minWidth: digits * 1.55,
+          paddingHorizontal: digits * 0.2,
+          paddingVertical: digits * 0.18,
+        }}
+      >
+        <TickingText
+          testID={testID ? `${testID}-${key}` : undefined}
+          remaining={remaining}
+          format={format}
+          className="text-center font-display text-ink-inverse"
+          style={{ fontSize: digits }}
+        />
+      </View>
+      <AppText
+        className="font-sans-bold text-ink-faint"
+        style={{ fontSize: size * 0.32, letterSpacing: size * 0.02 }}
+      >
+        {label}
+      </AppText>
+    </View>
+  );
+
+  // Le séparateur s'aligne sur les chiffres, pas sur le bloc entier : centré verticalement il
+  // flotterait entre les nombres et leur légende, au lieu de séparer les nombres.
+  const separator = (char: string, digits: number) => (
+    <AppText
+      className="font-display text-ink-faint"
+      style={{ fontSize: digits * 0.8, marginTop: digits * 0.15 }}
+    >
+      {char}
+    </AppText>
+  );
 
   return (
     <View
@@ -117,48 +205,20 @@ export function CountdownBlocks({
       style={{ gap: size * 0.24 }}
       accessible
       accessibilityRole="timer"
-      accessibilityLabel={`Il reste ${parts.h} heures, ${parts.m} minutes et ${parts.s} secondes`}
+      accessibilityLabel={timerLabel(left)}
     >
       {UNITS.map((u, i) => (
         <View key={u.key} className="flex-row items-start" style={{ gap: size * 0.24 }}>
-          <View className="items-center" style={{ gap: size * 0.12 }}>
-            <View
-              className="items-center justify-center rounded-control"
-              style={{
-                backgroundColor: colors.surfaceInverse,
-                minWidth: size * 1.55,
-                paddingHorizontal: size * 0.2,
-                paddingVertical: size * 0.18,
-              }}
-            >
-              <AppText
-                className="font-display text-ink-inverse"
-                style={{ fontSize: size, fontVariant: ['tabular-nums'] }}
-              >
-                {parts[u.key]}
-              </AppText>
-            </View>
-            <AppText
-              className="font-sans-bold text-ink-faint"
-              style={{ fontSize: size * 0.32, letterSpacing: size * 0.02 }}
-            >
-              {u.label}
-            </AppText>
-          </View>
-
-          {/* Le séparateur s'aligne sur les chiffres, pas sur le bloc entier :
-              centré verticalement il flotterait entre les nombres et leur
-              légende, au lieu de séparer les nombres. */}
-          {i < UNITS.length - 1 ? (
-            <AppText
-              className="font-display text-ink-faint"
-              style={{ fontSize: size * 0.8, marginTop: size * 0.15 }}
-            >
-              :
-            </AppText>
-          ) : null}
+          {block(u.key, u.label, u.format, size)}
+          {i < UNITS.length - 1 ? separator(':', size) : null}
         </View>
       ))}
+      {reduced ? null : (
+        <View className="flex-row items-start" style={{ gap: size * 0.24 }}>
+          {separator(',', size)}
+          {block('cs', '1/100', centisBlockOf, Math.round(size * 0.62))}
+        </View>
+      )}
     </View>
   );
 }

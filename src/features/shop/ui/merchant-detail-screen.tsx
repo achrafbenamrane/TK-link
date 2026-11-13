@@ -77,7 +77,7 @@ function FlashTile({ deal, onOpen, onAdd }: { deal: Deal; onOpen: () => void; on
         style={{ flexShrink: 0 }}
       >
         <Feather name="clock" size={10} color={colors.brand500} />
-        <Countdown seconds={deal.endsInSeconds} className="text-ink" />
+        <Countdown seconds={deal.endsInSeconds} endsAt={deal.endsAt} className="text-ink" />
       </View>
       <AppText className="font-sans-bold text-ink" style={{ fontSize: 13 }} numberOfLines={1}>
         {deal.title}

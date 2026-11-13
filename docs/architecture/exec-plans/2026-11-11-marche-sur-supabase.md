@@ -70,6 +70,9 @@ ils viennent après, sur les mêmes fondations.
 
 ### Étape 3 — La commande
 
+Reprise le 13/11/2026 dans [2026-11-13-rapport-avancement.md](2026-11-13-rapport-avancement.md)
+(étape 3, avec le paiement Stripe Connect et Uber Direct).
+
 - [ ] `flash_orders` + `reserve_flash()` atomique (stock sous verrou, prix recalculé)
 - [ ] Commerçant : commandes reçues et statuts ; client : suivi en direct
 

@@ -108,7 +108,11 @@ export function FlashCard({ deal }: Props) {
           style={{ backgroundColor: critical ? colors.danger : colors.surfaceInverse }}
         >
           <Feather name="clock" size={13} color={colors.inkInverse} />
-          <Countdown seconds={deal.endsInSeconds} className="text-sm text-ink-inverse" />
+          <Countdown
+            seconds={deal.endsInSeconds}
+            endsAt={deal.endsAt}
+            className="text-sm text-ink-inverse"
+          />
         </View>
 
         <Pressable

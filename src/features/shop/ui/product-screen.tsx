@@ -157,7 +157,12 @@ export function ProductScreen({ dealId }: Props) {
                 FIN DANS
               </AppText>
             </View>
-            <CountdownBlocks testID="product-countdown" seconds={deal.endsInSeconds} size={30} />
+            <CountdownBlocks
+              testID="product-countdown"
+              seconds={deal.endsInSeconds}
+              endsAt={deal.endsAt}
+              size={30}
+            />
           </View>
 
           <View className="gap-2 border-t border-line px-4 py-3">

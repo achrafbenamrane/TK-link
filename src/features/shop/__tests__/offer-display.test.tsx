@@ -13,6 +13,18 @@ import { ProductScreen } from '../ui/product-screen';
 
 const mockPush = jest.fn();
 
+// « Réduire les animations », piloté par test (désactivé par défaut, comme sur un téléphone neuf).
+let mockReducedMotion = false;
+jest.mock('react-native-reanimated', () => {
+  const actual = jest.requireActual<{ default: unknown }>('react-native-reanimated');
+  return {
+    ...actual,
+    __esModule: true,
+    default: actual.default,
+    useReducedMotion: () => mockReducedMotion,
+  };
+});
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     push: mockPush,
@@ -94,7 +106,8 @@ describe('<Countdown />', () => {
   it('affiche « 24:00:00 » en entier pour une offre de 24 heures, sans largeur figée', () => {
     render(<Countdown seconds={86400} />);
 
-    const text = screen.getByText('24:00:00');
+    // Le texte défile sur le fil d'interface (champ en lecture seule) : on lit sa valeur.
+    const text = screen.getByDisplayValue('24:00:00');
     expect(text).toBeOnTheScreen();
     // Ni troncature, ni largeur imposée : le texte refuse de rétrécir.
     expect(text.props.numberOfLines).toBeUndefined();
@@ -106,7 +119,23 @@ describe('<Countdown />', () => {
 
   it('tient aussi à 100 heures et plus, sans casser la ligne', () => {
     render(<Countdown seconds={100 * 3600 + 61} />);
-    expect(screen.getByText('100:01:01')).toBeOnTheScreen();
+    expect(screen.getByDisplayValue('100:01:01')).toBeOnTheScreen();
+  });
+
+  it('égrène les centièmes, et annonce le temps à la seconde aux lecteurs d’écran', () => {
+    render(<Countdown seconds={15 * 60} />);
+    expect(screen.getByTestId('countdown-centis')).toHaveDisplayValue('.00');
+    expect(screen.getByRole('timer')).toHaveAccessibleName(
+      'Il reste 00 heures, 15 minutes et 00 secondes',
+    );
+  });
+
+  it('sans centièmes quand les animations sont réduites', () => {
+    mockReducedMotion = true;
+    render(<Countdown seconds={15 * 60} />);
+    expect(screen.queryByTestId('countdown-centis')).toBeNull();
+    expect(screen.getByDisplayValue('00:15:00')).toBeOnTheScreen();
+    mockReducedMotion = false;
   });
 });
 

@@ -80,6 +80,7 @@ export function liveDeal(offer: LiveOffer, nowMs: number): Deal {
     stockTotal: offer.stockTotal,
     stockLeft: offer.stockLeft,
     endsInSeconds: Math.max(0, Math.round((offer.endsAt - nowMs) / 1000)),
+    endsAt: offer.endsAt,
     description: offer.description || 'Vente flash publiée par le commerçant.',
     fulfilments: offer.modes,
   };

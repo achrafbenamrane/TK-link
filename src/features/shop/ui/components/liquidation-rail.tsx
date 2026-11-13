@@ -108,7 +108,11 @@ export function LiquidationRail({ limit = 8 }: Props) {
                   style={{ flexShrink: 0 }}
                 >
                   <Feather name="clock" size={9} color={colors.inkInverse} />
-                  <Countdown seconds={deal.endsInSeconds} className="text-xs text-ink-inverse" />
+                  <Countdown
+                    seconds={deal.endsInSeconds}
+                    endsAt={deal.endsAt}
+                    className="text-xs text-ink-inverse"
+                  />
                 </View>
               </View>
             </View>
