@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
-import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { AppText, Button, EmptyState, Screen } from '@/shared/ui';
@@ -14,6 +14,7 @@ import {
   type OrderStatus,
   type StatusTone,
 } from '../lib/order-status';
+import { selectMyServerOrders, useServerOrdersStore } from '../model/server-orders';
 import { selectOrders, useShopStore } from '../model/store';
 
 type FeatherName = ComponentProps<typeof Feather>['name'];
@@ -67,7 +68,19 @@ export function OrdersScreen() {
     const t = setInterval(sync, 5000);
     return () => clearInterval(t);
   }, [sync]);
-  const orders = useShopStore(selectOrders);
+  const localOrders = useShopStore(selectOrders);
+  // Les commandes du serveur (Flash en direct payées sur la page Stripe), relues à chaque passage.
+  const serverOrders = useServerOrdersStore(selectMyServerOrders);
+  const refreshServer = useServerOrdersStore((s) => s.refreshMine);
+  useFocusEffect(
+    useCallback(() => {
+      void refreshServer();
+    }, [refreshServer]),
+  );
+  const orders = useMemo(
+    () => [...serverOrders, ...localOrders].sort((a, b) => b.createdAt - a.createdAt),
+    [serverOrders, localOrders],
+  );
 
   return (
     <Screen testID="orders-screen">
@@ -150,8 +163,13 @@ export function OrdersScreen() {
                         +{order.pointsEarned}
                       </AppText>
                     </View>
-                    <AppText variant="display" style={{ fontSize: 18 }}>
-                      {order.total.toFixed(2)}€
+                    {/* Ce qui a été payé : les articles ET la livraison. */}
+                    <AppText
+                      testID={`order-${order.id}-total`}
+                      variant="display"
+                      style={{ fontSize: 18 }}
+                    >
+                      {(order.total + order.deliveryFee).toFixed(2)}€
                     </AppText>
                   </View>
                 </View>

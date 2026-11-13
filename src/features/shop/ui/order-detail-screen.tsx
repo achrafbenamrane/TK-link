@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, type ComponentProps } from 'react';
+import { useEffect, useState, type ComponentProps } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -18,7 +18,15 @@ import {
 import type { Order } from '../model/schema';
 import { useShopStore } from '../model/store';
 import { getDeal, getMerchant } from '../model/catalog';
+import { useServerOrdersStore } from '../model/server-orders';
 import { RateMerchant, ReportIssue } from './components/order-feedback';
+import { ServerOrderPanel } from './components/server-order-panel';
+
+/** Statuts après lesquels une commande du serveur n'avance plus : on cesse de la relire. */
+const FINAL: readonly OrderStatus[] = ['recuperee', 'livree', 'annulee', 'remboursee', 'refusee'];
+
+/** Le QR se dessine en sombre sur blanc, quel que soit le thème (en Nuit, `ink` est blanc). */
+const QR_INK = '#0A0A0D';
 
 type FeatherName = ComponentProps<typeof Feather>['name'];
 
@@ -136,9 +144,15 @@ export function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
 
-  const order = useShopStore((s) => s.orders.find((o) => o.id === id));
+  const local = useShopStore((s) => s.orders.find((o) => o.id === id));
+  // Une commande du SERVEUR (payée sur la page Stripe, suivie par le serveur).
+  const server = useServerOrdersStore((s) => s.mine.find((o) => o.id === id));
+  const refreshMine = useServerOrdersStore((s) => s.refreshMine);
+  const order = local ?? server;
   const address = useShopStore((s) => s.addresses.find((a) => a.id === order?.addressId));
   const sync = useShopStore((s) => s.syncOrderStatuses);
+  const [loaded, setLoaded] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   // DÉMO : la commande avance dans le temps ; on rafraîchit tant que l'écran
   // est ouvert pour que le fil bouge sous les yeux du client.
@@ -147,6 +161,38 @@ export function OrderDetailScreen() {
     const t = setInterval(sync, 5000);
     return () => clearInterval(t);
   }, [sync]);
+
+  // SERVEUR : relire la commande toutes les 5 s tant qu'elle avance (paiement confirmé par le
+  // webhook Stripe, préparation, coursier Uber…). Pas pour une commande locale.
+  const serverStatus = server?.status;
+  useEffect(() => {
+    if (local) return;
+    if (serverStatus && FINAL.includes(serverStatus)) return;
+    let alive = true;
+    const tick = () =>
+      void refreshMine().then(() => {
+        if (!alive) return;
+        setLoaded(true);
+        setNow(Date.now());
+      });
+    tick();
+    const t = setInterval(tick, 5000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [local, serverStatus, refreshMine]);
+
+  if (!order && !loaded && !local) {
+    return (
+      <Screen testID="order-detail-screen">
+        <View className="flex-1 items-center justify-center gap-2" testID="order-loading">
+          <Feather name="loader" size={24} color={colors.inkFaint} />
+          <AppText variant="caption">Chargement de la commande…</AppText>
+        </View>
+      </Screen>
+    );
+  }
 
   if (!order) {
     return (
@@ -161,6 +207,7 @@ export function OrderDetailScreen() {
     );
   }
 
+  const isServer = !local && Boolean(server);
   const itemCount = order.items.reduce((n, i) => n + i.qty, 0);
   const firstDeal = order.items[0] ? getDeal(order.items[0].dealId) : undefined;
   const merchantName = (firstDeal && getMerchant(firstDeal.merchantId)?.name) || 'le commerçant';
@@ -194,6 +241,18 @@ export function OrderDetailScreen() {
 
         {/* Adresse — l'ancienne commande n'en a pas, on ne montre rien plutôt
             qu'un bloc vide. Inutile aussi en Touch & Collect : le client vient. */}
+        {server && !local && order.fulfilment === 'livraison' && server.deliveryAddress ? (
+          <View
+            testID="order-server-address"
+            className="mb-4 flex-row gap-3 rounded-card border border-line bg-surface p-4"
+          >
+            <Feather name="map-pin" size={16} color={colors.brand500} />
+            <AppText variant="caption" className="flex-1 text-ink-muted">
+              Livraison · {server.deliveryAddress}
+            </AppText>
+          </View>
+        ) : null}
+
         {address && order.fulfilment === 'livraison' ? (
           <View className="mb-4 flex-row gap-3 rounded-card border border-line bg-surface p-4">
             <Feather name="map-pin" size={16} color={colors.brand500} />
@@ -253,8 +312,12 @@ export function OrderDetailScreen() {
             </View>
             <View className="flex-row items-center justify-between">
               <AppText variant="label">Total</AppText>
-              <AppText variant="display" style={{ fontSize: 20, lineHeight: 26 }}>
-                {order.total.toFixed(2)}€
+              <AppText
+                testID="order-total"
+                variant="display"
+                style={{ fontSize: 20, lineHeight: 26 }}
+              >
+                {(order.total + order.deliveryFee).toFixed(2)}€
               </AppText>
             </View>
             {order.pointsEarned > 0 ? (
@@ -268,29 +331,37 @@ export function OrderDetailScreen() {
           </View>
         </View>
 
-        <RateMerchant order={order} merchantName={merchantName} />
+        {server && isServer ? (
+          <ServerOrderPanel order={server} now={now} onChanged={() => void refreshMine()} />
+        ) : null}
 
-        <View className="items-center gap-3 rounded-card border border-line bg-surface p-5">
-          <AppText className="font-sans-bold text-ink">Facture QR</AppText>
-          {/* Fond blanc : un QR sur crème perd du contraste et certains
+        {isServer ? null : <RateMerchant order={order} merchantName={merchantName} />}
+
+        {isServer ? null : (
+          <View className="items-center gap-3 rounded-card border border-line bg-surface p-5">
+            <AppText className="font-sans-bold text-ink">Facture QR</AppText>
+            {/* Fond blanc : un QR sur crème perd du contraste et certains
               scanners le refusent. */}
-          <View className="rounded-card bg-white p-3">
-            <QRCode
-              value={invoicePayload(order)}
-              size={150}
-              color={colors.ink}
-              backgroundColor="#FFFFFF"
-            />
+            <View className="rounded-card bg-white p-3">
+              <QRCode
+                value={invoicePayload(order)}
+                size={150}
+                color={QR_INK}
+                backgroundColor="#FFFFFF"
+              />
+            </View>
+            <AppText variant="caption" className="text-center text-xs text-ink-faint">
+              Présentez ce code au commerçant.
+            </AppText>
           </View>
-          <AppText variant="caption" className="text-center text-xs text-ink-faint">
-            Présentez ce code au commerçant.
-          </AppText>
-        </View>
+        )}
 
-        {/* Point d'entrée UNIQUE — CDC V1.1. */}
-        <View className="mt-4">
-          <ReportIssue order={order} />
-        </View>
+        {/* Point d'entrée UNIQUE — CDC V1.1. Une commande du serveur passe par le support. */}
+        {isServer ? null : (
+          <View className="mt-4">
+            <ReportIssue order={order} />
+          </View>
+        )}
       </ScrollView>
     </Screen>
   );

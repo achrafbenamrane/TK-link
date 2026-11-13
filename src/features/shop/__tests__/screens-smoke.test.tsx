@@ -15,6 +15,9 @@ jest.mock('expo-router', () => ({
     back: jest.fn(),
     canGoBack: () => false,
   }),
+  // L'écran des commandes relit celles du serveur à chaque passage (effet au montage, ici).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- why: une fabrique de jest.mock ne capture pas un import
+  useFocusEffect: (effect: () => void) => require('react').useEffect(effect, [effect]),
 }));
 jest.mock('expo-image', () => ({ Image: () => null }));
 

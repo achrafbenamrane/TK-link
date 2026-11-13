@@ -5,6 +5,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cn } from '@/shared/lib/cn';
+import { isSupabaseConfigured } from '@/shared/lib/env';
 import { haptic } from '@/shared/lib/haptics';
 import { usePlatformSettings } from '@/shared/lib/platform-overrides';
 import { AppText, Button } from '@/shared/ui';
@@ -14,6 +15,13 @@ import { authenticate } from '../lib/biometrics';
 import { POSITION_LABEL, POSITION_UNAVAILABLE_MESSAGE } from '../lib/destination';
 import { clientDeliveryFee, deliveryDistanceKm } from '../lib/delivery';
 import { getUserCoord } from '../lib/location';
+import type { OrdersError } from '../lib/orders-api';
+import {
+  CHECKOUT_ERROR,
+  openPaymentPage,
+  prepareServerCheckout,
+  SERVER_DEAL_ID,
+} from '../lib/server-checkout';
 import type { Coord } from '../model/schema';
 import { FULFILMENTS, FULFILMENT_LABEL, type Fulfilment } from '../lib/order-status';
 import { getMerchant } from '../model/catalog';
@@ -49,6 +57,9 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
   const [position, setPosition] = useState<Coord | null>(null);
   const [locating, setLocating] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Commande du serveur : passage en caisse en cours, et pourquoi il a échoué.
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<OrdersError | null>(null);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -88,6 +99,15 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
   const cart = useShopStore(selectCart);
   const lines = useMemo(() => cartLines(cart), [cart]);
   const subtotal = useMemo(() => lines.reduce((sum, l) => sum + l.lineTotal, 0), [lines]);
+  // LA COMMANDE DU SERVEUR (rapport d'avancement du 13/11/2026) : quand le panier ne contient que
+  // des Flash du serveur, on réserve le stock, la livraison est chiffrée par Uber Direct et l'on
+  // paie sur la page Stripe. Un panier qui mêle des offres d'exemple ne peut pas partir ainsi.
+  const serverLines = lines.filter((l) => SERVER_DEAL_ID.test(l.deal.id));
+  const serverMode =
+    isSupabaseConfigured && lines.length > 0 && serverLines.length === lines.length;
+  const mixedCart = isSupabaseConfigured && serverLines.length > 0 && !serverMode;
+  // La livraison d'une commande du serveur est chiffrée par Uber Direct au moment de payer.
+  const deliveryOnPayment = serverMode && fulfilment === 'livraison';
   const settings = usePlatformSettings();
   const addToCart = useShopStore((s) => s.addToCart);
   const decrement = useShopStore((s) => s.decrement);
@@ -106,10 +126,15 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
     firstMerchant?.coord,
     destination === 'here' ? position : null,
   );
-  const deliveryFee = fulfilment === 'touch-collect' ? 0 : clientDeliveryFee(deliveryKm, settings);
-  const surcharge = fulfilment === 'touch-collect' ? 0 : deliveryFee - settings.deliveryFeeEur;
-  // Le crédit se déduit AVANT le paiement, borné aux articles.
-  const discount = Math.round(Math.min(Math.max(0, credit), subtotal) * 100) / 100;
+  const deliveryFee =
+    fulfilment === 'touch-collect' || deliveryOnPayment
+      ? 0
+      : clientDeliveryFee(deliveryKm, settings);
+  const surcharge =
+    fulfilment === 'touch-collect' || deliveryOnPayment ? 0 : deliveryFee - settings.deliveryFeeEur;
+  // Le crédit se déduit AVANT le paiement, borné aux articles. Le serveur ne sait pas encore
+  // l'appliquer (réduction financée par TK LINK) : pas de crédit sur une commande du serveur.
+  const discount = serverMode ? 0 : Math.round(Math.min(Math.max(0, credit), subtotal) * 100) / 100;
   const total = subtotal + deliveryFee - discount;
 
   // Les points suivent les produits payés : livraison et frais exclus (CDC V1.1).
@@ -134,6 +159,46 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
     if (biometricEnabled) {
       const auth = await authenticate('Confirmez votre commande');
       if (!auth.ok && auth.reason !== 'indisponible') return;
+    }
+
+    if (mixedCart) {
+      setPayError('one_shop_per_order');
+      return;
+    }
+    if (serverMode) {
+      if (paying) return;
+      setPaying(true);
+      setPayError(null);
+      const res = await prepareServerCheckout({
+        lines: lines.map((l) => ({ offerId: l.deal.id, qty: l.qty })),
+        fulfilment,
+        address:
+          fulfilment !== 'livraison'
+            ? null
+            : usingPosition
+              ? POSITION_LABEL
+              : address
+                ? `${address.street}, ${address.zip} ${address.city}`
+                : null,
+        coord: usingPosition
+          ? position
+          : address?.lat !== undefined && address.lng !== undefined
+            ? { lat: address.lat, lng: address.lng }
+            : null,
+      });
+      if (!mounted.current) return;
+      setPaying(false);
+      if (!res.ok) {
+        setPayError(res.code);
+        return;
+      }
+      // Le stock est réservé : le panier se vide, la commande vit sur le serveur (« À payer » si la
+      // page de paiement est abandonnée, payable ensuite depuis sa fiche).
+      for (const l of lines) removeFromCart(l.deal.id);
+      haptic.success();
+      await openPaymentPage(res.paymentUrl);
+      router.replace({ pathname: '/commande/[id]', params: { id: res.orderId } });
+      return;
     }
 
     const res = checkout(
@@ -437,11 +502,13 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
               {FULFILMENT_LABEL[fulfilment]}
             </AppText>
             <AppText className="font-sans-bold text-sm text-success">
-              {deliveryFee === 0
-                ? fulfilment === 'touch-collect'
-                  ? 'Gratuit'
-                  : 'Offerte'
-                : `${deliveryFee.toFixed(2)}€`}
+              {deliveryOnPayment
+                ? 'Calculée par Uber Direct'
+                : deliveryFee === 0
+                  ? fulfilment === 'touch-collect'
+                    ? 'Gratuit'
+                    : 'Offerte'
+                  : `${deliveryFee.toFixed(2)}€`}
             </AppText>
           </View>
           {surcharge > 0 && deliveryKm !== null ? (
@@ -467,17 +534,30 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
           </View>
         </View>
 
+        {payError || mixedCart ? (
+          <AppText testID="cart-error" variant="caption" className="text-center text-danger">
+            {mixedCart
+              ? 'Votre panier mêle des offres d’exemple et des Flash en direct : retirez les offres d’exemple.'
+              : CHECKOUT_ERROR[payError ?? 'unknown']}
+          </AppText>
+        ) : null}
         <Pressable
           testID="cart-checkout"
           accessibilityRole="button"
+          accessibilityState={{ disabled: paying, busy: paying }}
+          disabled={paying}
           onPress={handleCheckout}
           className="flex-row items-center justify-center gap-2 rounded-control bg-brand-500 py-4 active:bg-brand-600"
         >
           <Feather name="lock" size={16} color={colors.inkInverse} />
           <AppText className="font-sans-bold text-ink-inverse">
-            {fulfilment === 'touch-collect' || hasDestination
-              ? `Payer · ${total.toFixed(2)}€`
-              : 'Choisir une adresse'}
+            {paying
+              ? 'Ouverture du paiement…'
+              : fulfilment === 'touch-collect' || hasDestination
+                ? deliveryOnPayment
+                  ? `Payer · ${total.toFixed(2)}€ + livraison`
+                  : `Payer · ${total.toFixed(2)}€`
+                : 'Choisir une adresse'}
           </AppText>
         </Pressable>
         <View className="flex-row items-center justify-center gap-1.5">
