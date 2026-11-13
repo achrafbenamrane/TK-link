@@ -138,7 +138,7 @@ export function HomeScreen({
   const preferences = useShopStore((s) => s.preferences);
   const userCoord = useShopStore((s) => s.userCoord);
 
-  const { deals, forYouCount, radiusRelaxed } = useMemo(() => {
+  const { deals, forYouCount, radiusRelaxed, available } = useMemo(() => {
     // Les offres publiées depuis l'app passent par exactement les mêmes filtres
     // que le catalogue : régimes, rayon, catégorie, recherche. Les exempter
     // ferait apparaître une offre que « Ma Fan Zone » vient d'écarter.
@@ -171,6 +171,9 @@ export function HomeScreen({
       deals: [...forYou, ...others],
       forYouCount: forYou.length,
       radiusRelaxed: outcome.radiusRelaxed,
+      // Avant « Ma Fan Zone » : zéro ici veut dire qu'aucun commerçant n'a rien publié, et l'écran
+      // vide ne doit pas accuser les réglages de l'utilisateur.
+      available: list.length,
     };
   }, [category, query, preferences, userCoord, interests, extraDeals, liveOffers, now, examples]);
 
@@ -275,14 +278,26 @@ export function HomeScreen({
           }
           ListEmptyComponent={
             <View className="items-center px-10 pt-16" testID="home-empty">
-              <Feather name={query ? 'search' : 'sliders'} size={30} color={colors.inkFaint} />
+              <Feather
+                name={query ? 'search' : available === 0 ? 'clock' : 'sliders'}
+                size={30}
+                color={colors.inkFaint}
+              />
               <AppText variant="title" className="mt-3 text-center text-ink-faint">
-                {query ? 'Aucune offre pour cette recherche' : 'Aucune offre avec ces réglages'}
+                {query
+                  ? 'Aucune offre pour cette recherche'
+                  : available === 0
+                    ? category
+                      ? 'Pas de Flash dans cette catégorie'
+                      : 'Pas encore de Flash près de vous'
+                    : 'Aucune offre avec ces réglages'}
               </AppText>
               <AppText variant="caption" className="mt-1 text-center">
                 {query
                   ? 'Essayez une autre catégorie ou un autre mot-clé.'
-                  : 'Vos régimes déclarés dans Ma Fan Zone écartent toutes les offres du moment.'}
+                  : available === 0
+                    ? 'Les commerçants du quartier publient leurs invendus ici, pour quelques minutes. Revenez un peu plus tard.'
+                    : 'Vos régimes déclarés dans Ma Fan Zone écartent toutes les offres du moment.'}
               </AppText>
             </View>
           }

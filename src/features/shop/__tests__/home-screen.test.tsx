@@ -164,6 +164,15 @@ describe('<HomeScreen />', () => {
     useLiveFeedStore.setState({ offers: [] });
   });
 
+  it('aucune Flash publiée : l’écran vide le dit, sans accuser les réglages', () => {
+    useLiveFeedStore.setState({ offers: [] });
+    render(<HomeScreen examples={false} />);
+
+    expect(screen.getByTestId('home-empty')).toBeOnTheScreen();
+    expect(screen.getByText('Pas encore de Flash près de vous')).toBeOnTheScreen();
+    expect(screen.queryByText(/écartent toutes les offres/)).toBeNull();
+  });
+
   it('sépare les centres d’intérêt déclarés du reste des offres', () => {
     render(<HomeScreen interests={['services']} />);
 
