@@ -125,6 +125,9 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
       comptes
 - [x] 13/11/2026 : migration 0018 (partage des récompenses) appliquée ; `npm run auth:check` voit
       0007 à 0018 en place
+- [x] Back-office : Vue d’ensemble, Comptes et Revenus lus dans les vraies tables (route
+      `admin/api/stats` : comptes, Flash, volume vendu, commission du serveur, revenu net du crédit
+      de parrainage, six mois glissants) ; la démonstration reste sans clé de service
 - [x] Back-office : l’onglet Litiges lit les vraies commandes en litige et enregistre la décision
       motivée (0021) ; le remboursement se fait dans Stripe
 - [ ] Migrations 0019 (parrainage, relue), 0020 (annulation avec page de paiement ouverte) et 0021

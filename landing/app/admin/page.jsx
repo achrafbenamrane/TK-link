@@ -86,13 +86,34 @@ export default function AdminPage() {
    * se voir dans Revenus, sinon deux onglets donneraient deux chiffres pour la même chose.
    */
   const commissionPct = settings.commissionB2cPct;
+  /**
+   * Les VRAIS chiffres (comptes, Flash, commandes) dès que le back-office a sa clé de service ; sinon
+   * ceux de la démonstration. Les revenus réels viennent des commissions calculées par le serveur à
+   * chaque commande, moins ce que TK LINK finance (crédit de parrainage) — pas d'un taux appliqué après
+   * coup.
+   */
+  const [stats, setStats] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    void fetch('/admin/api/stats', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (alive && data?.totals) setStats(data);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const totals = stats?.totals ?? TOTALS;
   const months = useMemo(
     () =>
+      stats?.months ??
       MONTHS.map((m) => {
         const commission = commissionCents(m.gmvCents, commissionPct);
         return { ...m, commissionCents: commission, revenueCents: commission };
       }),
-    [commissionPct],
+    [commissionPct, stats],
   );
   const revenueTotalCents = months.reduce((sum, m) => sum + m.revenueCents, 0);
 
@@ -345,21 +366,23 @@ export default function AdminPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return [...acceptedMembers, ...MEMBERS].filter((m) => {
+    // En direct, un dossier accepté est déjà un compte du serveur : pas de doublon.
+    return [...(stats ? [] : acceptedMembers), ...(stats?.members ?? MEMBERS)].filter((m) => {
       if (roleFilter !== 'all' && m.role !== roleFilter) return false;
       if (!q) return true;
       return `${m.name} ${m.city} ${m.siret}`.toLowerCase().includes(q);
     });
-  }, [query, roleFilter, acceptedMembers]);
+  }, [query, roleFilter, acceptedMembers, stats]);
 
   /** Les commerçants qui font tourner la plateforme, par volume publié. */
   const topPros = useMemo(
     () =>
-      MEMBERS.filter((m) => m.role === 'commercant')
+      (stats?.members ?? MEMBERS)
+        .filter((m) => m.role === 'commercant')
         .slice()
         .sort((a, b) => b.spentCents - a.spentCents)
         .slice(0, 5),
-    [],
+    [stats],
   );
 
   const peak = Math.max(1, ...months.map((m) => m.revenueCents));
@@ -624,17 +647,17 @@ export default function AdminPage() {
             <div className="tkpro-stats">
               <div className="tkpro-stat">
                 <div className="k">Inscrits</div>
-                <div className="v">{TOTALS.members}</div>
-                <div className="d">dont {TOTALS.pros} professionnels</div>
+                <div className="v">{totals.members}</div>
+                <div className="d">dont {totals.pros} professionnels</div>
               </div>
               <div className="tkpro-stat">
                 <div className="k">Offres publiées</div>
-                <div className="v">{TOTALS.offers}</div>
+                <div className="v">{totals.offers}</div>
                 <div className="d">toutes enseignes confondues</div>
               </div>
               <div className="tkpro-stat">
                 <div className="k">Volume vendu</div>
-                <div className="v">{formatEuros(TOTALS.gmvCents)}</div>
+                <div className="v">{formatEuros(totals.gmvCents)}</div>
                 <div className="d">sur six mois</div>
               </div>
               <div className="tkpro-stat eco">
@@ -645,7 +668,7 @@ export default function AdminPage() {
             </div>
 
             {/* Ce qui demande une action passe AVANT les jolis chiffres. */}
-            {TOTALS.incomplete > 0 ? (
+            {totals.incomplete > 0 ? (
               <button
                 type="button"
                 className="tkadmin-alert"
@@ -657,7 +680,7 @@ export default function AdminPage() {
                 <span aria-hidden="true">⚠</span>
                 <span>
                   <b>
-                    {TOTALS.incomplete} professionnel{TOTALS.incomplete > 1 ? 's' : ''} sans SIRET
+                    {totals.incomplete} professionnel{totals.incomplete > 1 ? 's' : ''} sans SIRET
                   </b>
                   <em>
                     Ils publient, mais le CDC §5 leur interdit de commander chez un grossiste.
