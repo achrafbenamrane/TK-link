@@ -29,6 +29,11 @@ layer. A change without proof doesn't merge.
   grows; never lower it to merge.
 - Mock at the boundary (AsyncStorage, network), not the middle. Global mocks
   live in `jest.setup.ts`; feature mocks next to the feature's tests.
+- A local `jest.mock('expo-router', …)` replaces the global one entirely: spread
+  `require('@/shared/testing/expo-router-mock').expoRouterDefaults()` first, then
+  override. When a screen starts using a new `expo-router` hook, add it to
+  `expoRouterDefaults` — not to each test (14 suites broke at once on
+  `useFocusEffect`, 13/11/2026).
 
 ## E2E (Maestro)
 

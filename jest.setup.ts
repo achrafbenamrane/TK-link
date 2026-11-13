@@ -46,20 +46,10 @@ jest.mock('expo-haptics', () => ({
  * de test écrase celui-ci. `canGoBack` y manque souvent — c'est sans effet, il
  * n'est appelé qu'au moment du clic.
  */
-jest.mock('expo-router', () => ({
-  useRouter: () => ({
-    push: jest.fn(),
-    replace: jest.fn(),
-    back: jest.fn(),
-    canGoBack: () => true,
-  }),
-  useLocalSearchParams: () => ({}),
-  // Un écran « au premier plan » une fois monté : l'effet tourne au montage, comme à la première
-  // mise au point dans l'app.
-  // `require` : une fabrique de `jest.mock` ne peut pas capturer un import du fichier.
-  useFocusEffect: (effect: () => void | (() => void)) =>
-    require('react').useEffect(effect, [effect]),
-}));
+// Une seule source pour les valeurs par défaut (useFocusEffect compris) : les mocks LOCAUX les
+// étalent aussi avant leurs remplacements (voir src/shared/testing/expo-router-mock.ts).
+// `require` : une fabrique de `jest.mock` ne peut pas capturer un import du fichier.
+jest.mock('expo-router', () => require('@/shared/testing/expo-router-mock').expoRouterDefaults());
 
 // Reanimated ships an official Jest integration (v3.6+ / v4).
 require('react-native-reanimated').setUpTests();

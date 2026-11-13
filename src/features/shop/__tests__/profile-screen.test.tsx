@@ -5,6 +5,9 @@ import { fireEvent, render, screen, within } from '@/shared/testing/render';
 import { ProfileScreen } from '../ui/profile-screen';
 
 jest.mock('expo-router', () => ({
+  // Valeurs par défaut d'abord (useFocusEffect…), remplacements ensuite.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- why: une fabrique de jest.mock ne capture pas un import
+  ...require('@/shared/testing/expo-router-mock').expoRouterDefaults(),
   useRouter: () => ({
     push: jest.fn(),
     replace: jest.fn(),
