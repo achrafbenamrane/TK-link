@@ -122,10 +122,11 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
       au-delà du stock, aucun statut ni point ni « payé » écrit par un client, pas de message « au nom
       de TK LINK », commerçant sans saut d’étape ni encaissement auto-déclaré, aucune fuite entre
       comptes
-- [ ] Migration 0018 (partage des récompenses) à appliquer dans le SQL Editor ; `npm run auth:check`
-      la sonde
+- [x] 13/11/2026 : migration 0018 (partage des récompenses) appliquée ; `npm run auth:check` voit
+      0007 à 0018 en place
 - [ ] Clés Stripe (test), Uber Direct, fal.ai ; fonctions Edge déployées ; webhooks déclarés
-- [x] Mises à jour OTA publiées (dernière : 109b19ac, design à 360 px, 13/11/2026)
+- [x] Mises à jour OTA publiées (dernière : be16f769 — factures serveur, partage des récompenses,
+      13/11/2026)
 - [ ] Essai sur deux téléphones
 - [ ] Nouvelle APK (notifications) avec `google-services.json`
 
