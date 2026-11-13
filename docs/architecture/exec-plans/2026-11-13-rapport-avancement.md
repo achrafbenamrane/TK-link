@@ -40,10 +40,13 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
 
 ### 1 — Expérience utilisateur (sans dépendance externe)
 
-- [ ] Compte à rebours au centième de seconde, calculé sur le fil d’interface (Reanimated), arrêté
+- [x] Compte à rebours au centième de seconde, calculé sur le fil d’interface (Reanimated), arrêté
       à zéro pour une vraie Flash, sans centièmes si « réduire les animations »
-- [ ] Bloc du commerçant = un seul chemin vers sa boutique (carte Flash, fiche produit, carte)
-- [ ] Programmation d’une Flash simplifiée côté commerçant
+- [x] Bloc du commerçant = un seul chemin vers sa boutique (carte Flash, fiche produit, carte)
+- [x] Programmation d’une Flash simplifiée côté commerçant : Maintenant / Aujourd’hui / Demain
+      puis un créneau à la demi-heure ; fin calculée depuis le créneau
+      **Preuve :** aperçu web 13/11 (fiche produit, compte commerçant de test) ; c936265, 86606c7,
+      c3fca43. En plus : accueil vide sans Flash = « Pas encore de Flash près de vous » (903d9e0)
 
 ### 2 — Uber Direct à la place des livreurs
 
