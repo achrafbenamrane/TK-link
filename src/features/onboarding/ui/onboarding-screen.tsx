@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cn } from '@/shared/lib/cn';
 import { type Role } from '@/shared/lib/roles';
-import { AppText, Button } from '@/shared/ui';
+import { AppText, Button, ScreenIntro } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { INTERESTS } from '../lib/avatar';
@@ -126,7 +126,7 @@ export function OnboardingScreen({ onDone, onRequestLocation, onEnableBiometrics
         {/* 3 — CDC §2.3 : les huit catégories, à choisir librement. */}
         {step === 'interets' ? (
           <View className="gap-5">
-            <Header title={copy.title} subtitle={copy.subtitle} />
+            <ScreenIntro className="mb-3" title={copy.title} subtitle={copy.subtitle} />
 
             <View className="gap-3">
               <View className="flex-row items-center justify-between">
@@ -140,7 +140,7 @@ export function OnboardingScreen({ onDone, onRequestLocation, onEnableBiometrics
                   onPress={() => setInterests(allSelected ? [] : INTERESTS.map((i) => i.key))}
                   hitSlop={8}
                 >
-                  <AppText className="font-sans-bold text-brand-600" style={{ fontSize: 13 }}>
+                  <AppText className="font-sans-bold text-sm text-brand-600">
                     {allSelected ? 'Tout retirer' : 'Tout choisir'}
                   </AppText>
                 </Pressable>
@@ -169,10 +169,9 @@ export function OnboardingScreen({ onDone, onRequestLocation, onEnableBiometrics
                       />
                       <AppText
                         className={cn(
-                          'font-sans-semibold',
+                          'font-sans-semibold text-sm',
                           on ? 'text-ink-inverse' : 'text-ink-muted',
                         )}
-                        style={{ fontSize: 13 }}
                       >
                         {it.label}
                       </AppText>
@@ -181,7 +180,7 @@ export function OnboardingScreen({ onDone, onRequestLocation, onEnableBiometrics
                 })}
               </View>
 
-              <AppText variant="caption" className="text-ink-faint" style={{ fontSize: 12 }}>
+              <AppText variant="caption" className="text-xs text-ink-faint">
                 Modifiable à tout moment.
               </AppText>
             </View>
@@ -204,7 +203,8 @@ export function OnboardingScreen({ onDone, onRequestLocation, onEnableBiometrics
             icon="shield"
             title="Sécurisez votre compte"
             text="Votre appareil est enregistré. Vous pouvez y ajouter l’empreinte ou le visage : elle protège aussi les paiements et les données sensibles."
-            note="L’empreinte reste sur votre téléphone : TK LINK ne la stocke jamais."
+            // Espace insécable : « TK LINK » ne se coupe pas en fin de ligne.
+            note={'L’empreinte reste sur votre téléphone : TK LINK ne la stocke jamais.'}
           />
         ) : null}
 
@@ -263,17 +263,6 @@ export function OnboardingScreen({ onDone, onRequestLocation, onEnableBiometrics
 
 /* ---------------------------------------------------------------- morceaux */
 
-function Header({ title, subtitle }: { title: string; subtitle: string }) {
-  return (
-    <View className="gap-1.5">
-      <AppText variant="display" style={{ fontSize: 28 }}>
-        {title}
-      </AppText>
-      <AppText variant="caption">{subtitle}</AppText>
-    </View>
-  );
-}
-
 function Illustrated({
   icon,
   title,
@@ -298,17 +287,17 @@ function Illustrated({
         <Feather name={icon} size={52} color={color} />
       </View>
       <View className="items-center gap-2">
-        <AppText variant="display" className="text-center" style={{ fontSize: 26 }}>
+        <AppText variant="display" className="text-center text-2xl">
           {title}
         </AppText>
-        <AppText variant="caption" className="text-center" style={{ fontSize: 14 }}>
+        <AppText variant="caption" className="max-w-xs text-center leading-5">
           {text}
         </AppText>
       </View>
       {note ? (
         <View className="flex-row items-start gap-2 rounded-card bg-surface-muted p-3.5">
           <Feather name="info" size={14} color={colors.inkFaint} />
-          <AppText variant="caption" className="flex-1 text-ink-muted" style={{ fontSize: 12 }}>
+          <AppText variant="caption" className="flex-1 text-xs text-ink-muted">
             {note}
           </AppText>
         </View>

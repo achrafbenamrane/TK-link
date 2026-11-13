@@ -645,7 +645,8 @@ export function SignUpScreen({
                   {PLATFORM_SETTINGS.freeOperations} opérations Flash gratuites
                 </AppText>
                 <AppText variant="caption" className="text-xs">
-                  Pour démarrer sur TK LINK.
+                  {/* Espace insécable : « TK LINK » ne se coupe pas en fin de ligne. */}
+                  {'Pour démarrer sur TK LINK.'}
                 </AppText>
               </View>
             </View>
