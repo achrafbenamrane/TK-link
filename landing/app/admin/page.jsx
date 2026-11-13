@@ -104,6 +104,39 @@ export default function AdminPage() {
    * et un refus est plus difficile à rattraper qu'une acceptation.
    */
   const [decisions, setDecisions] = useState({});
+  /**
+   * Les dossiers : ceux du SERVEUR (table `shops`) dès que le back-office a sa clé de service, sinon
+   * ceux de la démonstration. `liveApps` : vrai quand chaque décision part au serveur.
+   */
+  const [apps, setApps] = useState(APPLICATIONS);
+  const [liveApps, setLiveApps] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void fetch('/admin/api/shops', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!alive || !data?.applications) return;
+        setApps(data.applications);
+        setDecisions(data.decisions ?? {});
+        setLiveApps(true);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /** Envoie une décision au serveur (dossiers réels). Rend vrai si elle est enregistrée. */
+  const decide = async (app, decision, note) => {
+    if (!liveApps) return true;
+    const res = await fetch('/admin/api/shops', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shopId: app.id, decision, note }),
+    }).catch(() => null);
+    if (!res?.ok) notify(`La décision sur ${app.shop} n’a pas pu être enregistrée. Réessayez.`);
+    return Boolean(res?.ok);
+  };
   /** Le dossier dont on est en train d'écrire le motif de refus. */
   const [refusing, setRefusing] = useState(null);
   const [reason, setReason] = useState('');
@@ -162,16 +195,18 @@ export default function AdminPage() {
     );
   };
 
-  const accept = (app) => {
+  const accept = async (app) => {
+    if (!(await decide(app, 'valide'))) return;
     setDecisions((d) => ({ ...d, [app.id]: { decision: 'accepted' } }));
     setRefusing(null);
     notify(`${app.shop} est accepté — son espace professionnel est ouvert.`);
   };
 
-  const confirmRefusal = (app) => {
+  const confirmRefusal = async (app) => {
     // Un refus sans motif est un mur : le demandeur ne saura pas quoi corriger,
     // et rappellera. Le champ est donc obligatoire.
     if (!reason.trim()) return;
+    if (!(await decide(app, 'refuse', reason.trim()))) return;
     setDecisions((d) => ({ ...d, [app.id]: { decision: 'refused', reason: reason.trim() } }));
     setRefusing(null);
     setReason('');
@@ -179,7 +214,8 @@ export default function AdminPage() {
   };
 
   /** Revenir sur une décision — la fausse manœuvre doit être rattrapable. */
-  const reopen = (app) => {
+  const reopen = async (app) => {
+    if (!(await decide(app, 'en_verification'))) return;
     setDecisions((d) => {
       const next = { ...d };
       delete next[app.id];
@@ -201,7 +237,7 @@ export default function AdminPage() {
 
   const openDisputes = DISPUTES.filter((d) => !rulings[d.id]);
 
-  const pending = APPLICATIONS.filter((a) => !decisions[a.id]);
+  const pending = apps.filter((a) => !decisions[a.id]);
 
   /**
    * Le tri se fait par MÉTIER, plus par état d'avancement.
@@ -218,13 +254,15 @@ export default function AdminPage() {
    * et les dossiers non traités passent devant. C'est l'information qu'on
    * cherchait dans l'onglet, sans avoir à changer d'onglet.
    */
-  const visibleApps = APPLICATIONS.filter((a) => a.role === appFilter).sort((a, b) => {
-    const traiteA = decisions[a.id] ? 1 : 0;
-    const traiteB = decisions[b.id] ? 1 : 0;
-    return traiteA - traiteB;
-  });
+  const visibleApps = apps
+    .filter((a) => a.role === appFilter)
+    .sort((a, b) => {
+      const traiteA = decisions[a.id] ? 1 : 0;
+      const traiteB = decisions[b.id] ? 1 : 0;
+      return traiteA - traiteB;
+    });
 
-  const parRole = (r) => APPLICATIONS.filter((a) => a.role === r).length;
+  const parRole = (r) => apps.filter((a) => a.role === r).length;
 
   /**
    * Depuis combien de temps ce dossier attend.
@@ -251,19 +289,21 @@ export default function AdminPage() {
    */
   const acceptedMembers = useMemo(
     () =>
-      APPLICATIONS.filter((a) => decisions[a.id]?.decision === 'accepted').map((a) => ({
-        id: a.id,
-        name: a.shop,
-        role: a.role,
-        city: a.address.split(',').pop().trim(),
-        daysAgo: 0,
-        orders: 0,
-        offers: 0,
-        spentCents: 0,
-        siret: a.siret,
-        justAccepted: true,
-      })),
-    [decisions],
+      apps
+        .filter((a) => decisions[a.id]?.decision === 'accepted')
+        .map((a) => ({
+          id: a.id,
+          name: a.shop,
+          role: a.role,
+          city: a.address.split(',').pop().trim(),
+          daysAgo: 0,
+          orders: 0,
+          offers: 0,
+          spentCents: 0,
+          siret: a.siret,
+          justAccepted: true,
+        })),
+    [apps, decisions],
   );
 
   const filtered = useMemo(() => {
@@ -325,6 +365,9 @@ export default function AdminPage() {
                 <p>
                   Aucun professionnel ne publie avant d’avoir été validé ici. Ouvrez le
                   justificatif, puis tranchez.
+                  {liveApps
+                    ? ' Les décisions partent au serveur : le professionnel les voit dans l’app.'
+                    : ' (Démonstration : le serveur n’est pas relié à Supabase.)'}
                 </p>
               </div>
               <span

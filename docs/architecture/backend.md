@@ -86,8 +86,10 @@ Luhn vérifiée par le serveur), du type de compte **déclaré**. Le statut (`en
 et y renvoie un dossier refusé que l’on corrige, ou validé dont on change le SIRET ou le nom. Le
 public ne lit que les commerces validés. Côté app : `src/features/merchant/lib/shop-api.ts`.
 
-**Valider ou refuser un dossier** (TK LINK, SQL Editor du tableau de bord, en attendant une vraie
-connexion à `/admin`) :
+**Valider ou refuser un dossier** : dans `/admin` → Demandes (route serveur
+`landing/app/admin/api/shops`, avec la clé de service côté Vercel : voir
+[landing/DEPLOY.md](../../landing/DEPLOY.md)) — le refus exige un motif, que le professionnel lit dans
+l’app. Sans le back-office relié, dans le SQL Editor du tableau de bord :
 
 ```sql
 -- Les dossiers à contrôler
