@@ -36,7 +36,14 @@ const MODE_LABEL: Record<OfferMode, string> = {
  * maquette). Les horaires sont vides tant qu'on ne les a pas réglés : on
  * n'affiche pas d'horaires inventés.
  */
-export function ShopSettingsScreen({ onPreview }: { onPreview?: () => void } = {}) {
+export function ShopSettingsScreen({
+  onPreview,
+  onAiMedia,
+}: {
+  onPreview?: () => void;
+  /** Ouvre les visuels IA (image ou vidéo de la boutique, créées par le serveur). */
+  onAiMedia?: () => void;
+} = {}) {
   const colors = useColors();
   const saved = useMerchantStore(selectProfile);
   const saveProfile = useMerchantStore((s) => s.saveProfile);
@@ -182,6 +189,27 @@ export function ShopSettingsScreen({ onPreview }: { onPreview?: () => void } = {
             Ce que vos clients voient sur la fiche de votre enseigne.
           </AppText>
         </View>
+
+        {onAiMedia ? (
+          <Pressable
+            testID="shop-ai-media"
+            accessibilityRole="button"
+            accessibilityLabel="Créer des visuels IA de ma boutique"
+            onPress={onAiMedia}
+            className="flex-row items-center gap-3 rounded-card border border-brand-500 bg-surface p-4 active:opacity-80"
+          >
+            <View className="h-10 w-10 items-center justify-center rounded-pill bg-brand-500">
+              <Feather name="image" size={18} color="#FFFFFF" />
+            </View>
+            <View className="flex-1">
+              <AppText variant="label">Visuels IA</AppText>
+              <AppText variant="caption">
+                Une image ou une vidéo de votre boutique, sans photographe.
+              </AppText>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.inkFaint} />
+          </Pressable>
+        ) : null}
 
         <View className="gap-2 rounded-card border border-line bg-surface p-4">
           <AppText variant="label">Présentation</AppText>

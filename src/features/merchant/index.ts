@@ -16,6 +16,8 @@ export {
 } from './ui/dashboard-screen';
 export { PayoutsScreen, type PayoutLine } from './ui/payouts-screen';
 export { ShopSettingsScreen } from './ui/shop-settings-screen';
+export { AiMediaScreen } from './ui/ai-media-screen';
+export { fetchShopMedia, type ShopMedia } from './lib/media-api';
 export { ProLocked } from './ui/pro-locked';
 export { ProStatusBanner } from './ui/pro-status-banner';
 export { ProSetupScreen } from './ui/pro-setup-screen';
