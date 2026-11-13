@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Switch, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { CATEGORIES, CATEGORY_INFO, type Category } from '@/shared/lib/categories';
 import { cn } from '@/shared/lib/cn';
@@ -112,6 +112,9 @@ export function PublishForm({
   const durations: readonly number[] = wholesale ? B2B_DURATIONS : DURATIONS;
   const modeLabel = wholesale ? WHOLESALE_MODE_LABEL : MODE_LABEL;
   const colors = useColors();
+  // Sous 400 px de large (la plupart des Android), les rangées de quatre champs passent sur deux
+  // lignes et la bascule Nuit/Jour en icônes, pour laisser son titre à l'écran.
+  const narrow = useWindowDimensions().width < 400;
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<Category>('restauration');
   const [oldPrice, setOldPrice] = useState('');
@@ -243,7 +246,7 @@ export function PublishForm({
             </AppText>
           </View>
         </View>
-        <ThemeToggle />
+        <ThemeToggle compact={narrow} />
       </View>
       {subtitle ? (
         <AppText variant="caption" className="-mt-2 ml-8 text-ink-faint">
@@ -433,9 +436,10 @@ export function PublishForm({
         </View>
       </View>
 
-      {/* Titre · prix initial · prix flash · quantité */}
-      <View className="flex-row gap-2">
-        <View className="gap-1" style={{ flex: 1.7 }}>
+      {/* Titre · prix initial · prix flash · quantité. Sous 400 px, le titre prend sa propre ligne
+          (`flex-wrap`) : à quatre de front, « Casque audio » n'avait plus la place d'être lu. */}
+      <View className="flex-row flex-wrap gap-2">
+        <View className="gap-1" style={narrow ? { width: '100%' } : { flex: 1.7 }}>
           <Label>Titre de l’offre</Label>
           <TextInput
             testID="publish-title"
@@ -504,8 +508,9 @@ export function PublishForm({
         </View>
       ) : null}
 
-      {/* Durée · fin du Flash · catégorie */}
-      <View className="flex-row gap-2">
+      {/* Durée · fin du Flash · catégorie — la catégorie sur sa ligne sous 400 px (elle se réduisait
+          à « R »). */}
+      <View className="flex-row flex-wrap gap-2">
         <View className="gap-1" style={{ flex: 1.1 }}>
           <Label>{wholesale ? 'Durée de l’offre' : 'Durée du Flash'}</Label>
           {/* min-h et non h-10 : « 24 heures » ou « 2 jours » passent à la ligne au lieu d'être coupés. */}
@@ -535,7 +540,7 @@ export function PublishForm({
             </AppText>
           </View>
         </View>
-        <View className="gap-1" style={{ flex: 0.9 }}>
+        <View className="gap-1" style={narrow ? { width: '100%' } : { flex: 0.9 }}>
           <Label>Catégorie</Label>
           <Pressable
             testID="publish-cat-open"

@@ -99,8 +99,11 @@ export function RewardsScreen() {
             testID={`reward-${r.id}`}
             className="items-center gap-3 rounded-card border border-line bg-surface p-5"
           >
-            <View className="w-full flex-row items-center gap-2">
-              <Feather name="gift" size={16} color={colors.brand500} />
+            <View className="w-full flex-row items-start gap-2.5">
+              {/* L'icône sur la ligne du titre, pas au milieu des trois lignes. */}
+              <View className="pt-0.5">
+                <Feather name="gift" size={18} color={colors.brand500} />
+              </View>
               <View className="flex-1">
                 <AppText className="font-sans-bold text-ink" numberOfLines={2}>
                   {r.label}
