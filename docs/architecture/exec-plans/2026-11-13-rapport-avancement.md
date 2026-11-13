@@ -50,35 +50,52 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
 
 ### 2 — Uber Direct à la place des livreurs
 
-- [ ] Retrait du rôle livreur (inscription, onglets, écrans, store)
-- [ ] Edge Functions : devis, création, annulation, suivi (webhook) ; secrets Uber côté serveur
+- [x] Retrait du rôle livreur (0adedca, 1a4bc89) : feature, routes et onglets retirés ; un rôle
+      « livreur » enregistré devient client à la relecture (test) ; la livraison se lit « Remise au
+      coursier » → « En livraison » → « Livrée »
+- [x] Serveur (13/11) : `uber-quote` (frais de livraison de la commande réservée),
+      `uber-dispatch` (le commerçant commande la course, une seule par commande), `uber-webhook`
+      (signé HMAC : en livraison, livrée, litige). Logique pure testée (`supabase/__tests__/uber`).
+      Reste : l’annulation d’une course, l’essai réel (clés Uber Direct)
 - [ ] La commande en livraison affiche le statut et le lien de suivi Uber
 
 ### 3 — La commande et le paiement (Stripe Connect)
 
-- [ ] `flash_orders` + `reserve_flash()` atomique (étape 3 du plan du marché)
-- [ ] Compte Stripe Connect du commerçant (lien d’inscription), PaymentSheet dans le panier,
-      commission en `application_fee`, webhook qui passe la commande à « payée »
+- [x] Migration 0012 : `flash_orders`, `reserve_flash()` sous verrou, prix et commission par
+      le serveur, expiration des réservations, `advance_order`, `confirm_pickup`, code de retrait
+      hors API ; tests pgTAP 36–46 (non lancés ici : pas de Docker)
+- [x] Serveur : migration 0013 (compte Stripe du commerce), `stripe-connect`, `stripe-payment`
+      (Direct charges, frais = commission + livraison − réduction), `stripe-webhook` ; pages de
+      retour sur le site (`/stripe/retour`, `/stripe/relancer`)
+- [ ] App : PaymentSheet dans le panier, inscription Stripe du commerçant (nouvelle APK)
 - [ ] Onglet Versements lu depuis Stripe
 
 ### 4 — Notifications
 
-- [ ] Jetons push enregistrés au serveur ; envoi sur les changements de statut de commande et les
-      nouvelles commandes du commerçant
+- [x] Serveur : migration 0016 (`push_tokens`, enregistrement par fonction), `push-events`
+      (Database Webhooks : commandes et réponses du support) ; tests pgTAP 56–57
+- [ ] App : `expo-notifications`, demande d’autorisation, enregistrement du jeton (nouvelle APK)
 
 ### 5 — Messagerie support et tickets
 
-- [ ] Tables `support_tickets` / `support_messages` ; écran « Aide » dans l’app ; boîte de
-      réception et réponses dans `/admin`
+- [x] Migration 0014 (demandes, messages, statut qui suit la conversation, quota) ; tests pgTAP
+      47–52 ; `/admin` → Messages lit et répond par une route serveur (clé de service, démonstration
+      sans elle)
+- [ ] App : écran « Aide » (ouvrir une demande, suivre les réponses en direct)
 
 ### 6 — Contenu IA de la boutique
 
-- [ ] Edge Function fal.ai : image ou vidéo de présentation à partir du nom, de la catégorie et
-      d’une photo ; rangée dans Storage, affichée sur la vitrine
+- [x] Serveur : migration 0015 (`shop_media`, quota 10 images / 2 vidéos par jour),
+      `ai-media-start`, `ai-media-status` (copie dans Storage) ; tests pgTAP 53–55
+- [ ] App : génération depuis l’espace commerçant, visuels sur la vitrine
 
 ## Risques
 
 - Disque presque plein sur ce poste (cf. mémoire) : vérifier `df -h` avant export ou build.
 - Stripe et notifications exigent une nouvelle APK (quota EAS gratuit mensuel).
+- Les fonctions Edge n’ont été ni typées par Deno ni lancées sur ce poste (Deno absent) :
+  relecture seulement, à éprouver au déploiement.
+- Le back-office n’est protégé que par un mot de passe partagé : à rendre long et unique AVANT d’y
+  mettre la clé de service (landing/DEPLOY.md).
 - Uber Direct et fal.ai : rien ne s’éprouve sans les clés ; le code est testé sur des réponses
   enregistrées de la documentation, l’essai réel attend les comptes.

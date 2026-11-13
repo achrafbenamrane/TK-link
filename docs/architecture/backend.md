@@ -121,6 +121,123 @@ Storage public `flash-photos`, écriture dans `<id du compte>/…` seulement. C�
 update public.shops set ops_purchased = ops_purchased + 10 where siret = '44306184100047';
 ```
 
+**`public.flash_orders` (0012) — la commande.** Plan :
+[exec-plans/2026-11-13-rapport-avancement.md](exec-plans/2026-11-13-rapport-avancement.md).
+Aucun droit d’écriture client : tout passe par des fonctions qui vérifient l’appelant.
+`reserve_flash(items, fulfilment, address…)` verrouille les offres, vérifie qu’elles sont en ligne
+et que le stock suffit, le décrémente, et calcule le prix et la commission (5 %,
+`private.platform_config.commission_bps`). Une commande = un commerce (Stripe Connect en « Direct
+charges »). Une réservation non payée expire en 15 minutes et rend son stock ; un compte en tient 3
+au plus. Ensuite : `cancel_order` (acheteur, avant paiement), `advance_order` (commerçant :
+payée → préparation → prête), `confirm_pickup(order, code)` (Touch & Collect : le commerçant scanne
+le QR du client). Le code de retrait vit dans `private.order_pickup_codes` : seul l’acheteur le lit
+(`order_pickup_code`), une fois payé. Le statut « payée » sera posé par le webhook Stripe (à
+venir). `flash_orders` est publiée dans Supabase Realtime (sous RLS) pour le suivi en direct.
+
+**Livraison : Uber Direct** (13/11/2026, à la place des livreurs TK LINK). Trois fonctions Edge :
+`uber-quote` (l’acheteur demande le prix de la livraison de sa commande réservée : il fixe
+`delivery_fee_cents`), `uber-dispatch` (le commerçant commande la course quand c’est prêt ; une
+seule course par commande) et `uber-webhook` (Uber fait avancer la commande : en livraison, livrée,
+ou litige si la course échoue après paiement). La logique pure (adresses, statuts, signature) est
+dans `supabase/functions/_shared/uber.ts`, testée par `supabase/__tests__/uber.test.ts`.
+
+Mise en route, une fois le compte Uber Direct ouvert (direct.uber.com → Developer) :
+
+```sh
+npx supabase secrets set UBER_CUSTOMER_ID=… UBER_CLIENT_ID=… UBER_CLIENT_SECRET=… \
+  UBER_WEBHOOK_SIGNING_KEY=… UBER_FALLBACK_PHONE=+33…   # numéro TK LINK si un commerce n'en a pas
+npx supabase functions deploy uber-quote
+npx supabase functions deploy uber-dispatch
+npx supabase functions deploy uber-webhook
+```
+
+Puis, dans le tableau de bord Uber Direct → Webhooks : l’adresse
+`https://<ref>.supabase.co/functions/v1/uber-webhook`, événement « delivery status ». Sans les
+secrets, les deux fonctions de l’app répondent `503 uber_not_configured`.
+
+## Support : messages et tickets (0014)
+
+Décision du 13/11/2026 : clients et commerçants écrivent à **TK LINK** (pas entre eux). Une demande
+(`support_tickets` : catégorie, sujet, commande éventuelle) porte des messages
+(`support_messages`). Chacun ne lit que ses demandes ; un message venu de l’app ne peut pas se dire
+« de TK LINK » (`from_staff` hors des droits client) ; le statut suit la conversation (réponse de
+TK LINK → « en cours », nouveau message sur une demande résolue → « ouvert »), une demande
+« fermée » ne reçoit plus rien ; 5 nouvelles demandes par compte et par 24 h. Les messages sont
+publiés en temps réel (sous RLS). Le back-office répond depuis `/admin` → Messages, par la route
+serveur `landing/app/admin/api/support/route.js` (clé de service côté Vercel : voir
+[landing/DEPLOY.md](../../landing/DEPLOY.md), et changer d’abord le mot de passe du back-office).
+
+## Notifications (0016)
+
+L’app enregistre le jeton Expo du téléphone (`register_push_token`, retiré à la déconnexion par
+`unregister_push_token`) ; la table `push_tokens` n’est lisible par personne. La fonction
+`push-events` envoie : « payée » → le commerçant (nouvelle commande) ; préparation, prête,
+en livraison, livrée, litige, remboursée → l’acheteur ; réponse de TK LINK → l’auteur de la
+demande. Les destinataires sont lus en base, jamais dans la requête ; les jetons d’applications
+désinstallées sont effacés. Logique pure : `supabase/functions/_shared/push.ts`
+(`supabase/__tests__/push.test.ts`).
+
+Mise en route : `npx supabase secrets set PUSH_WEBHOOK_SECRET=<aléatoire long>`,
+`npx supabase functions deploy push-events`, puis tableau de bord → Database → Webhooks : deux
+webhooks (POST vers `https://<ref>.supabase.co/functions/v1/push-events`, en-tête
+`x-webhook-secret`) — `flash_orders` (INSERT, UPDATE) et `support_messages` (INSERT). Côté app, les
+notifications demandent une nouvelle APK (module natif `expo-notifications`) et les identifiants
+FCM dans EAS pour Android.
+
+## Visuels IA des commerces : fal.ai (0015)
+
+Un commerçant validé fait générer une image ou une vidéo de présentation de sa boutique.
+`ai-media-start` vérifie le quota du jour (10 images, 2 vidéos, `private.platform_config`),
+construit le texte envoyé au modèle (nom, catégorie, description nettoyée : jamais reçu tel quel),
+crée la ligne `shop_media` et soumet à la file fal.ai. L’app relève avec `ai-media-status` : une
+fois prêt, le fichier est copié dans Storage (`shop-media`, public) car les adresses fal.ai
+expirent. Le public voit les visuels prêts et montrés d’un commerce validé ; le commerçant les
+cache ou les montre (`set_shop_media_visible`). Logique pure : `supabase/functions/_shared/fal.ts`,
+testée par `supabase/__tests__/fal.test.ts`.
+
+```sh
+npx supabase secrets set FAL_KEY=…        # facultatifs : FAL_IMAGE_MODEL, FAL_VIDEO_MODEL
+npx supabase functions deploy ai-media-start
+npx supabase functions deploy ai-media-status
+```
+
+## Paiement des commandes : Stripe Connect (0013)
+
+CDC V1.1 : « Direct charges ». Le client paie le commerçant (son compte Stripe connecté) ; TK LINK
+prélève commission + livraison − réduction qu’il offre, si bien que le commerçant touche toujours
+`sous-total − commission`. Trois fonctions Edge, la logique pure dans
+`supabase/functions/_shared/stripe.ts` (testée par `supabase/__tests__/stripe.test.ts`) :
+
+- `stripe-connect` (commerçant validé) : crée son compte Express au premier appel
+  (`shops.stripe_account_id`) et rend la page d’inscription Stripe (identité, IBAN — TK LINK n’en
+  voit rien).
+- `stripe-payment` (acheteur) : crée le paiement de sa commande réservée sur le compte du
+  commerçant, montant et frais tirés de la commande ; une livraison exige d’abord le devis Uber.
+- `stripe-webhook` : paiement réussi → « payée » (vaut acceptation) ; payé après expiration de la
+  réservation → « litige » ; remboursement total → « remboursée » ; `account.updated` →
+  `shops.stripe_charges_enabled`.
+
+Mise en route (mode test possible avant l’immatriculation de la société) :
+
+```sh
+npx supabase secrets set STRIPE_SECRET_KEY=sk_test_… STRIPE_WEBHOOK_SECRET=whsec_… \
+  STRIPE_CONNECT_RETURN_URL=https://…/stripe/retour STRIPE_CONNECT_REFRESH_URL=https://…/stripe/relancer
+npx supabase functions deploy stripe-connect
+npx supabase functions deploy stripe-payment
+npx supabase functions deploy stripe-webhook
+```
+
+Dans Stripe → Développeurs → Webhooks : un point de terminaison **Connect** vers
+`https://<ref>.supabase.co/functions/v1/stripe-webhook`, événements `payment_intent.succeeded`,
+`charge.refunded`, `account.updated`. La clé publiable (`pk_test_…`) ira dans l’app
+(`EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`), jamais la clé secrète.
+
+```sql
+-- Les paiements à régler à la main (payés hors délai, course Uber échouée…)
+select id, status, total_cents, stripe_payment_intent_id, uber_status, updated_at
+  from public.flash_orders where status = 'litige' order by updated_at desc;
+```
+
 ## Payments (entitlement is server-owned)
 
 `public.subscriptions` is **client read-only** (no client write policy). The
