@@ -226,7 +226,7 @@ try {
   warn('Impossible de sonder les commandes.');
 }
 
-// Les migrations 0013 à 0021. Une table ou une fonction ABSENTE répond 404 (PostgREST) ; présente,
+// Les migrations 0013 à 0022. Une table ou une fonction ABSENTE répond 404 (PostgREST) ; présente,
 // elle répond 200 (lecture publique) ou 401/403 (réservée aux comptes) — rien n'est écrit.
 const probes = [
   {
@@ -273,8 +273,9 @@ const probes = [
   {
     migration: '0020_checkout_cancel',
     rpc: 'cancel_order_after_checkout',
-    // Réservée au serveur : présente, elle refuse la clé publique ; absente, 404.
-    body: { p_order: '00000000-0000-0000-0000-000000000000' },
+    // Réservée au serveur : présente, elle refuse la clé publique ; absente, 404. TOUS ses
+    // paramètres : il en manque un, PostgREST répond 404 même si elle existe.
+    body: { p_order: '00000000-0000-0000-0000-000000000000', p_checkout: 'sonde' },
     what: 'une réservation peut être annulée pendant que sa page de paiement reste ouverte',
   },
   {
@@ -283,6 +284,12 @@ const probes = [
     // Colonne absente : 400 ; présente : refusée à la clé publique (401) — rien n’est lu.
     missing: (s) => s === 400 || s === 404,
     what: 'les décisions sur les litiges ne sont pas enregistrées (onglet Litiges du back-office)',
+  },
+  {
+    migration: '0022_platform_settings',
+    rpc: 'platform_public_settings',
+    // Lecture publique : présente, 200 ; absente, 404.
+    what: 'la commission et le crédit réglés dans le back-office ne s’appliquent pas',
   },
 ];
 for (const probe of probes) {
