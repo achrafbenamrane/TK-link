@@ -265,20 +265,20 @@ select ok(
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
 select lives_ok(
-  $ insert into public.shops (kind, name, category, siret, address)
+  $$ insert into public.shops (kind, name, category, siret, address)
      values ('commercant', 'Le Petit Toulousain', 'restauration', '44306184100047',
-             '8 rue des Carmes, 31000 Toulouse') $,
+             '8 rue des Carmes, 31000 Toulouse') $$,
   'a merchant files their shop'
 );
 select results_eq(
-  $ select status::text from public.shops where siret = '44306184100047' $,
-  $ values ('en_verification'::text) $,
+  $$ select status::text from public.shops where siret = '44306184100047' $$,
+  $$ values ('en_verification'::text) $$,
   'a filed shop starts under review'
 );
 
 -- 23) Un type qui n'est pas celui déclaré est refusé ; un SIRET mal formé aussi.
 select throws_ok(
-  $ update public.shops set siret = '44306184100048' where siret = '44306184100047' $,
+  $$ update public.shops set siret = '44306184100048' where siret = '44306184100047' $$,
   '23514',
   null,
   'a SIRET failing the Luhn key is rejected'
@@ -288,31 +288,31 @@ reset role;
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
 select throws_ok(
-  $ insert into public.shops (kind, name, category, siret, address)
-     values ('commercant', 'Faux commerce', 'mode', '73282932000074', '1 place du Capitole, Toulouse') $,
+  $$ insert into public.shops (kind, name, category, siret, address)
+     values ('commercant', 'Faux commerce', 'mode', '73282932000074', '1 place du Capitole, Toulouse') $$,
   '42501',
   null,
   'an account cannot file a shop of another type than the one it declared'
 );
 -- 24) Un SIRET déjà déposé par un autre compte est refusé.
 select throws_ok(
-  $ insert into public.shops (kind, name, category, siret, address)
+  $$ insert into public.shops (kind, name, category, siret, address)
      values ('grossiste', 'Grossiste Occitan', 'restauration', '44306184100047',
-             '14 avenue des Pyrénées, 31600 Muret') $,
+             '14 avenue des Pyrénées, 31600 Muret') $$,
   '23505',
   null,
   'a SIRET already filed by another account is rejected'
 );
 -- 25) Un autre compte ne voit pas un dossier en vérification.
 select is_empty(
-  $ select 1 from public.shops where siret = '44306184100047' $,
+  $$ select 1 from public.shops where siret = '44306184100047' $$,
   'another account cannot see a shop under review'
 );
 reset role;
 
 set local role anon;
 select is_empty(
-  $ select 1 from public.shops where siret = '44306184100047' $,
+  $$ select 1 from public.shops where siret = '44306184100047' $$,
   'anon cannot see a shop under review'
 );
 reset role;
@@ -325,8 +325,8 @@ select ok(
 );
 set local role anon;
 select results_eq(
-  $ select name from public.shops where siret = '44306184100047' $,
-  $ values ('Le Petit Toulousain'::text) $,
+  $$ select name from public.shops where siret = '44306184100047' $$,
+  $$ values ('Le Petit Toulousain'::text) $$,
   'a validated shop is public'
 );
 reset role;
@@ -335,15 +335,15 @@ reset role;
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
 select throws_ok(
-  $ update public.shops set status = 'valide' where siret = '44306184100047' $,
+  $$ update public.shops set status = 'valide' where siret = '44306184100047' $$,
   '42501',
   null,
   'an owner cannot set their own status'
 );
 update public.shops set siret = '73282932000074' where siret = '44306184100047';
 select results_eq(
-  $ select status::text from public.shops where siret = '73282932000074' $,
-  $ values ('en_verification'::text) $,
+  $$ select status::text from public.shops where siret = '73282932000074' $$,
+  $$ values ('en_verification'::text) $$,
   'changing the SIRET of a validated shop sends it back to review'
 );
 reset role;
@@ -363,10 +363,10 @@ select ok(
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
 select throws_ok(
-  $ insert into public.flash_offers
+  $$ insert into public.flash_offers
        (shop_id, title, category, price_cents, old_price_cents, stock_total, duration_minutes)
      values ((select id from public.shops where siret = '73282932000074'),
-             'Pain au chocolat', 'restauration', 90, 150, 10, 30) $,
+             'Pain au chocolat', 'restauration', 90, 150, 10, 30) $$,
   '42501',
   null,
   'a shop under review cannot publish'
@@ -380,24 +380,24 @@ update public.shops set status = 'valide' where siret = '73282932000074';
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
 select lives_ok(
-  $ insert into public.flash_offers
+  $$ insert into public.flash_offers
        (shop_id, title, category, price_cents, old_price_cents, stock_total, duration_minutes)
      values ((select id from public.shops where siret = '73282932000074'),
-             'Pain au chocolat', 'restauration', 90, 150, 10, 30) $,
+             'Pain au chocolat', 'restauration', 90, 150, 10, 30) $$,
   'a validated shop publishes a Flash'
 );
 select results_eq(
-  $ select stock_left, ends_at - starts_at from public.flash_offers where title = 'Pain au chocolat' $,
-  $ values (10, interval '30 minutes') $,
+  $$ select stock_left, ends_at - starts_at from public.flash_offers where title = 'Pain au chocolat' $$,
+  $$ values (10, interval '30 minutes') $$,
   'the server sets the remaining stock and the end time'
 );
 
 -- 31) Un Flash de 3 heures est refusé (CDC V1.1 : 15 min à 2 h).
 select throws_ok(
-  $ insert into public.flash_offers
+  $$ insert into public.flash_offers
        (shop_id, title, category, price_cents, old_price_cents, stock_total, duration_minutes)
      values ((select id from public.shops where siret = '73282932000074'),
-             'Croissant', 'restauration', 80, 120, 10, 180) $,
+             'Croissant', 'restauration', 80, 120, 10, 180) $$,
   '23514',
   null,
   'a Flash longer than 2 hours is rejected'
@@ -407,8 +407,8 @@ reset role;
 -- 32) Le public voit le Flash en ligne.
 set local role anon;
 select results_eq(
-  $ select title from public.flash_offers where title = 'Pain au chocolat' $,
-  $ values ('Pain au chocolat'::text) $,
+  $$ select title from public.flash_offers where title = 'Pain au chocolat' $$,
+  $$ values ('Pain au chocolat'::text) $$,
   'anon sees a live Flash'
 );
 reset role;
@@ -418,10 +418,10 @@ update public.shops set ops_free = 1 where siret = '73282932000074';
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
 select throws_ok(
-  $ insert into public.flash_offers
+  $$ insert into public.flash_offers
        (shop_id, title, category, price_cents, old_price_cents, stock_total, duration_minutes)
      values ((select id from public.shops where siret = '73282932000074'),
-             'Chausson aux pommes', 'restauration', 100, 160, 5, 60) $,
+             'Chausson aux pommes', 'restauration', 100, 160, 5, 60) $$,
   'P0001',
   'quota_exhausted',
   'publishing past the free operations is refused'
@@ -430,7 +430,7 @@ select throws_ok(
 -- 34) Retirer son offre la cache au public ; elle ne revient pas en ligne.
 update public.flash_offers set offline = true where title = 'Pain au chocolat';
 select throws_ok(
-  $ update public.flash_offers set offline = false where title = 'Pain au chocolat' $,
+  $$ update public.flash_offers set offline = false where title = 'Pain au chocolat' $$,
   '23514',
   null,
   'a withdrawn offer cannot come back online'
@@ -439,7 +439,7 @@ reset role;
 
 set local role anon;
 select is_empty(
-  $ select 1 from public.flash_offers where title = 'Pain au chocolat' $,
+  $$ select 1 from public.flash_offers where title = 'Pain au chocolat' $$,
   'anon no longer sees a withdrawn Flash'
 );
 reset role;
@@ -448,10 +448,10 @@ reset role;
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}';
 select throws_ok(
-  $ insert into public.flash_offers
+  $$ insert into public.flash_offers
        (shop_id, title, category, price_cents, old_price_cents, stock_total, duration_minutes)
      values ((select id from public.shops where siret = '73282932000074'),
-             'Faux Flash', 'restauration', 100, 200, 5, 30) $,
+             'Faux Flash', 'restauration', 100, 200, 5, 30) $$,
   '42501',
   null,
   'an account cannot publish for a shop it does not own'
