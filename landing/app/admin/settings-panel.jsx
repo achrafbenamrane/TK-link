@@ -12,6 +12,8 @@ import {
   writeSettings,
 } from '../pro/platform';
 
+import ServerSettingsPanel from './server-settings-panel';
+
 /**
  * LES RÉGLAGES — CDC §12.3 : ce que le Super Admin doit pouvoir régler sans qu'on touche au code.
  *
@@ -28,6 +30,8 @@ export default function SettingsPanel({ settings, onSaved, notify }) {
     Object.fromEntries(Object.keys(DEFAULT_SETTINGS).map((k) => [k, toInput(settings[k])])),
   );
   const [errors, setErrors] = useState({});
+  // Vrai dès que le serveur répond : l'encadré « Sur le serveur » fait alors foi.
+  const [live, setLive] = useState(false);
 
   const set = (key) => (event) => {
     setInputs((current) => ({ ...current, [key]: event.target.value }));
@@ -69,6 +73,14 @@ export default function SettingsPanel({ settings, onSaved, notify }) {
           </p>
         </div>
       </div>
+
+      <ServerSettingsPanel notify={notify} onLive={setLive} />
+      {live ? (
+        <p className="tkpro-note" style={{ margin: '0 0 18px' }}>
+          Les réglages ci-dessous restent ceux de la démonstration : ils ne changent aucune vraie
+          commande.
+        </p>
+      ) : null}
 
       <form onSubmit={save} noValidate data-testid="admin-settings-form">
         {SETTING_GROUPS.map((group) => (

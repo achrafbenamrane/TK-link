@@ -5,7 +5,7 @@ import { Pressable, ScrollView, Share, TextInput, View } from 'react-native';
 
 import { isSupabaseConfigured } from '@/shared/lib/env';
 import { formatEuros } from '@/shared/lib/money';
-import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
+import { usePlatformSettings } from '@/shared/lib/platform-overrides';
 import { AppText, Button, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
 import { useColors } from '@/shared/theme/theme-provider';
@@ -60,7 +60,9 @@ export function ReferralScreen({ hasOrdered }: Props) {
     }, [syncServer]),
   );
 
-  const reward = server ? server.creditCents / 100 : PLATFORM_SETTINGS.referralRewardEur;
+  const settings = usePlatformSettings();
+  const reward = server ? server.creditCents / 100 : settings.referralRewardEur;
+  const commission = String(settings.commissionB2cPct).replace('.', ',');
   const myCode = server?.code ?? localCode;
   const referredBy = server ? server.referrerCode : localReferredBy;
   const link = `https://tklink.fr/invite/${myCode}`;
@@ -164,7 +166,7 @@ export function ReferralScreen({ hasOrdered }: Props) {
               </AppText>
             ) : null}
             <AppText variant="caption" className="text-ink-faint">
-              {`Il se déduit à chaque commande, à hauteur de la part de TK LINK (${PLATFORM_SETTINGS.commissionB2cPct} % du montant) : il sert donc sur plusieurs commandes.`}
+              {`Il se déduit à chaque commande, à hauteur de la part de TK LINK (${commission} % du montant) : il sert donc sur plusieurs commandes.`}
             </AppText>
           </View>
         ) : null}

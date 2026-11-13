@@ -31,11 +31,39 @@ const OverridesSchema = z.object({
 });
 export type Overrides = z.infer<typeof OverridesSchema>;
 
+/**
+ * CE QUE LE SERVEUR APPLIQUE (migration 0022, `platform_public_settings`) : la commission et le
+ * crédit de parrainage que le Super Admin règle dans le back-office. Le panier estime donc la même
+ * chose que ce que le serveur calculera. Absent (démonstration, migration pas appliquée, hors ligne) : les
+ * valeurs du CDC restent. Bornes = celles que le serveur accepte.
+ */
+export const ServerSettingsSchema = z.object({
+  commission_bps: z.number().int().min(0).max(3000).nullish(),
+  referral_credit_cents: z.number().int().min(0).max(10000).nullish(),
+});
+export type ServerSettings = Partial<
+  Pick<PlatformSettings, 'commissionB2cPct' | 'referralRewardEur'>
+>;
+
+/** La réponse du serveur, en valeurs de l'app ; une réponse illisible ne change rien. */
+export function fromServer(raw: unknown): ServerSettings {
+  const parsed = ServerSettingsSchema.safeParse(raw);
+  if (!parsed.success) return {};
+  const out: ServerSettings = {};
+  const { commission_bps: bps, referral_credit_cents: cents } = parsed.data;
+  if (typeof bps === 'number') out.commissionB2cPct = bps / 100;
+  if (typeof cents === 'number') out.referralRewardEur = cents / 100;
+  return out;
+}
+
 /** Ce qui est conservé d'un lancement à l'autre (exporté pour le test de relecture). */
 export const PersistedOverridesSchema = z.object({ overrides: OverridesSchema.default({}) });
 
 type State = {
   overrides: Overrides;
+  /** Les réglages du serveur, relus à chaque lancement (jamais conservés : le serveur fait foi). */
+  server: ServerSettings;
+  setServer: (server: ServerSettings) => void;
   /** Pose un ajustement ; `null` le retire (la valeur du CDC, ou « à définir », revient). */
   setOverride: (key: OverridableKey, value: number | null) => void;
   reset: () => void;
@@ -45,6 +73,8 @@ export const usePlatformOverrides = create<State>()(
   persist(
     (set) => ({
       overrides: {},
+      server: {},
+      setServer: (server) => set({ server }),
       setOverride: (key, value) =>
         set((s) => {
           const next = { ...s.overrides };
@@ -66,19 +96,26 @@ export const usePlatformOverrides = create<State>()(
   ),
 );
 
-/** Les valeurs en vigueur : celles du CDC, avec les ajustements de démonstration par-dessus. */
-export function mergeSettings(overrides: Overrides): PlatformSettings {
+/**
+ * Les valeurs en vigueur : celles du CDC, celles du serveur par-dessus, puis les ajustements de
+ * démonstration (qui ne touchent que la livraison : rien ne se chevauche).
+ */
+export function mergeSettings(overrides: Overrides, server: ServerSettings = {}): PlatformSettings {
   // Une build de production n'applique jamais d'ajustement de démonstration.
-  return isDemoBuild ? { ...PLATFORM_SETTINGS, ...overrides } : { ...PLATFORM_SETTINGS };
+  return isDemoBuild
+    ? { ...PLATFORM_SETTINGS, ...server, ...overrides }
+    : { ...PLATFORM_SETTINGS, ...server };
 }
 
 /** Pour le code qui n'est pas un composant (stores, règles pures) : lu au moment de l'appel. */
 export function currentSettings(): PlatformSettings {
-  return mergeSettings(usePlatformOverrides.getState().overrides);
+  const { overrides, server } = usePlatformOverrides.getState();
+  return mergeSettings(overrides, server);
 }
 
 /** Pour les écrans : se met à jour quand un réglage change. */
 export function usePlatformSettings(): PlatformSettings {
   const overrides = usePlatformOverrides((s) => s.overrides);
-  return useMemo(() => mergeSettings(overrides), [overrides]);
+  const server = usePlatformOverrides((s) => s.server);
+  return useMemo(() => mergeSettings(overrides, server), [overrides, server]);
 }

@@ -219,6 +219,19 @@ commande est honorée (« récupérée » / « livrée »). Chaque décision est
 (`dispute_outcome`, `dispute_note`, `dispute_decided_at`, les trois ou aucun), écrite sous condition
 (toujours en litige). Le back-office n’a aucune clé Stripe.
 
+## Réglages de la plateforme (0022)
+
+`private.platform_config` tient ce que le serveur applique : la commission (`commission_bps`), le
+crédit de parrainage (`referral_credit_cents`), la durée et le nombre de réservations non payées,
+les visuels IA par jour. Le back-office (`/admin` → Réglages, encadré « Sur le serveur », route
+`admin/api/settings`, clé de service) les lit (`admin_platform_settings`) et en change un à la fois
+(`admin_set_platform_setting` : une clé connue, un entier, dans des bornes — commission 0 à 30 %,
+crédit 0 à 100 €, réservation 5 à 60 min). L’app lit la commission et le crédit
+(`platform_public_settings`, ouvert à tous) au lancement et à chaque ouverture du panier : son
+estimation suit le serveur. Une nouvelle commission vaut pour les réservations SUIVANTES ; celles
+déjà faites gardent la leur (`commission_cents`). Les autres réglages de l’onglet restent ceux de la
+démonstration (navigateur).
+
 ## Parrainage (0019)
 
 CDC V1.1 : 5 € au parrain ET au filleul, financés par TK LINK, débloqués au premier achat réel du

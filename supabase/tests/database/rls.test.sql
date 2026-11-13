@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(140);
+select plan(146);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -1238,6 +1238,50 @@ select lives_ok(
       where id = current_setting('tklink.order')::uuid $$,
   'a reasoned, dated decision is kept with the order'
 );
+
+-- ──────────────────────────────────────────── réglages de la plateforme (migration 0022)
+
+-- 79) Lire et écrire les réglages : le back-office seul (clé de service).
+select ok(
+  not has_function_privilege('authenticated', 'public.admin_set_platform_setting(text, numeric)', 'execute')
+  and not has_function_privilege('anon', 'public.admin_set_platform_setting(text, numeric)', 'execute')
+  and not has_function_privilege('authenticated', 'public.admin_platform_settings()', 'execute'),
+  'only the back-office reads and writes platform settings'
+);
+
+-- 80) Des bornes sûres ; une clé inconnue est refusée.
+set local request.jwt.claims to '{}';
+select throws_ok(
+  $$ select public.admin_set_platform_setting('commission_bps', 30000) $$,
+  '22023',
+  'invalid_value',
+  'a commission above 30 percent is refused'
+);
+select throws_ok(
+  $$ select public.admin_set_platform_setting('commission_bps', 512.5) $$,
+  '22023',
+  'invalid_value',
+  'settings are whole numbers'
+);
+select throws_ok(
+  $$ select public.admin_set_platform_setting('not_a_setting', 1) $$,
+  '22023',
+  'unknown_setting',
+  'an unknown setting is refused'
+);
+
+-- 81) Une commission changée s'applique aux réservations suivantes, et l'app la lit.
+select lives_ok(
+  $$ select public.admin_set_platform_setting('commission_bps', 700) $$,
+  'the back-office sets the commission to 7 percent'
+);
+set local role anon;
+select results_eq(
+  $$ select (public.platform_public_settings() ->> 'commission_bps')::integer $$,
+  $$ values (700) $$,
+  'the app reads the commission the server will apply'
+);
+reset role;
 
 select * from finish();
 rollback;

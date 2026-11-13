@@ -4,7 +4,8 @@ import { useCallback } from 'react';
 import { earnedPoints, programOf, useMerchantLoyaltyStore } from '@/features/loyalty';
 import { selectCredit, useReferralStore } from '@/features/referral';
 import { isSupabaseConfigured } from '@/shared/lib/env';
-import { PLATFORM_SETTINGS } from '@/shared/lib/platform-settings';
+import { usePlatformSettings } from '@/shared/lib/platform-overrides';
+import { loadServerSettings } from '@/shared/lib/platform-server';
 import { CartScreen, pointsByMerchant, selectOrders, useShopStore } from '@/features/shop';
 
 /**
@@ -23,16 +24,20 @@ export default function PanierRoute() {
   const credit = useReferralStore(selectCredit);
   const serverReferral = useReferralStore((s) => s.server);
   const syncReferral = useReferralStore((s) => s.syncServer);
+  const settings = usePlatformSettings();
   useFocusEffect(
     useCallback(() => {
-      if (isSupabaseConfigured) void syncReferral();
+      if (!isSupabaseConfigured) return;
+      void syncReferral();
+      // La commission a pu changer depuis le lancement : l'estimation suit le serveur.
+      void loadServerSettings();
     }, [syncReferral]),
   );
 
   return (
     <CartScreen
       // Le crédit de parrainage, une fois débloqué, se déduit du prochain paiement.
-      credit={credit === 'disponible' ? PLATFORM_SETTINGS.referralRewardEur : 0}
+      credit={credit === 'disponible' ? settings.referralRewardEur : 0}
       serverCredit={serverReferral ? serverReferral.balanceCents / 100 : 0}
       onOrdered={(orderId) => {
         // Le crédit qui vient de servir est consommé AVANT que ce premier achat
