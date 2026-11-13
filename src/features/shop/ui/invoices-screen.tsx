@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
+import { formatEuros } from '@/shared/lib/money';
 import { AppText, Screen } from '@/shared/ui';
 import { BackButton } from '@/shared/ui/back-button';
 import { useColors } from '@/shared/theme/theme-provider';
@@ -51,7 +52,7 @@ function InvoiceCard({ order }: { order: Order }) {
             {order.items.length > 1 ? 's' : ''}
           </AppText>
         </View>
-        <AppText className="font-display text-base text-ink">{order.total.toFixed(2)}€</AppText>
+        <AppText className="font-display text-base text-ink">{formatEuros(order.total)}</AppText>
         <Feather name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.inkFaint} />
       </View>
 
@@ -79,7 +80,7 @@ function InvoiceCard({ order }: { order: Order }) {
                   {line.qty} × {line.title}
                 </AppText>
                 <AppText variant="caption" className="font-sans-semibold text-ink">
-                  {(line.price * line.qty).toFixed(2)}€
+                  {formatEuros(line.price * line.qty)}
                 </AppText>
               </View>
             ))}
@@ -88,7 +89,7 @@ function InvoiceCard({ order }: { order: Order }) {
                 Livraison
               </AppText>
               <AppText variant="caption" className="font-sans-bold text-brand-600">
-                {order.deliveryFee === 0 ? 'Offerte' : `${order.deliveryFee.toFixed(2)}€`}
+                {order.deliveryFee === 0 ? 'Offerte' : `${formatEuros(order.deliveryFee)}`}
               </AppText>
             </View>
           </View>

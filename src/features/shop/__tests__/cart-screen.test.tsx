@@ -35,7 +35,7 @@ describe('<CartScreen /> — total', () => {
     // Touch & Collect : gratuit, donc le total est exactement le sous-total.
     fireEvent.press(screen.getByTestId('cart-fulfilment-touch-collect'));
 
-    expect(screen.getByTestId('cart-total')).toHaveTextContent('6.90€');
+    expect(screen.getByTestId('cart-total')).toHaveTextContent('6,90 €');
     expect(screen.queryByTestId('cart-discount-line')).not.toBeOnTheScreen();
     expect(screen.queryByTestId('cart-coupon-open')).not.toBeOnTheScreen();
   });
@@ -81,14 +81,14 @@ describe('<CartScreen /> — crédit de parrainage (CDC V1.1)', () => {
     render(<CartScreen credit={5} />);
     fireEvent.press(screen.getByTestId('cart-fulfilment-touch-collect'));
 
-    expect(screen.getByTestId('cart-credit')).toHaveTextContent(/−5.00€/);
-    expect(screen.getByTestId('cart-total')).toHaveTextContent('1.90€');
+    expect(screen.getByTestId('cart-credit')).toHaveTextContent(/−5,00\s€/);
+    expect(screen.getByTestId('cart-total')).toHaveTextContent('1,90 €');
   });
 
   it('ne rembourse jamais plus que les articles', () => {
     render(<CartScreen credit={50} />);
     // Le crédit couvre les articles, jamais la livraison (3,00 €, arrêtée le 24/10/2026).
-    expect(screen.getByTestId('cart-total')).toHaveTextContent('3.00€');
+    expect(screen.getByTestId('cart-total')).toHaveTextContent('3,00 €');
   });
 
   it('enregistre la réduction dans la commande', async () => {
@@ -179,9 +179,9 @@ describe('<CartScreen /> — livraison : chez moi ou position actuelle', () => {
     fireEvent.press(screen.getByTestId('cart-delivery-here'));
 
     const detail = await screen.findByTestId('cart-delivery-detail');
-    expect(detail).toHaveTextContent(/0\.80€ par km au-delà de 3 km/);
+    expect(detail).toHaveTextContent(/0,80\s€ par km au-delà de 3 km/);
     // 3,00 € + 5 km × 0,80 € = 7,00 € de livraison, en plus des 6,90 € d'articles.
-    expect(screen.getByTestId('cart-total')).toHaveTextContent('13.90€');
+    expect(screen.getByTestId('cart-total')).toHaveTextContent('13,90 €');
 
     fireEvent.press(screen.getByTestId('cart-checkout'));
     await waitFor(() => expect(useShopStore.getState().orders).toHaveLength(1));
@@ -190,7 +190,7 @@ describe('<CartScreen /> — livraison : chez moi ou position actuelle', () => {
 
   it('adresse du carnet : le forfait seul, aucune distance inventée', () => {
     render(<CartScreen />);
-    expect(screen.getByTestId('cart-total')).toHaveTextContent('9.90€');
+    expect(screen.getByTestId('cart-total')).toHaveTextContent('9,90 €');
     expect(screen.queryByTestId('cart-delivery-detail')).not.toBeOnTheScreen();
   });
 

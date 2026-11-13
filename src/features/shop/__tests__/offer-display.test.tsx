@@ -70,8 +70,8 @@ describe('<PriceTag />', () => {
     expect(classOf('price-tag-old')).toContain('text-danger');
     expect(classOf('price-tag-old')).toContain('line-through');
     expect(classOf('price-tag-promo')).toContain('text-success');
-    expect(screen.getByTestId('price-tag-old')).toHaveTextContent('10.00€');
-    expect(screen.getByTestId('price-tag-promo')).toHaveTextContent('7.50€');
+    expect(screen.getByTestId('price-tag-old')).toHaveTextContent('10,00 €');
+    expect(screen.getByTestId('price-tag-promo')).toHaveTextContent('7,50 €');
   });
 
   it('range la remise sur sa propre ligne, AVANT le prix dans l’arbre', () => {
@@ -98,10 +98,11 @@ describe('<PriceTag />', () => {
     expect(classOf('price-tag-promo')).toContain('text-success');
   });
 
-  it('peut masquer la pastille et écrire à la française', () => {
-    render(<PriceTag price={7.5} oldPrice={10} hideDiscount comma />);
+  it('peut masquer la pastille ; écrit toujours à la française', () => {
+    render(<PriceTag price={7.5} oldPrice={10} hideDiscount />);
     expect(screen.queryByTestId('price-tag-discount')).toBeNull();
-    expect(screen.getByTestId('price-tag-promo')).toHaveTextContent('7,50€');
+    // Virgule, et espace insécable avant l'euro : « 7,50 € », sur tous les écrans.
+    expect(screen.getByTestId('price-tag-promo').props.children).toBe('7,50 €');
   });
 });
 

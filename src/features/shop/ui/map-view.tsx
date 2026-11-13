@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
+import { formatEuros } from '@/shared/lib/money';
 import { AppText } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -49,7 +50,7 @@ function PriceBubble({ deal, active }: { deal: Deal; active: boolean }) {
           className={cn('font-sans-bold', active ? 'text-ink-inverse' : 'text-ink')}
           style={{ fontSize: 12 }}
         >
-          {deal.price.toFixed(2)}€
+          {formatEuros(deal.price)}
         </AppText>
       </View>
       {/* petite pointe sous la bulle */}
@@ -350,7 +351,7 @@ export function DealsMap({ deals, category }: Props) {
               </AppText>
               <View className="flex-row items-center gap-2">
                 <AppText className="font-display text-base text-ink">
-                  {selected.price.toFixed(2)}€
+                  {formatEuros(selected.price)}
                 </AppText>
                 {routing ? (
                   <ActivityIndicator size="small" color={colors.inkFaint} />

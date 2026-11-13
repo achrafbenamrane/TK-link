@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
+import { formatEuros } from '@/shared/lib/money';
 import { AppText } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -16,8 +17,6 @@ type Props = {
   size?: number;
   /** Alignement du bloc : à gauche (défaut) ou à droite, collé au bord. */
   align?: 'start' | 'end';
-  /** Virgule décimale (« 24,90 ») au lieu du point — l'usage des fiches. */
-  comma?: boolean;
   /** Masque la pastille de remise quand l'écran l'affiche déjà ailleurs. */
   hideDiscount?: boolean;
   /** Préfixe des testID : `<testID>-discount`, `<testID>-promo`, `<testID>-old`. */
@@ -47,14 +46,12 @@ export function PriceTag({
   oldPrice,
   size = 30,
   align = 'start',
-  comma = false,
   hideDiscount = false,
   testID = 'price-tag',
 }: Props) {
   const colors = useColors();
   const showOld = typeof oldPrice === 'number' && oldPrice > price;
   const pct = hideDiscount ? null : discountPercent(price, oldPrice);
-  const fmt = (n: number) => (comma ? n.toFixed(2).replace('.', ',') : n.toFixed(2));
 
   return (
     <View className={cn('gap-1', align === 'end' ? 'items-end' : 'items-start')}>
@@ -87,7 +84,7 @@ export function PriceTag({
             fontVariant: ['tabular-nums'],
           }}
         >
-          {fmt(price)}€
+          {formatEuros(price)}
         </AppText>
 
         {showOld ? (
@@ -103,7 +100,7 @@ export function PriceTag({
               fontVariant: ['tabular-nums'],
             }}
           >
-            {fmt(oldPrice)}€
+            {formatEuros(oldPrice)}
           </AppText>
         ) : null}
       </View>

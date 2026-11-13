@@ -75,6 +75,9 @@ Les maquettes sont dessinées sur un iPhone de 390 px ; la plupart des Android f
 - **Rangées d’en-tête chargées** (accueil, tableau de bord) : sous 400 px
   (`useWindowDimensions`), les bascules passent en icônes seules (`ThemeToggle compact`,
   `ViewSwitch iconOnly`) et les grilles perdent une colonne plutôt que de couper les mots.
+- **Prix :** `formatEuros()` (`@/shared/lib/money`) — « 24,90 € », virgule et espace insécable,
+  sur tous les écrans. Plus de `toFixed(2)}€` écrit à la main (la fiche produit mélangeait les deux
+  formes).
 - **Une action principale par carte**, pleine largeur ; les sorties (refuser, annuler) dessous, à
   parts égales.
 

@@ -5,6 +5,7 @@ import { ScrollView, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { cn } from '@/shared/lib/cn';
+import { formatEuros } from '@/shared/lib/money';
 import { AppText, HeaderBackButton, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -279,10 +280,10 @@ export function OrderDetailScreen() {
                   {line.title}
                 </AppText>
                 <AppText variant="caption" className="text-xs text-ink-faint">
-                  {line.qty} × {line.price.toFixed(2)}€
+                  {line.qty} × {formatEuros(line.price)}
                 </AppText>
               </View>
-              <AppText variant="label">{(line.price * line.qty).toFixed(2)}€</AppText>
+              <AppText variant="label">{formatEuros(line.price * line.qty)}</AppText>
             </View>
           ))}
 
@@ -293,7 +294,7 @@ export function OrderDetailScreen() {
                   Réduction
                 </AppText>
                 <AppText className="font-sans-bold text-sm text-brand-600">
-                  −{order.discount.toFixed(2)}€
+                  −{formatEuros(order.discount)}
                 </AppText>
               </View>
             ) : null}
@@ -302,7 +303,7 @@ export function OrderDetailScreen() {
                 Livraison
               </AppText>
               <AppText className="font-sans-bold text-sm text-success">
-                {order.deliveryFee === 0 ? 'Offerte' : `${order.deliveryFee.toFixed(2)}€`}
+                {order.deliveryFee === 0 ? 'Offerte' : `${formatEuros(order.deliveryFee)}`}
               </AppText>
             </View>
             <View className="flex-row items-center justify-between">
@@ -312,7 +313,7 @@ export function OrderDetailScreen() {
                 variant="display"
                 style={{ fontSize: 20, lineHeight: 26 }}
               >
-                {(order.total + order.deliveryFee).toFixed(2)}€
+                {formatEuros(order.total + order.deliveryFee)}
               </AppText>
             </View>
             {order.pointsEarned > 0 ? (

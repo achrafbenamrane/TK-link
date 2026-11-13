@@ -8,6 +8,7 @@ import { cn } from '@/shared/lib/cn';
 import { isSupabaseConfigured } from '@/shared/lib/env';
 import { haptic } from '@/shared/lib/haptics';
 import { usePlatformSettings } from '@/shared/lib/platform-overrides';
+import { formatEuros } from '@/shared/lib/money';
 import { AppText, Button, HeaderBackButton } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -251,7 +252,14 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
   return (
     <View className="flex-1 bg-surface">
       {Header}
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-5 pb-72 pt-1">
+      {/* Le défilement s'arrête AU-DESSUS du volet de paiement : posé par-dessus (position absolue,
+          marge basse devinée), il cachait la carte des points de fidélité, qu'on ne pouvait plus
+          lire en entier. */}
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerClassName="px-5 pb-4 pt-1"
+      >
         {lines.map((line) => (
           <View
             key={line.deal.id}
@@ -279,7 +287,7 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
                 </Pressable>
               </View>
               <AppText variant="caption" className="text-ink-faint">
-                {line.deal.price.toFixed(2)}€ · {line.deal.unit}
+                {formatEuros(line.deal.price)} · {line.deal.unit}
               </AppText>
               <View className="mt-1 flex-row items-center justify-between">
                 <QtyStepper
@@ -287,7 +295,7 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
                   onInc={() => addToCart(line.deal.id)}
                   onDec={() => decrement(line.deal.id)}
                 />
-                <AppText className="font-display text-base">{line.lineTotal.toFixed(2)}€</AppText>
+                <AppText className="font-display text-base">{formatEuros(line.lineTotal)}</AppText>
               </View>
             </View>
           </View>
@@ -304,7 +312,7 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
 
       {/* Summary + checkout */}
       <View
-        className="absolute inset-x-0 bottom-0 gap-3 rounded-t-card border-t border-line bg-surface px-5 pt-4"
+        className="gap-3 rounded-t-card border-t border-line bg-surface px-5 pt-4"
         style={{ paddingBottom: insets.bottom + 12 }}
       >
         {/* Mode de retrait — CDC §12. Le choix se fait AVANT le total, parce
@@ -320,22 +328,23 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
                 accessibilityLabel={FULFILMENT_LABEL[f]}
                 accessibilityState={{ selected: active }}
                 onPress={() => setFulfilment(f)}
+                // Le même « choisi » que partout ailleurs (filet rose) : l'aplat gris foncé du mode
+                // Nuit se distinguait à peine de l'option non choisie.
                 className={cn(
-                  'flex-1 flex-row items-center justify-center gap-2 rounded-control py-2.5',
-                  active ? 'bg-surface-inverse' : 'bg-surface-muted',
+                  'h-11 flex-1 flex-row items-center justify-center gap-2 rounded-control border',
+                  active ? 'border-brand-500 bg-brand-50' : 'border-line bg-surface-muted',
                 )}
               >
                 <Feather
                   name={f === 'touch-collect' ? 'shopping-bag' : 'truck'}
-                  size={14}
-                  color={active ? colors.inkInverse : colors.inkMuted}
+                  size={15}
+                  color={active ? colors.brand600 : colors.inkMuted}
                 />
                 <AppText
                   className={cn(
-                    'font-sans-semibold',
-                    active ? 'text-ink-inverse' : 'text-ink-muted',
+                    'font-sans-semibold text-sm',
+                    active ? 'text-brand-600' : 'text-ink-muted',
                   )}
-                  style={{ fontSize: 12.5 }}
                 >
                   {FULFILMENT_LABEL[f]}
                 </AppText>
@@ -490,7 +499,7 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
             <AppText variant="caption" className="text-ink-muted">
               Sous-total
             </AppText>
-            <AppText variant="label">{subtotal.toFixed(2)}€</AppText>
+            <AppText variant="label">{formatEuros(subtotal)}</AppText>
           </View>
           <View className="flex-row items-center justify-between">
             <AppText variant="caption" className="text-ink-muted">
@@ -503,12 +512,12 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
                   ? fulfilment === 'touch-collect'
                     ? 'Gratuit'
                     : 'Offerte'
-                  : `${deliveryFee.toFixed(2)}€`}
+                  : `${formatEuros(deliveryFee)}`}
             </AppText>
           </View>
           {surcharge > 0 && deliveryKm !== null ? (
             <AppText testID="cart-delivery-detail" variant="caption" className="text-ink-faint">
-              {`${settings.deliveryFeeEur.toFixed(2)}€ + ${settings.deliveryPerKmEur.toFixed(2)}€ par km au-delà de ${settings.deliveryBaseZoneKm ?? 0} km (${deliveryKm.toFixed(1).replace('.', ',')} km)`}
+              {`${formatEuros(settings.deliveryFeeEur)} + ${formatEuros(settings.deliveryPerKmEur)} par km au-delà de ${settings.deliveryBaseZoneKm ?? 0} km (${deliveryKm.toFixed(1).replace('.', ',')} km)`}
             </AppText>
           ) : null}
           {discount > 0 ? (
@@ -517,14 +526,14 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
                 Crédit de parrainage
               </AppText>
               <AppText className="font-sans-bold text-sm text-brand-600">
-                −{discount.toFixed(2)}€
+                −{formatEuros(discount)}
               </AppText>
             </View>
           ) : null}
           <View className="mt-1 flex-row items-center justify-between border-t border-line pt-2">
             <AppText variant="label">Total</AppText>
             <AppText variant="display" style={{ fontSize: 22 }} testID="cart-total">
-              {total.toFixed(2)}€
+              {formatEuros(total)}
             </AppText>
           </View>
         </View>
@@ -550,8 +559,8 @@ export function CartScreen({ onOrdered, credit = 0 }: Props = {}) {
               ? 'Ouverture du paiement…'
               : fulfilment === 'touch-collect' || hasDestination
                 ? deliveryOnPayment
-                  ? `Payer · ${total.toFixed(2)}€ + livraison`
-                  : `Payer · ${total.toFixed(2)}€`
+                  ? `Payer · ${formatEuros(total)} + livraison`
+                  : `Payer · ${formatEuros(total)}`
                 : 'Choisir une adresse'}
           </AppText>
         </Pressable>

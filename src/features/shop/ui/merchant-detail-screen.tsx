@@ -114,7 +114,6 @@ function FlashTile({
         price={deal.price}
         oldPrice={deal.oldPrice}
         size={15}
-        comma
       />
       <View className="flex-row items-center justify-between">
         <View

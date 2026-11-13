@@ -5,6 +5,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cn } from '@/shared/lib/cn';
+import { formatEuros } from '@/shared/lib/money';
 import { AppText, HeaderBackButton } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -115,13 +116,11 @@ export function ProductScreen({ dealId }: Props) {
             <ProductImage deal={deal} emojiSize={110} />
           </View>
 
-          <View className="flex-row items-end justify-between gap-3 px-4 pb-1 pt-3">
-            <View className="flex-1">
-              <AppText
-                className="font-sans-bold text-ink"
-                style={{ fontSize: 16 }}
-                numberOfLines={2}
-              >
+          {/* Le titre sur toute la largeur, le prix dessous à droite : côte à côte sur 360 px, le
+              prix en 34 px réduisait le titre à « Côte de bœuf … ». */}
+          <View className="gap-2 px-4 pb-1 pt-3">
+            <View>
+              <AppText className="font-sans-bold text-lg text-ink" numberOfLines={2}>
                 {deal.title}
               </AppText>
               {deal.unit ? (
@@ -137,8 +136,6 @@ export function ProductScreen({ dealId }: Props) {
               price={deal.price}
               oldPrice={deal.oldPrice}
               size={34}
-              align="end"
-              comma
             />
           </View>
 
@@ -329,7 +326,7 @@ export function ProductScreen({ dealId }: Props) {
               ne doit découvrir le total à l'écran suivant. */}
           <Feather name="shopping-bag" size={17} color={colors.inkInverse} />
           <AppText className="font-sans-bold text-ink-inverse">
-            J’EN PROFITE · {total.toFixed(2)}€
+            J’EN PROFITE · {formatEuros(total)}
           </AppText>
         </Pressable>
       </View>

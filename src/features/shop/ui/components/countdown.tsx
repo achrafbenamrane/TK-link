@@ -159,6 +159,13 @@ export function CountdownBlocks({
   const left = useRemainingSeconds(remaining);
   const reduced = useReducedMotion();
 
+  // Des HAUTEURS FIXES, dérivées de la taille des chiffres : les séparateurs et le petit bloc des
+  // centièmes s'alignent dessus. Avec des marges « à l'œil », les « : » flottaient en haut des
+  // blocs et les centièmes ne tombaient sur rien.
+  const boxHeight = (digits: number) => Math.round(digits * 1.7);
+  const big = boxHeight(size);
+  const centis = Math.round(size * 0.62);
+
   const block = (key: string, label: string, format: (ms: number) => string, digits: number) => (
     <View className="items-center" style={{ gap: size * 0.12 }}>
       <View
@@ -166,8 +173,8 @@ export function CountdownBlocks({
         style={{
           backgroundColor: colors.surfaceInverse,
           minWidth: digits * 1.55,
+          height: boxHeight(digits),
           paddingHorizontal: digits * 0.2,
-          paddingVertical: digits * 0.18,
         }}
       >
         <TickingText
@@ -187,15 +194,21 @@ export function CountdownBlocks({
     </View>
   );
 
-  // Le séparateur s'aligne sur les chiffres, pas sur le bloc entier : centré verticalement il
-  // flotterait entre les nombres et leur légende, au lieu de séparer les nombres.
-  const separator = (char: string, digits: number) => (
-    <AppText
-      className="font-display text-ink-faint"
-      style={{ fontSize: digits * 0.8, marginTop: digits * 0.15 }}
-    >
-      {char}
-    </AppText>
+  // Le séparateur s'aligne sur les blocs de chiffres, pas sur le bloc entier (chiffres + légende) :
+  // les « : » au milieu de la hauteur des chiffres, la virgule en bas, comme un décimal.
+  const separator = (char: string) => (
+    <View style={{ height: big, justifyContent: char === ',' ? 'flex-end' : 'center' }}>
+      <AppText
+        className="font-display text-ink-faint"
+        style={{
+          fontSize: size * 0.8,
+          lineHeight: size,
+          marginBottom: char === ',' ? size * 0.1 : 0,
+        }}
+      >
+        {char}
+      </AppText>
+    </View>
   );
 
   return (
@@ -210,13 +223,16 @@ export function CountdownBlocks({
       {UNITS.map((u, i) => (
         <View key={u.key} className="flex-row items-start" style={{ gap: size * 0.24 }}>
           {block(u.key, u.label, u.format, size)}
-          {i < UNITS.length - 1 ? separator(':', size) : null}
+          {i < UNITS.length - 1 ? separator(':') : null}
         </View>
       ))}
       {reduced ? null : (
         <View className="flex-row items-start" style={{ gap: size * 0.24 }}>
-          {separator(',', size)}
-          {block('cs', '1/100', centisBlockOf, Math.round(size * 0.62))}
+          {separator(',')}
+          {/* Le petit bloc s'aligne par le BAS sur les grands, comme une décimale. */}
+          <View style={{ marginTop: big - boxHeight(centis) }}>
+            {block('cs', '1/100', centisBlockOf, centis)}
+          </View>
         </View>
       )}
     </View>

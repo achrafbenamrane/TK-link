@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { formatEuros } from '@/shared/lib/money';
 import { AppText, Button, EmptyState, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
@@ -169,7 +170,7 @@ export function OrdersScreen() {
                       variant="display"
                       style={{ fontSize: 18 }}
                     >
-                      {(order.total + order.deliveryFee).toFixed(2)}€
+                      {formatEuros(order.total + order.deliveryFee)}
                     </AppText>
                   </View>
                 </View>
