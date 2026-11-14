@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(167);
+select plan(171);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -1505,6 +1505,41 @@ select throws_ok(
   'only the courier moves a customer delivery on, not the merchant'
 );
 reset role;
+
+-- ─── 0024 : les notifications partent des déclencheurs (pg_net, secret dans Vault) ───
+-- La file de pg_net n'est lue par son processus qu'après validation : dans ce test (annulé à la
+-- fin), la requête reste en file et se lit.
+select has_trigger('public', 'flash_orders', 'flash_orders_push', 'a status change notifies');
+select has_trigger('public', 'support_messages', 'support_messages_push', 'a staff reply notifies');
+select ok(
+  not has_function_privilege('authenticated', 'private.post_push_event(text, jsonb, jsonb)', 'execute'),
+  'no signed-in account can send a notification payload of its choosing'
+);
+select vault.create_secret('http://127.0.0.1:9/functions/v1/push-events', 'push_events_url');
+select vault.create_secret('secret-de-test', 'push_webhook_secret');
+select set_config('tklink.queued',
+  (select coalesce(max(id), 0)::text from net.http_request_queue), true);
+update public.flash_orders set uber_status = 'pending', updated_at = now()
+ where id = current_setting('tklink.uber')::uuid;
+update public.flash_orders set status = 'litige', updated_at = now()
+ where id = current_setting('tklink.uber')::uuid;
+select is(
+  (select jsonb_build_object('n', count(*), 'secret', max(r.secret), 'keys', max(r.keys),
+                            'status', max(r.status), 'old', max(r.old))
+     from (select q.headers ->> 'x-webhook-secret' as secret,
+                  (select string_agg(k, ',' order by k) from jsonb_object_keys(j.b -> 'record') k)
+                    as keys,
+                  j.b #>> '{record,status}' as status,
+                  j.b #>> '{old_record,status}' as old
+             from net.http_request_queue q,
+                  lateral (select convert_from(q.body, 'UTF8')::jsonb as b) j
+            where q.id > current_setting('tklink.queued')::bigint) r),
+  jsonb_build_object(
+    'n', 1, 'secret', 'secret-de-test',
+    'keys', 'audience,customer_id,fulfilment,id,shop_id,status',
+    'status', 'litige', 'old', 'preparation'),
+  'one request per status change, with the six columns push-events reads and the shared secret'
+);
 
 select * from finish();
 rollback;

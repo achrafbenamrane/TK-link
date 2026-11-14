@@ -270,8 +270,8 @@ supabase functions deploy link-phone delete-account stripe-connect stripe-balanc
 qu’une clé manque, la fonction répond 503 (`stripe_not_configured`, `uber_not_configured`,
 `ai_not_configured`) et l’app dit « pas encore activé » ; les webhooks refusent tout appel non signé
 (401). `revenuecat-webhook` (squelette, RevenueCat n’est pas utilisé) n’est volontairement pas
-déployé. Reste à poser les secrets de chaque service (sections Uber, notifications, fal.ai et
-Stripe ci-dessous), puis le webhook Stripe et les deux webhooks de base de données.
+déployé. Posés le 14/11 : `PUSH_WEBHOOK_SECRET` et les trois pages de retour Stripe. Reste les
+clés de chaque service (sections Uber, fal.ai et Stripe ci-dessous) et le webhook Stripe.
 
 ## Parrainage (0019)
 
@@ -301,12 +301,17 @@ demande. Les destinataires sont lus en base, jamais dans la requête ; les jeton
 désinstallées sont effacés. Logique pure : `supabase/functions/_shared/push.ts`
 (`supabase/__tests__/push.test.ts`).
 
-Mise en route : `npx supabase secrets set PUSH_WEBHOOK_SECRET=<aléatoire long>`,
-`npx supabase functions deploy push-events`, puis tableau de bord → Database → Webhooks : deux
-webhooks (POST vers `https://<ref>.supabase.co/functions/v1/push-events`, en-tête
-`x-webhook-secret`) — `flash_orders` (INSERT, UPDATE) et `support_messages` (INSERT). Côté app, les
-notifications demandent une nouvelle APK (module natif `expo-notifications`) et les identifiants
-FCM dans EAS pour Android.
+L’appel part de la base (migration **0024**, pas de webhook à créer à la main) : deux déclencheurs
+(un changement de statut de `flash_orders`, une réponse de TK LINK dans `support_messages`)
+envoient par pg_net, en asynchrone, les seules colonnes que lit `push-events` ; une erreur d’envoi
+ne bloque jamais la commande. L’adresse de la fonction et le secret partagé sont dans Supabase
+Vault, jamais dans le dépôt. Mise en route, une fois par projet :
+`supabase secrets set PUSH_WEBHOOK_SECRET=<aléatoire long>`, puis dans le SQL Editor
+`vault.create_secret('<adresse>/functions/v1/push-events', 'push_events_url')` et
+`vault.create_secret('<même valeur>', 'push_webhook_secret')`. Fait sur `dvvuktwgdakysaraeocz` le
+14/11/2026 (le secret, tiré au hasard, n’a été affiché nulle part). Côté app, les notifications
+demandent une nouvelle APK (module natif `expo-notifications`) et les identifiants FCM dans EAS
+pour Android.
 
 ## Visuels IA des commerces : fal.ai (0015)
 
@@ -359,6 +364,13 @@ npx supabase functions deploy stripe-webhook
 npx supabase functions deploy stripe-balance
 npx supabase functions deploy order-cancel
 ```
+
+**Pages de retour (14/11/2026).** Sans `STRIPE_*_URL` (https, sans `?`), `stripe-connect` et
+`stripe-payment` se disent non configurées : plus d’adresse par défaut, car celle d’avant
+(`tklink.vercel.app`) appartient à un autre site, où Stripe aurait renvoyé nos clients
+(`returnUrlOf`, garde dans `supabase/__tests__/stripe.test.ts`). Les trois pointent sur
+`tklink-wine.vercel.app/stripe/…` ; ces pages n’existent que sur la branche
+`feat/cdc-v1.1-alignement` : le site doit être déployé avec elles avant d’ouvrir les paiements.
 
 **Annuler avec une page de paiement ouverte (0020).** `cancel_order` refuse (`checkout_open`) dès
 qu’une page Checkout a été ouverte : sinon le stock revenait, puis le paiement arrivait quand même.
