@@ -71,3 +71,6 @@ assets/images/products/_incoming/*
 # Captures brutes du téléphone : seules les versions optimisées sont versionnées.
 landing/public/screens/_incoming/*
 !landing/public/screens/_incoming/.gitkeep
+
+# État local de la CLI Supabase (projet lié, versions) : propre à chaque poste
+supabase/.temp
