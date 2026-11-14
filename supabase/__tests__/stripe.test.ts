@@ -1,4 +1,6 @@
 import { createHmac } from 'crypto';
+import { readdirSync, readFileSync, statSync } from 'fs';
+import { join } from 'path';
 
 import {
   afterExpire,
@@ -9,6 +11,7 @@ import {
   nextCheckoutStep,
   parseBalance,
   parsePayouts,
+  returnUrlOf,
   stripeForm,
   verifyStripeSignature,
 } from '../functions/_shared/stripe';
@@ -150,7 +153,7 @@ describe('page de paiement Stripe Checkout', () => {
     items,
     shopName: 'Le Petit Toulousain',
     fee: 619,
-    returnUrl: 'https://tklink.vercel.app/stripe/paiement',
+    returnUrl: 'https://tklink-wine.vercel.app/stripe/paiement',
     nowS: 1_763_050_000,
   };
 
@@ -160,8 +163,8 @@ describe('page de paiement Stripe Checkout', () => {
     expect(params).toMatchObject({
       mode: 'payment',
       payment_intent_data: { application_fee_amount: 619, metadata: { order_id: 'o-1' } },
-      success_url: 'https://tklink.vercel.app/stripe/paiement?commande=o-1&etat=ok',
-      cancel_url: 'https://tklink.vercel.app/stripe/paiement?commande=o-1&etat=annule',
+      success_url: 'https://tklink-wine.vercel.app/stripe/paiement?commande=o-1&etat=ok',
+      cancel_url: 'https://tklink-wine.vercel.app/stripe/paiement?commande=o-1&etat=annule',
       expires_at: 1_763_050_000 + 1800,
     });
   });
@@ -238,7 +241,7 @@ describe('un crédit de parrainage égal à la commission (migration 0019)', () 
       items: [{ title: 'Pain de campagne', unit_price_cents: 700, qty: 1 }],
       shopName: 'Le Petit',
       fee: fee as number,
-      returnUrl: 'https://tklink.vercel.app/stripe/paiement',
+      returnUrl: 'https://tklink-wine.vercel.app/stripe/paiement',
       nowS: 1763078400,
     });
     expect(params.payment_intent_data).not.toHaveProperty('application_fee_amount');
@@ -276,9 +279,45 @@ describe('pages de paiement déjà ouvertes (relecture du 13/11/2026)', () => {
       items: [{ title: 'Quiche', unit_price_cents: 700, qty: 1 }],
       shopName: 'Le Petit',
       fee: 35,
-      returnUrl: 'https://tklink.vercel.app/stripe/paiement',
+      returnUrl: 'https://tklink-wine.vercel.app/stripe/paiement',
       nowS: 1763078400,
     });
     expect(params.payment_method_types).toEqual(['card']);
+  });
+});
+
+describe('pages de retour Stripe (relecture du 14/11/2026)', () => {
+  it('une adresse https explicite, sinon « non configurée »', () => {
+    expect(returnUrlOf('https://tklink-wine.vercel.app/stripe/paiement')).toBe(
+      'https://tklink-wine.vercel.app/stripe/paiement',
+    );
+    expect(returnUrlOf('  https://tklink-wine.vercel.app/stripe/retour ')).toBe(
+      'https://tklink-wine.vercel.app/stripe/retour',
+    );
+    for (const bad of [
+      undefined,
+      null,
+      '',
+      '   ',
+      'http://tklink-wine.vercel.app/stripe/paiement',
+    ]) {
+      expect(returnUrlOf(bad)).toBeNull();
+    }
+    // La page de paiement reçoit ?commande=…&etat=… : une adresse qui a déjà sa requête est refusée.
+    expect(returnUrlOf('https://tklink-wine.vercel.app/stripe/paiement?x=1')).toBeNull();
+    expect(returnUrlOf('pas une adresse')).toBeNull();
+  });
+
+  it('aucune fonction ne renvoie vers tklink.vercel.app (un autre site que TK LINK)', () => {
+    const root = join(__dirname, '..', 'functions');
+    const files = (dir: string): string[] =>
+      readdirSync(dir).flatMap((name) => {
+        const path = join(dir, name);
+        return statSync(path).isDirectory() ? files(path) : [path];
+      });
+    const offenders = files(root).filter((f) =>
+      /\/\/tklink\.vercel\.app/.test(readFileSync(f, 'utf8')),
+    );
+    expect(offenders).toEqual([]);
   });
 });

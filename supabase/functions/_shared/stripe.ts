@@ -10,6 +10,22 @@
 
 export const STRIPE_API = 'https://api.stripe.com/v1';
 
+/**
+ * Une page de retour Stripe (secret `STRIPE_*_URL`) : une adresse https explicite, sinon rien — et
+ * la fonction se dit alors « non configurée ». Jamais d'adresse par défaut : celle d'avant
+ * (`tklink.vercel.app`) appartenait à un autre site, où Stripe aurait renvoyé nos clients.
+ */
+export function returnUrlOf(raw: string | null | undefined): string | null {
+  const value = (raw ?? '').trim();
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.search && !url.hash ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 export type PayableOrder = {
   subtotal_cents: number;
   discount_cents: number;

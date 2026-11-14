@@ -16,18 +16,19 @@ import {
   checkoutParams,
   checkoutTotal,
   nextCheckoutStep,
+  returnUrlOf,
 } from '../_shared/stripe.ts';
 import { stripeConfigured, stripeRequest } from '../_shared/stripe-api.ts';
 import { needsCourier } from '../_shared/uber.ts';
 
-// Où Stripe renvoie après paiement ou abandon (page du site qui rouvre l'app).
-const RETURN_URL =
-  Deno.env.get('STRIPE_PAYMENT_RETURN_URL') ?? 'https://tklink.vercel.app/stripe/paiement';
+// Où Stripe renvoie après paiement ou abandon (page du site qui rouvre l'app). Sans elle, la
+// fonction se dit non configurée (pas d'adresse par défaut : voir `returnUrlOf`).
+const RETURN_URL = returnUrlOf(Deno.env.get('STRIPE_PAYMENT_RETURN_URL'));
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' });
-  if (!stripeConfigured()) return reply(503, { error: 'stripe_not_configured' });
+  if (!stripeConfigured() || !RETURN_URL) return reply(503, { error: 'stripe_not_configured' });
 
   const user = await callerOf(req);
   if (!user) return reply(401, { error: 'unauthorized' });

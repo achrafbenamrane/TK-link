@@ -8,18 +8,20 @@
 //
 // Sécurité : l'appelant est identifié par son jeton et doit être le titulaire d'un commerce VALIDÉ.
 import { adminClient, callerOf, CORS, reply, serve } from '../_shared/http.ts';
+import { returnUrlOf } from '../_shared/stripe.ts';
 import { stripeConfigured, stripeRequest } from '../_shared/stripe-api.ts';
 
 // Pages de retour (https obligatoire chez Stripe) : le site TK LINK dit « revenez dans l'app ».
-const RETURN_URL =
-  Deno.env.get('STRIPE_CONNECT_RETURN_URL') ?? 'https://tklink.vercel.app/stripe/retour';
-const REFRESH_URL =
-  Deno.env.get('STRIPE_CONNECT_REFRESH_URL') ?? 'https://tklink.vercel.app/stripe/relancer';
+// Sans elles, la fonction se dit non configurée (pas d'adresse par défaut : voir `returnUrlOf`).
+const RETURN_URL = returnUrlOf(Deno.env.get('STRIPE_CONNECT_RETURN_URL'));
+const REFRESH_URL = returnUrlOf(Deno.env.get('STRIPE_CONNECT_REFRESH_URL'));
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' });
-  if (!stripeConfigured()) return reply(503, { error: 'stripe_not_configured' });
+  if (!stripeConfigured() || !RETURN_URL || !REFRESH_URL) {
+    return reply(503, { error: 'stripe_not_configured' });
+  }
 
   const user = await callerOf(req);
   if (!user) return reply(401, { error: 'unauthorized' });
