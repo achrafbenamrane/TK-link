@@ -395,9 +395,17 @@ npx supabase functions deploy order-cancel
 **Pages de retour (14/11/2026).** Sans `STRIPE_*_URL` (https, sans `?`), `stripe-connect` et
 `stripe-payment` se disent non configurées : plus d’adresse par défaut, car celle d’avant
 (`tklink.vercel.app`) appartient à un autre site, où Stripe aurait renvoyé nos clients
-(`returnUrlOf`, garde dans `supabase/__tests__/stripe.test.ts`). Les trois pointent sur
-`tklink-wine.vercel.app/stripe/…` ; ces pages n’existent que sur la branche
-`feat/cdc-v1.1-alignement` : le site doit être déployé avec elles avant d’ouvrir les paiements.
+(`returnUrlOf`, garde dans `supabase/__tests__/stripe.test.ts`). Depuis le soir du 14/11/2026, les
+trois pointent sur `tklink-theta.vercel.app/stripe/…` : il existe DEUX projets Vercel nommés
+`tklink` (comptes `achrafs-projects` et `vfounders5`) ; seul le premier sert la branche
+`feat/cdc-v1.1-alignement` en production (promue ce jour-là), `tklink-wine.vercel.app` est l’autre
+et n’a pas ces pages. Avec le domaine du client, ces trois adresses changeront encore
+(`supabase secrets set STRIPE_…_URL=…`).
+
+**Mode test (14/11/2026).** Un compte Stripe de test (bac à sable) est branché :
+`STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` posées dans les secrets du projet (jamais affichées),
+Connect activé (« vos commerçants collectent directement les paiements »), image de marque TK LINK,
+webhook Connect avec les cinq événements ci-dessous. À remplacer par le compte du client.
 
 **Annuler avec une page de paiement ouverte (0020).** `cancel_order` refuse (`checkout_open`) dès
 qu’une page Checkout a été ouverte : sinon le stock revenait, puis le paiement arrivait quand même.
