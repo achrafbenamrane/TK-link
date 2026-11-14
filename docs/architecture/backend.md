@@ -396,10 +396,11 @@ npx supabase functions deploy order-cancel
 `stripe-payment` se disent non configurées : plus d’adresse par défaut, car celle d’avant
 (`tklink.vercel.app`) appartient à un autre site, où Stripe aurait renvoyé nos clients
 (`returnUrlOf`, garde dans `supabase/__tests__/stripe.test.ts`). Depuis le soir du 14/11/2026, les
-trois pointent sur `tklink-theta.vercel.app/stripe/…` : il existe DEUX projets Vercel nommés
-`tklink` (comptes `achrafs-projects` et `vfounders5`) ; seul le premier sert la branche
-`feat/cdc-v1.1-alignement` en production (promue ce jour-là), `tklink-wine.vercel.app` est l’autre
-et n’a pas ces pages. Avec le domaine du client, ces trois adresses changeront encore
+trois pointent sur `tklink-app.vercel.app/stripe/…` (`tklink.vercel.app` appartient à un autre
+compte Vercel). Il existe DEUX projets Vercel nommés `tklink` (comptes `achrafs-projects` et
+`vfounders5`) ; seul le premier sert la branche `feat/cdc-v1.1-alignement` en production (promue ce
+jour-là), sous `tklink-app.vercel.app` et `tklink-theta.vercel.app` ; `tklink-wine.vercel.app` est
+l’autre et n’a pas ces pages. Avec le domaine du client, ces trois adresses changeront encore
 (`supabase secrets set STRIPE_…_URL=…`).
 
 **Mode test (14/11/2026).** Un compte Stripe de test (bac à sable) est branché :
