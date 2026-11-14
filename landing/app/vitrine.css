@@ -1227,6 +1227,13 @@ a:hover > .v-arrow {
   align-items: center;
   gap: var(--s-3);
 }
+/* Sous les boutons : comment installer l'APK de test (Android). */
+.v-cta__in > .v-cta__note {
+  margin: var(--s-3) 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.85;
+}
 /* Pas encore des liens : l'app n'est pas encore sur les stores. Le pointillé le dit. */
 .v-store {
   display: inline-flex;

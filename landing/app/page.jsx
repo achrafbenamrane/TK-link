@@ -99,6 +99,14 @@ const INVOICE = [
   ['TVA', '6,32 €'],
 ];
 
+/**
+ * L'APK Android de TEST (build EAS « preview »), en téléchargement direct — en attendant Google Play.
+ * `null` : pas de bouton, le pointillé « Bientôt sur Google Play » reste. À remplacer par le lien
+ * du store le jour de la publication.
+ */
+const ANDROID_APK_URL =
+  'https://expo.dev/artifacts/eas/ZbLftN9TbUn0bjpI3273DDgE5fLRUkhyw9IjVue7_sI.apk';
+
 function formatStat(n, decimals) {
   return n.toLocaleString('fr-FR', {
     minimumFractionDigits: decimals,
@@ -352,16 +360,29 @@ export default function Page() {
               Les prochaines ventes flash arrivent sur votre téléphone.
             </h2>
             <p>
-              Gratuit, sans engagement. Bientôt sur iPhone et Android — les commerces de votre
-              quartier, à Toulouse pour commencer.
+              {ANDROID_APK_URL
+                ? 'Gratuit, sans engagement. Sur Android dès maintenant, en version de test ; bientôt sur iPhone — les commerces de votre quartier, à Toulouse pour commencer.'
+                : 'Gratuit, sans engagement. Bientôt sur iPhone et Android — les commerces de votre quartier, à Toulouse pour commencer.'}
             </p>
             <div className="v-cta__row">
+              {ANDROID_APK_URL ? (
+                <a className="v-btn-dark" href={ANDROID_APK_URL} rel="noopener">
+                  Télécharger pour Android <Arrow />
+                </a>
+              ) : (
+                <span className="v-store">Bientôt sur Google Play</span>
+              )}
               <span className="v-store">Bientôt sur l’App Store</span>
-              <span className="v-store">Bientôt sur Google Play</span>
               <a className="v-btn-light" href="/pro">
                 Je suis un commerçant <Arrow />
               </a>
             </div>
+            {ANDROID_APK_URL ? (
+              <p className="v-cta__note">
+                Version de test (fichier APK). Si Android le demande, autorisez l’installation
+                depuis votre navigateur.
+              </p>
+            ) : null}
           </div>
         </section>
       </main>
