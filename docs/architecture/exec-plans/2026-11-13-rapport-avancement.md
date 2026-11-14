@@ -133,9 +133,10 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
 - [x] Back-office : la commission, le crédit de parrainage, les réservations et les quotas IA
       se règlent sur le serveur (0022, encadré « Sur le serveur » de l’onglet Réglages) ; l’app
       relit la commission et le crédit au lancement et à l’ouverture du panier
-- [ ] Migrations 0019 (parrainage, relue), 0020 (annulation avec page de paiement ouverte), 0021
-      (décisions sur les litiges) et 0022 (réglages) à appliquer dans le SQL Editor ; tests pgTAP
-      63–81
+- [x] 14/11/2026 : migrations 0019 (parrainage), 0020 (annulation avec page de paiement ouverte),
+      0021 (décisions sur les litiges) et 0022 (réglages) appliquées (SQL Editor, une transaction) ;
+      `npm run auth:check` voit 0007 à 0022 en place ; `platform_public_settings` répond 5 % et
+      5 € à la clé publique, `admin_platform_settings` la refuse
 - [ ] Clés Stripe (test), Uber Direct, fal.ai ; fonctions Edge déployées ; webhooks déclarés
 - [x] Mises à jour OTA publiées (dernière : be16f769 — factures serveur, partage des récompenses,
       13/11/2026)
