@@ -55,6 +55,9 @@ const RowSchema = z
     endsAt: Date.parse(r.ends_at),
     modes: r.modes,
     photoUrl: r.photo_url ?? '',
+    // Complétée par `shop_ratings` (0025) dans le magasin du fil.
+    shopRating: 0,
+    shopRatingCount: 0,
   }));
 
 export type FeedResult = { ok: true; value: LiveOffer[] } | { ok: false };

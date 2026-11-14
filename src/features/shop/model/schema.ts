@@ -37,7 +37,10 @@ export type Merchant = {
   name: string;
   area: string; // quartier de Toulouse
   coord: Coord; // position réelle du commerçant (vue carte)
+  /** Moyenne des notes (1–5) ; 0 : pas encore noté. */
   rating: number;
+  /** Nombre de notes derrière la moyenne (commerces du serveur, 0025). */
+  ratingCount?: number;
   halal: boolean;
   emoji: string;
 };

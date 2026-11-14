@@ -134,6 +134,8 @@ describe('<HomeScreen />', () => {
           endsAt: Date.now() + 3_600_000,
           modes: ['touch-collect'],
           photoUrl: '',
+          shopRating: 0,
+          shopRatingCount: 0,
         },
         // Terminée depuis la dernière lecture : plus proposée.
         {
@@ -153,6 +155,8 @@ describe('<HomeScreen />', () => {
           endsAt: Date.now() - 1000,
           modes: ['touch-collect'],
           photoUrl: '',
+          shopRating: 0,
+          shopRatingCount: 0,
         },
       ],
     });

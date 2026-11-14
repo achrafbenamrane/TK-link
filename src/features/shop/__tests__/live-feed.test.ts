@@ -29,6 +29,8 @@ const OFFER: LiveOffer = {
   endsAt: Date.parse('2026-11-11T11:00:00Z'),
   modes: ['touch-collect'],
   photoUrl: 'https://cdn.example/p.jpg',
+  shopRating: 0,
+  shopRatingCount: 0,
 };
 
 beforeEach(() => {

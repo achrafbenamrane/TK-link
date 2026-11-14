@@ -232,6 +232,17 @@ estimation suit le serveur. Une nouvelle commission vaut pour les réservations 
 déjà faites gardent la leur (`commission_cents`). Les autres réglages de l’onglet restent ceux de la
 démonstration (navigateur).
 
+## Notes des commerçants (0025)
+
+CDC V1.1 (Client, VALIDÉ) : après une commande terminée, le client note le commerçant — 1 à 5
+étoiles et des tags rapides, **sans texte libre** — et la moyenne s'affiche sur la vitrine.
+`order_ratings` (une note par commande) n'est écrite que par `rate_order` : le client de la
+commande, commande récupérée ou livrée, jamais un achat B2B ; les tags viennent d'une liste fermée,
+la même que l'app (`src/features/shop/lib/rating.ts` — un test Jest compare les deux). Chacun ne
+relit que ses notes ; la moyenne et le nombre d'avis sont publics (`shop_ratings`) et arrivent sur
+les offres du fil (« 4,6 · 12 avis » ; « Nouveau » tant qu'il n'y en a aucune, jamais « note 0 »).
+Un compte supprimé laisse une note anonyme. Sans 0025, l'app n'affiche simplement pas la note.
+
 ## Commandes B2B (0023)
 
 Un commerçant commande l’offre pro d’un grossiste par le même moteur que le B2C (CDC V1.1 §1 : « pas

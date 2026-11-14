@@ -7,6 +7,7 @@ import { isSupabaseConfigured } from '@/shared/lib/env';
 import { asyncStorageBackend } from '@/shared/lib/storage';
 
 import { fetchLiveFlashes } from '../lib/feed-api';
+import { fetchShopRatings } from '../lib/ratings-api';
 import type { Deal, Merchant } from './schema';
 
 /**
@@ -43,6 +44,9 @@ export const LiveOfferSchema = z.object({
   endsAt: z.number(),
   modes: z.array(FulfilmentSchema).default(['touch-collect', 'livraison']),
   photoUrl: z.string().default(''),
+  /** La moyenne publique du commerce (0025) ; 0 : pas encore de note. */
+  shopRating: z.number().default(0),
+  shopRatingCount: z.number().int().default(0),
 });
 export type LiveOffer = z.infer<typeof LiveOfferSchema>;
 
@@ -75,8 +79,10 @@ export function liveDeal(offer: LiveOffer, nowMs: number): Deal {
     tint: TINTS[offer.category],
     price: offer.priceCents / 100,
     oldPrice: offer.oldPriceCents / 100,
-    // Aucune note tant qu'aucun avis n'est relié aux commandes du serveur : on n'invente pas de note.
-    rating: 0,
+    // La vraie moyenne du commerce (notes des clients, 0025) ; 0 tant qu'il n'en a aucune : on
+    // n'invente pas de note.
+    rating: offer.shopRating,
+    ...(offer.shopRatingCount > 0 ? { reviewCount: offer.shopRatingCount } : {}),
     stockTotal: offer.stockTotal,
     stockLeft: offer.stockLeft,
     endsInSeconds: Math.max(0, Math.round((offer.endsAt - nowMs) / 1000)),
@@ -95,7 +101,8 @@ export function liveMerchant(offer: LiveOffer): Merchant {
       offer.lat !== null && offer.lng !== null
         ? { lat: offer.lat, lng: offer.lng }
         : FALLBACK_COORD,
-    rating: 0,
+    rating: offer.shopRating,
+    ratingCount: offer.shopRatingCount,
     halal: false,
     emoji: CATEGORY_INFO[offer.category].emoji,
   };
@@ -114,7 +121,15 @@ export const useLiveFeedStore = create<LiveFeedState>()(
       refresh: async () => {
         if (!isSupabaseConfigured) return;
         const res = await fetchLiveFlashes(new Date().toISOString());
-        if (res.ok) set({ offers: res.value });
+        if (!res.ok) return;
+        // Les moyennes des commerces en ligne (0025) ; sans elles, chaque offre reste « Nouveau ».
+        const ratings = await fetchShopRatings(res.value.map((o) => o.shopId));
+        set({
+          offers: res.value.map((o) => {
+            const r = ratings[o.shopId];
+            return r ? { ...o, shopRating: r.average, shopRatingCount: r.count } : o;
+          }),
+        });
       },
     }),
     {

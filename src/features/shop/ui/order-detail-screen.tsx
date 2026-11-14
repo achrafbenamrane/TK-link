@@ -21,6 +21,7 @@ import { useShopStore } from '../model/store';
 import { getDeal, getMerchant } from '../model/catalog';
 import { useServerOrdersStore } from '../model/server-orders';
 import { RateMerchant, ReportIssue } from './components/order-feedback';
+import { ServerRateMerchant } from './components/server-rating';
 import { ServerOrderPanel } from './components/server-order-panel';
 
 /** Statuts après lesquels une commande du serveur n'avance plus : on cesse de la relire. */
@@ -383,7 +384,18 @@ export function OrderDetailScreen({ wholesale = false }: Props = {}) {
           <ServerOrderPanel order={server} now={now} onChanged={() => void refreshMine()} />
         ) : null}
 
-        {isServer ? null : <RateMerchant order={order} merchantName={merchantName} />}
+        {isServer && server ? (
+          // Achat aux grossistes : pas de note (une règle du client final, 0025).
+          wholesale ? null : (
+            <ServerRateMerchant
+              orderId={server.id}
+              status={server.status}
+              merchantName={merchantName}
+            />
+          )
+        ) : (
+          <RateMerchant order={order} merchantName={merchantName} />
+        )}
 
         {isServer ? null : (
           <View className="items-center gap-3 rounded-card border border-line bg-surface p-5">

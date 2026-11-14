@@ -23,6 +23,18 @@ export function canRate(status: OrderStatus): boolean {
   return status === 'recuperee' || status === 'livree';
 }
 
+/**
+ * La moyenne telle que la vitrine l'affiche : « 4,6 · 12 avis », ou null quand le commerce n'a pas
+ * encore de note (la vitrine dit alors « Nouveau » — jamais « note 0 »).
+ */
+export function ratingSummary(average: number, count?: number): string | null {
+  if (!(average > 0)) return null;
+  // Comme les prix (`formatEuros`) : sans Intl, identique sur tous les téléphones.
+  const value = average.toFixed(1).replace('.', ',');
+  if (!count) return value;
+  return `${value} · ${count} avis`;
+}
+
 /** Bornes l'étoile à 1–5 : un 0 n'est pas une note, c'est une absence de note. */
 export function clampStars(stars: number): number {
   return Math.min(5, Math.max(1, Math.round(stars)));

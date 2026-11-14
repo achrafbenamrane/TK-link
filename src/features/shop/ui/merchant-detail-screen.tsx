@@ -9,6 +9,7 @@ import { ShopVideo } from '@/shared/ui/shop-video';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { FULFILMENT_LABEL, FULFILMENTS } from '../lib/order-status';
+import { ratingSummary } from '../lib/rating';
 import { STOCK_CLASSES, stockAccessibilityLabel, stockTone } from '../lib/stock';
 import { videoSource } from '../lib/showcase';
 import { DEALS, getMerchant } from '../model/catalog';
@@ -287,9 +288,17 @@ export function MerchantDetailScreen({
             </AppText>
             <View className="flex-row items-center gap-3">
               <View className="flex-row items-center gap-1">
-                <Feather name="star" size={13} color={colors.warning} />
-                <AppText className="font-sans-semibold text-ink" style={{ fontSize: 13 }}>
-                  {merchant.rating}
+                <Feather
+                  name="star"
+                  size={13}
+                  color={merchant.rating > 0 ? colors.warning : colors.inkFaint}
+                />
+                <AppText
+                  testID="merchant-rating"
+                  className="font-sans-semibold text-ink"
+                  style={{ fontSize: 13 }}
+                >
+                  {ratingSummary(merchant.rating, merchant.ratingCount) ?? 'Nouveau'}
                 </AppText>
               </View>
               <View className="flex-1 flex-row items-center gap-1">
@@ -367,7 +376,10 @@ export function MerchantDetailScreen({
               </View>
             ) : null}
             <AppText variant="caption" className="text-ink-faint">
-              {merchant.area} · note {merchant.rating}
+              {merchant.area}
+              {ratingSummary(merchant.rating, merchant.ratingCount)
+                ? ` · note ${ratingSummary(merchant.rating, merchant.ratingCount)}`
+                : ''}
             </AppText>
           </View>
         ) : null}

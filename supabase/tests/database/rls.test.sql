@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(171);
+select plan(182);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -1540,6 +1540,90 @@ select is(
     'status', 'litige', 'old', 'preparation'),
   'one request per status change, with the six columns push-events reads and the shared secret'
 );
+
+-- ─── 0025 : noter le commerçant (étoiles + tags, une note par commande terminée) ───
+select set_config('tklink.rate1',
+  (select id::text from public.flash_orders
+    where customer_id = '00000000-0000-0000-0000-0000000000a1' and audience = 'clients'
+      and id <> current_setting('tklink.uber')::uuid
+    order by created_at limit 1), true);
+update public.flash_orders set status = 'livree', updated_at = now()
+ where id = current_setting('tklink.rate1')::uuid;
+select set_config('tklink.rate_shop',
+  (select shop_id::text from public.flash_orders where id = current_setting('tklink.rate1')::uuid), true);
+select set_config('tklink.b2b',
+  (select id::text from public.flash_orders
+    where audience = 'commercants' and status = 'livree' limit 1), true);
+select set_config('tklink.b2b_buyer',
+  (select customer_id::text from public.flash_orders
+    where id = current_setting('tklink.b2b')::uuid), true);
+
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select throws_ok(
+  $$ select public.rate_order(current_setting('tklink.uber')::uuid, 4, '{}') $$,
+  'P0001', 'not_finished', 'an order that is not finished cannot be rated'
+);
+select throws_ok(
+  $$ select public.rate_order(current_setting('tklink.rate1')::uuid, 6, '{}') $$,
+  '22023', 'invalid_rating', 'six stars is not a rating'
+);
+select throws_ok(
+  $$ select public.rate_order(current_setting('tklink.rate1')::uuid, 4, array['Très sympa']) $$,
+  '22023', 'invalid_rating', 'no free text: only the closed list of tags'
+);
+select throws_ok(
+  $$ select public.rate_order(current_setting('tklink.rate1')::uuid, 4, array['Rapide', 'Rapide']) $$,
+  '22023', 'invalid_rating', 'a tag counts once'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select throws_ok(
+  $$ select public.rate_order(current_setting('tklink.rate1')::uuid, 1, '{}') $$,
+  'P0001', 'order_not_found', 'nobody rates someone else''s order'
+);
+reset role;
+select set_config('request.jwt.claims',
+  json_build_object('sub', current_setting('tklink.b2b_buyer'), 'role', 'authenticated')::text, true);
+set local role authenticated;
+select throws_ok(
+  $$ select public.rate_order(current_setting('tklink.b2b')::uuid, 5, '{}') $$,
+  'P0001', 'not_ratable', 'a B2B purchase is not rated (customer rule)'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select lives_ok(
+  $$ select public.rate_order(current_setting('tklink.rate1')::uuid, 5,
+       array['Rapide', 'Conforme à l’offre']) $$,
+  'the customer rates a finished order'
+);
+select throws_ok(
+  $$ select public.rate_order(current_setting('tklink.rate1')::uuid, 3, '{}') $$,
+  'P0001', 'already_rated', 'one rating per order'
+);
+select is(
+  (select stars::integer from public.order_ratings where order_id = current_setting('tklink.rate1')::uuid),
+  5, 'the customer reads back their own rating'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select is(
+  (select count(*)::integer from public.order_ratings),
+  0, 'nobody else reads the rating itself'
+);
+reset role;
+set local role anon;
+set local request.jwt.claims to '{}';
+select is(
+  (select jsonb_build_object('average', r.average, 'count', r.count)
+     from public.shop_ratings(array[current_setting('tklink.rate_shop')::uuid]) r),
+  jsonb_build_object('average', 5.0, 'count', 1),
+  'the storefront average is public'
+);
+reset role;
 
 select * from finish();
 rollback;

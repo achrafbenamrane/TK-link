@@ -298,6 +298,13 @@ const probes = [
     missing: (s) => s === 400 || s === 404,
     what: 'les commerçants ne peuvent pas commander les offres pro des grossistes',
   },
+  {
+    migration: '0025_order_ratings',
+    rpc: 'shop_ratings',
+    // Moyennes publiques : présente, 200 (liste vide pour aucun commerce) ; absente, 404.
+    body: { p_shops: [] },
+    what: 'les clients ne peuvent pas noter les commerçants, et les vitrines n’ont pas de moyenne',
+  },
 ];
 for (const probe of probes) {
   try {

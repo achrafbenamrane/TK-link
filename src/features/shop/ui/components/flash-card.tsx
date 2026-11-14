@@ -183,7 +183,7 @@ export function FlashCard({ deal }: Props) {
               <View className="flex-row items-center gap-0.5">
                 <Ionicons name="star" size={11} color={colors.brand500} />
                 <AppText variant="caption" className="font-sans-semibold text-ink">
-                  {deal.rating.toFixed(1)}
+                  {deal.rating.toFixed(1).replace('.', ',')}
                 </AppText>
                 {deal.reviewCount ? (
                   <AppText

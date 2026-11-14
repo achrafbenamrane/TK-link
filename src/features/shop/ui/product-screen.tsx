@@ -227,7 +227,7 @@ export function ProductScreen({ dealId }: Props) {
                   <View className="flex-row items-center gap-0.5">
                     <Ionicons name="star" size={12} color={colors.brand500} />
                     <AppText variant="caption" className="font-sans-semibold text-ink">
-                      {deal.rating.toFixed(1)}
+                      {deal.rating.toFixed(1).replace('.', ',')}
                     </AppText>
                     {/* Le nombre d'avis, exigé par les affiches à côté de la note. */}
                     {deal.reviewCount ? (

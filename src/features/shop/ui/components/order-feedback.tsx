@@ -14,39 +14,49 @@ import {
   ROUTE_LABEL,
   type IssueKind,
 } from '../../lib/issues';
-import { canRate, RATING_TAGS, type RatingTag } from '../../lib/rating';
+import { canRate, type Rating, RATING_TAGS, type RatingTag } from '../../lib/rating';
 import type { Order } from '../../model/schema';
 import { useShopStore } from '../../model/store';
 
-/**
- * Noter le commerçant — CDC V1.1 : étoiles et tags rapides, sans texte libre,
- * une fois la commande terminée. Une seule note par commande.
- */
-export function RateMerchant({ order, merchantName }: { order: Order; merchantName: string }) {
+/** La note déjà donnée : un merci, et ce qui a été dit. */
+export function RatingDone({ merchantName, rating }: { merchantName: string; rating: Rating }) {
   const colors = useColors();
-  const rateOrder = useShopStore((s) => s.rateOrder);
+  return (
+    <View
+      testID="order-rating-done"
+      className="mb-4 flex-row items-center gap-3 rounded-card border border-line bg-surface p-4"
+    >
+      <Feather name="star" size={18} color={colors.brand500} />
+      <View className="flex-1">
+        <AppText className="font-sans-bold text-sm text-ink">Merci pour votre avis</AppText>
+        <AppText variant="caption" className="text-ink-faint">
+          {merchantName} · {rating.stars}/5
+          {rating.tags.length > 0 ? ` · ${rating.tags.join(', ')}` : ''}
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Le formulaire de note — étoiles et tags rapides, sans texte libre (CDC V1.1). Il ne sait pas où
+ * part la note : la commande de démonstration la garde sur le téléphone, celle du serveur l'envoie
+ * (`ServerRateMerchant`).
+ */
+export function RatingForm({
+  merchantName,
+  onSubmit,
+  busy = false,
+  error = null,
+}: {
+  merchantName: string;
+  onSubmit: (stars: number, tags: RatingTag[]) => void;
+  busy?: boolean;
+  error?: string | null;
+}) {
+  const colors = useColors();
   const [stars, setStars] = useState(0);
   const [tags, setTags] = useState<RatingTag[]>([]);
-
-  if (!canRate(order.status)) return null;
-
-  if (order.rating) {
-    return (
-      <View
-        testID="order-rating-done"
-        className="mb-4 flex-row items-center gap-3 rounded-card border border-line bg-surface p-4"
-      >
-        <Feather name="star" size={18} color={colors.brand500} />
-        <View className="flex-1">
-          <AppText className="font-sans-bold text-sm text-ink">Merci pour votre avis</AppText>
-          <AppText variant="caption" className="text-ink-faint">
-            {merchantName} · {order.rating.stars}/5
-            {order.rating.tags.length > 0 ? ` · ${order.rating.tags.join(', ')}` : ''}
-          </AppText>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View
@@ -98,13 +108,35 @@ export function RateMerchant({ order, merchantName }: { order: Order; merchantNa
           );
         })}
       </View>
+      {error ? (
+        <AppText testID="rating-error" variant="caption" className="text-danger">
+          {error}
+        </AppText>
+      ) : null}
       <Button
         testID="rating-submit"
-        label="Envoyer ma note"
-        disabled={stars === 0}
-        onPress={() => rateOrder(order.id, stars, tags)}
+        label={busy ? 'Envoi…' : 'Envoyer ma note'}
+        disabled={stars === 0 || busy}
+        onPress={() => onSubmit(stars, tags)}
       />
     </View>
+  );
+}
+
+/**
+ * Noter le commerçant — CDC V1.1 : étoiles et tags rapides, sans texte libre,
+ * une fois la commande terminée. Une seule note par commande. (Commande de démonstration : la note
+ * reste sur le téléphone.)
+ */
+export function RateMerchant({ order, merchantName }: { order: Order; merchantName: string }) {
+  const rateOrder = useShopStore((s) => s.rateOrder);
+  if (!canRate(order.status)) return null;
+  if (order.rating) return <RatingDone merchantName={merchantName} rating={order.rating} />;
+  return (
+    <RatingForm
+      merchantName={merchantName}
+      onSubmit={(stars, tags) => rateOrder(order.id, stars, tags)}
+    />
   );
 }
 
