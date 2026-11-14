@@ -127,6 +127,18 @@ describe('un remboursement (0027)', () => {
     ).toMatch(/L’acheteur est remboursé/);
   });
 
+  it('refusée par le commerce → l’acheteur sait qu’il est remboursé ; le commerce, lui, le sait', () => {
+    expect(orderMessage(order('refusee'), { status: 'payee' })).toMatchObject({
+      to: 'customer',
+      title: 'Commande refusée',
+      body: expect.stringMatching(/Le commerçant.*remboursé intégralement/),
+    });
+    expect(orderMessage(order('refusee', 'commercants'), { status: 'payee' })?.body).toMatch(
+      /Le grossiste/,
+    );
+    expect(shopNotice(order('refusee'), { status: 'payee' })).toBeNull();
+  });
+
   it('rien pour le commerce quand la commande n’était pas entre ses mains', () => {
     // Décision du back-office sur un litige : le commerce n'a plus rien à faire.
     expect(shopNotice(order('remboursement_en_cours'), { status: 'litige' })).toBeNull();

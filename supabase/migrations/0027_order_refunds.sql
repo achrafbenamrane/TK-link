@@ -20,6 +20,10 @@
 --   3. CONTESTATION BANCAIRE : un client qui conteste le paiement auprès de sa banque met la commande
 --      en litige (webhook `charge.dispute.created`, `stripe_dispute_id`) — sinon personne ne le
 --      saurait avant le débit.
+--   4. LE COMMERÇANT REFUSE une commande payée qu'il ne peut pas honorer (`refuse_order`, avant de
+--      la préparer) : « refusée », et le remboursement part de la même façon. CDC V1.1 : « refusée »
+--      est une des exceptions du suivi ; l'app de démonstration le faisait déjà (payée → refusée →
+--      remboursement). Le stock ne revient pas : s'il refuse, c'est qu'il n'a plus le produit.
 --
 -- Rien de plus à régler : l'adresse de `order-refund` se déduit de celle de `push-events` (Vault).
 
@@ -96,7 +100,37 @@ $$;
 revoke execute on function public.report_order_issue(uuid, text) from public, anon;
 grant execute on function public.report_order_issue(uuid, text) to authenticated;
 
--- ─────────────────────────────────────────── « remboursement en cours » → la fonction Edge
+-- ─────────────────────────────────── refuser (le commerçant) : payée, mais impossible à honorer
+
+create or replace function public.refuse_order(p_order uuid)
+  returns void
+  language plpgsql
+  security definer
+  set search_path = ''
+as $$
+declare
+  v_order public.flash_orders%rowtype;
+begin
+  select o.* into v_order
+    from public.flash_orders o
+    join public.shops s on s.id = o.shop_id
+   where o.id = p_order and s.owner_id = auth.uid()
+   for update of o;
+  if not found then
+    raise exception 'not_your_order' using errcode = '42501';
+  end if;
+  -- Avant la préparation seulement : une fois commencée, la commande s'honore ou passe par TK LINK.
+  if v_order.status not in ('payee', 'acceptee') then
+    raise exception 'invalid_transition' using errcode = 'P0001';
+  end if;
+  update public.flash_orders set status = 'refusee', updated_at = now() where id = p_order;
+end;
+$$;
+
+revoke execute on function public.refuse_order(uuid) from public, anon;
+grant execute on function public.refuse_order(uuid) to authenticated;
+
+-- ───────────────────────────────── « remboursement en cours » ou « refusée » → la fonction Edge
 
 -- La même porte que les notifications (0024) : l'adresse de `push-events` dans Vault, dont on prend
 -- la voisine `order-refund`, et le même secret partagé. Sans eux, rien ne part et rien n'échoue (un
@@ -136,7 +170,7 @@ drop trigger if exists flash_orders_refund on public.flash_orders;
 create trigger flash_orders_refund
   after update of status on public.flash_orders
   for each row
-  when (new.status = 'remboursement_en_cours' and old.status is distinct from new.status)
+  when (new.status in ('remboursement_en_cours', 'refusee') and old.status is distinct from new.status)
   execute function private.request_order_refund();
 
 revoke execute on function private.request_order_refund() from public, anon, authenticated;

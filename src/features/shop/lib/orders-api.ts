@@ -373,6 +373,19 @@ export async function advanceOrder(
   }
 }
 
+/**
+ * Payée, mais impossible à honorer (plus le produit) : le commerce la refuse avant de la préparer
+ * (migration 0027). Le client est remboursé intégralement, tout seul, par Stripe.
+ */
+export async function refuseOrder(orderId: string): Promise<Result<null>> {
+  try {
+    const { error } = await supabase.rpc('refuse_order', { p_order: orderId });
+    return error ? { ok: false, code: classifyOrdersError(error) } : { ok: true, value: null };
+  } catch (error) {
+    return { ok: false, code: classifyOrdersError(error) };
+  }
+}
+
 /** Livraison prête : commande la course Uber Direct (une seule par commande). */
 export async function dispatchCourier(orderId: string): Promise<Result<string | null>> {
   const res = await callEdge<{ trackingUrl?: unknown }>('uber-dispatch', { orderId });

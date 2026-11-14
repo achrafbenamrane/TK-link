@@ -351,9 +351,12 @@ const COURIER_DONE = ['canceled', 'returned', 'delivered'];
 export type RefundBlocker =
   'stripe_not_configured' | 'no_payment' | 'no_account' | 'courier_active';
 
+/** Les statuts qui attendent leur remboursement : signalée ou décidée, et refusée par le commerce. */
+export const AWAITING_REFUND = ['remboursement_en_cours', 'refusee'];
+
 /**
- * Que faire d'une commande « remboursement en cours » ?
- * - `skip` : elle ne l'est plus (rejeu, autre onglet, webhook arrivé avant) — rien ;
+ * Que faire d'une commande « remboursement en cours » (ou « refusée » par le commerce) ?
+ * - `skip` : elle ne l'attend plus (rejeu, autre onglet, webhook arrivé avant) — rien ;
  * - `manual` : impossible sans un humain (pas de clé Stripe, pas de paiement, pas de compte, ou un
  *   coursier qui roule encore : rembourser d'abord, ce serait livrer gratuitement) ;
  * - `refund` : le remboursement TOTAL, au nom du commerce (Direct charges). `refund_application_fee` :
@@ -379,7 +382,7 @@ export function refundPlan(
       idempotencyKey: string;
       params: Record<string, unknown>;
     } {
-  if (order.status !== 'remboursement_en_cours') return { kind: 'skip' };
+  if (!AWAITING_REFUND.includes(order.status)) return { kind: 'skip' };
   if (!configured) return { kind: 'manual', reason: 'stripe_not_configured' };
   if (!order.stripe_payment_intent_id) return { kind: 'manual', reason: 'no_payment' };
   if (!account) return { kind: 'manual', reason: 'no_account' };
@@ -401,9 +404,10 @@ export function refundPlan(
 }
 
 /**
- * La réponse de Stripe à `POST /v1/refunds` → le statut de la commande.
+ * La réponse de Stripe à `POST /v1/refunds` → le nouveau statut de la commande (`null` : inchangé).
  * - fait (`succeeded`) : « remboursée » ;
- * - en route (`pending`, `requires_action`) : reste « remboursement en cours », le webhook finira ;
+ * - en route (`pending`, `requires_action`) : inchangé, le webhook finira — surtout pas réécrire le
+ *   statut : repasser « remboursement en cours » relancerait le déclencheur ;
  * - déjà remboursée chez Stripe (à la main, par exemple) : « remboursée » ;
  * - autre chose (refus, Stripe injoignable) : « litige », avec la raison pour le back-office.
  */
@@ -411,7 +415,7 @@ export function afterRefund(
   httpStatus: number,
   body: Record<string, unknown> | null,
 ): {
-  status: 'remboursee' | 'remboursement_en_cours' | 'litige';
+  status: 'remboursee' | 'litige' | null;
   refundId: string | null;
   failure: string | null;
 } {
@@ -419,7 +423,7 @@ export function afterRefund(
   if (httpStatus >= 200 && httpStatus < 300 && id) {
     if (body?.status === 'succeeded') return { status: 'remboursee', refundId: id, failure: null };
     if (body?.status === 'pending' || body?.status === 'requires_action') {
-      return { status: 'remboursement_en_cours', refundId: id, failure: null };
+      return { status: null, refundId: id, failure: null };
     }
     return {
       status: 'litige',

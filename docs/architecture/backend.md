@@ -420,8 +420,14 @@ commande payée et pas close) ; la base décide avec la règle de l’app (`shop
   stock revient aux autres clients tant que l’offre court ;
 - tout le reste → « litige », la file du back-office (`/admin` → Litiges, avec le motif choisi).
 
+Le commerçant, lui, peut **refuser** une commande payée qu’il ne peut pas honorer, avant de la
+préparer (`refuse_order`, bouton « Je ne peux pas l’honorer », confirmé d’un second appui) :
+« refusée » est une exception du suivi au CDC, et l’app de démonstration le faisait déjà. Le stock
+ne revient pas.
+
 Dès qu’une commande passe « remboursement en cours » — par ce signalement ou par la décision
-« Rembourser » du back-office — le déclencheur `flash_orders_refund` appelle `order-refund` (pg_net,
+« Rembourser » du back-office — ou « refusée », le déclencheur `flash_orders_refund` appelle
+`order-refund` (pg_net,
 même secret et même adresse de base que `push-events` : rien à régler en plus). Elle rembourse
 **tout**, au nom du commerce, avec `refund_application_fee` : TK LINK rend aussi sa commission et la
 livraison, sinon le commerçant rembourserait de sa poche ce qu’il n’a pas touché (à confirmer avec

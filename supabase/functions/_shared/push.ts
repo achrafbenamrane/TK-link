@@ -93,6 +93,13 @@ export function orderMessage(
         body: 'Il arrive sur votre carte, en général sous 5 à 10 jours ouvrés.',
         data: order,
       };
+    case 'refusee':
+      return {
+        to: 'customer',
+        title: 'Commande refusée',
+        body: 'Le commerçant ne peut pas l’honorer : vous êtes remboursé intégralement.',
+        data: order,
+      };
     case 'remboursee':
       return {
         to: 'customer',
@@ -165,6 +172,13 @@ function wholesaleMessage(record: OrderRow, delivery: boolean): PushMessage | nu
         to: 'customer',
         title: 'Livrée',
         body: 'Votre commande du grossiste est arrivée.',
+        data: order,
+      };
+    case 'refusee':
+      return {
+        to: 'customer',
+        title: 'Commande refusée',
+        body: 'Le grossiste ne peut pas l’honorer : vous êtes remboursé intégralement.',
         data: order,
       };
     case 'litige':

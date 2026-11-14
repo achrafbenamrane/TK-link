@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(203);
+select plan(208);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -1805,6 +1805,48 @@ select is(
 select is(
   (select status from public.flash_orders where id = current_setting('tklink.issue_admin')::uuid),
   'litige', 'the other report joins the back-office queue'
+);
+
+-- Le commerçant refuse une commande payée qu'il ne peut pas honorer : remboursée de la même façon.
+select ok(
+  not has_function_privilege('anon', 'public.refuse_order(uuid)', 'execute'),
+  'a visitor cannot refuse an order'
+);
+update public.flash_orders
+   set status = 'payee', paid_at = now(), stripe_payment_intent_id = 'pi_test_0027_c'
+ where id = current_setting('tklink.issue_pending')::uuid;
+select set_config('tklink.queued_refuse',
+  (select coalesce(max(id), 0)::text from net.http_request_queue), true);
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select throws_ok(
+  $$ select public.refuse_order(current_setting('tklink.issue_pending')::uuid) $$,
+  '42501', 'not_your_order', 'only the shop refuses its own orders, not the buyer'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select throws_ok(
+  $$ select public.refuse_order(current_setting('tklink.issue_admin')::uuid) $$,
+  'P0001', 'invalid_transition', 'an order already in TK LINK''s hands is not refused'
+);
+select lives_ok(
+  $$ select public.refuse_order(current_setting('tklink.issue_pending')::uuid) $$,
+  'the merchant refuses a paid order it cannot honour'
+);
+reset role;
+set local request.jwt.claims to '{}';
+select is(
+  (select jsonb_build_object(
+            'status', (select status from public.flash_orders
+                        where id = current_setting('tklink.issue_pending')::uuid),
+            'refunds', count(*))
+     from net.http_request_queue q
+    where q.id > current_setting('tklink.queued_refuse')::bigint
+      and q.url like '%/functions/v1/order-refund'
+      and convert_from(q.body, 'UTF8')::jsonb ->> 'order_id' = current_setting('tklink.issue_pending')),
+  jsonb_build_object('status', 'refusee', 'refunds', 1),
+  'refused: the refund leaves on its own'
 );
 
 select * from finish();

@@ -1,20 +1,26 @@
-// Rembourse une commande passée « remboursement en cours » (migration 0027) : par le client qui
-// signale « je n'ai rien reçu » avant la remise, ou par la décision « Rembourser » du back-office.
+// Rembourse une commande (migration 0027) passée « remboursement en cours » — le client a signalé
+// « je n'ai rien reçu » avant la remise, ou le back-office a décidé « Rembourser » — ou « refusée »
+// par le commerce, qui ne peut pas l'honorer.
 //
 // Appelée par le déclencheur `flash_orders_refund` (pg_net), méthode POST, corps `{ order_id }`, avec
 // l'en-tête `x-webhook-secret: <PUSH_WEBHOOK_SECRET>` (le même secret que `push-events`).
 //
 // Le remboursement est TOTAL, créé au nom du commerce (Direct charges), frais de TK LINK compris. Il
-// ne part qu'une fois : la commande doit être ENCORE « remboursement en cours », la clé d'idempotence
-// est celle de la tentative, et Stripe refuse de rembourser deux fois un paiement déjà remboursé en
-// entier. Ce qui empêche de rembourser seul (pas de clé Stripe,
-// coursier en route, refus de Stripe) renvoie la commande en « litige » avec la raison : le back-office
-// tranche. Le webhook Stripe (`charge.refunded`) la passe « remboursée » si ce n'est déjà fait ici.
+// ne part qu'une fois : la commande doit l'attendre ENCORE, la clé d'idempotence est celle de la
+// tentative, et Stripe refuse de rembourser deux fois un paiement déjà remboursé en entier. Ce qui
+// empêche de rembourser seul (pas de clé Stripe, coursier en route, refus de Stripe) renvoie la
+// commande en « litige » avec la raison : le back-office tranche. Le webhook Stripe
+// (`charge.refunded`) la passe « remboursée » si ce n'est déjà fait ici.
 //
 // Sécurité : pas de jeton Supabase (`verify_jwt = false`) ; seul l'identifiant de la commande vient de
 // la requête — le montant, le paiement et le compte sont relus en base.
 import { adminClient, sameSecret, UUID } from '../_shared/http.ts';
-import { afterRefund, refundPlan, type RefundableOrder } from '../_shared/stripe.ts';
+import {
+  afterRefund,
+  AWAITING_REFUND,
+  refundPlan,
+  type RefundableOrder,
+} from '../_shared/stripe.ts';
 import { stripeConfigured, stripeRequest } from '../_shared/stripe-api.ts';
 
 const SECRET = Deno.env.get('PUSH_WEBHOOK_SECRET') ?? '';
@@ -66,16 +72,17 @@ Deno.serve(async (req) => {
   }
 
   // Seulement si elle attend TOUJOURS son remboursement : le webhook a pu la passer « remboursée ».
+  // Remboursement en route : on garde le statut (le réécrire relancerait le déclencheur).
   const { error: writeError } = await admin
     .from('flash_orders')
     .update({
-      status: outcome.status,
+      ...(outcome.status ? { status: outcome.status } : {}),
       ...(outcome.refundId ? { stripe_refund_id: outcome.refundId } : {}),
       refund_failure: outcome.failure,
       updated_at: new Date().toISOString(),
     })
     .eq('id', order.id)
-    .eq('status', 'remboursement_en_cours');
+    .in('status', AWAITING_REFUND);
   if (writeError) return new Response(null, { status: 500 });
 
   return new Response(null, { status: 200 });

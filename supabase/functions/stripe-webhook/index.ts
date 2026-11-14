@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       .from('flash_orders')
       .update({ status: 'litige', refund_failure: effect.reason.slice(0, 200), updated_at: now })
       .eq('stripe_payment_intent_id', effect.paymentIntentId)
-      .in('status', ['remboursement_en_cours', 'remboursee']);
+      .in('status', ['remboursement_en_cours', 'refusee', 'remboursee']);
     if (error) return new Response(null, { status: 500 });
   } else if (effect.kind === 'order_disputed') {
     // Contestation bancaire (0027) : la commande garde la trace de la contestation, et passe en

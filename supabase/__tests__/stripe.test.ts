@@ -221,6 +221,10 @@ describe('rembourser une commande (0027, order-refund)', () => {
     );
   });
 
+  it('une commande refusée par le commerce se rembourse de la même façon', () => {
+    expect(refundPlan(order({ status: 'refusee' }), 'acct_1', true).kind).toBe('refund');
+  });
+
   it('une commande qui n’attend plus son remboursement : rien', () => {
     expect(refundPlan(order({ status: 'remboursee' }), 'acct_1', true)).toEqual({ kind: 'skip' });
     expect(refundPlan(order({ status: 'litige' }), 'acct_1', true)).toEqual({ kind: 'skip' });
@@ -260,8 +264,9 @@ describe('rembourser une commande (0027, order-refund)', () => {
       refundId: 're_1',
       failure: null,
     });
+    // En route : le statut ne bouge pas (le réécrire relancerait le déclencheur).
     expect(afterRefund(200, { id: 're_1', status: 'pending' })).toEqual({
-      status: 'remboursement_en_cours',
+      status: null,
       refundId: 're_1',
       failure: null,
     });

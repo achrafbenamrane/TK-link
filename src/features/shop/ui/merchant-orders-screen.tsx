@@ -20,6 +20,7 @@ import {
   confirmPickup,
   dispatchCourier,
   type OrdersError,
+  refuseOrder,
   type ServerOrder,
 } from '../lib/orders-api';
 import { parsePickupQr } from '../lib/pickup';
@@ -431,9 +432,13 @@ const SERVER_ERROR: Partial<Record<OrdersError, string>> = {
   cancel_refused: 'Uber n’a pas pu annuler la course. Réessayez dans un instant.',
 };
 
+/** « Refuser » (0027) : le serveur ne l'a pas encore, le service paraît indisponible. */
+const REFUSE_UNAVAILABLE = 'Le refus n’est pas encore ouvert : contactez le support TK LINK.';
+
 /**
  * LES GESTES D'UNE COMMANDE DU SERVEUR, au comptoir : préparer, dire « c'est prêt », remettre au
- * client contre son code de retrait, ou appeler un coursier Uber Direct pour une livraison. Le
+ * client contre son code de retrait, ou appeler un coursier Uber Direct pour une livraison — et,
+ * avant de préparer, refuser une commande impossible à honorer (le client est remboursé, 0027). Le
  * serveur vérifie chaque geste (titulaire du commerce, ordre des étapes, code).
  */
 function ServerActions({ order, onDone }: { order: ServerOrder; onDone: () => void }) {
@@ -446,6 +451,9 @@ function ServerActions({ order, onDone }: { order: ServerOrder; onDone: () => vo
   const [wrongQr, setWrongQr] = useState(false);
   // Annuler une course se confirme d'un second appui : le coursier est peut-être déjà en route.
   const [confirmCancel, setConfirmCancel] = useState(false);
+  // Refuser aussi : le client est remboursé, sans retour en arrière.
+  const [confirmRefuse, setConfirmRefuse] = useState(false);
+  const [refuseTried, setRefuseTried] = useState(false);
 
   // Le QR du client contient sa commande et son code : on vérifie que c'est CETTE commande, puis le
   // serveur vérifie le code. Un QR d'une autre commande ou étranger à TK LINK est refusé sur place.
@@ -461,13 +469,17 @@ function ServerActions({ order, onDone }: { order: ServerOrder; onDone: () => vo
     void run(() => confirmPickup(order.id, qr.code));
   };
 
-  const run = async (action: () => Promise<{ ok: true } | { ok: false; code: OrdersError }>) => {
+  const run = async (
+    action: () => Promise<{ ok: true } | { ok: false; code: OrdersError }>,
+    refusing = false,
+  ) => {
     if (busy) return;
     setBusy(true);
     setError(null);
     const res = await action();
     setBusy(false);
     if (!res.ok) {
+      setRefuseTried(refusing);
       setError(res.code);
       return;
     }
@@ -660,13 +672,54 @@ function ServerActions({ order, onDone }: { order: ServerOrder; onDone: () => vo
         </Pressable>
       ) : null}
 
+      {/* Payée, pas encore préparée : la refuser si on ne peut pas l'honorer (0027). */}
+      {paid ? (
+        <View className="gap-1">
+          <Pressable
+            testID={`merchant-order-${order.id}-refuse`}
+            accessibilityRole="button"
+            accessibilityLabel={
+              confirmRefuse
+                ? 'Confirmer : refuser la commande et rembourser le client'
+                : 'Refuser la commande'
+            }
+            accessibilityState={{ disabled: busy, busy }}
+            disabled={busy}
+            onPress={() => {
+              if (!confirmRefuse) {
+                setConfirmRefuse(true);
+                return;
+              }
+              setConfirmRefuse(false);
+              void run(() => refuseOrder(order.id), true);
+            }}
+            className="h-11 items-center justify-center self-start rounded-control border border-line px-4 active:opacity-70"
+          >
+            <AppText className="font-sans-semibold text-sm text-danger">
+              {confirmRefuse ? 'Confirmer : refuser et rembourser' : 'Je ne peux pas l’honorer'}
+            </AppText>
+          </Pressable>
+          {confirmRefuse ? (
+            <AppText
+              testID={`merchant-order-${order.id}-refuse-hint`}
+              variant="caption"
+              className="text-ink-faint"
+            >
+              Le client est remboursé intégralement, sans retour en arrière.
+            </AppText>
+          ) : null}
+        </View>
+      ) : null}
+
       {error ? (
         <AppText
           testID={`merchant-order-${order.id}-error`}
           variant="caption"
           className="text-danger"
         >
-          {SERVER_ERROR[error] ?? 'Action impossible pour le moment. Réessayez.'}
+          {refuseTried && error === 'service_unavailable'
+            ? REFUSE_UNAVAILABLE
+            : (SERVER_ERROR[error] ?? 'Action impossible pour le moment. Réessayez.')}
         </AppText>
       ) : null}
     </View>

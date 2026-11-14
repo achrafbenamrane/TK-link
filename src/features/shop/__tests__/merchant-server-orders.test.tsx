@@ -82,6 +82,38 @@ it('payée : « En préparation » passe par le serveur', async () => {
   );
 });
 
+it('payée mais impossible à honorer : refuser se confirme, et le client est remboursé (0027)', async () => {
+  seed([order({})]);
+  rpc.mockResolvedValue({ data: null, error: null });
+  render(<MerchantOrdersScreen server />);
+
+  fireEvent.press(screen.getByTestId(`merchant-order-${ID}-refuse`));
+  // Un premier appui ne refuse rien : il demande confirmation, et dit ce qui va se passer.
+  expect(rpc).not.toHaveBeenCalledWith('refuse_order', expect.anything());
+  expect(screen.getByTestId(`merchant-order-${ID}-refuse-hint`)).toHaveTextContent(
+    /remboursé intégralement/,
+  );
+  fireEvent.press(screen.getByTestId(`merchant-order-${ID}-refuse`));
+  await waitFor(() => expect(rpc).toHaveBeenCalledWith('refuse_order', { p_order: ID }));
+});
+
+it('refuser sur un serveur sans 0027 : le message le dit', async () => {
+  seed([order({})]);
+  rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202', message: 'missing' } });
+  render(<MerchantOrdersScreen server />);
+  fireEvent.press(screen.getByTestId(`merchant-order-${ID}-refuse`));
+  fireEvent.press(screen.getByTestId(`merchant-order-${ID}-refuse`));
+  expect(await screen.findByTestId(`merchant-order-${ID}-error`)).toHaveTextContent(
+    /refus n’est pas encore ouvert/,
+  );
+});
+
+it('en préparation : plus de refus possible', () => {
+  seed([order({ status: 'preparation' })]);
+  render(<MerchantOrdersScreen server />);
+  expect(screen.queryByTestId(`merchant-order-${ID}-refuse`)).toBeNull();
+});
+
 it('livraison en préparation : « appeler un coursier » commande la course Uber Direct', async () => {
   seed([order({ fulfilment: 'livraison', status: 'preparation', delivery_address: 'x' })]);
   edge.mockResolvedValue({ ok: true, data: { trackingUrl: 'https://www.ubr.to/x' } });
