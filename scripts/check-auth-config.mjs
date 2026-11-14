@@ -3,7 +3,7 @@
  * auth:check — le projet Supabase est-il prêt pour l'authentification de TK LINK ?
  *
  * LECTURE SEULE : interroge `/auth/v1/settings` (public, avec la clé anon), sonde la table des
- * profils et la présence de la fonction Edge `link-phone`. Ne crée aucun compte, n'envoie aucun
+ * profils et la présence des fonctions Edge (`link-phone` et les autres). Ne crée aucun compte, n'envoie aucun
  * e-mail ni SMS.
  *
  * Usage (depuis la racine du dépôt) :
@@ -340,6 +340,50 @@ if (phoneWanted) {
   } catch {
     warn('Impossible de joindre les fonctions Edge.');
   }
+}
+
+// Les autres fonctions Edge (paiement, livraison, visuels IA, notifications). Même sonde, sans
+// session : une fonction présente répond 401 (appelant inconnu ou webhook non signé) ou 503 tant que
+// la clé de son service manque ; 404 = pas déployée. Aucune ne fait rien sans session ni signature.
+// Pas bloquant pour l'authentification : signalé seulement.
+const EDGE_FUNCTIONS = [
+  'delete-account',
+  'stripe-connect',
+  'stripe-balance',
+  'stripe-payment',
+  'stripe-webhook',
+  'order-cancel',
+  'uber-quote',
+  'uber-dispatch',
+  'uber-cancel',
+  'uber-webhook',
+  'ai-media-start',
+  'ai-media-status',
+  'push-events',
+];
+const missingKey = [];
+const absent = [];
+for (const name of EDGE_FUNCTIONS) {
+  try {
+    const res = await fetch(`${url}/functions/v1/${name}`, {
+      method: 'POST',
+      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    const body = await res.text();
+    if (res.status === 404) absent.push(name);
+    else if (res.status === 503 && /not_configured/.test(body)) missingKey.push(name);
+    else if (res.status >= 500) warn(`Fonction Edge ${name} en erreur (HTTP ${res.status}).`);
+  } catch {
+    warn(`Impossible de joindre la fonction Edge ${name}.`);
+  }
+}
+if (absent.length) warn(`Fonctions Edge non déployées : ${absent.join(', ')}.`);
+else ok(`Les ${EDGE_FUNCTIONS.length} autres fonctions Edge sont déployées.`);
+if (missingKey.length) {
+  warn(
+    `Clé du service manquante (Supabase → Edge Functions → Secrets) : ${missingKey.join(', ')}.`,
+  );
 }
 
 console.log(

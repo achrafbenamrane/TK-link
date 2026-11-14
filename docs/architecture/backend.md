@@ -254,8 +254,24 @@ parrainage (règles du client final). L’adresse de livraison est TOUJOURS cell
 `audience` qui n’existe pas encore et répondent « commande introuvable » à toutes les commandes ;
 laissées anciennes après, elles chiffreraient et commanderaient un coursier Uber pour une commande
 B2B. Règle générale : une fonction Edge qui lit une colonne nouvelle se déploie juste après la
-migration qui l’ajoute, dans la même séance. Au 14/11/2026, 0023 est appliquée et aucune de ces
-quatre fonctions n’est encore déployée : il suffira de les déployer depuis le code actuel.
+migration qui l’ajoute, dans la même séance. Fait le 14/11/2026 : 0023 appliquée, puis les
+fonctions déployées.
+
+**Fonctions en ligne (14/11/2026).** Les 14 fonctions de TK LINK sont déployées sur
+`dvvuktwgdakysaraeocz`, en une commande, sans Docker (la CLI voit désormais ce projet) :
+
+```bash
+supabase functions deploy link-phone delete-account stripe-connect stripe-balance stripe-payment \
+  stripe-webhook order-cancel uber-quote uber-dispatch uber-cancel uber-webhook ai-media-start \
+  ai-media-status push-events --project-ref dvvuktwgdakysaraeocz --use-api
+```
+
+`verify_jwt = false` vient de `config.toml` ; chaque fonction vérifie elle-même l’appelant. Tant
+qu’une clé manque, la fonction répond 503 (`stripe_not_configured`, `uber_not_configured`,
+`ai_not_configured`) et l’app dit « pas encore activé » ; les webhooks refusent tout appel non signé
+(401). `revenuecat-webhook` (squelette, RevenueCat n’est pas utilisé) n’est volontairement pas
+déployé. Reste à poser les secrets de chaque service (sections Uber, notifications, fal.ai et
+Stripe ci-dessous), puis le webhook Stripe et les deux webhooks de base de données.
 
 ## Parrainage (0019)
 

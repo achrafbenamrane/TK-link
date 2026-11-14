@@ -78,8 +78,9 @@ paiement instantané), facture électronique du grossiste (chantier facturation)
       s’arrêtait au premier `THEN`) ; rien n’avait été appliqué. Garde Jest ajouté
       (`supabase/__tests__/plpgsql-if-case.test.ts`)
 - [ ] Écrans en démonstration à 360 px ; essai à deux téléphones (CUJ-010) après la mise à jour OTA
-- [ ] Le jour où `stripe-payment`, `uber-quote`, `uber-dispatch` et `push-events` se déploient
-      (aucune ne l’est au 14/11), les déployer depuis le code actuel, qui connaît `audience`
+- [x] `stripe-payment`, `uber-quote`, `uber-dispatch`, `push-events` (et les 10 autres) déployées
+      le 14/11 depuis le code actuel, juste après 0023 ; sondées en ligne (503 sans clé, 401 sans
+      compte ou sans signature)
 
 ## Risques
 
