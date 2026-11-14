@@ -199,6 +199,8 @@ export function isCourierCancellable(order: {
  * (migration 0023) est livrée par le grossiste lui-même : ni devis, ni coursier — et son paiement
  * n'attend pas de devis.
  */
-export function needsCourier(order: { fulfilment: string; audience: string }): boolean {
-  return order.fulfilment === 'livraison' && order.audience === 'clients';
+export function needsCourier(order: { fulfilment: string; audience?: string | null }): boolean {
+  // Refus explicite du B2B plutôt qu'« uniquement les clients » : une ligne lue sans sa colonne
+  // `audience` garde le coursier (et son devis) au lieu de livrer gratuitement sans personne.
+  return order.fulfilment === 'livraison' && order.audience !== 'commercants';
 }

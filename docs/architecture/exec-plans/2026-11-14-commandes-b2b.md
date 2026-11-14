@@ -50,12 +50,15 @@ paiement instantané), facture électronique du grossiste (chantier facturation)
 
 ### Phase 1 — Le serveur (migration 0023)
 
-- [ ] `flash_orders.audience` ; `reserve_flash` accepte une offre pro pour un commerçant validé
+- [x] `flash_orders.audience` ; `reserve_flash` accepte une offre pro pour un commerçant validé
       (pas la sienne), sans crédit de parrainage, 999 par ligne, adresse du commerce acheteur
-- [ ] `advance_order` : la livraison B2B avancée par le grossiste ; fidélité et parrainage
+- [x] `advance_order` : la livraison B2B avancée par le grossiste ; fidélité et parrainage
       ignorent le B2B
-- [ ] Edge : `stripe-payment` sans devis pour le B2B ; `uber-quote` et `uber-dispatch` le refusent
-- [ ] pgTAP (acheteur refusé, minimum, volume, pas de crédit, transitions, pas de points)
+- [x] Edge : `stripe-payment` sans devis pour le B2B ; `uber-quote` et `uber-dispatch` le refusent
+- [x] pgTAP (acheteur refusé, minimum, volume, pas de crédit, transitions, pas de points)
+- [x] Relecture indépendante (14/11) : ordre des refus de 0019 rétabli, adresse B2B forcée à
+      celle du commerce acheteur, plafond Stripe, notifications B2B, « déjà client » hors B2B ;
+      tests 82–92 (le test 82 lisait l’offre sous les règles d’accès d’un client : corrigé)
 
 ### Phase 2 — L’app
 

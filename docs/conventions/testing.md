@@ -35,6 +35,20 @@ layer. A change without proof doesn't merge.
   `expoRouterDefaults` — not to each test (14 suites broke at once on
   `useFocusEffect`, 13/11/2026).
 
+## Base de données (pgTAP)
+
+`supabase/tests/database/rls.test.sql` prouve les règles du serveur (`supabase test db`, sur un
+poste avec Docker ; le garde Jest `sql-quoting` vérifie au moins ses guillemets). Deux pièges :
+
+- **Une sous-requête dans `throws_ok`/`lives_ok` s’exécute sous le rôle et les règles d’accès du
+  compte simulé.** Pour une ligne qu’il ne voit pas (une offre pro sous un compte client, la
+  commande d’un autre), elle rend `null` et le test échoue pour une autre raison que celle annoncée.
+  Lire l’identifiant AVANT, en superutilisateur, puis le passer par `set_config('tklink.x', …, true)`
+  et `current_setting('tklink.x')` (relecture de 0023, 14/11/2026).
+- **Une règle n’est prouvée que si le test peut échouer sans elle.** Un « pas de crédit » se teste
+  sur un compte qui EN A un ; un « réservé aux commerces validés » se teste avec un commerce en
+  vérification ET un autre type de compte.
+
 ## E2E (Maestro)
 
 Each Critical User Journey in

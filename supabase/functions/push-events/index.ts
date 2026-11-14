@@ -49,6 +49,7 @@ Deno.serve(async (req) => {
       id: string;
       status: string;
       fulfilment: string;
+      audience?: string | null;
       customer_id: string;
       shop_id: string;
     };

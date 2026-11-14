@@ -243,8 +243,18 @@ d’étape d’acceptation ; livrée par le grossiste, pas par Uber Direct (`nee
 `_shared/uber.ts` : ni devis, ni coursier, paiement sans devis), à l’adresse du commerce acheteur,
 frais 0 : `advance_order` la mène de « en préparation » à « expédiée » (`en_livraison`) puis
 « livrée ». Retrait chez le grossiste : comme le B2C. Ni crédit de parrainage, ni points, ni
-déblocage du parrainage (règles du client final). Plan :
-[exec-plans/2026-11-14-commandes-b2b.md](exec-plans/2026-11-14-commandes-b2b.md).
+déblocage du parrainage, et un achat B2B ne fait pas de l’acheteur un « client déjà venu » pour le
+parrainage (règles du client final). L’adresse de livraison est TOUJOURS celle du commerce acheteur
+(le serveur ignore celle qu’on lui envoie). Un seul paiement plafonne à 999 999,99 €
+(`order_too_large`). Les notifications d’une commande B2B ont leurs mots (`wholesaleMessage` dans
+`_shared/push.ts`). Plan : [exec-plans/2026-11-14-commandes-b2b.md](exec-plans/2026-11-14-commandes-b2b.md).
+
+**Ordre de mise en ligne (0023)** : appliquer la migration, PUIS déployer aussitôt `stripe-payment`,
+`uber-quote`, `uber-dispatch` et `push-events`. Déployées avant, ces fonctions lisent une colonne
+`audience` qui n’existe pas encore et répondent « commande introuvable » à toutes les commandes ;
+laissées anciennes après, elles chiffreraient et commanderaient un coursier Uber pour une commande
+B2B. Règle générale : une fonction Edge qui lit une colonne nouvelle se déploie juste après la
+migration qui l’ajoute, dans la même séance.
 
 ## Parrainage (0019)
 

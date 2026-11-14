@@ -14,7 +14,8 @@ export type PushMessage = {
   data: { kind: 'order' | 'merchant_order' | 'support'; id: string };
 };
 
-type OrderRow = { id: string; status: string; fulfilment: string };
+/** `audience` (0023) : `commercants` pour une offre pro — le grossiste livre lui-même. */
+type OrderRow = { id: string; status: string; fulfilment: string; audience?: string | null };
 
 /**
  * Le message d'un changement de statut de commande, ou `null` s'il n'y a rien à dire (statut
@@ -28,6 +29,8 @@ export function orderMessage(
   if (old?.status === record.status) return null;
   const order = { kind: 'order' as const, id: record.id };
   const delivery = record.fulfilment === 'livraison';
+  // Une offre pro (0023) : le grossiste prépare et livre lui-même, l'acheteur est un commerçant.
+  if (record.audience === 'commercants') return wholesaleMessage(record, delivery);
   switch (record.status) {
     case 'payee':
       return {
@@ -87,6 +90,57 @@ export function orderMessage(
         body: 'Votre commande vous a été remboursée.',
         data: order,
       };
+    default:
+      return null;
+  }
+}
+
+/** Les messages d'une commande B2B : sans Uber Direct ni « Bonne dégustation ». */
+function wholesaleMessage(record: OrderRow, delivery: boolean): PushMessage | null {
+  const order = { kind: 'order' as const, id: record.id };
+  switch (record.status) {
+    case 'payee':
+      return {
+        to: 'shop_owner',
+        title: 'Nouvelle commande d’un commerçant',
+        body: delivery
+          ? 'Une commande payée à préparer, à expédier par vos soins.'
+          : 'Une commande payée à préparer, retrait chez vous.',
+        data: { kind: 'merchant_order', id: record.id },
+      };
+    case 'preparation':
+      return {
+        to: 'customer',
+        title: 'En préparation',
+        body: 'Le grossiste prépare votre commande.',
+        data: order,
+      };
+    case 'prete':
+      return delivery
+        ? null
+        : {
+            to: 'customer',
+            title: 'Commande prête',
+            body: 'Venez la retirer : donnez votre code de retrait au grossiste.',
+            data: order,
+          };
+    case 'en_livraison':
+      return {
+        to: 'customer',
+        title: 'Expédiée',
+        body: 'Le grossiste a expédié votre commande.',
+        data: order,
+      };
+    case 'livree':
+      return {
+        to: 'customer',
+        title: 'Livrée',
+        body: 'Votre commande du grossiste est arrivée.',
+        data: order,
+      };
+    case 'litige':
+    case 'remboursee':
+      return orderMessage({ ...record, audience: 'clients' }, null);
     default:
       return null;
   }

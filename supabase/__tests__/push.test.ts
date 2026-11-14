@@ -47,6 +47,35 @@ describe('qui prévenir quand une commande avance', () => {
   });
 });
 
+describe('une commande B2B (0023)', () => {
+  const b2b = (status: string, fulfilment = 'livraison') => ({
+    id: 'o-b2b',
+    status,
+    fulfilment,
+    audience: 'commercants',
+  });
+
+  it('payée → le grossiste, qui expédie lui-même (pas d’Uber Direct)', () => {
+    const m = orderMessage(b2b('payee'), { status: 'paiement_attente' });
+    expect(m?.to).toBe('shop_owner');
+    expect(m?.body).toMatch(/expédier par vos soins/);
+    expect(m?.body).not.toMatch(/Uber/);
+  });
+
+  it('expédiée, puis livrée → le commerçant acheteur, sans « Bonne dégustation »', () => {
+    expect(orderMessage(b2b('en_livraison'), { status: 'preparation' })?.title).toBe('Expédiée');
+    const livree = orderMessage(b2b('livree'), { status: 'en_livraison' });
+    expect(livree?.to).toBe('customer');
+    expect(livree?.body).not.toMatch(/dégustation/);
+  });
+
+  it('retrait chez le grossiste : prête, avec le code', () => {
+    expect(orderMessage(b2b('prete', 'touch-collect'), { status: 'preparation' })?.body).toMatch(
+      /code de retrait/,
+    );
+  });
+});
+
 describe('support', () => {
   it('une réponse de TK LINK prévient l’auteur ; ses propres messages, non', () => {
     expect(supportMessage({ ticket_id: 't-1', from_staff: true })).toMatchObject({

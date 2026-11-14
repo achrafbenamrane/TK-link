@@ -46,13 +46,16 @@ declare
   v_uid uuid := auth.uid();
   v_shop uuid;
   v_order uuid;
-  v_subtotal integer := 0;
+  -- En bigint : 999 lots d'une offre pro chère dépasseraient l'entier ordinaire.
+  v_subtotal bigint := 0;
   v_commission integer;
   v_discount integer := 0;
   v_line record;
   v_offer public.flash_offers%rowtype;
   v_audience text;
   v_address text := nullif(btrim(coalesce(p_address, '')), '');
+  v_lat double precision := p_lat;
+  v_lng double precision := p_lng;
 begin
   if v_uid is null then
     raise exception 'not_authenticated' using errcode = '42501';
@@ -60,18 +63,25 @@ begin
   if p_fulfilment is null or p_fulfilment not in ('touch-collect', 'livraison') then
     raise exception 'invalid_fulfilment' using errcode = '22023';
   end if;
-  if jsonb_typeof(p_items) is distinct from 'array'
-     or jsonb_array_length(p_items) not between 1 and 20 then
-    raise exception 'invalid_items' using errcode = '22023';
-  end if;
-  -- Une offre pro se livre à l'adresse du commerce acheteur : seule une commande de client final
-  -- doit porter la sienne. (Lu sans verrou : l'audience d'une offre ne change pas.)
-  select f.audience into v_audience
-    from public.flash_offers f
-   where f.id = (p_items -> 0 ->> 'offer_id')::uuid;
+  -- Une offre pro se livre au commerce acheteur : seule une commande de client final doit porter son
+  -- adresse. On lit donc l'audience de la première offre AVANT les contrôles de 0019, sans rien
+  -- changer à leur ordre pour un client : un panier vide ou un identifiant mal formé ne lève rien ici
+  -- (`->` sur autre chose qu'un tableau rend null ; la boucle relèvera l'identifiant mal formé). Lu
+  -- sans verrou : la boucle revérifie l'audience de chaque offre verrouillée.
+  begin
+    select f.audience into v_audience
+      from public.flash_offers f
+     where f.id = (p_items -> 0 ->> 'offer_id')::uuid;
+  exception when invalid_text_representation then
+    v_audience := null;
+  end;
   if p_fulfilment = 'livraison' and v_address is null
      and v_audience is distinct from 'commercants' then
     raise exception 'address_required' using errcode = '22023';
+  end if;
+  if jsonb_typeof(p_items) is distinct from 'array'
+     or jsonb_array_length(p_items) not between 1 and 20 then
+    raise exception 'invalid_items' using errcode = '22023';
   end if;
 
   perform private.release_expired_reservations();
@@ -137,12 +147,20 @@ begin
     v_subtotal := v_subtotal + v_offer.price_cents * v_line.qty;
   end loop;
 
+  -- Un seul paiement Stripe ne dépasse pas 999 999,99 € : au-delà, on commande en plusieurs fois
+  -- plutôt que de réserver un stock qui ne pourra jamais être payé.
+  if v_subtotal > 99999999 then
+    raise exception 'order_too_large' using errcode = 'P0001';
+  end if;
+
   v_commission := round(v_subtotal * private.config('commission_bps') / 10000)::integer;
 
   if v_audience = 'commercants' then
-    -- Livrée par le grossiste au commerce acheteur ; pas de crédit de parrainage en B2B.
+    -- Livrée par le grossiste au commerce acheteur — à SON adresse, jamais à une autre (le grossiste
+    -- livre à ses frais : ce n'est pas une course à destination libre). Pas de crédit de parrainage.
     if p_fulfilment = 'livraison' then
-      v_address := coalesce(v_address, (select s.address from public.shops s where s.owner_id = v_uid));
+      select s.address, s.lat, s.lng into v_address, v_lat, v_lng
+        from public.shops s where s.owner_id = v_uid;
     end if;
   else
     -- 2) Le crédit de parrainage (0019), borné à la commission (Direct charges, voir 0019).
@@ -158,8 +176,8 @@ begin
     v_uid, v_shop, p_fulfilment, v_audience, v_subtotal, v_commission, v_discount,
     v_discount,
     case when p_fulfilment = 'livraison' then v_address end,
-    case when p_fulfilment = 'livraison' then p_lat end,
-    case when p_fulfilment = 'livraison' then p_lng end,
+    case when p_fulfilment = 'livraison' then v_lat end,
+    case when p_fulfilment = 'livraison' then v_lng end,
     nullif(btrim(coalesce(p_phone, '')), ''),
     now() + make_interval(mins => private.config('reservation_minutes')::integer)
   ) returning id into v_order;
@@ -240,5 +258,47 @@ create trigger flash_orders_unlock_referral
         and new.audience = 'clients')
   execute function private.unlock_referral();
 
--- Les droits de `reserve_flash` et `advance_order` sont gardés (create or replace, même signature) :
--- réservés aux comptes depuis 0012.
+-- Saisir le code d'un parrain (0019) : « déjà client » ne compte que les achats de client final — un
+-- commerçant qui s'est approvisionné chez un grossiste n'a encore rien acheté en tant que client.
+create or replace function public.apply_referral_code(p_code text)
+  returns void
+  language plpgsql
+  security definer
+  set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_referrer uuid;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated' using errcode = '42501';
+  end if;
+  select c.user_id into v_referrer
+    from public.referral_codes c
+   where c.code = upper(btrim(coalesce(p_code, '')));
+  if v_referrer is null then
+    raise exception 'invalid_code' using errcode = 'P0001';
+  end if;
+  if v_referrer = v_uid then
+    raise exception 'own_code' using errcode = 'P0001';
+  end if;
+  if exists (select 1 from public.referrals r where r.referee_id = v_uid) then
+    raise exception 'already_referred' using errcode = 'P0001';
+  end if;
+  if exists (
+    select 1 from public.flash_orders o
+     where o.customer_id = v_uid and o.audience = 'clients' and private.order_was_paid(o.status)
+  ) then
+    raise exception 'already_customer' using errcode = 'P0001';
+  end if;
+  -- Deux saisies simultanées : la seconde voit la première et répond « déjà parrainé ».
+  insert into public.referrals (referee_id, referrer_id) values (v_uid, v_referrer)
+  on conflict (referee_id) do nothing;
+  if not found then
+    raise exception 'already_referred' using errcode = 'P0001';
+  end if;
+end;
+$$;
+
+-- Les droits de `reserve_flash`, `advance_order` et `apply_referral_code` sont gardés (create or
+-- replace, même signature) : réservés aux comptes depuis 0012 et 0019.

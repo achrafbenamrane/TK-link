@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(159);
+select plan(167);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -1285,44 +1285,61 @@ reset role;
 
 -- ─────────────────────────────────────────────────────── commandes B2B (migration 0023)
 
--- Un grossiste (a5), son entreprise validée par TK LINK, et une offre pro : minimum 10 sacs.
+-- Un grossiste (a5), son entreprise validée ; un commerçant (a6) dont le dossier est encore en
+-- vérification ; une offre pro du grossiste (minimum 10 sacs), une autre publiée par a2 lui-même.
 insert into auth.users (id, raw_user_meta_data)
-values ('00000000-0000-0000-0000-0000000000a5', '{"first_name":"Marc","account_type":"grossiste"}'::jsonb);
+values ('00000000-0000-0000-0000-0000000000a5', '{"first_name":"Marc","account_type":"grossiste"}'::jsonb),
+       ('00000000-0000-0000-0000-0000000000a6', '{"first_name":"Inès","account_type":"commercant"}'::jsonb);
 set local request.jwt.claims to '{}';
 insert into public.shops (owner_id, kind, name, category, siret, address, status)
 values ('00000000-0000-0000-0000-0000000000a5', 'grossiste', 'Grossiste Occitan', 'restauration',
-        '52081000000007', '14 avenue des Pyrénées, 31600 Muret', 'valide');
+        '52081000000007', '14 avenue des Pyrénées, 31600 Muret', 'valide'),
+       ('00000000-0000-0000-0000-0000000000a6', 'commercant', 'Épicerie du Canal', 'restauration',
+        '39251000000004', '3 port Saint-Sauveur, 31000 Toulouse', 'en_verification');
 insert into public.flash_offers
   (shop_id, audience, title, category, price_cents, old_price_cents, stock_total, stock_left,
    min_qty, duration_minutes)
 values ((select id from public.shops where siret = '52081000000007'), 'commercants',
-        'Farine T65 (sac 25 kg)', 'restauration', 1800, 2400, 500, 500, 10, 1440);
--- …et une offre pro publiée par le commerçant a2 lui-même.
-insert into public.flash_offers
-  (shop_id, audience, title, category, price_cents, old_price_cents, stock_total, stock_left,
-   min_qty, duration_minutes)
-values ((select id from public.shops where siret = '73282932000074'), 'commercants',
+        'Farine T65 (sac 25 kg)', 'restauration', 1800, 2400, 500, 500, 10, 1440),
+       ((select id from public.shops where siret = '73282932000074'), 'commercants',
         'Lot de baguettes', 'restauration', 900, 1200, 50, 50, 5, 1440);
+-- Les identifiants se lisent ICI, en superutilisateur : sous le rôle d'un client, les règles d'accès
+-- cachent les offres pro, et une sous-requête dans `throws_ok` rendrait null.
+select set_config('tklink.farine',
+  (select id::text from public.flash_offers where title = 'Farine T65 (sac 25 kg)'), true);
+select set_config('tklink.baguettes',
+  (select id::text from public.flash_offers where title = 'Lot de baguettes'), true);
+select set_config('tklink.pain',
+  (select id::text from public.flash_offers where title = 'Pain de campagne'), true);
+-- a2 a un parrain (a1) et 5 € de crédit : une commande B2B ne doit ni le prendre, ni débloquer le
+-- parrainage.
+insert into public.referrals (referee_id, referrer_id)
+values ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000a1');
+insert into public.referral_credits (user_id, amount_cents, kind, referee_id)
+values ('00000000-0000-0000-0000-0000000000a2', 500, 'filleul', '00000000-0000-0000-0000-0000000000a2');
 
 -- 82) Un client ne commande pas une offre pro.
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
 select throws_ok(
   $$ select public.reserve_flash(
-       jsonb_build_array(jsonb_build_object(
-         'offer_id', (select id from public.flash_offers where title = 'Farine T65 (sac 25 kg)'),
-         'qty', 10)),
+       jsonb_build_array(jsonb_build_object('offer_id', current_setting('tklink.farine'), 'qty', 10)),
        'touch-collect') $$,
   'P0001',
   'pro_required',
   'a customer cannot order a wholesaler offer'
 );
 
--- 83) Le B2C reste borné à 99 par ligne.
+-- 83) Pour un client, rien ne change depuis 0019 : l'adresse manquante d'abord, puis 99 par ligne.
+select throws_ok(
+  $$ select public.reserve_flash('[]'::jsonb, 'livraison') $$,
+  '22023',
+  'address_required',
+  'a delivery without an address is refused before the basket is read'
+);
 select throws_ok(
   $$ select public.reserve_flash(
-       jsonb_build_array(jsonb_build_object(
-         'offer_id', (select id from public.flash_offers where title = 'Pain de campagne'), 'qty', 100)),
+       jsonb_build_array(jsonb_build_object('offer_id', current_setting('tklink.pain'), 'qty', 100)),
        'touch-collect') $$,
   '22023',
   'invalid_items',
@@ -1330,14 +1347,36 @@ select throws_ok(
 );
 reset role;
 
--- 84) Le commerçant validé (a2) : pas en dessous du minimum, ni sa propre offre.
+-- 84) Ni un grossiste, ni un commerçant dont le dossier n'est pas validé ne commande une offre pro.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a5","role":"authenticated"}';
+select throws_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object('offer_id', current_setting('tklink.baguettes'), 'qty', 5)),
+       'touch-collect') $$,
+  'P0001',
+  'pro_required',
+  'a wholesaler cannot buy a wholesale offer'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a6","role":"authenticated"}';
+select throws_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object('offer_id', current_setting('tklink.farine'), 'qty', 10)),
+       'touch-collect') $$,
+  'P0001',
+  'pro_required',
+  'a merchant whose shop is still under review cannot order'
+);
+reset role;
+
+-- 85) Le commerçant validé (a2) : ni sous le minimum, ni au-delà de 999, ni sa propre offre.
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
 select throws_ok(
   $$ select public.reserve_flash(
-       jsonb_build_array(jsonb_build_object(
-         'offer_id', (select id from public.flash_offers where title = 'Farine T65 (sac 25 kg)'),
-         'qty', 9)),
+       jsonb_build_array(jsonb_build_object('offer_id', current_setting('tklink.farine'), 'qty', 9)),
        'touch-collect') $$,
   '22023',
   'invalid_items',
@@ -1345,29 +1384,34 @@ select throws_ok(
 );
 select throws_ok(
   $$ select public.reserve_flash(
-       jsonb_build_array(jsonb_build_object(
-         'offer_id', (select id from public.flash_offers where title = 'Lot de baguettes'), 'qty', 5)),
+       jsonb_build_array(jsonb_build_object('offer_id', current_setting('tklink.farine'), 'qty', 1000)),
+       'touch-collect') $$,
+  '22023',
+  'invalid_items',
+  'a wholesale order line is capped at 999'
+);
+select throws_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object('offer_id', current_setting('tklink.baguettes'), 'qty', 5)),
        'touch-collect') $$,
   'P0001',
   'own_offer',
   'a merchant cannot order their own wholesale offer'
 );
 
--- 85) 150 sacs livrés (volume au-delà de 99) : livrés au commerce acheteur, sans crédit de parrainage,
---     commission du serveur (7 % depuis le test 81).
+-- 86) 150 sacs livrés (au-delà de 99) : à l'adresse de SON commerce, pas à celle qu'il a tapée ; sans
+--     son crédit de parrainage ; commission du serveur (7 % depuis le test 81).
 select lives_ok(
   $$ select public.reserve_flash(
-       jsonb_build_array(jsonb_build_object(
-         'offer_id', (select id from public.flash_offers where title = 'Farine T65 (sac 25 kg)'),
-         'qty', 150)),
-       'livraison') $$,
+       jsonb_build_array(jsonb_build_object('offer_id', current_setting('tklink.farine'), 'qty', 150)),
+       'livraison', 'quai de la Joliette, 13002 Marseille') $$,
   'a validated merchant orders a wholesale volume, delivered'
 );
 select results_eq(
   $$ select audience, subtotal_cents, commission_cents, discount_cents, delivery_address
        from public.flash_orders where audience = 'commercants' $$,
   $$ values ('commercants'::text, 270000, 18900, 0, '8 rue des Carmes, 31000 Toulouse'::text) $$,
-  'the order is priced by the server and delivered to the buyer''s shop'
+  'priced by the server, no referral credit, delivered to the buyer''s own shop'
 );
 reset role;
 
@@ -1377,7 +1421,7 @@ update public.flash_orders set status = 'payee', paid_at = now() where audience 
 select set_config('tklink.b2b',
   (select id::text from public.flash_orders where audience = 'commercants'), true);
 
--- 86) Le grossiste livre lui-même, sans étape d'acceptation : préparée, expédiée, livrée.
+-- 87) Le grossiste livre lui-même, sans étape d'acceptation : préparée, expédiée, livrée.
 set local role authenticated;
 set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a5","role":"authenticated"}';
 select lives_ok(
@@ -1398,7 +1442,8 @@ select lives_ok(
   $$ select public.advance_order(current_setting('tklink.b2b')::uuid, 'livree') $$,
   'the wholesaler marks it delivered'
 );
--- 87) Le grossiste voit la commande ; elle est livrée.
+
+-- 88) Le grossiste voit la commande ; elle est livrée.
 select results_eq(
   $$ select status from public.flash_orders where audience = 'commercants' $$,
   $$ values ('livree'::text) $$,
@@ -1406,7 +1451,7 @@ select results_eq(
 );
 reset role;
 
--- 88) Une commande B2B livrée ne crédite aucun point de fidélité.
+-- 89) Une commande B2B livrée ne crédite aucun point de fidélité…
 select results_eq(
   $$ select count(*)::integer from public.loyalty_ledger
       where order_id = current_setting('tklink.b2b')::uuid $$,
@@ -1414,12 +1459,52 @@ select results_eq(
   'a wholesale order earns no loyalty points'
 );
 
--- 89) Le stock de l'offre pro a baissé de 150.
+-- 90) …et ne débloque pas le parrainage de l'acheteur (aucun crédit de plus).
+select results_eq(
+  $$ select r.unlocked_at is null,
+            (select count(*)::integer from public.referral_credits c where c.referee_id = r.referee_id)
+       from public.referrals r where r.referee_id = '00000000-0000-0000-0000-0000000000a2' $$,
+  $$ values (true, 1) $$,
+  'a wholesale order does not unlock the buyer''s referral'
+);
+
+-- 91) Le stock de l'offre pro a baissé de 150.
 select results_eq(
   $$ select stock_left from public.flash_offers where title = 'Farine T65 (sac 25 kg)' $$,
   $$ values (350) $$,
   'the ordered volume leaves the wholesaler''s stock'
 );
+
+-- 92) Une livraison de client (Uber Direct) : le commerçant ne la marque pas « expédiée » lui-même.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select lives_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object('offer_id', current_setting('tklink.pain'), 'qty', 1)),
+       'livraison', '5 place du Capitole, 31000 Toulouse') $$,
+  'a customer reserves a delivery'
+);
+reset role;
+set local request.jwt.claims to '{}';
+update public.flash_orders set status = 'payee', paid_at = now()
+ where customer_id = '00000000-0000-0000-0000-0000000000a1' and status = 'paiement_attente';
+select set_config('tklink.uber',
+  (select id::text from public.flash_orders
+    where customer_id = '00000000-0000-0000-0000-0000000000a1' and fulfilment = 'livraison'
+      and status = 'payee'), true);
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select lives_ok(
+  $$ select public.advance_order(current_setting('tklink.uber')::uuid, 'preparation') $$,
+  'the merchant prepares the delivery'
+);
+select throws_ok(
+  $$ select public.advance_order(current_setting('tklink.uber')::uuid, 'en_livraison') $$,
+  'P0001',
+  'invalid_transition',
+  'only the courier moves a customer delivery on, not the merchant'
+);
+reset role;
 
 select * from finish();
 rollback;
