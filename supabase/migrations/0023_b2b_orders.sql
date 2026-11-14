@@ -56,6 +56,8 @@ declare
   v_address text := nullif(btrim(coalesce(p_address, '')), '');
   v_lat double precision := p_lat;
   v_lng double precision := p_lng;
+  -- Une ligne B2B va jusqu'à 999 (commandes de volume), une ligne de client jusqu'à 99.
+  v_max_qty integer;
 begin
   if v_uid is null then
     raise exception 'not_authenticated' using errcode = '42501';
@@ -83,6 +85,9 @@ begin
      or jsonb_array_length(p_items) not between 1 and 20 then
     raise exception 'invalid_items' using errcode = '22023';
   end if;
+
+  -- Calculé à part : dans la condition d'un IF, le THEN d'un CASE clôt la condition (PL/pgSQL).
+  v_max_qty := case when v_audience = 'commercants' then 999 else 99 end;
 
   perform private.release_expired_reservations();
 
@@ -133,7 +138,7 @@ begin
       raise exception 'mode_unavailable' using errcode = 'P0001';
     end if;
     if v_line.qty is null or v_line.qty < greatest(1, v_offer.min_qty)
-       or v_line.qty > case when v_audience = 'commercants' then 999 else 99 end then
+       or v_line.qty > v_max_qty then
       raise exception 'invalid_items' using errcode = '22023';
     end if;
     if v_offer.stock_left < v_line.qty then
