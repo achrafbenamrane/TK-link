@@ -239,8 +239,9 @@ CDC V1.1 (Client, EXIGENCE) : « favoris et alertes ». Le CDC ne dit pas ce qui
 prévient ses abonnés ; le cœur d'une OFFRE reste un favori sur le téléphone. `shop_follows` : chacun
 suit, ne suit plus et relit seulement les siens, vers un commerce validé. À la publication d'une
 Flash CLIENT, un déclencheur appelle `push-events` (même mécanisme que 0024) ; la fonction relit les
-abonnés (sauf le commerçant lui-même) et leurs jetons. Le toucher ouvre l'offre, ou la vitrine si la
-Flash est programmée (« Vente flash dès 18:30 »). Garde technique : une alerte par commerce toutes
+abonnés (sauf le commerçant lui-même) et leurs jetons. Le toucher ouvre la vitrine, l'offre épinglée
+en tête si elle est déjà en ligne (demande du client, 14/11/2026), seule si la Flash est programmée
+(« Vente flash dès 18:30 »). Garde technique : une alerte par commerce toutes
 les 30 minutes au plus (`private.shop_alert_log`) — cinq offres d'affilée ne réveillent pas cinq
 fois. Une offre pro de grossiste ne prévient personne. Les abonnements ne sont pas gardés sur le
 téléphone : relus au serveur, effacés à la déconnexion.

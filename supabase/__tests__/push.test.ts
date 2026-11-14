@@ -16,7 +16,7 @@ describe('followMessage — un commerce suivi publie une vente flash (0026)', ()
     title: 'Panier viennoiseries',
   };
 
-  it('une Flash en ligne : le nom du commerce, l’offre, et le toucher ouvre l’offre', () => {
+  it('une Flash en ligne : le nom du commerce, l’offre, et le toucher ouvre la vitrine, l’offre épinglée', () => {
     expect(
       followMessage(
         { ...offer, audience: 'clients', starts_at: '2026-11-14T16:00:00Z' },
@@ -27,7 +27,7 @@ describe('followMessage — un commerce suivi publie une vente flash (0026)', ()
       to: 'shop_followers',
       title: 'Boulangerie Saint-Cyprien',
       body: 'Nouvelle vente flash : Panier viennoiseries',
-      data: { kind: 'offer', id: offer.id },
+      data: { kind: 'shop', id: offer.shop_id, offer: offer.id },
     });
   });
 
@@ -40,8 +40,11 @@ describe('followMessage — un commerce suivi publie une vente flash (0026)', ()
       ),
     ).toMatchObject({
       body: 'Vente flash dès 18:30 : Panier viennoiseries',
-      data: { kind: 'shop', id: offer.shop_id },
     });
+    // Pas encore visible : rien à épingler.
+    expect(
+      followMessage({ ...offer, starts_at: '2026-11-14T17:30:00Z' }, 'Boulangerie', NOW)?.data,
+    ).toEqual({ kind: 'shop', id: offer.shop_id });
   });
 
   it('une offre pro de grossiste ne prévient personne', () => {

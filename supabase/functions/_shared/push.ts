@@ -13,8 +13,15 @@ export type PushMessage = {
   to: 'customer' | 'shop_owner' | 'ticket_author' | 'shop_followers';
   title: string;
   body: string;
-  /** Ce que l'app ouvre au toucher. */
-  data: { kind: 'order' | 'merchant_order' | 'support' | 'offer' | 'shop'; id: string };
+  /**
+   * Ce que l'app ouvre au toucher. `offer` (avec `shop`) : l'offre à épingler en tête de la vitrine
+   * (demande du client, 14/11/2026) ; une app plus ancienne l'ignore et ouvre la vitrine seule.
+   */
+  data: {
+    kind: 'order' | 'merchant_order' | 'support' | 'offer' | 'shop';
+    id: string;
+    offer?: string;
+  };
 };
 
 /** `audience` (0023) : `commercants` pour une offre pro — le grossiste livre lui-même. */
@@ -206,9 +213,10 @@ export function supportMessage(record: {
 }
 
 /**
- * Un commerce suivi publie une vente flash (0026) : ses abonnés sont prévenus. Une Flash déjà en
- * ligne s'ouvre directement ; une Flash programmée n'est pas encore visible, la notification ouvre
- * alors la vitrine et dit l'heure (Europe/Paris). Une offre pro de grossiste ne prévient personne.
+ * Un commerce suivi publie une vente flash (0026) : ses abonnés sont prévenus. Le toucher ouvre la
+ * VITRINE (comme toute offre touchée, demande du client du 14/11/2026), l'offre épinglée en tête si
+ * elle est déjà en ligne ; programmée, elle n'est pas encore visible et la notification dit l'heure
+ * (Europe/Paris). Une offre pro de grossiste ne prévient personne.
  */
 export function followMessage(
   record: {
@@ -237,7 +245,9 @@ export function followMessage(
     body: later
       ? `Vente flash dès ${time} : ${record.title}`
       : `Nouvelle vente flash : ${record.title}`,
-    data: later ? { kind: 'shop', id: record.shop_id } : { kind: 'offer', id: record.id },
+    data: later
+      ? { kind: 'shop', id: record.shop_id }
+      : { kind: 'shop', id: record.shop_id, offer: record.id },
   };
 }
 

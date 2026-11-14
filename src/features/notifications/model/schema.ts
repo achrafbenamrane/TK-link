@@ -8,10 +8,12 @@ import { z } from 'zod';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const PushDataSchema = z.object({
-  // `offer` / `shop` : un commerce suivi publie une vente flash (0026) — l'offre si elle est en
-  // ligne, la vitrine si elle est programmée pour plus tard.
+  // `shop` : un commerce suivi publie une vente flash (0026) — sa vitrine, avec `offer` à épingler
+  // en tête si elle est déjà en ligne (demande du client, 14/11/2026). `offer` seul : l'ancienne
+  // forme (l'offre directement), gardée pour les notifications envoyées avant.
   kind: z.enum(['order', 'merchant_order', 'support', 'offer', 'shop']),
   id: z.string().regex(UUID),
+  offer: z.string().regex(UUID).optional(),
 });
 export type PushData = z.infer<typeof PushDataSchema>;
 
@@ -20,13 +22,13 @@ export type PushRoute =
   | { pathname: '/commande/[id]'; params: { id: string } }
   | { pathname: '/aide/[id]'; params: { id: string } }
   | { pathname: '/produit/[id]'; params: { id: string } }
-  | { pathname: '/enseigne/[id]'; params: { id: string } }
+  | { pathname: '/enseigne/[id]'; params: { id: string; offre?: string } }
   | '/commandes';
 
 export function routeForPush(data: unknown): PushRoute | null {
   const parsed = PushDataSchema.safeParse(data);
   if (!parsed.success) return null;
-  const { kind, id } = parsed.data;
+  const { kind, id, offer } = parsed.data;
   switch (kind) {
     case 'order':
       return { pathname: '/commande/[id]', params: { id } };
@@ -38,7 +40,7 @@ export function routeForPush(data: unknown): PushRoute | null {
     case 'offer':
       return { pathname: '/produit/[id]', params: { id } };
     case 'shop':
-      return { pathname: '/enseigne/[id]', params: { id } };
+      return { pathname: '/enseigne/[id]', params: offer ? { id, offre: offer } : { id } };
   }
 }
 

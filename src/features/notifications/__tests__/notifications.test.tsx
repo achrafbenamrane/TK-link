@@ -75,6 +75,14 @@ describe('le toucher d’une notification', () => {
       pathname: '/enseigne/[id]',
       params: { id: ORDER },
     });
+    // Une Flash en ligne : la vitrine, l'offre épinglée en tête (demande du client, 14/11/2026).
+    const OFFER = '33333333-3333-4333-8333-333333333333';
+    expect(routeForPush({ kind: 'shop', id: ORDER, offer: OFFER })).toEqual({
+      pathname: '/enseigne/[id]',
+      params: { id: ORDER, offre: OFFER },
+    });
+    // Un identifiant d'offre malformé n'ouvre rien.
+    expect(routeForPush({ kind: 'shop', id: ORDER, offer: 'pas-un-id' })).toBeNull();
   });
 
   it('une charge inattendue n’ouvre rien', () => {
