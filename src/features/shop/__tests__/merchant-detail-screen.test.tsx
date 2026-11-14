@@ -50,6 +50,39 @@ describe('<MerchantDetailScreen />', () => {
     expect(onOpenDeal).toHaveBeenCalledWith(HERO.id);
   });
 
+  describe('venue d’une offre touchée (demande du client, 14/11/2026)', () => {
+    const SHOP_DEALS = DEALS.filter((d) => d.merchantId === MID);
+    const LAST = SHOP_DEALS[SHOP_DEALS.length - 1]!;
+
+    it('l’offre est épinglée en tête, ajoutable au panier, et la fiche s’ouvre d’un toucher', () => {
+      const onOpenDeal = jest.fn();
+      mount({ focusDealId: LAST.id, onOpenDeal });
+      const pinned = screen.getByTestId('merchant-focus');
+      expect(pinned).toHaveTextContent(new RegExp(`Votre Flash.*${LAST.title}`));
+      fireEvent.press(screen.getByTestId(`merchant-add-${LAST.id}`));
+      expect(useShopStore.getState().cart[0]?.dealId).toBe(LAST.id);
+      fireEvent.press(screen.getByTestId(`merchant-deal-${LAST.id}`));
+      expect(onOpenDeal).toHaveBeenCalledWith(LAST.id);
+    });
+
+    it('elle n’apparaît qu’une fois : la liste montre les AUTRES Flash du commerce', () => {
+      mount({ focusDealId: LAST.id });
+      expect(screen.getAllByTestId(`merchant-deal-${LAST.id}`)).toHaveLength(1);
+      if (SHOP_DEALS.length > 1) {
+        expect(screen.getByTestId('merchant-deals')).toHaveTextContent(/Ses autres Flash/);
+      } else {
+        expect(screen.queryByTestId('merchant-deals')).toBeNull();
+        expect(screen.queryByTestId('merchant-no-deals')).toBeNull();
+      }
+    });
+
+    it('une offre terminée entre-temps : rien d’épinglé, la vitrine comme d’habitude', () => {
+      mount({ focusDealId: 'offre-disparue' });
+      expect(screen.queryByTestId('merchant-focus')).toBeNull();
+      expect(screen.getByTestId('merchant-deals')).toHaveTextContent(/Nos Flash du moment/);
+    });
+  });
+
   it('le « + » ajoute l’offre au panier', () => {
     mount();
     fireEvent.press(screen.getByTestId(`merchant-add-${HERO.id}`));

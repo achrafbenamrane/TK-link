@@ -15,6 +15,7 @@ import type { Category, Deal } from '../model/schema';
 import { fetchRoute, routeToGeoJSON, type Route } from '../lib/directions';
 import { formatDistance, TOULOUSE_CENTER } from '../lib/geo';
 import { hasMapboxToken, MAPBOX_PUBLIC_TOKEN } from '../lib/mapbox';
+import { offerHref } from '../lib/offer-route';
 import { ProductImage } from './components/product-image';
 
 Mapbox.setAccessToken(MAPBOX_PUBLIC_TOKEN);
@@ -313,7 +314,7 @@ export function DealsMap({ deals, category }: Props) {
         <View className="absolute inset-x-4 bottom-4" testID="map-detail-card">
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push(`/produit/${selected.id}`)}
+            onPress={() => router.push(offerHref(selected))}
             className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-3"
             style={{
               shadowColor: '#000',

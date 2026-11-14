@@ -34,7 +34,8 @@ const SERVER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
  * palier viennent de `loyalty`, la vitrine réglée et les visuels IA de `merchant`.
  */
 export default function EnseigneRoute() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `offre` : l'offre touchée pour venir ici (accueil, carte, Favoris), épinglée en tête.
+  const { id, offre } = useLocalSearchParams<{ id: string; offre?: string }>();
   const router = useRouter();
   const cards = useMerchantLoyaltyStore(selectCards);
   const programs = useMerchantLoyaltyStore(selectPrograms);
@@ -104,6 +105,7 @@ export default function EnseigneRoute() {
       {...(profile ? { profile } : {})}
       {...(local && application?.phone ? { phone: application.phone } : {})}
       {...(showcase ? { phone: showcase.phone } : {})}
+      {...(typeof offre === 'string' && offre ? { focusDealId: offre } : {})}
       onOpenLoyalty={() => router.push({ pathname: '/fidelite/[id]', params: { id: merchantId } })}
       onOpenDeal={(dealId) => router.push({ pathname: '/produit/[id]', params: { id: dealId } })}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}

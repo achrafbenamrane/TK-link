@@ -6,6 +6,7 @@ import { FlatList, Pressable, ScrollView, View } from 'react-native';
 import { AppText, Button, EmptyState, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
+import { offerHref } from '../lib/offer-route';
 import { getDeal } from '../model/catalog';
 import { selectFollowedShops, useFollowsStore } from '../model/follows';
 import type { Deal } from '../model/schema';
@@ -34,7 +35,7 @@ function FavoriteCard({ deal }: { deal: Deal }) {
       testID={`favorite-card-${deal.id}`}
       accessibilityRole="button"
       accessibilityLabel={deal.title}
-      onPress={() => router.push({ pathname: '/produit/[id]', params: { id: deal.id } })}
+      onPress={() => router.push(offerHref(deal))}
       className="flex-1 overflow-hidden rounded-card bg-surface active:opacity-80"
       style={{ borderWidth: 1, borderColor: colors.line }}
     >

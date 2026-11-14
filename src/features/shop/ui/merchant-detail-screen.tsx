@@ -46,6 +46,12 @@ type Props = {
   loyalty?: { points: number; remaining: number | null; progress: number };
   /** Téléphone du commerce, s'il est connu. Sans lui, « Appeler » est grisé. */
   phone?: string;
+  /**
+   * L'offre touchée sur l'accueil, la carte ou Favoris (`offerHref`) : épinglée en tête de la
+   * vitrine, avec son bouton panier (demande du client, 14/11/2026). Terminée ou épuisée entre-temps :
+   * rien d'épinglé, la vitrine s'affiche comme d'habitude.
+   */
+  focusDealId?: string;
   onOpenLoyalty: () => void;
   onOpenDeal: (dealId: string) => void;
   onBack: () => void;
@@ -65,12 +71,15 @@ function FlashTile({
   onOpen,
   onAdd,
   wide = false,
+  highlight = false,
 }: {
   deal: Deal;
   onOpen: () => void;
   onAdd: () => void;
   /** Seule de sa boutique : pleine largeur, visuel plus haut. */
   wide?: boolean;
+  /** L'offre touchée pour venir ici : un cadre plus marqué. */
+  highlight?: boolean;
 }) {
   const colors = useColors();
   const modes = deal.fulfilments ?? [...FULFILMENTS];
@@ -84,7 +93,10 @@ function FlashTile({
       accessibilityRole={Platform.OS === 'web' ? 'link' : 'button'}
       accessibilityLabel={deal.title}
       onPress={onOpen}
-      className="flex-1 gap-1.5 rounded-card border border-brand-500 bg-surface-muted p-3 active:opacity-80"
+      className={cn(
+        'flex-1 gap-1.5 rounded-card border-brand-500 bg-surface-muted p-3 active:opacity-80',
+        highlight ? 'border-2' : 'border',
+      )}
     >
       {/* flexShrink 0 : la pastille ne rétrécit pas, même pour « 24:00:00 ». */}
       <View
@@ -171,6 +183,7 @@ export function MerchantDetailScreen({
   profile,
   loyalty,
   phone,
+  focusDealId,
   onOpenLoyalty,
   onOpenDeal,
   onBack,
@@ -226,7 +239,10 @@ export function MerchantDetailScreen({
     : profile?.status === 'Fermé'
       ? 'closed'
       : null;
-  const shownDeals = showAll ? deals : deals.slice(0, 2);
+  // L'offre touchée passe en tête ; « Nos Flash du moment » montre les AUTRES.
+  const focused = focusDealId ? deals.find((d) => d.id === focusDealId) : undefined;
+  const others = focused ? deals.filter((d) => d.id !== focused.id) : deals;
+  const shownDeals = showAll ? others : others.slice(0, 2);
   const video = profile?.videos?.[0];
 
   const actions: {
@@ -411,6 +427,21 @@ export function MerchantDetailScreen({
           </View>
         ) : null}
 
+        {/* L'offre touchée, juste sous l'identité : on la voit sans défiler, et on l'ajoute au
+            panier d'ici. La fiche produit s'ouvre en la touchant. */}
+        {focused ? (
+          <View testID="merchant-focus" className="gap-2">
+            <AppText className="font-sans-bold text-ink">Votre Flash</AppText>
+            <FlashTile
+              deal={focused}
+              wide
+              highlight
+              onOpen={() => onOpenDeal(focused.id)}
+              onAdd={() => addToCart(focused.id)}
+            />
+          </View>
+        ) : null}
+
         {/* Vidéo du magasin — seulement si le commerçant en a déposé une */}
         {video ? (
           <View className="gap-2">
@@ -462,12 +493,14 @@ export function MerchantDetailScreen({
           </View>
         ) : null}
 
-        {/* Nos Flash du moment */}
-        {deals.length > 0 ? (
-          <View className="gap-2.5">
+        {/* Nos Flash du moment (les autres, quand une offre est épinglée) */}
+        {others.length > 0 ? (
+          <View testID="merchant-deals" className="gap-2.5">
             <View className="flex-row items-center justify-between">
-              <AppText className="font-sans-bold text-ink">Nos Flash du moment</AppText>
-              {deals.length > 2 ? (
+              <AppText className="font-sans-bold text-ink">
+                {focused ? 'Ses autres Flash du moment' : 'Nos Flash du moment'}
+              </AppText>
+              {others.length > 2 ? (
                 <Pressable
                   testID="merchant-see-all"
                   accessibilityRole="button"
@@ -499,7 +532,7 @@ export function MerchantDetailScreen({
               </View>
             ))}
           </View>
-        ) : (
+        ) : focused ? null : (
           <View testID="merchant-no-deals" className="items-center gap-1 py-6">
             <Feather name="zap" size={22} color={colors.inkFaint} />
             <AppText variant="caption">Aucun Flash en ce moment.</AppText>

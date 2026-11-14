@@ -9,6 +9,7 @@ import { useColors } from '@/shared/theme/theme-provider';
 import { getMerchant } from '../../model/catalog';
 import { distanceKm, formatDistance } from '../../lib/geo';
 import { fulfilmentIcon, fulfilmentLabel } from '../../lib/fulfilment';
+import { offerHref } from '../../lib/offer-route';
 import { screeningLabel } from '../../lib/screening';
 import {
   STOCK_CLASSES,
@@ -77,8 +78,9 @@ export function FlashCard({ deal }: Props) {
   return (
     <Pressable
       testID={`deal-${deal.id}`}
-      // La carte OUVRE la fiche produit, et contient ses propres boutons (favori, panier). Sur le web,
-      // un bouton dans un bouton est du HTML invalide : la carte y est donc un lien — ce qu'elle est.
+      // La carte OUVRE la vitrine du commerce, l'offre épinglée en tête (demande du client,
+      // 14/11/2026 — `offerHref`), et contient ses propres boutons (favori, panier). Sur le web, un
+      // bouton dans un bouton est du HTML invalide : la carte y est donc un lien — ce qu'elle est.
       // Sur téléphone, rien ne change.
       accessibilityRole={Platform.OS === 'web' ? 'link' : 'button'}
       accessibilityLabel={`${deal.title}${
@@ -88,7 +90,7 @@ export function FlashCard({ deal }: Props) {
       }, ${deal.price.toFixed(2)} euros au lieu de ${(deal.oldPrice ?? deal.price).toFixed(2)}, ${
         deal.stockLeft
       } restant${deal.stockLeft > 1 ? 's' : ''}`}
-      onPress={() => router.push(`/produit/${deal.id}`)}
+      onPress={() => router.push(offerHref(deal))}
       className="mb-4 overflow-hidden rounded-card border border-line bg-surface"
     >
       {/* ------------------------------------------------------------ visuel */}

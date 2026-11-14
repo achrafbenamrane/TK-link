@@ -227,4 +227,14 @@ describe('le bloc du commerçant mène à sa boutique', () => {
     expect(mockPush).toHaveBeenCalledWith(toShop);
     expect(mockPush).not.toHaveBeenCalledWith(`/produit/${cote.id}`);
   });
+
+  it('carte Flash : toucher l’offre ouvre la vitrine, l’offre épinglée (demande du client)', () => {
+    render(<FlashCard deal={cote} />);
+
+    fireEvent.press(screen.getByTestId(`deal-${cote.id}`));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/enseigne/[id]',
+      params: { id: cote.merchantId, offre: cote.id },
+    });
+  });
 });

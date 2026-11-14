@@ -8,6 +8,7 @@ import { AppText } from '@/shared/ui';
 import type { Palette } from '@/shared/theme/colors';
 import { useColors } from '@/shared/theme/theme-provider';
 
+import { offerHref } from '../../lib/offer-route';
 import { STOCK_CLASSES, stockAccessibilityLabel, stockBarPct, stockTone } from '../../lib/stock';
 import { liquidationLabel, sortByUrgency, urgencyOf } from '../../lib/urgency';
 import { DEALS, getMerchant } from '../../model/catalog';
@@ -74,7 +75,7 @@ export function LiquidationRail({ limit = 8 }: Props) {
             testID={`liquidation-${deal.id}`}
             accessibilityRole="button"
             accessibilityLabel={`${deal.title}, ${deal.price.toFixed(2)} euros`}
-            onPress={() => router.push(`/produit/${deal.id}`)}
+            onPress={() => router.push(offerHref(deal))}
             style={{ width: CARD_WIDTH }}
             className="overflow-hidden rounded-card border border-line bg-surface"
           >
