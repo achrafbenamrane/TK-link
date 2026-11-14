@@ -226,7 +226,7 @@ try {
   warn('Impossible de sonder les commandes.');
 }
 
-// Les migrations 0013 à 0022. Une table ou une fonction ABSENTE répond 404 (PostgREST) ; présente,
+// Les migrations 0013 à 0023. Une table ou une fonction ABSENTE répond 404 (PostgREST) ; présente,
 // elle répond 200 (lecture publique) ou 401/403 (réservée aux comptes) — rien n'est écrit.
 const probes = [
   {
@@ -290,6 +290,13 @@ const probes = [
     rpc: 'platform_public_settings',
     // Lecture publique : présente, 200 ; absente, 404.
     what: 'la commission et le crédit réglés dans le back-office ne s’appliquent pas',
+  },
+  {
+    migration: '0023_b2b_orders',
+    path: 'flash_orders?select=audience&limit=1',
+    // Colonne absente : 400 ; présente : refusée à la clé publique (401) — rien n’est lu.
+    missing: (s) => s === 400 || s === 404,
+    what: 'les commerçants ne peuvent pas commander les offres pro des grossistes',
   },
 ];
 for (const probe of probes) {

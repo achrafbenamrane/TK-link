@@ -9,7 +9,7 @@
 // pas encore payée. Le prix vient d'Uber, jamais du téléphone.
 import { adminClient, callerOf, CORS, jsonBody, reply, serve, UUID } from '../_shared/http.ts';
 import { uberConfigured, uberRequest } from '../_shared/uber-api.ts';
-import { parseQuote, uberAddress, uberPhone } from '../_shared/uber.ts';
+import { needsCourier, parseQuote, uberAddress, uberPhone } from '../_shared/uber.ts';
 
 // Numéro de TK LINK, donné à Uber quand le commerce n'a pas renseigné le sien (secret facultatif).
 const FALLBACK_PHONE = Deno.env.get('UBER_FALLBACK_PHONE') ?? '';
@@ -30,12 +30,15 @@ serve(async (req) => {
   const { data: order } = await admin
     .from('flash_orders')
     .select(
-      'id, customer_id, shop_id, fulfilment, status, subtotal_cents, delivery_address, delivery_lat, delivery_lng, delivery_phone, stripe_payment_intent_id',
+      'id, customer_id, shop_id, fulfilment, audience, status, subtotal_cents, delivery_address, delivery_lat, delivery_lng, delivery_phone, stripe_payment_intent_id',
     )
     .eq('id', orderId)
     .maybeSingle();
   if (!order || order.customer_id !== user.id) return reply(404, { error: 'order_not_found' });
-  if (order.fulfilment !== 'livraison') return reply(409, { error: 'not_a_delivery' });
+  // Une offre pro (0023) est livrée par le grossiste : pas de coursier.
+  if (!needsCourier(order)) {
+    return reply(409, { error: 'not_a_delivery' });
+  }
   if (order.status !== 'paiement_attente' || order.stripe_payment_intent_id) {
     return reply(409, { error: 'order_locked' });
   }

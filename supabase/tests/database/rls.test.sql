@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(146);
+select plan(159);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -1282,6 +1282,144 @@ select results_eq(
   'the app reads the commission the server will apply'
 );
 reset role;
+
+-- ─────────────────────────────────────────────────────── commandes B2B (migration 0023)
+
+-- Un grossiste (a5), son entreprise validée par TK LINK, et une offre pro : minimum 10 sacs.
+insert into auth.users (id, raw_user_meta_data)
+values ('00000000-0000-0000-0000-0000000000a5', '{"first_name":"Marc","account_type":"grossiste"}'::jsonb);
+set local request.jwt.claims to '{}';
+insert into public.shops (owner_id, kind, name, category, siret, address, status)
+values ('00000000-0000-0000-0000-0000000000a5', 'grossiste', 'Grossiste Occitan', 'restauration',
+        '52081000000007', '14 avenue des Pyrénées, 31600 Muret', 'valide');
+insert into public.flash_offers
+  (shop_id, audience, title, category, price_cents, old_price_cents, stock_total, stock_left,
+   min_qty, duration_minutes)
+values ((select id from public.shops where siret = '52081000000007'), 'commercants',
+        'Farine T65 (sac 25 kg)', 'restauration', 1800, 2400, 500, 500, 10, 1440);
+-- …et une offre pro publiée par le commerçant a2 lui-même.
+insert into public.flash_offers
+  (shop_id, audience, title, category, price_cents, old_price_cents, stock_total, stock_left,
+   min_qty, duration_minutes)
+values ((select id from public.shops where siret = '73282932000074'), 'commercants',
+        'Lot de baguettes', 'restauration', 900, 1200, 50, 50, 5, 1440);
+
+-- 82) Un client ne commande pas une offre pro.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select throws_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object(
+         'offer_id', (select id from public.flash_offers where title = 'Farine T65 (sac 25 kg)'),
+         'qty', 10)),
+       'touch-collect') $$,
+  'P0001',
+  'pro_required',
+  'a customer cannot order a wholesaler offer'
+);
+
+-- 83) Le B2C reste borné à 99 par ligne.
+select throws_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object(
+         'offer_id', (select id from public.flash_offers where title = 'Pain de campagne'), 'qty', 100)),
+       'touch-collect') $$,
+  '22023',
+  'invalid_items',
+  'a consumer order line stays capped at 99'
+);
+reset role;
+
+-- 84) Le commerçant validé (a2) : pas en dessous du minimum, ni sa propre offre.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select throws_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object(
+         'offer_id', (select id from public.flash_offers where title = 'Farine T65 (sac 25 kg)'),
+         'qty', 9)),
+       'touch-collect') $$,
+  '22023',
+  'invalid_items',
+  'a wholesale order below the minimum is refused'
+);
+select throws_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object(
+         'offer_id', (select id from public.flash_offers where title = 'Lot de baguettes'), 'qty', 5)),
+       'touch-collect') $$,
+  'P0001',
+  'own_offer',
+  'a merchant cannot order their own wholesale offer'
+);
+
+-- 85) 150 sacs livrés (volume au-delà de 99) : livrés au commerce acheteur, sans crédit de parrainage,
+--     commission du serveur (7 % depuis le test 81).
+select lives_ok(
+  $$ select public.reserve_flash(
+       jsonb_build_array(jsonb_build_object(
+         'offer_id', (select id from public.flash_offers where title = 'Farine T65 (sac 25 kg)'),
+         'qty', 150)),
+       'livraison') $$,
+  'a validated merchant orders a wholesale volume, delivered'
+);
+select results_eq(
+  $$ select audience, subtotal_cents, commission_cents, discount_cents, delivery_address
+       from public.flash_orders where audience = 'commercants' $$,
+  $$ values ('commercants'::text, 270000, 18900, 0, '8 rue des Carmes, 31000 Toulouse'::text) $$,
+  'the order is priced by the server and delivered to the buyer''s shop'
+);
+reset role;
+
+-- Le webhook Stripe (service_role) marque la commande payée.
+set local request.jwt.claims to '{}';
+update public.flash_orders set status = 'payee', paid_at = now() where audience = 'commercants';
+select set_config('tklink.b2b',
+  (select id::text from public.flash_orders where audience = 'commercants'), true);
+
+-- 86) Le grossiste livre lui-même, sans étape d'acceptation : préparée, expédiée, livrée.
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a5","role":"authenticated"}';
+select lives_ok(
+  $$ select public.advance_order(current_setting('tklink.b2b')::uuid, 'preparation') $$,
+  'the wholesaler prepares a paid order straight away'
+);
+select throws_ok(
+  $$ select public.advance_order(current_setting('tklink.b2b')::uuid, 'prete') $$,
+  'P0001',
+  'invalid_transition',
+  'a wholesaler delivery does not wait at the counter'
+);
+select lives_ok(
+  $$ select public.advance_order(current_setting('tklink.b2b')::uuid, 'en_livraison') $$,
+  'the wholesaler ships the order'
+);
+select lives_ok(
+  $$ select public.advance_order(current_setting('tklink.b2b')::uuid, 'livree') $$,
+  'the wholesaler marks it delivered'
+);
+-- 87) Le grossiste voit la commande ; elle est livrée.
+select results_eq(
+  $$ select status from public.flash_orders where audience = 'commercants' $$,
+  $$ values ('livree'::text) $$,
+  'the wholesaler sees the delivered order'
+);
+reset role;
+
+-- 88) Une commande B2B livrée ne crédite aucun point de fidélité.
+select results_eq(
+  $$ select count(*)::integer from public.loyalty_ledger
+      where order_id = current_setting('tklink.b2b')::uuid $$,
+  $$ values (0) $$,
+  'a wholesale order earns no loyalty points'
+);
+
+-- 89) Le stock de l'offre pro a baissé de 150.
+select results_eq(
+  $$ select stock_left from public.flash_offers where title = 'Farine T65 (sac 25 kg)' $$,
+  $$ values (350) $$,
+  'the ordered volume leaves the wholesaler''s stock'
+);
 
 select * from finish();
 rollback;

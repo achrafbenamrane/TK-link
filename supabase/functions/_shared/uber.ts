@@ -193,3 +193,12 @@ export function isCourierCancellable(order: {
     CANCELLABLE_UBER_STATUSES.includes(order.uber_status ?? '')
   );
 }
+
+/**
+ * Une commande part-elle en course Uber Direct ? Une livraison de client final, oui. Une offre pro
+ * (migration 0023) est livrée par le grossiste lui-même : ni devis, ni coursier — et son paiement
+ * n'attend pas de devis.
+ */
+export function needsCourier(order: { fulfilment: string; audience: string }): boolean {
+  return order.fulfilment === 'livraison' && order.audience === 'clients';
+}

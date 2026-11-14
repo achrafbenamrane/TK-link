@@ -2,6 +2,7 @@ import { createHmac } from 'crypto';
 
 import {
   isCourierCancellable,
+  needsCourier,
   orderStatusFor,
   parseDelivery,
   parseQuote,
@@ -156,5 +157,16 @@ describe('annuler une course (fonction uber-cancel)', () => {
     expect(isCourierCancellable(order({ uber_delivery_id: null }))).toBe(false);
     expect(isCourierCancellable(order({ uber_status: null }))).toBe(false);
     expect(isCourierCancellable(order({ status: 'en_livraison' }))).toBe(false);
+  });
+});
+
+describe('needsCourier', () => {
+  it('envoie un coursier pour une livraison de client final', () => {
+    expect(needsCourier({ fulfilment: 'livraison', audience: 'clients' })).toBe(true);
+  });
+
+  it('jamais pour un retrait, ni pour une offre pro livrée par le grossiste (0023)', () => {
+    expect(needsCourier({ fulfilment: 'touch-collect', audience: 'clients' })).toBe(false);
+    expect(needsCourier({ fulfilment: 'livraison', audience: 'commercants' })).toBe(false);
   });
 });

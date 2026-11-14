@@ -232,6 +232,20 @@ estimation suit le serveur. Une nouvelle commission vaut pour les réservations 
 déjà faites gardent la leur (`commission_cents`). Les autres réglages de l’onglet restent ceux de la
 démonstration (navigateur).
 
+## Commandes B2B (0023)
+
+Un commerçant commande l’offre pro d’un grossiste par le même moteur que le B2C (CDC V1.1 §1 : « pas
+de catalogue distinct ») : `reserve_flash`, la même page Stripe Checkout au compte Connect du
+grossiste, la commission du serveur. La commande porte `audience = 'commercants'`. L’acheteur est un
+compte `commercant` au commerce **validé** (`pro_required` sinon), jamais sa propre offre
+(`own_offer`) ; le minimum de l’offre est tenu, jusqu’à 999 par ligne (le B2C reste à 99). Pas
+d’étape d’acceptation ; livrée par le grossiste, pas par Uber Direct (`needsCourier` dans
+`_shared/uber.ts` : ni devis, ni coursier, paiement sans devis), à l’adresse du commerce acheteur,
+frais 0 : `advance_order` la mène de « en préparation » à « expédiée » (`en_livraison`) puis
+« livrée ». Retrait chez le grossiste : comme le B2C. Ni crédit de parrainage, ni points, ni
+déblocage du parrainage (règles du client final). Plan :
+[exec-plans/2026-11-14-commandes-b2b.md](exec-plans/2026-11-14-commandes-b2b.md).
+
 ## Parrainage (0019)
 
 CDC V1.1 : 5 € au parrain ET au filleul, financés par TK LINK, débloqués au premier achat réel du

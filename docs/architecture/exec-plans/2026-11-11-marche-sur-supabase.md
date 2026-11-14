@@ -65,23 +65,23 @@ ils viennent après, sur les mêmes fondations.
 - [x] Coordonnées du commerce (géocodage Mapbox de l’adresse) pour « autour de vous »
 - [x] Accueil client et carte lisent les Flash du serveur (les exemples restent en démonstration)
       — la fiche produit, le panier, les favoris et la page du commerce les retrouvent par
-      `getDeal`/`getMerchant`. Reste : offres pro (B2B) lues du serveur côté commerçant, récurrence
-      des offres pro côté serveur
+      `getDeal`/`getMerchant`. Reste : récurrence des offres pro côté serveur ; les offres pro lues
+      et commandées par les commerçants : [2026-11-14-commandes-b2b.md](2026-11-14-commandes-b2b.md)
 
 ### Étape 3 — La commande
 
 Reprise le 13/11/2026 dans [2026-11-13-rapport-avancement.md](2026-11-13-rapport-avancement.md)
 (étape 3, avec le paiement Stripe Connect et Uber Direct).
 
-- [ ] `flash_orders` + `reserve_flash()` atomique (stock sous verrou, prix recalculé)
-- [ ] Commerçant : commandes reçues et statuts ; client : suivi en direct
+- [x] `flash_orders` + `reserve_flash()` atomique (stock sous verrou, prix recalculé) — 0012
+- [x] Commerçant : commandes reçues et statuts ; client : suivi en direct — 13/11/2026
 
 ### Étape 4 — Fidélité et tickets rattachés aux commandes du serveur
 
 - [x] 13/11/2026 : migration 0017 (programme, points crédités par le serveur à la remise, paliers
       réclamés contre un code, validés par le commerçant) ; app : fidélité des commerces du serveur
-      lue et réclamée au serveur, paliers du commerçant enregistrés au serveur. Reste : partage d’une
-      récompense, tickets (reçus) des commandes du serveur
+      lue et réclamée au serveur, paliers du commerçant enregistrés au serveur. Partage d’une
+      récompense : 0018 ; commandes du serveur dans « Mes factures » : 13/11/2026
 
 ## Risques
 

@@ -18,6 +18,7 @@ import {
   nextCheckoutStep,
 } from '../_shared/stripe.ts';
 import { stripeConfigured, stripeRequest } from '../_shared/stripe-api.ts';
+import { needsCourier } from '../_shared/uber.ts';
 
 // Où Stripe renvoie après paiement ou abandon (page du site qui rouvre l'app).
 const RETURN_URL =
@@ -40,7 +41,7 @@ serve(async (req) => {
   const { data: order } = await admin
     .from('flash_orders')
     .select(
-      'id, customer_id, shop_id, fulfilment, status, reserved_until, subtotal_cents, discount_cents, delivery_fee_cents, total_cents, commission_cents, uber_quote_id, stripe_checkout_id',
+      'id, customer_id, shop_id, fulfilment, audience, status, reserved_until, subtotal_cents, discount_cents, delivery_fee_cents, total_cents, commission_cents, uber_quote_id, stripe_checkout_id',
     )
     .eq('id', orderId)
     .maybeSingle();
@@ -49,8 +50,9 @@ serve(async (req) => {
   if (Date.parse(order.reserved_until) < Date.now()) {
     return reply(410, { error: 'reservation_expired' });
   }
-  // Une livraison se paie avec ses frais : le devis Uber doit être fait.
-  if (order.fulfilment === 'livraison' && !order.uber_quote_id) {
+  // Une livraison se paie avec ses frais : le devis Uber doit être fait. Sauf une offre pro (0023) :
+  // le grossiste livre lui-même, sans coursier ni devis.
+  if (needsCourier(order) && !order.uber_quote_id) {
     return reply(409, { error: 'delivery_quote_required' });
   }
 

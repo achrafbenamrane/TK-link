@@ -7,7 +7,7 @@
 // 'requesting'`, sous condition), si bien que deux appuis simultanés n'en commandent pas deux.
 import { adminClient, callerOf, CORS, jsonBody, reply, serve, UUID } from '../_shared/http.ts';
 import { uberConfigured, uberRequest } from '../_shared/uber-api.ts';
-import { parseDelivery, uberAddress, uberPhone } from '../_shared/uber.ts';
+import { needsCourier, parseDelivery, uberAddress, uberPhone } from '../_shared/uber.ts';
 
 const FALLBACK_PHONE = Deno.env.get('UBER_FALLBACK_PHONE') ?? '';
 const DISPATCHABLE = ['payee', 'acceptee', 'preparation', 'prete'];
@@ -28,7 +28,7 @@ serve(async (req) => {
   const { data: order } = await admin
     .from('flash_orders')
     .select(
-      'id, customer_id, shop_id, fulfilment, status, subtotal_cents, delivery_address, delivery_lat, delivery_lng, delivery_phone, uber_delivery_id, uber_tracking_url',
+      'id, customer_id, shop_id, fulfilment, audience, status, subtotal_cents, delivery_address, delivery_lat, delivery_lng, delivery_phone, uber_delivery_id, uber_tracking_url',
     )
     .eq('id', orderId)
     .maybeSingle();
@@ -40,7 +40,10 @@ serve(async (req) => {
     .eq('id', order.shop_id)
     .maybeSingle();
   if (!shop || shop.owner_id !== user.id) return reply(404, { error: 'order_not_found' });
-  if (order.fulfilment !== 'livraison') return reply(409, { error: 'not_a_delivery' });
+  // Une offre pro (0023) est livrée par le grossiste : pas de coursier.
+  if (!needsCourier(order)) {
+    return reply(409, { error: 'not_a_delivery' });
+  }
   // Déjà commandée (second appui, autre téléphone) : on rend la course existante.
   if (order.uber_delivery_id) {
     return reply(200, { deliveryId: order.uber_delivery_id, trackingUrl: order.uber_tracking_url });
