@@ -102,6 +102,11 @@ enforces).
 - **Edge cases agents must try :** « je n’ai rien reçu » après la remise (file
   admin, jamais remboursement direct), noter deux fois, partager puis utiliser
   la même récompense, saisir son propre code de parrainage.
+- **Sur le serveur (0027) :** la même règle tranche dans `report_order_issue` ; « remboursement en
+  cours » déclenche `order-refund` (Stripe) — couvert par `supabase/tests/database/rls.test.sql`
+  (0027), `supabase/__tests__/stripe.test.ts`, `shop/__tests__/server-issue.test.tsx`. À essayer :
+  signaler deux fois, signaler une réservation pas payée, « Rembourser » au back-office sans clé
+  Stripe (retour en litige avec la raison).
 
 ## CUJ-006 — (retirée) Le livreur (TK Deliver)
 

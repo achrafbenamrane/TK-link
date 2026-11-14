@@ -9,8 +9,10 @@ export const OUTCOMES = ['refund', 'merchant', 'gesture'];
 
 /**
  * Le statut d'une commande en litige après la décision.
- * - Rembourser : « remboursement en cours » — le remboursement se fait dans Stripe, et le webhook
- *   Stripe la passe « remboursée » (le crédit de parrainage pris revient alors de lui-même).
+ * - Rembourser : « remboursement en cours » — le remboursement part alors TOUT SEUL chez Stripe
+ *   (migration 0027, fonction `order-refund`) et le webhook la passe « remboursée » (le crédit de
+ *   parrainage pris revient alors de lui-même). S'il ne peut pas partir, la commande revient en
+ *   litige avec la raison (`refundFailure`).
  * - Donner raison au commerçant, ou geste commercial (remboursement partiel fait dans Stripe) : la
  *   commande est HONORÉE — « livrée » ou « récupérée » (points de fidélité crédités).
  */
@@ -33,8 +35,16 @@ export function orderRef(id) {
   return `#TKL-${String(id).slice(-6).toUpperCase()}`;
 }
 
-/** Le genre de litige (clés de `DISPUTE_KINDS`), d'après la course et la demande au support. */
+/**
+ * Le genre de litige (clés de `DISPUTE_KINDS`) : une contestation bancaire, puis le motif choisi par
+ * le client dans l'app (0027), puis la course et la demande au support.
+ */
 export function disputeKind(order, ticket) {
+  if (order.stripe_dispute_id) return 'paiement';
+  if (order.issue_kind === 'non_conforme') return 'manquant';
+  if (order.issue_kind === 'non_recue') {
+    return order.fulfilment === 'livraison' ? 'livraison' : 'indisponible';
+  }
   if (order.uber_status === 'canceled' || order.uber_status === 'returned') return 'livraison';
   if (ticket?.category === 'livraison') return 'livraison';
   if (ticket?.category === 'commande') return 'manquant';
@@ -47,6 +57,35 @@ const DEFAULT_MESSAGE = {
     'Paiement reçu après l’expiration de la réservation : le stock a pu être rendu entre-temps.',
   manquant: 'Le client signale un problème sur sa commande.',
 };
+
+/** Le motif choisi par le client dans l'app (« Signaler un problème », 0027). */
+const ISSUE_MESSAGE = {
+  non_recue:
+    'Le client signale ne pas avoir reçu sa commande (après la remise au retrait ou au coursier).',
+  non_conforme: 'Le client signale un produit incomplet ou non conforme à l’offre.',
+  autre: 'Le client signale un autre problème (commerçant, livraison ou paiement).',
+};
+
+const CHARGEBACK_MESSAGE =
+  'Le client conteste le paiement auprès de sa banque. À traiter dans Stripe (Connect → le compte du commerce → Litiges) avant l’échéance indiquée.';
+
+/**
+ * Pourquoi le remboursement automatique n'est pas parti (0027, `refund_failure`), en clair — `null`
+ * s'il n'y a rien à signaler.
+ */
+export function refundFailureText(code) {
+  if (!code) return null;
+  const [kind, detail] = String(code).split(':');
+  const why = {
+    stripe_not_configured: 'Stripe n’est pas encore branché sur le serveur',
+    no_payment: 'la commande ne porte aucun paiement Stripe',
+    no_account: 'le commerce n’a pas de compte Stripe',
+    courier_active: 'un coursier Uber Direct est encore en route — annulez la course d’abord',
+    refund_failed: `Stripe n’a pas pu rendre l’argent${detail ? ` (${detail})` : ''}`,
+    stripe_failed: `Stripe a refusé ou n’a pas répondu${detail ? ` (${detail})` : ''}`,
+  }[kind];
+  return `Le remboursement automatique n’est pas parti : ${why ?? code}. À faire dans Stripe.`;
+}
 
 /**
  * Les litiges prêts à afficher, et les décisions déjà prises (`{ [id]: { outcome, note } }`).
@@ -80,10 +119,16 @@ export function toDisputes(orders, shops, profiles, tickets) {
       amountCents: o.total_cents ?? 0,
       openedAt: o.updated_at,
       fulfilment: o.fulfilment,
-      message: lastFromCustomer?.body ?? DEFAULT_MESSAGE[kind],
+      message:
+        lastFromCustomer?.body ??
+        (o.stripe_dispute_id
+          ? CHARGEBACK_MESSAGE
+          : (ISSUE_MESSAGE[o.issue_kind] ?? DEFAULT_MESSAGE[kind] ?? DEFAULT_MESSAGE.manquant)),
       // Pour retrouver le paiement dans Stripe (compte du commerce, Direct charges).
       stripeAccount: shop?.stripe_account_id ?? null,
       paymentIntent: o.stripe_payment_intent_id ?? null,
+      chargeback: Boolean(o.stripe_dispute_id),
+      refundFailure: refundFailureText(o.refund_failure),
     });
     if (o.dispute_outcome && o.dispute_note) {
       rulings[o.id] = { outcome: o.dispute_outcome, note: o.dispute_note };

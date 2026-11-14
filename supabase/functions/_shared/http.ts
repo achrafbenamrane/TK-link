@@ -67,3 +67,14 @@ export async function jsonBody(req: Request): Promise<Record<string, unknown> | 
 }
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Le secret partagé des appels de la base (pg_net, en-tête `x-webhook-secret`), comparé à temps
+ * constant. Un secret vide côté serveur ne laisse passer personne.
+ */
+export const sameSecret = (expected: string, given: string): boolean => {
+  if (!expected || expected.length !== given.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ given.charCodeAt(i);
+  return diff === 0;
+};

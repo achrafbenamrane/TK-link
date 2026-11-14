@@ -114,6 +114,8 @@ export async function verifyStripeSignature(
 export type StripeEffect =
   | { kind: 'order_paid'; paymentIntentId: string; orderId: string | null }
   | { kind: 'order_refunded'; paymentIntentId: string }
+  | { kind: 'refund_failed'; paymentIntentId: string; reason: string }
+  | { kind: 'order_disputed'; paymentIntentId: string; disputeId: string }
   | { kind: 'account_updated'; accountId: string; chargesEnabled: boolean }
   | null;
 
@@ -136,6 +138,23 @@ export function effectOf(event: unknown): StripeEffect {
       // Remboursement TOTAL seulement : un remboursement partiel ne change pas le statut.
       return typeof obj.payment_intent === 'string' && obj.refunded === true
         ? { kind: 'order_refunded', paymentIntentId: obj.payment_intent }
+        : null;
+    // Un remboursement qui échoue APRÈS coup (carte expirée, compte fermé) : rare, mais l'argent n'est
+    // alors jamais revenu au client. Stripe l'annonce sous deux noms selon la version de l'API.
+    case 'charge.refund.updated':
+    case 'refund.updated':
+    case 'refund.failed':
+      return obj.status === 'failed' && typeof obj.payment_intent === 'string'
+        ? {
+            kind: 'refund_failed',
+            paymentIntentId: obj.payment_intent,
+            reason: `refund_failed:${typeof obj.failure_reason === 'string' ? obj.failure_reason : 'unknown'}`,
+          }
+        : null;
+    // Le client conteste le paiement auprès de sa banque : à traiter dans Stripe avant l'échéance.
+    case 'charge.dispute.created':
+      return typeof obj.payment_intent === 'string' && typeof obj.id === 'string'
+        ? { kind: 'order_disputed', paymentIntentId: obj.payment_intent, disputeId: obj.id }
         : null;
     case 'account.updated':
       return typeof obj.id === 'string'
@@ -311,4 +330,111 @@ export function afterExpire(
   if (sessionStatus === 'expired') return 'cancel';
   if (sessionStatus === 'complete') return 'already_paid';
   return 'stripe_failed';
+}
+
+// ─────────────────────────────────────────── rembourser une commande (migration 0027, `order-refund`)
+
+export type RefundableOrder = {
+  id: string;
+  status: string;
+  stripe_payment_intent_id: string | null;
+  uber_delivery_id: string | null;
+  uber_status: string | null;
+  /** L'instant du passage en « remboursement en cours » : une tentative = une clé d'idempotence. */
+  updated_at?: string | null;
+};
+
+/** Une course Uber Direct terminée, d'une façon ou d'une autre : plus de coursier sur la route. */
+const COURIER_DONE = ['canceled', 'returned', 'delivered'];
+
+/** Pourquoi un remboursement ne part pas tout seul : la commande revient alors en « litige ». */
+export type RefundBlocker =
+  'stripe_not_configured' | 'no_payment' | 'no_account' | 'courier_active';
+
+/**
+ * Que faire d'une commande « remboursement en cours » ?
+ * - `skip` : elle ne l'est plus (rejeu, autre onglet, webhook arrivé avant) — rien ;
+ * - `manual` : impossible sans un humain (pas de clé Stripe, pas de paiement, pas de compte, ou un
+ *   coursier qui roule encore : rembourser d'abord, ce serait livrer gratuitement) ;
+ * - `refund` : le remboursement TOTAL, au nom du commerce (Direct charges). `refund_application_fee` :
+ *   TK LINK rend aussi ce qu'il a prélevé (commission, livraison) — sinon le commerçant rembourserait
+ *   de sa poche un argent qu'il n'a jamais touché.
+ *
+ * Deux fois rembourser est impossible : un remboursement TOTAL d'un paiement déjà remboursé est
+ * refusé par Stripe (`charge_already_refunded`). La clé d'idempotence vaut pour UNE tentative (la
+ * commande et l'instant où elle est passée « remboursement en cours ») : Stripe rejoue la réponse
+ * d'une clé pendant 24 h, échec compris — une nouvelle décision « Rembourser » après un refus doit
+ * pouvoir réessayer.
+ */
+export function refundPlan(
+  order: RefundableOrder,
+  account: string | null,
+  configured: boolean,
+):
+  | { kind: 'skip' }
+  | { kind: 'manual'; reason: RefundBlocker }
+  | {
+      kind: 'refund';
+      account: string;
+      idempotencyKey: string;
+      params: Record<string, unknown>;
+    } {
+  if (order.status !== 'remboursement_en_cours') return { kind: 'skip' };
+  if (!configured) return { kind: 'manual', reason: 'stripe_not_configured' };
+  if (!order.stripe_payment_intent_id) return { kind: 'manual', reason: 'no_payment' };
+  if (!account) return { kind: 'manual', reason: 'no_account' };
+  if (order.uber_delivery_id && !COURIER_DONE.includes(order.uber_status ?? '')) {
+    return { kind: 'manual', reason: 'courier_active' };
+  }
+  const attempt = order.updated_at ? Date.parse(order.updated_at) : Number.NaN;
+  return {
+    kind: 'refund',
+    account,
+    idempotencyKey: `tklink-refund-${order.id}${Number.isFinite(attempt) ? `-${attempt}` : ''}`,
+    params: {
+      payment_intent: order.stripe_payment_intent_id,
+      refund_application_fee: true,
+      reason: 'requested_by_customer',
+      metadata: { order_id: order.id },
+    },
+  };
+}
+
+/**
+ * La réponse de Stripe à `POST /v1/refunds` → le statut de la commande.
+ * - fait (`succeeded`) : « remboursée » ;
+ * - en route (`pending`, `requires_action`) : reste « remboursement en cours », le webhook finira ;
+ * - déjà remboursée chez Stripe (à la main, par exemple) : « remboursée » ;
+ * - autre chose (refus, Stripe injoignable) : « litige », avec la raison pour le back-office.
+ */
+export function afterRefund(
+  httpStatus: number,
+  body: Record<string, unknown> | null,
+): {
+  status: 'remboursee' | 'remboursement_en_cours' | 'litige';
+  refundId: string | null;
+  failure: string | null;
+} {
+  const id = typeof body?.id === 'string' ? body.id : null;
+  if (httpStatus >= 200 && httpStatus < 300 && id) {
+    if (body?.status === 'succeeded') return { status: 'remboursee', refundId: id, failure: null };
+    if (body?.status === 'pending' || body?.status === 'requires_action') {
+      return { status: 'remboursement_en_cours', refundId: id, failure: null };
+    }
+    return {
+      status: 'litige',
+      refundId: id,
+      failure: `refund_${String(body?.status ?? 'unknown')}`,
+    };
+  }
+  const error = (body?.error ?? null) as { code?: unknown } | null;
+  const code = typeof error?.code === 'string' ? error.code : null;
+  if (code === 'charge_already_refunded') {
+    return { status: 'remboursee', refundId: null, failure: null };
+  }
+  return {
+    status: 'litige',
+    refundId: null,
+    failure: `stripe_failed:${code ?? (httpStatus || 'unreachable')}`.slice(0, 200),
+  };
 }

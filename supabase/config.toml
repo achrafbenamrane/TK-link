@@ -64,6 +64,11 @@ verify_jwt = false
 [functions.push-events]
 verify_jwt = false
 
+# Remboursements (0027) : appelée par un déclencheur de la base (pg_net), même en-tête et même
+# secret que push-events.
+[functions.order-refund]
+verify_jwt = false
+
 # ─────────────────────────────────────────────────────────────── authentification
 #
 # Ce que l'app attend du serveur (voir docs/security/authentication.md, ADR-0010) :

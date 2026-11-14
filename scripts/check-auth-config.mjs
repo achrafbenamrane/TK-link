@@ -312,6 +312,14 @@ const probes = [
     missing: (s) => s === 404,
     what: 'personne ne peut suivre un commerce ni être prévenu de ses ventes flash',
   },
+  {
+    migration: '0027_order_refunds',
+    rpc: 'report_order_issue',
+    // Réservée aux comptes : présente, elle refuse la clé publique (401) ; absente, 404. TOUS ses
+    // paramètres, sinon 404 même quand elle existe. Rien n'est signalé.
+    body: { p_order: '00000000-0000-0000-0000-000000000000', p_kind: 'autre' },
+    what: '« Signaler un problème » n’atteint pas le serveur, et aucun remboursement ne part tout seul',
+  },
 ];
 for (const probe of probes) {
   try {
@@ -374,6 +382,7 @@ const EDGE_FUNCTIONS = [
   'ai-media-start',
   'ai-media-status',
   'push-events',
+  'order-refund',
 ];
 const missingKey = [];
 const absent = [];

@@ -130,6 +130,10 @@ Non-objectifs : immatriculation de la société et activation commerciale d’Ub
       de parrainage, six mois glissants) ; la démonstration reste sans clé de service
 - [x] Back-office : l’onglet Litiges lit les vraies commandes en litige et enregistre la décision
       motivée (0021) ; le remboursement se fait dans Stripe
+- [x] « Signaler un problème » sur une vraie commande (0027, 14/11/2026) : le serveur route vers
+      un remboursement (« rien reçu » avant la remise) ou vers Litiges ; le remboursement part tout
+      seul chez Stripe (`order-refund`, aussi pour « Rembourser » au back-office) ; un échec revient
+      en litige avec sa raison ; contestation bancaire → litige ; le commerçant est prévenu
 - [x] Back-office : la commission, le crédit de parrainage, les réservations et les quotas IA
       se règlent sur le serveur (0022, encadré « Sur le serveur » de l’onglet Réglages) ; l’app
       relit la commission et le crédit au lancement et à l’ouverture du panier

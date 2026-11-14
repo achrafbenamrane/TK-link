@@ -86,6 +86,13 @@ export function orderMessage(
         body: 'TK LINK s’en occupe et revient vers vous très vite.',
         data: order,
       };
+    case 'remboursement_en_cours':
+      return {
+        to: 'customer',
+        title: 'Remboursement en cours',
+        body: 'Il arrive sur votre carte, en général sous 5 à 10 jours ouvrés.',
+        data: order,
+      };
     case 'remboursee':
       return {
         to: 'customer',
@@ -96,6 +103,25 @@ export function orderMessage(
     default:
       return null;
   }
+}
+
+/** Les statuts où le commerce a la commande en main : payée, pas encore remise. */
+const IN_HAND = ['payee', 'acceptee', 'preparation', 'prete', 'en_livraison'];
+
+/**
+ * Ce que le COMMERÇANT doit savoir en plus de l'acheteur (0027) : une commande qu'il a en main part en
+ * remboursement — qu'il ne la prépare ni ne la remette. B2C comme B2B (« l'acheteur »).
+ */
+export function shopNotice(record: OrderRow, old: { status?: string } | null): PushMessage | null {
+  if (record.status !== 'remboursement_en_cours' || !IN_HAND.includes(old?.status ?? '')) {
+    return null;
+  }
+  return {
+    to: 'shop_owner',
+    title: 'Commande remboursée',
+    body: 'L’acheteur est remboursé : ne préparez pas cette commande et ne la remettez pas.',
+    data: { kind: 'merchant_order', id: record.id },
+  };
 }
 
 /** Les messages d'une commande B2B : sans Uber Direct ni « Bonne dégustation ». */
@@ -142,6 +168,7 @@ function wholesaleMessage(record: OrderRow, delivery: boolean): PushMessage | nu
         data: order,
       };
     case 'litige':
+    case 'remboursement_en_cours':
     case 'remboursee':
       return orderMessage({ ...record, audience: 'clients' }, null);
     default:

@@ -16,6 +16,7 @@ import {
 } from '../../lib/orders-api';
 import { pickupPayload } from '../../lib/pickup';
 import { CHECKOUT_ERROR, openPaymentPage } from '../../lib/server-checkout';
+import { ServerReportIssue } from './server-issue';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const hhmm = (ms: number) => {
@@ -32,7 +33,8 @@ const PAID = ['payee', 'acceptee', 'preparation', 'prete'];
  *   revient aux autres clients).
  * - Touch & Collect payé : le QR et le code de retrait à montrer au commerçant.
  * - Livraison : le lien de suivi du coursier Uber Direct, dès que la course est commandée.
- * - Toujours : « Signaler un problème » ouvre une demande au support, rattachée à la commande.
+ * - « Signaler un problème » (0027) : le serveur route vers un remboursement ou vers le back-office
+ *   (`ServerReportIssue`) ; sans signalement possible, le support, rattaché à la commande.
  */
 export function ServerOrderPanel({
   order,
@@ -183,22 +185,7 @@ export function ServerOrderPanel({
         </Pressable>
       ) : null}
 
-      <Pressable
-        testID="server-order-report"
-        accessibilityRole="button"
-        accessibilityLabel="Signaler un problème avec cette commande"
-        onPress={() =>
-          router.push({
-            pathname: '/aide/nouvelle',
-            params: { commande: order.id, sujet: 'commande' },
-          })
-        }
-        className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-4 active:opacity-70"
-      >
-        <Feather name="alert-circle" size={18} color={colors.ink} />
-        <AppText className="flex-1 font-sans-semibold text-ink">Signaler un problème</AppText>
-        <Feather name="chevron-right" size={16} color={colors.inkFaint} />
-      </Pressable>
+      <ServerReportIssue order={order} onChanged={onChanged} />
     </View>
   );
 }

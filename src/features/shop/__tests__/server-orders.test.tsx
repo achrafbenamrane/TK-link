@@ -246,7 +246,7 @@ describe('fiche d’une commande du serveur', () => {
     });
   });
 
-  it('livraison : le lien de suivi Uber, et « Signaler un problème » ouvre le support', () => {
+  it('livraison : le lien de suivi Uber, et « Signaler un problème » ouvre les trois motifs', () => {
     render(
       <ServerOrderPanel
         order={order({
@@ -259,6 +259,15 @@ describe('fiche d’une commande du serveur', () => {
       />,
     );
     expect(screen.getByTestId('server-order-tracking')).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('order-report-open'));
+    expect(screen.getByTestId('order-report')).toBeOnTheScreen();
+  });
+
+  it('annulée : pas de signalement, le support reste joignable', () => {
+    render(
+      <ServerOrderPanel order={order({ status: 'annulee' })} now={NOW} onChanged={jest.fn()} />,
+    );
+    expect(screen.queryByTestId('order-report-open')).toBeNull();
     fireEvent.press(screen.getByTestId('server-order-report'));
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/aide/nouvelle',

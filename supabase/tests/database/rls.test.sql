@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(191);
+select plan(203);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -1634,7 +1634,7 @@ select set_config('tklink.shop_a6',
   (select id::text from public.shops where owner_id = '00000000-0000-0000-0000-0000000000a6'), true);
 
 set local role authenticated;
-set local request.jwt.claims to '{sub:00000000-0000-0000-0000-0000000000a1,role:authenticated}';
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
 select lives_ok(
   $$ insert into public.shop_follows (user_id, shop_id)
      values ('00000000-0000-0000-0000-0000000000a1', current_setting('tklink.shop_a2')::uuid) $$,
@@ -1652,7 +1652,7 @@ select throws_ok(
 );
 reset role;
 set local role authenticated;
-set local request.jwt.claims to '{sub:00000000-0000-0000-0000-0000000000a2,role:authenticated}';
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
 select is(
   (select count(*)::integer from public.shop_follows),
   0, 'nobody reads someone else''s follows'
@@ -1700,7 +1700,7 @@ select is(
   1, 'a wholesaler pro offer alerts nobody'
 );
 set local role authenticated;
-set local request.jwt.claims to '{sub:00000000-0000-0000-0000-0000000000a1,role:authenticated}';
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
 select lives_ok(
   $$ delete from public.shop_follows where shop_id = current_setting('tklink.shop_a2')::uuid $$,
   'the customer unfollows'
@@ -1711,6 +1711,101 @@ select is(
   0, 'and the follow is gone'
 );
 reset role;
+
+-- ─── 0027 : signaler un problème ; le remboursement part de la base ───
+select ok(
+  not has_function_privilege('anon', 'public.report_order_issue(uuid, text)', 'execute'),
+  'a visitor cannot report a problem on an order'
+);
+select has_trigger('public', 'flash_orders', 'flash_orders_refund',
+  'a refund in progress calls order-refund');
+
+-- Des commandes neuves (aucune réservation en attente ne doit buter sur le plafond).
+update public.flash_orders set status = 'annulee', updated_at = now()
+ where customer_id = '00000000-0000-0000-0000-0000000000a1' and status = 'paiement_attente';
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select set_config('tklink.issue_refund', (public.reserve_flash(
+  jsonb_build_array(jsonb_build_object(
+    'offer_id', (select id from public.flash_offers where title = 'Tarte du jour'), 'qty', 2)),
+  'touch-collect'))::text, true);
+select set_config('tklink.issue_admin', (public.reserve_flash(
+  jsonb_build_array(jsonb_build_object(
+    'offer_id', (select id from public.flash_offers where title = 'Tarte du jour'), 'qty', 1)),
+  'touch-collect'))::text, true);
+select set_config('tklink.issue_pending', (public.reserve_flash(
+  jsonb_build_array(jsonb_build_object(
+    'offer_id', (select id from public.flash_offers where title = 'Tarte du jour'), 'qty', 1)),
+  'touch-collect'))::text, true);
+reset role;
+update public.flash_orders
+   set status = 'preparation', paid_at = now(), stripe_payment_intent_id = 'pi_test_0027_a'
+ where id = current_setting('tklink.issue_refund')::uuid;
+update public.flash_orders
+   set status = 'prete', paid_at = now(), stripe_payment_intent_id = 'pi_test_0027_b'
+ where id = current_setting('tklink.issue_admin')::uuid;
+select set_config('tklink.queued_refund',
+  (select coalesce(max(id), 0)::text from net.http_request_queue), true);
+
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}';
+select throws_ok(
+  $$ select public.report_order_issue(current_setting('tklink.issue_refund')::uuid, 'pas_content') $$,
+  '22023', 'invalid_issue', 'only the three reasons, no free text'
+);
+select throws_ok(
+  $$ select public.report_order_issue(current_setting('tklink.issue_pending')::uuid, 'non_recue') $$,
+  'P0001', 'not_reportable', 'a reservation not paid yet is cancelled, not reported'
+);
+select is(
+  public.report_order_issue(current_setting('tklink.issue_refund')::uuid, 'non_recue'),
+  'remboursement', 'nothing received before handover: refunded without review'
+);
+select throws_ok(
+  $$ select public.report_order_issue(current_setting('tklink.issue_refund')::uuid, 'autre') $$,
+  'P0001', 'already_reported', 'one report per order'
+);
+select is(
+  public.report_order_issue(current_setting('tklink.issue_admin')::uuid, 'non_recue'),
+  'admin', 'once the order is ready, a human checks'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}';
+select throws_ok(
+  $$ select public.report_order_issue(current_setting('tklink.issue_admin')::uuid, 'autre') $$,
+  'P0001', 'order_not_found', 'only the buyer reports a problem on an order'
+);
+reset role;
+set local request.jwt.claims to '{}';
+
+select is(
+  (select jsonb_build_object('status', status, 'kind', issue_kind,
+                             'dated', issue_reported_at is not null)
+     from public.flash_orders where id = current_setting('tklink.issue_refund')::uuid),
+  jsonb_build_object('status', 'remboursement_en_cours', 'kind', 'non_recue', 'dated', true),
+  'the order is being refunded, with the reason and the date'
+);
+select is(
+  (select stock_left from public.flash_offers where title = 'Tarte du jour'),
+  3, 'nothing left the shop: the stock goes back to other customers'
+);
+select is(
+  (select jsonb_build_object(
+            'n', count(*),
+            'order', max(convert_from(q.body, 'UTF8')::jsonb ->> 'order_id'),
+            'secret', max(q.headers ->> 'x-webhook-secret'))
+     from net.http_request_queue q
+    where q.id > current_setting('tklink.queued_refund')::bigint
+      and q.url like '%/functions/v1/order-refund'),
+  jsonb_build_object('n', 1, 'order', current_setting('tklink.issue_refund'),
+                     'secret', 'secret-de-test'),
+  'one refund request, to order-refund, with the shared secret'
+);
+select is(
+  (select status from public.flash_orders where id = current_setting('tklink.issue_admin')::uuid),
+  'litige', 'the other report joins the back-office queue'
+);
 
 select * from finish();
 rollback;

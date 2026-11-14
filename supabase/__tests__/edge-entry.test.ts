@@ -8,7 +8,13 @@ import { join } from 'path';
  * « hors ligne ». Seuls les webhooks (Stripe, Uber, base de données, RevenueCat) gardent `Deno.serve`.
  */
 const ROOT = join(__dirname, '..', 'functions');
-const WEBHOOKS = new Set(['stripe-webhook', 'uber-webhook', 'push-events', 'revenuecat-webhook']);
+const WEBHOOKS = new Set([
+  'stripe-webhook',
+  'uber-webhook',
+  'push-events',
+  'order-refund',
+  'revenuecat-webhook',
+]);
 
 const appCalled = readdirSync(ROOT, { withFileTypes: true })
   .filter((d) => d.isDirectory() && !d.name.startsWith('_') && !WEBHOOKS.has(d.name))

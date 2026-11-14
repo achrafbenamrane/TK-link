@@ -479,6 +479,13 @@
   background: #eef2ec;
   word-break: break-all;
 }
+/* Un remboursement automatique qui n'est pas parti (0027) : à reprendre à la main. */
+.tkadmin-hint-warn {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fdeae5;
+  color: #b8371a;
+}
 
 .tkadmin-quote {
   margin: 0;

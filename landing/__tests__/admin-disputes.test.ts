@@ -9,6 +9,7 @@ const d = require('../app/admin/disputes') as {
   validNote: (note: unknown) => string | null;
   orderRef: (id: string) => string;
   disputeKind: (order: Record<string, unknown>, ticket?: Record<string, unknown>) => string;
+  refundFailureText: (code: unknown) => string | null;
   toDisputes: (
     orders: unknown[],
     shops: unknown[],
@@ -25,6 +26,8 @@ const d = require('../app/admin/disputes') as {
       message: string;
       paymentIntent: string | null;
       stripeAccount: string | null;
+      chargeback: boolean;
+      refundFailure: string | null;
     }[];
     rulings: Record<string, { outcome: string; note: string }>;
   };
@@ -49,6 +52,63 @@ it('le genre de litige vient de la course, puis de la demande au support', () =>
   expect(d.disputeKind({ uber_status: 'returned' })).toBe('livraison');
   expect(d.disputeKind({ uber_status: null }, { category: 'commande' })).toBe('manquant');
   expect(d.disputeKind({ uber_status: null })).toBe('paiement');
+});
+
+it('0027 : la contestation bancaire, puis le motif choisi dans l’app, décident du genre', () => {
+  expect(d.disputeKind({ stripe_dispute_id: 'dp_1', issue_kind: 'non_conforme' })).toBe('paiement');
+  expect(d.disputeKind({ issue_kind: 'non_conforme' })).toBe('manquant');
+  expect(d.disputeKind({ issue_kind: 'non_recue', fulfilment: 'livraison' })).toBe('livraison');
+  expect(d.disputeKind({ issue_kind: 'non_recue', fulfilment: 'touch-collect' })).toBe(
+    'indisponible',
+  );
+  // « Autre » : la course, puis la demande au support, comme avant.
+  expect(d.disputeKind({ issue_kind: 'autre', uber_status: 'returned' })).toBe('livraison');
+});
+
+it('0027 : un remboursement automatique qui n’est pas parti se dit en clair', () => {
+  expect(d.refundFailureText(null)).toBeNull();
+  expect(d.refundFailureText('courier_active')).toMatch(/coursier Uber Direct est encore en route/);
+  expect(d.refundFailureText('stripe_failed:insufficient_funds')).toMatch(
+    /Stripe a refusé.*\(insufficient_funds\).*À faire dans Stripe/,
+  );
+  expect(d.refundFailureText('refund_failed:expired_or_canceled_card')).toMatch(
+    /n’a pas pu rendre l’argent \(expired_or_canceled_card\)/,
+  );
+});
+
+it('0027 : la carte d’un litige dit d’où il vient', () => {
+  const base = {
+    customer_id: 'u1',
+    shop_id: 's1',
+    fulfilment: 'touch-collect',
+    status: 'litige',
+    total_cents: 700,
+    stripe_payment_intent_id: 'pi_9',
+    uber_status: null,
+    updated_at: '2026-11-14T18:00:00Z',
+  };
+  const { disputes } = d.toDisputes(
+    [
+      { ...base, id: 'o-a', issue_kind: 'non_conforme' },
+      { ...base, id: 'o-b', stripe_dispute_id: 'dp_1' },
+      { ...base, id: 'o-c', refund_failure: 'no_account' },
+    ],
+    [],
+    [],
+    [],
+  );
+  expect(disputes[0]).toMatchObject({
+    kind: 'manquant',
+    message: expect.stringMatching(/incomplet ou non conforme/),
+    chargeback: false,
+    refundFailure: null,
+  });
+  expect(disputes[1]).toMatchObject({
+    kind: 'paiement',
+    message: expect.stringMatching(/conteste le paiement auprès de sa banque/),
+    chargeback: true,
+  });
+  expect(disputes[2]?.refundFailure).toMatch(/le commerce n’a pas de compte Stripe/);
 });
 
 it('met en forme les commandes en litige, avec le dernier mot du client et le paiement Stripe', () => {

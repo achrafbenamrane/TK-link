@@ -8,7 +8,8 @@
  *
  * Trancher (`PATCH`) écrit la décision, motivée et datée (migration 0021), et le statut qui en
  * découle — sous condition : la commande doit être TOUJOURS en litige (deux onglets ouverts ne
- * tranchent pas deux fois). Le remboursement lui-même se fait dans Stripe : le back-office n'a
+ * tranchent pas deux fois). « Rembourser » fait passer la commande « remboursement en cours » : la
+ * base appelle alors `order-refund`, qui rembourse chez Stripe (migration 0027). Le back-office n'a
  * aucune clé Stripe, et n'en a pas besoin.
  */
 import { OUTCOMES, statusAfter, toDisputes, validNote } from '../../disputes';
@@ -38,14 +39,19 @@ const configured = () => URL_.startsWith('https://') && KEY.length > 0;
 const BASE =
   'id,customer_id,shop_id,fulfilment,status,total_cents,stripe_payment_intent_id,uber_status,updated_at';
 
+const DECISION = 'dispute_outcome,dispute_note,dispute_decided_at';
+// 0027 : le motif choisi par le client, la raison d'un remboursement qui n'est pas parti, la
+// contestation bancaire.
+const REFUNDS = 'issue_kind,refund_failure,stripe_dispute_id';
+const DECIDED =
+  '&or=(status.eq.litige,dispute_decided_at.not.is.null)&order=updated_at.desc&limit=100';
+
 export async function GET() {
   if (!configured()) return json(503, { error: 'not_configured' });
-  // Avec la migration 0021 : les litiges ouverts ET ceux déjà tranchés (la décision reste à l'écran).
-  // Sans elle : les litiges ouverts seulement.
-  let res = await rest(
-    `flash_orders?select=${BASE},dispute_outcome,dispute_note,dispute_decided_at` +
-      '&or=(status.eq.litige,dispute_decided_at.not.is.null)&order=updated_at.desc&limit=100',
-  );
+  // Avec 0021 : les litiges ouverts ET ceux déjà tranchés (la décision reste à l'écran) ; avec 0027,
+  // ce qui explique le litige en plus. Sans elles : de moins en moins de colonnes, jamais d'écran vide.
+  let res = await rest(`flash_orders?select=${BASE},${DECISION},${REFUNDS}${DECIDED}`);
+  if (!res.ok) res = await rest(`flash_orders?select=${BASE},${DECISION}${DECIDED}`);
   if (!res.ok) {
     res = await rest(
       `flash_orders?select=${BASE}&status=eq.litige&order=updated_at.desc&limit=100`,

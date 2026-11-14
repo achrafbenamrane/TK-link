@@ -140,53 +140,42 @@ export function RateMerchant({ order, merchantName }: { order: Order; merchantNa
   );
 }
 
-/**
- * Signaler un problème — le point d'entrée UNIQUE (CDC V1.1). Le client dit ce
- * qui s'est passé ; l'app décide si l'incident part en remboursement ou dans la
- * file du Super Admin.
- */
-export function ReportIssue({ order }: { order: Order }) {
+/** Le bouton qui ouvre le signalement. */
+export function ReportIssueButton({ onPress }: { onPress: () => void }) {
   const colors = useColors();
-  const reportIssue = useShopStore((s) => s.reportIssue);
-  const [open, setOpen] = useState(false);
+  return (
+    <Pressable
+      testID="order-report-open"
+      accessibilityRole="button"
+      accessibilityLabel="Signaler un problème"
+      onPress={onPress}
+      className="mb-4 flex-row items-center justify-center gap-2 rounded-control border border-line py-3.5 active:bg-surface-muted"
+    >
+      <Feather name="flag" size={15} color={colors.inkMuted} />
+      <AppText className="font-sans-semibold text-ink-muted" style={{ fontSize: 14 }}>
+        Signaler un problème
+      </AppText>
+    </Pressable>
+  );
+}
+
+/**
+ * Les trois motifs, sans texte libre (CDC V1.1). Le formulaire ne sait pas où part le signalement :
+ * la commande de démonstration le décide sur le téléphone, celle du serveur le demande au serveur
+ * (`ServerReportIssue`).
+ */
+export function IssueForm({
+  onSubmit,
+  onCancel,
+  busy = false,
+  error = null,
+}: {
+  onSubmit: (kind: IssueKind) => void;
+  onCancel: () => void;
+  busy?: boolean;
+  error?: string | null;
+}) {
   const [kind, setKind] = useState<IssueKind | null>(null);
-
-  if (!canReportIssue(order.status)) return null;
-
-  if (order.issue) {
-    return (
-      <View
-        testID="order-issue-done"
-        className="mb-4 flex-row items-center gap-3 rounded-card border border-line bg-surface-muted p-4"
-      >
-        <Feather name="alert-circle" size={18} color={colors.brand600} />
-        <View className="flex-1">
-          <AppText className="font-sans-bold text-sm text-ink">Signalement envoyé</AppText>
-          <AppText variant="caption" className="text-ink-faint">
-            {ROUTE_LABEL[order.issue.route]}
-          </AppText>
-        </View>
-      </View>
-    );
-  }
-
-  if (!open) {
-    return (
-      <Pressable
-        testID="order-report-open"
-        accessibilityRole="button"
-        accessibilityLabel="Signaler un problème"
-        onPress={() => setOpen(true)}
-        className="mb-4 flex-row items-center justify-center gap-2 rounded-control border border-line py-3.5 active:bg-surface-muted"
-      >
-        <Feather name="flag" size={15} color={colors.inkMuted} />
-        <AppText className="font-sans-semibold text-ink-muted" style={{ fontSize: 14 }}>
-          Signaler un problème
-        </AppText>
-      </Pressable>
-    );
-  }
-
   return (
     <View
       testID="order-report"
@@ -219,19 +208,60 @@ export function ReportIssue({ order }: { order: Order }) {
           </Pressable>
         );
       })}
+      {error ? (
+        <AppText testID="report-error" variant="caption" className="text-danger">
+          {error}
+        </AppText>
+      ) : null}
       <View className="flex-row gap-2">
         <View className="flex-1">
-          <Button label="Annuler" variant="ghost" onPress={() => setOpen(false)} />
+          <Button label="Annuler" variant="ghost" disabled={busy} onPress={onCancel} />
         </View>
         <View className="flex-1">
           <Button
             testID="report-submit"
-            label="Envoyer"
-            disabled={!kind}
-            onPress={() => kind && reportIssue(order.id, kind)}
+            label={busy ? 'Envoi…' : 'Envoyer'}
+            disabled={!kind || busy}
+            onPress={() => kind && onSubmit(kind)}
           />
         </View>
       </View>
     </View>
+  );
+}
+
+/**
+ * Signaler un problème — le point d'entrée UNIQUE (CDC V1.1). Le client dit ce
+ * qui s'est passé ; l'app décide si l'incident part en remboursement ou dans la
+ * file du Super Admin. (Commande de démonstration : tout reste sur le téléphone.)
+ */
+export function ReportIssue({ order }: { order: Order }) {
+  const colors = useColors();
+  const reportIssue = useShopStore((s) => s.reportIssue);
+  const [open, setOpen] = useState(false);
+
+  if (!canReportIssue(order.status)) return null;
+
+  if (order.issue) {
+    return (
+      <View
+        testID="order-issue-done"
+        className="mb-4 flex-row items-center gap-3 rounded-card border border-line bg-surface-muted p-4"
+      >
+        <Feather name="alert-circle" size={18} color={colors.brand600} />
+        <View className="flex-1">
+          <AppText className="font-sans-bold text-sm text-ink">Signalement envoyé</AppText>
+          <AppText variant="caption" className="text-ink-faint">
+            {ROUTE_LABEL[order.issue.route]}
+          </AppText>
+        </View>
+      </View>
+    );
+  }
+
+  if (!open) return <ReportIssueButton onPress={() => setOpen(true)} />;
+
+  return (
+    <IssueForm onSubmit={(kind) => reportIssue(order.id, kind)} onCancel={() => setOpen(false)} />
   );
 }

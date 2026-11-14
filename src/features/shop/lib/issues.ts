@@ -34,6 +34,26 @@ export const ROUTE_LABEL: Record<IssueRoute, string> = {
   admin: 'Transmis au support TK LINK',
 };
 
+/** Ce qui se passe ensuite, en une phrase (commande du serveur). */
+export const ROUTE_HINT: Record<IssueRoute, string> = {
+  remboursement: 'L’argent revient sur votre carte, en général sous 5 à 10 jours ouvrés.',
+  admin: 'TK LINK examine votre commande et revient vers vous.',
+};
+
+/**
+ * Une commande DU SERVEUR se signale une fois payée, tant qu'elle n'est ni close ni déjà entre les
+ * mains de TK LINK — la liste de `report_order_issue` (migration 0027), qui seule décide.
+ */
+export const SERVER_REPORTABLE: readonly OrderStatus[] = [
+  'payee',
+  'acceptee',
+  'preparation',
+  'prete',
+  'en_livraison',
+  'recuperee',
+  'livree',
+];
+
 /**
  * Les statuts d'avant la remise : l'argent est pris, le client n'a encore rien
  * reçu. C'est le seul cas où le remboursement peut partir SANS examen — après

@@ -287,8 +287,10 @@ fonctions déployées.
 ```bash
 supabase functions deploy link-phone delete-account stripe-connect stripe-balance stripe-payment \
   stripe-webhook order-cancel uber-quote uber-dispatch uber-cancel uber-webhook ai-media-start \
-  ai-media-status push-events --project-ref dvvuktwgdakysaraeocz --use-api
+  ai-media-status push-events order-refund --project-ref dvvuktwgdakysaraeocz --use-api
 ```
+
+(`order-refund` vient avec 0027 : à déployer après elle, avec `stripe-webhook` et `push-events`.)
 
 `verify_jwt = false` vient de `config.toml` ; chaque fonction vérifie elle-même l’appelant. Tant
 qu’une clé manque, la fonction répond 503 (`stripe_not_configured`, `uber_not_configured`,
@@ -320,8 +322,9 @@ panier) ; sans la migration, l’app garde le parrainage local.
 L’app enregistre le jeton Expo du téléphone (`register_push_token`, retiré à la déconnexion par
 `unregister_push_token`) ; la table `push_tokens` n’est lisible par personne. La fonction
 `push-events` envoie : « payée » → le commerçant (nouvelle commande) ; préparation, prête,
-en livraison, livrée, litige, remboursée → l’acheteur ; réponse de TK LINK → l’auteur de la
-demande. Les destinataires sont lus en base, jamais dans la requête ; les jetons d’applications
+en livraison, livrée, litige, remboursement en cours, remboursée → l’acheteur ; une commande que le
+commerce avait en main qui part en remboursement → le commerçant aussi (0027) ; réponse de TK LINK
+→ l’auteur de la demande. Les destinataires sont lus en base, jamais dans la requête ; les jetons d’applications
 désinstallées sont effacés. Logique pure : `supabase/functions/_shared/push.ts`
 (`supabase/__tests__/push.test.ts`).
 
@@ -404,8 +407,37 @@ par `cancel_order_after_checkout` (réservée au serveur).
 
 Dans Stripe → Développeurs → Webhooks : un point de terminaison **Connect** vers
 `https://<ref>.supabase.co/functions/v1/stripe-webhook`, événements `payment_intent.succeeded`,
-`charge.refunded`, `account.updated`. L’app n’a besoin d’aucune clé Stripe (la page Checkout est
-créée par le serveur).
+`charge.refunded`, `charge.refund.updated`, `charge.dispute.created`, `account.updated`. L’app n’a
+besoin d’aucune clé Stripe (la page Checkout est créée par le serveur).
+
+**Remboursements et « Signaler un problème » (0027).** CDC V1.1 (VALIDÉ) : un point d’entrée unique
+qui route « automatiquement vers un remboursement ou vers une file Super Admin selon l’incident ».
+L’acheteur choisit un des trois motifs (`report_order_issue`, sans texte libre, une fois par
+commande payée et pas close) ; la base décide avec la règle de l’app (`shop/lib/issues.ts`) :
+
+- « Je n’ai pas reçu ma commande » **avant la remise** (payée, acceptée, en préparation) →
+  « remboursement en cours », sans examen : l’argent est pris et rien n’est sorti du commerce ; le
+  stock revient aux autres clients tant que l’offre court ;
+- tout le reste → « litige », la file du back-office (`/admin` → Litiges, avec le motif choisi).
+
+Dès qu’une commande passe « remboursement en cours » — par ce signalement ou par la décision
+« Rembourser » du back-office — le déclencheur `flash_orders_refund` appelle `order-refund` (pg_net,
+même secret et même adresse de base que `push-events` : rien à régler en plus). Elle rembourse
+**tout**, au nom du commerce, avec `refund_application_fee` : TK LINK rend aussi sa commission et la
+livraison, sinon le commerçant rembourserait de sa poche ce qu’il n’a pas touché (à confirmer avec
+le client). Le webhook passe ensuite la commande « remboursée ». Ce qui empêche de rembourser seul
+(pas de clé Stripe, pas de compte, coursier Uber encore en route, refus de Stripe, remboursement
+échoué après coup) la renvoie en « litige » avec la raison (`refund_failure`), affichée en clair
+dans l’onglet Litiges. Une contestation bancaire (`charge.dispute.created`) met la commande en
+litige (`stripe_dispute_id`) : la réponse se fait dans Stripe, avant l’échéance. Notifications :
+l’acheteur (« Remboursement en cours », puis « effectué ») et le commerçant qui avait la commande en
+main (« ne la préparez pas, ne la remettez pas »). Logique pure : `refundPlan`, `afterRefund`
+(`_shared/stripe.ts`), `shopNotice` (`_shared/push.ts`).
+
+```sh
+# APRÈS avoir appliqué 0027 (la fonction et le webhook lisent ses colonnes) :
+npx supabase functions deploy order-refund stripe-webhook push-events
+```
 
 ```sql
 -- Les paiements à régler à la main (payés hors délai, course Uber échouée…)

@@ -4,6 +4,7 @@ import { join } from 'path';
 
 import {
   afterExpire,
+  afterRefund,
   applicationFeeCents,
   checkoutParams,
   checkoutTotal,
@@ -11,6 +12,7 @@ import {
   nextCheckoutStep,
   parseBalance,
   parsePayouts,
+  refundPlan,
   returnUrlOf,
   stripeForm,
   verifyStripeSignature,
@@ -135,6 +137,156 @@ describe('effet d’un événement', () => {
   it('les autres événements ne changent rien', () => {
     expect(effectOf({ type: 'customer.created', data: { object: { id: 'cus_1' } } })).toBeNull();
     expect(effectOf(null)).toBeNull();
+  });
+
+  it('un remboursement qui échoue après coup (0027), sous ses différents noms', () => {
+    for (const type of ['charge.refund.updated', 'refund.updated', 'refund.failed']) {
+      expect(
+        effectOf({
+          type,
+          data: {
+            object: {
+              payment_intent: 'pi_1',
+              status: 'failed',
+              failure_reason: 'expired_or_canceled_card',
+            },
+          },
+        }),
+      ).toEqual({
+        kind: 'refund_failed',
+        paymentIntentId: 'pi_1',
+        reason: 'refund_failed:expired_or_canceled_card',
+      });
+    }
+    // Une mise à jour qui n'est pas un échec ne change rien.
+    expect(
+      effectOf({
+        type: 'refund.updated',
+        data: { object: { payment_intent: 'pi_1', status: 'succeeded' } },
+      }),
+    ).toBeNull();
+  });
+
+  it('une contestation bancaire (0027)', () => {
+    expect(
+      effectOf({
+        type: 'charge.dispute.created',
+        data: { object: { id: 'dp_1', payment_intent: 'pi_1' } },
+      }),
+    ).toEqual({ kind: 'order_disputed', paymentIntentId: 'pi_1', disputeId: 'dp_1' });
+    expect(
+      effectOf({ type: 'charge.dispute.created', data: { object: { id: 'dp_1' } } }),
+    ).toBeNull();
+  });
+});
+
+describe('rembourser une commande (0027, order-refund)', () => {
+  const order = (o: Partial<Parameters<typeof refundPlan>[0]> = {}) => ({
+    id: 'o-1',
+    status: 'remboursement_en_cours',
+    stripe_payment_intent_id: 'pi_1',
+    uber_delivery_id: null,
+    uber_status: null,
+    ...o,
+  });
+
+  it('le remboursement total, au nom du commerce, frais de TK LINK compris, une seule fois', () => {
+    const plan = refundPlan(order(), 'acct_1', true);
+    expect(plan).toEqual({
+      kind: 'refund',
+      account: 'acct_1',
+      idempotencyKey: 'tklink-refund-o-1',
+      params: {
+        payment_intent: 'pi_1',
+        refund_application_fee: true,
+        reason: 'requested_by_customer',
+        metadata: { order_id: 'o-1' },
+      },
+    });
+    // Pas de montant : Stripe rembourse tout ce qui reste.
+    expect(plan.kind === 'refund' && 'amount' in plan.params).toBe(false);
+    expect(plan.kind === 'refund' && stripeForm(plan.params)).toBe(
+      'payment_intent=pi_1&refund_application_fee=true&reason=requested_by_customer&metadata%5Border_id%5D=o-1',
+    );
+  });
+
+  it('une clé d’idempotence par tentative : une nouvelle décision peut réessayer', () => {
+    const first = refundPlan(order({ updated_at: '2026-11-14T18:00:00Z' }), 'acct_1', true);
+    const again = refundPlan(order({ updated_at: '2026-11-15T09:30:00Z' }), 'acct_1', true);
+    expect(first.kind === 'refund' && first.idempotencyKey).toBe(
+      `tklink-refund-o-1-${Date.parse('2026-11-14T18:00:00Z')}`,
+    );
+    expect(again.kind === 'refund' && again.idempotencyKey).not.toBe(
+      first.kind === 'refund' && first.idempotencyKey,
+    );
+  });
+
+  it('une commande qui n’attend plus son remboursement : rien', () => {
+    expect(refundPlan(order({ status: 'remboursee' }), 'acct_1', true)).toEqual({ kind: 'skip' });
+    expect(refundPlan(order({ status: 'litige' }), 'acct_1', true)).toEqual({ kind: 'skip' });
+  });
+
+  it('ce qui empêche de rembourser seul renvoie au back-office', () => {
+    expect(refundPlan(order(), 'acct_1', false)).toEqual({
+      kind: 'manual',
+      reason: 'stripe_not_configured',
+    });
+    expect(refundPlan(order({ stripe_payment_intent_id: null }), 'acct_1', true)).toEqual({
+      kind: 'manual',
+      reason: 'no_payment',
+    });
+    expect(refundPlan(order(), null, true)).toEqual({ kind: 'manual', reason: 'no_account' });
+  });
+
+  it('un coursier en route : on ne rembourse pas une commande qui roule encore', () => {
+    for (const uber_status of ['pending', 'pickup', 'pickup_complete', 'dropoff', null]) {
+      expect(refundPlan(order({ uber_delivery_id: 'del_1', uber_status }), 'acct_1', true)).toEqual(
+        {
+          kind: 'manual',
+          reason: 'courier_active',
+        },
+      );
+    }
+    for (const uber_status of ['canceled', 'returned', 'delivered']) {
+      expect(
+        refundPlan(order({ uber_delivery_id: 'del_1', uber_status }), 'acct_1', true).kind,
+      ).toBe('refund');
+    }
+  });
+
+  it('la réponse de Stripe → le statut de la commande', () => {
+    expect(afterRefund(200, { id: 're_1', status: 'succeeded' })).toEqual({
+      status: 'remboursee',
+      refundId: 're_1',
+      failure: null,
+    });
+    expect(afterRefund(200, { id: 're_1', status: 'pending' })).toEqual({
+      status: 'remboursement_en_cours',
+      refundId: 're_1',
+      failure: null,
+    });
+    expect(afterRefund(200, { id: 're_1', status: 'failed' })).toEqual({
+      status: 'litige',
+      refundId: 're_1',
+      failure: 'refund_failed',
+    });
+    // Déjà remboursée chez Stripe (à la main) : c'est fait.
+    expect(afterRefund(400, { error: { code: 'charge_already_refunded' } })).toEqual({
+      status: 'remboursee',
+      refundId: null,
+      failure: null,
+    });
+    expect(afterRefund(402, { error: { code: 'insufficient_funds' } })).toEqual({
+      status: 'litige',
+      refundId: null,
+      failure: 'stripe_failed:insufficient_funds',
+    });
+    // Stripe injoignable.
+    expect(afterRefund(0, null)).toEqual({
+      status: 'litige',
+      refundId: null,
+      failure: 'stripe_failed:unreachable',
+    });
   });
 });
 

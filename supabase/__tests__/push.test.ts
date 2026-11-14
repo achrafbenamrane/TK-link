@@ -4,6 +4,7 @@ import {
   followMessage,
   isExpoToken,
   orderMessage,
+  shopNotice,
   supportMessage,
 } from '../functions/_shared/push';
 
@@ -90,6 +91,48 @@ describe('qui prévenir quand une commande avance', () => {
 
   it('un litige prévient l’acheteur que TK LINK s’en occupe', () => {
     expect(orderMessage(order('litige'), { status: 'prete' })?.to).toBe('customer');
+  });
+});
+
+describe('un remboursement (0027)', () => {
+  const order = (status: string, audience = 'clients') => ({
+    id: 'o-r',
+    status,
+    fulfilment: 'touch-collect',
+    audience,
+  });
+
+  it('en cours → l’acheteur sait quand l’argent revient', () => {
+    expect(orderMessage(order('remboursement_en_cours'), { status: 'preparation' })).toMatchObject({
+      to: 'customer',
+      title: 'Remboursement en cours',
+      body: expect.stringMatching(/5 à 10 jours/),
+      data: { kind: 'order', id: 'o-r' },
+    });
+    expect(
+      orderMessage(order('remboursement_en_cours', 'commercants'), { status: 'payee' })?.to,
+    ).toBe('customer');
+  });
+
+  it('une commande que le commerce a en main → il ne la prépare pas, ne la remet pas', () => {
+    for (const from of ['payee', 'acceptee', 'preparation', 'prete', 'en_livraison']) {
+      expect(shopNotice(order('remboursement_en_cours'), { status: from })).toMatchObject({
+        to: 'shop_owner',
+        title: 'Commande remboursée',
+        data: { kind: 'merchant_order', id: 'o-r' },
+      });
+    }
+    expect(
+      shopNotice(order('remboursement_en_cours', 'commercants'), { status: 'payee' })?.body,
+    ).toMatch(/L’acheteur est remboursé/);
+  });
+
+  it('rien pour le commerce quand la commande n’était pas entre ses mains', () => {
+    // Décision du back-office sur un litige : le commerce n'a plus rien à faire.
+    expect(shopNotice(order('remboursement_en_cours'), { status: 'litige' })).toBeNull();
+    expect(shopNotice(order('remboursement_en_cours'), null)).toBeNull();
+    expect(shopNotice(order('remboursee'), { status: 'preparation' })).toBeNull();
+    expect(shopNotice(order('litige'), { status: 'preparation' })).toBeNull();
   });
 });
 

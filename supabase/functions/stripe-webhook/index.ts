@@ -1,5 +1,6 @@
 // Les nouvelles de Stripe : paiement réussi (la commande passe « payée », ce qui vaut acceptation —
-// CDC V1.1), remboursement total (« remboursée »), compte d'un commerçant activé (il peut encaisser).
+// CDC V1.1), remboursement total (« remboursée »), remboursement échoué et contestation bancaire
+// (« litige », 0027), compte d'un commerçant activé (il peut encaisser).
 //
 // À déclarer dans Stripe comme point de terminaison CONNECT (« événements des comptes connectés ») :
 // en Direct charges, les paiements naissent sur le compte du commerçant.
@@ -73,9 +74,39 @@ Deno.serve(async (req) => {
   } else if (effect.kind === 'order_refunded') {
     const { error } = await admin
       .from('flash_orders')
-      .update({ status: 'remboursee', updated_at: now })
+      .update({ status: 'remboursee', refund_failure: null, updated_at: now })
       .eq('stripe_payment_intent_id', effect.paymentIntentId)
       .neq('status', 'remboursee');
+    if (error) return new Response(null, { status: 500 });
+  } else if (effect.kind === 'refund_failed') {
+    // L'argent n'est pas revenu au client (0027) : « litige », la raison pour le back-office.
+    const { error } = await admin
+      .from('flash_orders')
+      .update({ status: 'litige', refund_failure: effect.reason.slice(0, 200), updated_at: now })
+      .eq('stripe_payment_intent_id', effect.paymentIntentId)
+      .in('status', ['remboursement_en_cours', 'remboursee']);
+    if (error) return new Response(null, { status: 500 });
+  } else if (effect.kind === 'order_disputed') {
+    // Contestation bancaire (0027) : la commande garde la trace de la contestation, et passe en
+    // « litige » si elle était en cours ou honorée. Remboursée (ou en passe de l'être) : elle le reste.
+    const { error: markError } = await admin
+      .from('flash_orders')
+      .update({ stripe_dispute_id: effect.disputeId, updated_at: now })
+      .eq('stripe_payment_intent_id', effect.paymentIntentId);
+    if (markError) return new Response(null, { status: 500 });
+    const { error } = await admin
+      .from('flash_orders')
+      .update({ status: 'litige', updated_at: now })
+      .eq('stripe_payment_intent_id', effect.paymentIntentId)
+      .in('status', [
+        'payee',
+        'acceptee',
+        'preparation',
+        'prete',
+        'en_livraison',
+        'recuperee',
+        'livree',
+      ]);
     if (error) return new Response(null, { status: 500 });
   } else {
     const { error } = await admin

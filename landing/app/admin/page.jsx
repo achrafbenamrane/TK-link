@@ -293,7 +293,8 @@ export default function AdminPage() {
     notify(`Litige ${dispute.order} tranché.`);
   };
 
-  const openDisputes = disputes.filter((d) => !rulings[d.id]);
+  // Ouvert : pas encore tranché — ou tranché « Rembourser » sans que Stripe ait pu rembourser (0027).
+  const openDisputes = disputes.filter((d) => !rulings[d.id] || d.refundFailure);
 
   const pending = apps.filter((a) => !decisions[a.id]);
 
@@ -903,12 +904,16 @@ export default function AdminPage() {
                       </div>
                       <span
                         className={
-                          verdict
+                          verdict && !dispute.refundFailure
                             ? 'tkadmin-verdict-pill tkadmin-ok'
                             : 'tkadmin-verdict-pill tkadmin-late'
                         }
                       >
-                        {verdict ? 'Tranché' : `Ouvert · ${formatEuros(dispute.amountCents)}`}
+                        {dispute.refundFailure
+                          ? 'Remboursement à faire'
+                          : verdict
+                            ? 'Tranché'
+                            : `Ouvert · ${formatEuros(dispute.amountCents)}`}
                       </span>
                     </header>
 
@@ -933,6 +938,12 @@ export default function AdminPage() {
 
                     <p className="tkadmin-quote">« {dispute.message} »</p>
 
+                    {dispute.refundFailure ? (
+                      <p className="tkadmin-hint tkadmin-hint-warn" role="alert">
+                        {dispute.refundFailure}
+                      </p>
+                    ) : null}
+
                     {dispute.paymentIntent ? (
                       <p className="tkadmin-hint">
                         Paiement Stripe <code>{dispute.paymentIntent}</code>
@@ -942,8 +953,10 @@ export default function AdminPage() {
                             sur le compte <code>{dispute.stripeAccount}</code>
                           </>
                         ) : null}
-                        . Pour rembourser : Stripe → Connect → ce compte → Paiements. Le webhook
-                        passe ensuite la commande « remboursée ».
+                        .{' '}
+                        {dispute.chargeback
+                          ? 'Contestation bancaire : la réponse se fait dans Stripe → Connect → ce compte → Litiges.'
+                          : '« Rembourser » lance le remboursement chez Stripe, au nom du commerce, frais de TK LINK compris ; la commande passe « remboursée » quand Stripe confirme.'}
                       </p>
                     ) : null}
 
