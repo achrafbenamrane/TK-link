@@ -77,3 +77,8 @@ supabase/.temp
 
 # Build de vérification du site (NEXT_DIST_DIR=.next-verify), jamais versionné
 landing/.next-verify
+
+# Rapport de couverture Jest (généré) et documents du client posés à la racine : ni dans git, ni
+# envoyés aux serveurs de build EAS (qui suivent ce fichier).
+coverage/
+/TK-LINK-*.pdf
