@@ -167,6 +167,26 @@ enforces).
   coursier », filleul : première commande récupérée → 5 € aux deux comptes, la commande suivante
   déduit au plus la commission (≈ 0,35 € sur 7 €), une réservation annulée rend le crédit.
 
+## CUJ-010 — Un commerçant commande l’offre pro d’un grossiste (B2B, argent réel)
+
+- **Owner :** squad produit TK LINK
+- **Flow :** aucun — couvert par `merchant/__tests__/wholesale-api.test.ts`,
+  `wholesale-server.test.tsx`, `wholesaler-sales.test.tsx`, `shop/__tests__/server-orders.test.tsx`,
+  `order-feedback.test.tsx`, `supabase/__tests__/push.test.ts` et pgTAP 82–92 ; à dérouler sur DEUX
+  téléphones (grossiste, commerçant), comptes validés dans `/admin`, migration 0023 appliquée PUIS
+  `stripe-payment`, `uber-quote`, `uber-dispatch`, `push-events` redéployées.
+- **Journey :** le grossiste publie une offre pro (minimum 10) → le commerçant ouvre « Grossistes »,
+  « Commander » : la quantité part du minimum et ne descend pas en dessous → « Expédiée par le
+  grossiste » → « Payer » : page Stripe → « Mes achats » : « Commande reçue » → le grossiste
+  (« Commandes ») voit l’acheteur et l’adresse du commerce, « Préparer la commande », coche le bon de
+  préparation, « Marquer expédiée », « Marquer livrée » → l’acheteur lit « Expédiée » puis
+  « Livrée », sans coursier ni points. Même chose en retrait : « Prête au retrait », le commerçant
+  donne son code, le grossiste le tape → « Retirée ».
+- **Edge cases agents must try :** un compte client ne voit pas les offres pro ; un commerçant
+  dont le dossier est en vérification est refusé ; sa propre offre ne se commande pas ; deux
+  commerçants sur le dernier lot ; un mauvais code de retrait ; le grossiste ne peut pas « expédier »
+  avant d’avoir coché le bon.
+
 ## Template for new CUJs
 
 ```

@@ -40,6 +40,8 @@ export { BiometricsScreen } from './ui/biometrics-screen';
 export { InvoicesScreen } from './ui/invoices-screen';
 export { AddressesScreen } from './ui/addresses-screen';
 export { MerchantOrdersScreen } from './ui/merchant-orders-screen';
+// La caisse du serveur, pour les routes qui la branchent ailleurs (les offres pro des grossistes).
+export { CHECKOUT_ERROR, openPaymentPage, prepareServerCheckout } from './lib/server-checkout';
 export { HandoverScreen } from './ui/handover-screen';
 export { MerchantDetailScreen } from './ui/merchant-detail-screen';
 export { useShopStore, selectCartCount, selectCartSubtotal } from './model/store';

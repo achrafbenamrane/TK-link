@@ -53,3 +53,69 @@ export type PrepStep = (typeof PREP_STEPS)[number]['key'];
 export function isOpenWholesale(status: WholesaleStatus): boolean {
   return status !== 'terminee';
 }
+
+/**
+ * LES COMMANDES B2B DU SERVEUR (migration 0023) — mêmes statuts que les commandes des clients, lus
+ * avec les mots du grossiste : pas d'acceptation (payée = « Commande reçue »), et « Expédiée » quand
+ * le grossiste livre lui-même.
+ */
+export const B2B_STATUSES = [
+  'paiement_attente',
+  'payee',
+  'acceptee',
+  'preparation',
+  'prete',
+  'en_livraison',
+  'recuperee',
+  'livree',
+  'refusee',
+  'annulee',
+  'remboursement_en_cours',
+  'remboursee',
+  'litige',
+] as const;
+export type B2bStatus = (typeof B2B_STATUSES)[number];
+
+export const B2B_STATUS_LABEL: Record<B2bStatus, string> = {
+  paiement_attente: 'À payer',
+  payee: 'Commande reçue',
+  acceptee: 'Commande reçue',
+  preparation: 'En préparation',
+  prete: 'Prête au retrait',
+  en_livraison: 'Expédiée',
+  recuperee: 'Retirée',
+  livree: 'Livrée',
+  refusee: 'Refusée',
+  annulee: 'Annulée',
+  remboursement_en_cours: 'Remboursement en cours',
+  remboursee: 'Remboursée',
+  litige: 'Litige en cours',
+};
+
+export type B2bStep =
+  | { kind: 'advance'; to: 'preparation' | 'prete' | 'en_livraison' | 'livree'; label: string }
+  /** Retrait chez le grossiste : il remet la commande contre le code de l'acheteur. */
+  | { kind: 'handover'; label: string };
+
+/** Le prochain geste du grossiste sur une vente du serveur, ou `null` s'il n'en a plus. */
+export function nextB2bStep(order: {
+  status: B2bStatus;
+  fulfilment: 'touch-collect' | 'livraison';
+}): B2bStep | null {
+  const shipped = order.fulfilment === 'livraison';
+  switch (order.status) {
+    case 'payee':
+    case 'acceptee':
+      return { kind: 'advance', to: 'preparation', label: 'Préparer la commande' };
+    case 'preparation':
+      return shipped
+        ? { kind: 'advance', to: 'en_livraison', label: 'Marquer expédiée' }
+        : { kind: 'advance', to: 'prete', label: 'Prête au retrait' };
+    case 'en_livraison':
+      return shipped ? { kind: 'advance', to: 'livree', label: 'Marquer livrée' } : null;
+    case 'prete':
+      return shipped ? null : { kind: 'handover', label: 'Remettre la commande' };
+    default:
+      return null;
+  }
+}

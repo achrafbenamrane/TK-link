@@ -144,6 +144,28 @@ describe('passage en caisse', () => {
     expect(await prepareServerCheckout(input)).toEqual({ ok: false, code: 'out_of_stock' });
     expect(edge).not.toHaveBeenCalled();
   });
+
+  it('offre pro livrée par le grossiste (0023) : pas de devis Uber, droit au paiement', async () => {
+    rpc.mockResolvedValueOnce({ data: ORDER_ID, error: null });
+    edge.mockResolvedValueOnce({ ok: true, data: { url: 'https://checkout.stripe.com/c/pay/y' } });
+    expect(await prepareServerCheckout({ ...input, courier: false })).toEqual({
+      ok: true,
+      orderId: ORDER_ID,
+      paymentUrl: 'https://checkout.stripe.com/c/pay/y',
+    });
+    expect(edge).toHaveBeenCalledTimes(1);
+    expect(edge).toHaveBeenCalledWith('stripe-payment', { orderId: ORDER_ID });
+  });
+
+  it('offre pro : les refus du serveur se disent', async () => {
+    for (const code of ['pro_required', 'own_offer'] as const) {
+      rpc.mockResolvedValueOnce({ data: null, error: { code: 'P0001', message: code } });
+      expect(await prepareServerCheckout({ ...input, courier: false })).toEqual({
+        ok: false,
+        code,
+      });
+    }
+  });
 });
 
 describe('annuler une réservation (migration 0020)', () => {

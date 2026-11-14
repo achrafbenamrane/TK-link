@@ -16,6 +16,7 @@ import {
   type WholesaleStatus,
 } from '../lib/wholesale-orders';
 import { selectWholesaleOrders, useMerchantStore } from '../model/store';
+import { ServerWholesalerOrders } from './wholesaler-sales';
 
 const TONE: Record<WholesaleStatus, string> = {
   recue: 'border-warning text-warning',
@@ -32,7 +33,22 @@ const TONE: Record<WholesaleStatus, string> = {
  * Statuts : Commande reçue → En préparation → Expédiée → Livrée → Terminée. Pas de geste
  * « Accepter » : la commande payée vaut acceptation (CDC V1.1, Grossiste).
  */
-export function WholesalerOrdersScreen({ onBack }: { onBack?: () => void }) {
+export function WholesalerOrdersScreen({
+  onBack,
+  server = false,
+}: {
+  onBack?: () => void;
+  /** Avec un serveur (migration 0023) : les vraies ventes payées par les commerçants. */
+  server?: boolean;
+}) {
+  return server ? (
+    <ServerWholesalerOrders onBack={onBack} />
+  ) : (
+    <LocalWholesalerOrders onBack={onBack} />
+  );
+}
+
+function LocalWholesalerOrders({ onBack }: { onBack?: () => void }) {
   const colors = useColors();
   const orders = useMerchantStore(selectWholesaleOrders);
   const advance = useMerchantStore((s) => s.advanceWholesaleOrder);

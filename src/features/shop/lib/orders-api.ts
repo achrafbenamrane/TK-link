@@ -30,6 +30,12 @@ export type OrdersError =
   | 'one_shop_per_order'
   /** Trois réservations non payées en même temps. */
   | 'too_many_pending'
+  /** Offre pro (0023) : il faut un commerce validé par TK LINK. */
+  | 'pro_required'
+  /** Offre pro (0023) : la sienne ne se commande pas. */
+  | 'own_offer'
+  /** Au-delà de ce qu'un seul paiement Stripe accepte (999 999,99 €). */
+  | 'order_too_large'
   | 'address_required'
   /** Livraison : Uber Direct ne livre pas cette adresse (hors zone, trop loin). */
   | 'delivery_unavailable'
@@ -63,6 +69,9 @@ export type OrdersError =
 type Result<T> = { ok: true; value: T } | { ok: false; code: OrdersError };
 
 const KNOWN: readonly OrdersError[] = [
+  'pro_required',
+  'own_offer',
+  'order_too_large',
   'out_of_stock',
   'offer_unavailable',
   'mode_unavailable',
@@ -266,6 +275,11 @@ export async function fetchShopOrders(
 export type ReserveInput = {
   lines: { offerId: string; qty: number }[];
   fulfilment: Fulfilment;
+  /**
+   * `false` : livrée par le vendeur lui-même (offre pro d’un grossiste, 0023) — ni devis Uber, ni
+   * adresse à saisir (le serveur prend celle du commerce acheteur).
+   */
+  courier?: boolean;
   /** Livraison : l’adresse en une ligne, et le point exact s’il est connu. */
   address?: string | null;
   coord?: { lat: number; lng: number } | null;

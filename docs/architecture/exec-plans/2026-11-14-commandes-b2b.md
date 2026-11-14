@@ -62,9 +62,13 @@ paiement instantané), facture électronique du grossiste (chantier facturation)
 
 ### Phase 2 — L’app
 
-- [ ] `merchant/lib/wholesale-api.ts` : offres pro du serveur, achats, ventes, avancer (tests)
-- [ ] Marché : les offres réelles, commande → paiement (route `lots.tsx`, sans devis Uber)
-- [ ] Achats du commerçant et ventes du grossiste lus au serveur ; actions du grossiste
+- [x] `merchant/lib/wholesale-api.ts` : offres pro du serveur, achats, ventes, avancer (tests)
+- [x] Marché : les offres réelles, commande → paiement (route `lots.tsx`, sans devis Uber)
+- [x] Achats du commerçant et ventes du grossiste lus au serveur ; actions du grossiste (bon de
+      préparation coché avant l’expédition, retrait contre le code) ; fiche de commande aux mots du
+      B2B (route `commande/[id]` : un compte commerçant n’achète qu’aux grossistes) — sans lire
+      `audience` dans la requête commune des commandes, pour qu’une mise à jour OTA arrivée avant 0023
+      ne casse pas les commandes des clients
 
 ### Phase 3 — Preuve et docs
 

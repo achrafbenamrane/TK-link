@@ -12,7 +12,6 @@ import { useColors } from '@/shared/theme/theme-provider';
 import {
   ORDER_STATUS_LABEL,
   timelineFor,
-  timelineIndex,
   type Fulfilment,
   type OrderStatus,
 } from '../lib/order-status';
@@ -51,7 +50,8 @@ const STEP_ICON: Record<OrderStatus, FeatherName> = {
 };
 
 /** Ce que chaque étape veut dire pour le client, selon son mode de retrait. */
-function hintFor(status: OrderStatus, fulfilment: Fulfilment): string {
+function hintFor(status: OrderStatus, fulfilment: Fulfilment, wholesale = false): string {
+  if (wholesale) return wholesaleHint(status, fulfilment);
   switch (status) {
     case 'creee':
       return 'Nous avons bien reçu votre commande';
@@ -75,6 +75,38 @@ function hintFor(status: OrderStatus, fulfilment: Fulfilment): string {
   }
 }
 
+/**
+ * Un achat chez un grossiste (migration 0023) : il prépare et livre lui-même — ni coursier Uber, ni
+ * « Bon appétit ». Le commerçant acheteur le lit avec ces mots-là.
+ */
+function wholesaleHint(status: OrderStatus, fulfilment: Fulfilment): string {
+  switch (status) {
+    case 'paiement_attente':
+      return 'En attente de la confirmation du paiement';
+    case 'payee':
+      return 'Le grossiste a reçu votre commande';
+    case 'preparation':
+      return 'Le grossiste prépare votre commande';
+    case 'prete':
+      return 'À retirer chez le grossiste, avec votre code';
+    case 'en_livraison':
+      return 'Le grossiste l’a expédiée à votre commerce';
+    case 'recuperee':
+      return 'Retirée chez le grossiste';
+    case 'livree':
+      return 'Livrée à votre commerce';
+    default:
+      return fulfilment === 'livraison' ? 'Livrée par le grossiste' : 'Retrait chez le grossiste';
+  }
+}
+
+/** Les étapes d'un achat B2B : pas d'acceptation (CDC V1.1), et pas de « prête » quand il expédie. */
+function stepsFor(fulfilment: Fulfilment, wholesale: boolean): OrderStatus[] {
+  const steps = timelineFor(fulfilment);
+  if (!wholesale) return steps;
+  return steps.filter((s) => s !== 'acceptee' && !(fulfilment === 'livraison' && s === 'prete'));
+}
+
 function formatDateTime(ms: number): string {
   const d = new Date(ms);
   const p = (n: number) => String(n).padStart(2, '0');
@@ -89,10 +121,19 @@ function formatDateTime(ms: number): string {
  * sur la frise : on n'allume alors aucune étape plutôt que d'en désigner une au
  * hasard, ce qui laisserait croire que la commande avance encore.
  */
-function Timeline({ status, fulfilment }: { status: OrderStatus; fulfilment: Fulfilment }) {
+function Timeline({
+  status,
+  fulfilment,
+  wholesale = false,
+}: {
+  status: OrderStatus;
+  fulfilment: Fulfilment;
+  wholesale?: boolean;
+}) {
   const colors = useColors();
-  const steps = timelineFor(fulfilment);
-  const current = timelineIndex(status, fulfilment);
+  const steps = stepsFor(fulfilment, wholesale);
+  const index = steps.indexOf(status);
+  const current = index === -1 ? null : index;
   return (
     <View className="gap-0">
       {steps.map((step, i) => {
@@ -124,10 +165,10 @@ function Timeline({ status, fulfilment }: { status: OrderStatus; fulfilment: Ful
                   active ? 'text-brand-600' : done ? 'text-ink' : 'text-ink-faint',
                 )}
               >
-                {ORDER_STATUS_LABEL[step]}
+                {wholesale && step === 'en_livraison' ? 'Expédiée' : ORDER_STATUS_LABEL[step]}
               </AppText>
               <AppText variant="caption" className="text-xs text-ink-faint">
-                {hintFor(step, fulfilment)}
+                {hintFor(step, fulfilment, wholesale)}
               </AppText>
             </View>
           </View>
@@ -141,7 +182,15 @@ function invoicePayload(order: Order): string {
   return JSON.stringify({ v: 1, id: order.id, t: order.total, n: order.items.length });
 }
 
-export function OrderDetailScreen() {
+type Props = {
+  /**
+   * Un achat chez un grossiste (migration 0023) — la route le sait par le rôle : un compte commerçant
+   * n’achète qu’aux grossistes. Ses mots, ses étapes, et pas de points de client.
+   */
+  wholesale?: boolean;
+};
+
+export function OrderDetailScreen({ wholesale = false }: Props = {}) {
   const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -231,7 +280,7 @@ export function OrderDetailScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-5 pb-10">
         <View className="mb-4 rounded-card border border-line bg-surface p-4">
-          <Timeline status={order.status} fulfilment={order.fulfilment} />
+          <Timeline status={order.status} fulfilment={order.fulfilment} wholesale={wholesale} />
         </View>
 
         {/* Adresse — l'ancienne commande n'en a pas, on ne montre rien plutôt
@@ -302,7 +351,11 @@ export function OrderDetailScreen() {
                 Livraison
               </AppText>
               <AppText className="font-sans-bold text-sm text-success">
-                {order.deliveryFee === 0 ? 'Offerte' : `${formatEuros(order.deliveryFee)}`}
+                {wholesale
+                  ? 'Par le grossiste'
+                  : order.deliveryFee === 0
+                    ? 'Offerte'
+                    : `${formatEuros(order.deliveryFee)}`}
               </AppText>
             </View>
             <View className="flex-row items-center justify-between">
@@ -315,7 +368,7 @@ export function OrderDetailScreen() {
                 {formatEuros(order.total + order.deliveryFee)}
               </AppText>
             </View>
-            {order.pointsEarned > 0 ? (
+            {order.pointsEarned > 0 && !wholesale ? (
               <View className="mt-1 flex-row items-center gap-1.5">
                 <Feather name="gift" size={13} color={colors.brand600} />
                 <AppText variant="caption" className="font-sans-semibold text-brand-600">

@@ -184,3 +184,24 @@ describe('<OrderDetailScreen /> — une livraison part avec un coursier partenai
     expect(screen.queryByText(/coursier/i)).toBeNull();
   });
 });
+
+describe('<OrderDetailScreen wholesale /> — un achat chez un grossiste (0023)', () => {
+  it('le grossiste expédie lui-même : ni coursier, ni « prête », ni points de client', () => {
+    useShopStore.setState({
+      orders: [order({ fulfilment: 'livraison', status: 'en_livraison', pointsEarned: 2700 })],
+    });
+    render(<OrderDetailScreen wholesale />);
+    expect(screen.getAllByText('Expédiée').length).toBeGreaterThan(0);
+    expect(screen.getByText('Le grossiste l’a expédiée à votre commerce')).toBeTruthy();
+    expect(screen.queryByText(/coursier|Uber/i)).toBeNull();
+    expect(screen.queryByText('Prête')).toBeNull();
+    expect(screen.queryByText(/points gagnés/)).toBeNull();
+    expect(screen.getByText('Par le grossiste')).toBeTruthy();
+  });
+
+  it('retrait chez le grossiste : avec le code', () => {
+    useShopStore.setState({ orders: [order({ fulfilment: 'touch-collect', status: 'prete' })] });
+    render(<OrderDetailScreen wholesale />);
+    expect(screen.getByText('À retirer chez le grossiste, avec votre code')).toBeTruthy();
+  });
+});

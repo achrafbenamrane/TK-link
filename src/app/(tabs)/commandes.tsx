@@ -26,7 +26,7 @@ export default function CommandesRoute() {
   );
 
   // Le grossiste reçoit les commandes des COMMERÇANTS : ce n'est ni l'écran du client ni celui du commerce.
-  if (role === 'grossiste') return <WholesalerOrdersScreen />;
+  if (role === 'grossiste') return <WholesalerOrdersScreen server={isSupabaseConfigured} />;
   return role === 'commercant' ? (
     <MerchantOrdersScreen
       dealIds={dealIds}

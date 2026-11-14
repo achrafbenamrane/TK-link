@@ -17,14 +17,14 @@ import { classifyShopError, type ShopApiError } from './shop-api';
  * publie. Les brouillons, eux, restent sur le téléphone : ils ne regardent que leur auteur.
  */
 
-const COLUMNS =
+export const OFFER_COLUMNS =
   'id, audience, title, category, description, price_cents, old_price_cents, stock_total, ' +
   'stock_left, min_qty, duration_minutes, starts_at, modes, photo_url, recurrence, offline, created_at';
 
 /** Au-delà d'une minute d'écart entre la création et le début, l'offre a été PROGRAMMÉE. */
 const SCHEDULED_AFTER_MS = 60_000;
 
-const ServerOfferSchema = z
+export const ServerOfferSchema = z
   .object({
     id: z.string(),
     audience: z.enum(AUDIENCES),
@@ -91,7 +91,7 @@ function classify(error: unknown): FlashApiError {
 }
 
 /** Le commerce de la personne connectée, s'il est validé. */
-async function myValidatedShop(): Promise<Result<{ id: string; ownerId: string }>> {
+export async function myValidatedShop(): Promise<Result<{ id: string; ownerId: string }>> {
   const { data: auth } = await supabase.auth.getSession();
   const ownerId = auth.session?.user.id;
   if (!ownerId) return { ok: false, code: 'not_signed_in' };
@@ -164,7 +164,7 @@ export async function publishFlash(
           ? { starts_at: new Date(scheduledStartMs(nowMs, draft.startInMinutes)).toISOString() }
           : {}),
       })
-      .select(COLUMNS)
+      .select(OFFER_COLUMNS)
       .single();
     if (error) return { ok: false, code: classify(error) };
     const parsed = ServerOfferSchema.safeParse(data);
@@ -181,7 +181,7 @@ export async function fetchMyFlashes(): Promise<Result<PublishedOffer[]>> {
     if (!shop.ok) return shop.code === 'not_validated' ? { ok: true, value: [] } : shop;
     const { data, error } = await supabase
       .from('flash_offers')
-      .select(COLUMNS)
+      .select(OFFER_COLUMNS)
       .eq('shop_id', shop.value.id)
       .order('created_at', { ascending: false })
       .limit(200);

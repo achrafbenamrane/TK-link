@@ -1,11 +1,15 @@
 import { Feather } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { cn } from '@/shared/lib/cn';
 import { AppText, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { formatCents } from '../lib/billing';
+import { type B2bOrder, fetchB2bPurchases } from '../lib/wholesale-api';
+import { B2B_STATUS_LABEL, type B2bStatus } from '../lib/wholesale-orders';
 import { selectWholesaleOrders, useMerchantStore } from '../model/store';
 
 /** « aujourd'hui », « hier », puis la date — ce qu'on cherche est récent. */
@@ -30,7 +34,18 @@ function dayLabel(at: number, nowMs: number): string {
  * Le total dépensé est en tête parce que c'est la question d'un commerçant
  * devant son historique d'achats : combien j'ai mis ce mois-ci.
  */
-export function MerchantPurchasesScreen() {
+type Props = {
+  /** Avec un serveur (migration 0023) : les vrais achats, relus à chaque ouverture. */
+  server?: boolean;
+  /** Ouvrir la commande : payer une réservation, lire le code de retrait. */
+  onOpenOrder?: (orderId: string) => void;
+};
+
+export function MerchantPurchasesScreen({ server = false, onOpenOrder }: Props) {
+  return server ? <ServerPurchases onOpenOrder={onOpenOrder} /> : <LocalPurchases />;
+}
+
+function LocalPurchases() {
   const colors = useColors();
   const orders = useMerchantStore(selectWholesaleOrders);
   // Instant figé au montage : « aujourd'hui » ne doit pas changer en cours de
@@ -121,6 +136,148 @@ export function MerchantPurchasesScreen() {
                 </View>
               </View>
             ))}
+          </View>
+        )}
+      </ScrollView>
+    </Screen>
+  );
+}
+
+/** Ce qui compte dans « dépensés » : une commande payée, ni refusée ni remboursée. */
+const NOT_SPENT: readonly B2bStatus[] = [
+  'paiement_attente',
+  'annulee',
+  'refusee',
+  'remboursement_en_cours',
+  'remboursee',
+];
+
+/** Ce qui attend un geste de l'acheteur : payer, ou présenter son code de retrait. */
+const NEEDS_BUYER: readonly B2bStatus[] = ['paiement_attente', 'prete'];
+
+/**
+ * MES ACHATS SUR LE SERVEUR (migration 0023) : payés en ligne, suivis jusqu'à la livraison par le
+ * grossiste (ou le retrait chez lui). Une réservation à payer, ou une commande prête au retrait,
+ * s'ouvre : on y paie, on y lit son code.
+ */
+function ServerPurchases({ onOpenOrder }: { onOpenOrder?: (orderId: string) => void }) {
+  const colors = useColors();
+  const [now] = useState(() => Date.now());
+  const [orders, setOrders] = useState<B2bOrder[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      void fetchB2bPurchases().then((res) => {
+        if (!alive) return;
+        setFailed(!res.ok);
+        if (res.ok) setOrders(res.value);
+      });
+      return () => {
+        alive = false;
+      };
+    }, []),
+  );
+
+  const list = orders ?? [];
+  const spent = list
+    .filter((o) => !NOT_SPENT.includes(o.status))
+    .reduce((sum, o) => sum + o.totalCents, 0);
+
+  return (
+    <Screen testID="merchant-purchases" padded={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-10">
+        <View className="px-5 pb-3 pt-2">
+          <AppText variant="display" className="text-2xl">
+            Mes achats
+          </AppText>
+          <AppText variant="caption" className="mt-0.5">
+            Ce que vous avez commandé aux grossistes.
+          </AppText>
+        </View>
+
+        {spent > 0 ? (
+          <View className="mx-5 rounded-card bg-surface-inverse p-4">
+            <AppText
+              testID="purchases-spent"
+              className="font-display text-accent"
+              style={{ fontSize: 22 }}
+            >
+              {formatCents(spent)}
+            </AppText>
+            <AppText variant="caption" className="text-ink-inverse/60">
+              payés aux grossistes
+            </AppText>
+          </View>
+        ) : null}
+
+        {orders === null ? (
+          <AppText variant="caption" className="mt-10 text-center">
+            {failed ? 'Vos achats n’ont pas pu être chargés.' : 'Chargement de vos achats…'}
+          </AppText>
+        ) : list.length === 0 ? (
+          <View testID="merchant-purchases-empty" className="mt-12 items-center gap-2 px-10">
+            <Feather name="package" size={30} color={colors.inkFaint} />
+            <AppText variant="title" className="mt-1 text-center text-base">
+              Aucun achat pour l’instant
+            </AppText>
+            <AppText variant="caption" className="text-center">
+              Les offres que vous commandez aux grossistes apparaîtront ici, jusqu’à leur livraison.
+            </AppText>
+          </View>
+        ) : (
+          <View className="mt-4 gap-3 px-5">
+            {list.map((order) => {
+              const actionable = NEEDS_BUYER.includes(order.status) && Boolean(onOpenOrder);
+              return (
+                <Pressable
+                  key={order.id}
+                  testID={`purchase-${order.id}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${order.title}, ${B2B_STATUS_LABEL[order.status]}`}
+                  disabled={!actionable}
+                  onPress={() => onOpenOrder?.(order.id)}
+                  className="rounded-card border border-line bg-surface p-4"
+                >
+                  <View className="flex-row items-start gap-2">
+                    <View className="flex-1">
+                      <AppText className="font-sans-bold text-ink" numberOfLines={2}>
+                        {order.title}
+                      </AppText>
+                      <AppText variant="caption" className="mt-0.5 text-ink-faint">
+                        {order.counterpart} · {dayLabel(order.at, now)}
+                      </AppText>
+                    </View>
+                    <AppText className="font-display text-ink" style={{ fontSize: 17 }}>
+                      {formatCents(order.totalCents)}
+                    </AppText>
+                  </View>
+
+                  <View className="mt-2 flex-row items-center justify-between border-t border-line pt-2">
+                    <AppText variant="caption" className="text-ink-muted">
+                      {order.qty} lot{order.qty > 1 ? 's' : ''} ·{' '}
+                      {order.fulfilment === 'livraison' ? 'expédiés' : 'à retirer'}
+                    </AppText>
+                    <View className="flex-row items-center gap-1.5">
+                      <AppText
+                        testID={`purchase-status-${order.id}`}
+                        className={cn(
+                          'font-sans-semibold',
+                          actionable ? 'text-brand-600' : 'text-ink-muted',
+                        )}
+                        style={{ fontSize: 12 }}
+                      >
+                        {B2B_STATUS_LABEL[order.status]}
+                      </AppText>
+                      {actionable ? (
+                        <Feather name="chevron-right" size={14} color={colors.brand600} />
+                      ) : null}
+                    </View>
+                  </View>
+                </Pressable>
+              );
+            })}
           </View>
         )}
       </ScrollView>

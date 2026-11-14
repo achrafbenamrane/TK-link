@@ -1,18 +1,28 @@
 import { Feather } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 
 import { CATEGORY_INFO } from '@/shared/lib/categories';
 import { cn } from '@/shared/lib/cn';
-import { AppText, HeaderBackButton, Screen } from '@/shared/ui';
+import { AppText, Button, HeaderBackButton, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { formatCents } from '../lib/billing';
 import { discountPct, liveOffers, secondsLeft } from '../lib/offers';
+import { fetchServerLots } from '../lib/wholesale-api';
 import type { PublishedOffer } from '../model/schema';
 import { selectLots, selectOffers, selectWholesaleOrders, useMerchantStore } from '../model/store';
+import { type LotCheckout, LotOrderPanel } from './lot-order-panel';
 
 type Props = {
+  /**
+   * Avec un serveur (migration 0023) : les offres pro RÉELLES, commandées et payées en ligne. La route
+   * branche la caisse de la feature `shop`. Sans elle : la démonstration de ce téléphone.
+   */
+  checkout?: LotCheckout;
+  /** Après un paiement : voir ses achats aux grossistes. */
+  onPurchases?: () => void;
   /**
    * Ce qui empêche de commander, s'il y a lieu — CDC §5. Calculé par la ROUTE
    * à partir du rôle et du SIRET : la feature n'a pas le profil sous la main.
@@ -42,25 +52,54 @@ function timeLabel(seconds: number): string {
  * moment du clic : découvrir qu'on ne peut pas commander après avoir choisi
  * son lot et sa quantité est la pire façon de l'apprendre.
  */
-export function WholesaleScreen({ blockedReason = null, onFixProfile, onBack }: Props) {
+export function WholesaleScreen({
+  checkout,
+  onPurchases,
+  blockedReason = null,
+  onFixProfile,
+  onBack,
+}: Props) {
   const colors = useColors();
   const [now] = useState(() => Date.now());
   const lots = useMerchantStore(selectLots);
   const mine = useMerchantStore(selectOffers);
-  const orders = useMerchantStore(selectWholesaleOrders);
+  const localOrders = useMerchantStore(selectWholesaleOrders);
   const orderLot = useMerchantStore((s) => s.orderLot);
+  const server = Boolean(checkout);
+
+  // Le marché du serveur : relu à chaque ouverture (le stock d'un lot bouge avec les commandes).
+  const [serverLots, setServerLots] = useState<PublishedOffer[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    const res = await fetchServerLots(Date.now());
+    setLoadFailed(!res.ok);
+    if (res.ok) setServerLots(res.value);
+  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      if (server) void load();
+    }, [server, load]),
+  );
 
   // Le marché, plus mes propres annonces B2B si j'en ai publié. Mémo et non
   // sélecteur abonné : un tableau recalculé ferait boucler Zustand 5.
-  const market = useMemo(() => {
+  const localMarket = useMemo(() => {
     const b2b = mine.filter((o) => o.audience === 'commercants');
     return liveOffers([...lots, ...b2b], now);
   }, [lots, mine, now]);
+  const market = server ? (serverLots ?? []) : localMarket;
+  // Le récapitulatif local ne parle que de la démonstration : les vrais achats sont dans « Mes achats ».
+  const orders = useMemo(() => (server ? [] : localOrders), [server, localOrders]);
 
   const spent = useMemo(() => orders.reduce((sum, o) => sum + o.totalCents, 0), [orders]);
 
   const order = (lot: PublishedOffer) => {
     if (blockedReason) return;
+    if (server) {
+      setSelected((current) => (current === lot.id ? null : lot.id));
+      return;
+    }
     // On commande au minimum exigé par le grossiste — jamais en dessous.
     const qty = Math.max(1, lot.minQty);
     Alert.alert(
@@ -145,7 +184,25 @@ export function WholesaleScreen({ blockedReason = null, onFixProfile, onBack }: 
           </View>
         ) : null}
 
-        {market.length === 0 ? (
+        {server && loadFailed && serverLots === null ? (
+          <View testID="wholesale-load-error" className="mt-8 items-center gap-3 px-10">
+            <Feather name="wifi-off" size={28} color={colors.inkFaint} />
+            <AppText variant="caption" className="text-center">
+              Les offres des grossistes n’ont pas pu être chargées.
+            </AppText>
+            <Button
+              testID="wholesale-retry"
+              label="Réessayer"
+              variant="outline"
+              size="sm"
+              onPress={() => void load()}
+            />
+          </View>
+        ) : server && serverLots === null ? (
+          <AppText testID="wholesale-loading" variant="caption" className="mt-8 text-center">
+            Chargement des offres…
+          </AppText>
+        ) : market.length === 0 ? (
           <View testID="wholesale-empty" className="mt-8 items-center gap-2 px-10">
             <Feather name="package" size={30} color={colors.inkFaint} />
             <AppText variant="title" className="mt-1 text-center text-base">
@@ -249,6 +306,19 @@ export function WholesaleScreen({ blockedReason = null, onFixProfile, onBack }: 
                       </AppText>
                     </Pressable>
                   </View>
+
+                  {checkout && selected === lot.id ? (
+                    <LotOrderPanel
+                      lot={lot}
+                      checkout={checkout}
+                      onClose={() => setSelected(null)}
+                      onDone={() => {
+                        setSelected(null);
+                        void load();
+                        onPurchases?.();
+                      }}
+                    />
+                  ) : null}
                 </View>
               );
             })}

@@ -26,7 +26,7 @@ export async function prepareServerCheckout(input: ReserveInput): Promise<Server
   if (!reserved.ok) return reserved;
   const orderId = reserved.value;
 
-  if (input.fulfilment === 'livraison') {
+  if (input.fulfilment === 'livraison' && input.courier !== false) {
     const quote = await quoteDelivery(orderId);
     if (!quote.ok) {
       await cancelOrder(orderId);
@@ -60,6 +60,9 @@ export const CHECKOUT_ERROR: Record<OrdersError, string> = {
   mode_unavailable: 'Ce mode de remise n’est pas proposé pour cette offre.',
   one_shop_per_order: 'Une commande par commerce : passez-les l’une après l’autre.',
   too_many_pending: 'Vous avez déjà trois commandes à payer. Payez-les ou annulez-les d’abord.',
+  pro_required: 'Les offres pro se commandent avec un commerce validé par TK LINK.',
+  own_offer: 'C’est votre propre offre : elle ne se commande pas.',
+  order_too_large: 'Montant trop élevé pour un seul paiement : commandez en plusieurs fois.',
   address_required: 'Ajoutez une adresse de livraison.',
   delivery_unavailable: 'La livraison n’est pas possible à cette adresse. Essayez le retrait.',
   phone_required: 'Ajoutez votre numéro (Profil → Mon compte) : le coursier en a besoin.',
