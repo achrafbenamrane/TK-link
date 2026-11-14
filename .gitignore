@@ -74,3 +74,6 @@ landing/public/screens/_incoming/*
 
 # État local de la CLI Supabase (projet lié, versions) : propre à chaque poste
 supabase/.temp
+
+# Build de vérification du site (NEXT_DIST_DIR=.next-verify), jamais versionné
+landing/.next-verify

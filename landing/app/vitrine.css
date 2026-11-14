@@ -1,0 +1,1474 @@
+/*
+ * Vitrine TK LINK — « l'étiquette, à l'heure de la fermeture » (14/11/2026).
+ *
+ * Un système court, appliqué partout :
+ *   - Couleurs : la charte de l'app (src/shared/theme/palette.json). Nuit #0A0A0D, rose #FF1478 pour
+ *     l'action et la marque, bleu #00B2FF pour le focus et le contre-jour, rien d'autre. Les fonds
+ *     clairs sont ceux de l'app (#FFFFFF, #F5F5F8).
+ *   - Typo : Big Shoulders Display (titres, prix, chiffres) — une grotesque étroite d'affiche, l'ardoise
+ *     du marché ; Manrope (texte), celle de l'app. Deux familles, pas plus.
+ *   - Espaces : multiples de 8 (--s-*). Rayons : 12, 20, 28.
+ *   - Lumière : une seule source, chaude, venue de la gauche (le soleil couchant de la scène 3D) ; le
+ *     contre-jour bleu à droite. Les ombres sont teintées, jamais noires pures.
+ *   - Mouvement : 200–900 ms, courbes réelles ; tout s'arrête si le système demande moins de
+ *     mouvement.
+ * Tout est rangé sous `.v` : les autres pages (/pro, /admin, /confidentialite…) n'en héritent rien.
+ */
+
+@font-face {
+  font-family: 'Big Shoulders Display';
+  src: url('/fonts/big-shoulders-display-800.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Big Shoulders Display';
+  src: url('/fonts/big-shoulders-display-900.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+.v {
+  --night: #0a0a0d;
+  --night-2: #121216;
+  --night-3: #1b1b1f;
+  --night-line: #2c2c34;
+  --day: #ffffff;
+  --paper: #f5f5f8;
+  --ink: #111114;
+  --ink-2: #4b4b57;
+  --ink-3: #6c6c7a;
+  --line: #e5e5eb;
+  --on-night: #ffffff;
+  --on-night-2: #b8b8c4;
+  --on-night-3: #8b8b99;
+  --pink: #ff1478;
+  --pink-600: #c70a5d;
+  --pink-night: #ff4c98;
+  --blue: #00b2ff;
+
+  --display: 'Big Shoulders Display', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  --text: Manrope, ui-sans-serif, system-ui, sans-serif;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 16px;
+  --s-4: 24px;
+  --s-5: 32px;
+  --s-6: 48px;
+  --s-7: 64px;
+  --s-8: 96px;
+  --s-9: 128px;
+
+  --ease: cubic-bezier(0.2, 0.75, 0.2, 1);
+  --head: 68px;
+
+  font-family: var(--text);
+  color: var(--ink);
+  background: var(--day);
+  overflow-x: clip;
+}
+
+.v *,
+.v *::before,
+.v *::after {
+  box-sizing: border-box;
+}
+
+/* Remises à zéro sans poids (:where) : une marge posée par une classe doit toujours l'emporter. */
+:where(.v) h1,
+:where(.v) h2,
+:where(.v) h3,
+:where(.v) h4 {
+  font-family: var(--display);
+  font-weight: 900;
+  letter-spacing: -0.005em;
+  line-height: 0.9;
+  margin: 0;
+  text-wrap: balance;
+}
+
+:where(.v) p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.v :focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.v section {
+  scroll-margin-top: var(--head);
+}
+
+.v-wrap {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--s-5);
+}
+
+.v-sr {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+}
+
+.v-eyebrow {
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pink-600);
+  margin-bottom: var(--s-3);
+}
+.v-eyebrow--night {
+  color: var(--pink-night);
+}
+
+.v-h2 {
+  font-size: clamp(48px, 6.2vw, 96px);
+  max-width: 14ch;
+}
+
+.v-arrow {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  transition: transform 0.25s var(--ease);
+}
+a:hover > .v-arrow {
+  transform: translateX(3px);
+}
+
+/* Grain : une texture de papier/pellicule, pour que les aplats sombres ne soient pas « numériques ». */
+.v-hero::after,
+.v-impact::after,
+.v-vitrine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ───────────────────────────────────────────────────────────────── boutons */
+
+/* Le bouton principal EST une étiquette : bout pointu, trou percé. Il penche au survol, depuis le
+   trou, comme une étiquette qu'on effleure. */
+.v-btn-tag {
+  --hole: var(--night);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 56px;
+  padding: 0 26px 0 42px;
+  background: var(--pink);
+  color: #fff;
+  font-weight: 800;
+  font-size: 18px;
+  text-decoration: none;
+  clip-path: polygon(18px 0, 100% 0, 100% 100%, 18px 100%, 0 50%);
+  border-radius: 0 12px 12px 0;
+  transform-origin: 0 50%;
+  transition:
+    transform 0.35s var(--ease),
+    background-color 0.2s ease;
+}
+.v-btn-tag::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin-top: -4.5px;
+  border-radius: 50%;
+  background: var(--hole);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.v-btn-tag:hover {
+  transform: rotate(-3deg);
+  background: #ff2d87;
+}
+.v-btn-tag:active {
+  transform: rotate(-1deg) scale(0.98);
+}
+
+.v-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--on-night);
+  font-weight: 700;
+  font-size: 17px;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.35);
+  text-underline-offset: 6px;
+  text-decoration-thickness: 1.5px;
+  transition: text-decoration-color 0.2s ease;
+}
+.v-link:hover {
+  text-decoration-color: var(--pink-night);
+}
+
+.v-btn-dark,
+.v-btn-light {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 54px;
+  padding: 0 24px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 16px;
+  text-decoration: none;
+  transition:
+    transform 0.25s var(--ease),
+    box-shadow 0.25s ease;
+}
+.v-btn-dark {
+  background: var(--ink);
+  color: #fff;
+  box-shadow: 0 10px 24px -14px rgba(17, 17, 20, 0.7);
+}
+.v-btn-light {
+  background: #fff;
+  color: var(--ink);
+}
+.v-btn-dark:hover,
+.v-btn-light:hover {
+  transform: translateY(-2px);
+}
+
+/* ─────────────────────────────────────────────────────────────── en-tête */
+
+.v-head {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  height: var(--head);
+  color: var(--on-night);
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    backdrop-filter 0.3s ease;
+}
+.v-head.is-stuck {
+  background: rgba(10, 10, 13, 0.94);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+.v-head__in {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+}
+.v-logo {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: 1px;
+}
+.v-logo span {
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 3px;
+  opacity: 0.72;
+}
+.v-nav {
+  display: flex;
+  gap: var(--s-5);
+  margin-left: var(--s-5);
+}
+.v-nav a {
+  color: var(--on-night-2);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+.v-nav a:hover {
+  color: #fff;
+}
+.v-head__cta {
+  margin-left: auto;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 16px;
+  border-radius: 10px;
+  background: var(--pink);
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+  text-decoration: none;
+}
+
+/* ──────────────────────────────────────────────────────────────── héros */
+
+.v-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: min(100svh, 980px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: calc(var(--head) + var(--s-6)) 0 var(--s-6);
+  background: var(--night);
+  color: var(--on-night);
+  overflow: hidden;
+}
+/* La lumière de la scène 3D, prolongée dans la page : un soleil bas et chaud depuis la gauche, un
+   contre-jour bleu à droite. Mêmes directions que dans Blender, sinon l'étiquette aurait l'air
+   collée. */
+.v-hero__light {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(60% 70% at 12% 0%, rgba(255, 168, 112, 0.16), transparent 70%),
+    linear-gradient(104deg, rgba(255, 190, 150, 0.07) 0%, transparent 42%),
+    radial-gradient(40% 55% at 92% 62%, rgba(0, 178, 255, 0.12), transparent 70%),
+    radial-gradient(26% 30% at 70% 52%, rgba(255, 20, 120, 0.16), transparent 72%);
+}
+.v-hero__grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'copy stage'
+    'copy offer';
+  column-gap: var(--s-6);
+  row-gap: var(--s-3);
+}
+.v-hero__offer {
+  grid-area: offer;
+  position: relative;
+  z-index: 3;
+}
+.v-hero__copy {
+  grid-area: copy;
+  align-self: center;
+  position: relative;
+  z-index: 2;
+}
+.v-kicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--on-night-2);
+  margin-bottom: var(--s-4);
+}
+.v-kicker__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--pink);
+  transform: rotate(45deg);
+}
+.v-hero__title {
+  font-size: clamp(60px, 7.3vw, 116px);
+  line-height: 0.86;
+  letter-spacing: -0.01em;
+  margin-bottom: var(--s-5);
+  padding-bottom: 0.06em;
+}
+.v-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.04em;
+}
+.v-line > span {
+  display: inline-block;
+}
+.v-pink {
+  color: var(--pink);
+}
+.v-hero__lead {
+  max-width: 44ch;
+  font-size: 19px;
+  line-height: 1.55;
+  color: var(--on-night-2);
+  margin-bottom: var(--s-5);
+}
+.v-hero__cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-5);
+  margin-bottom: var(--s-4);
+}
+.v-hero__note {
+  font-size: 14px;
+  color: var(--on-night-3);
+}
+
+.v-hero__stage {
+  grid-area: stage;
+  position: relative;
+  min-height: 430px;
+}
+/* L'étiquette pend du haut de l'écran : sa ficelle part sous l'en-tête. */
+.v-hero__swing {
+  position: absolute;
+  left: 50%;
+  top: calc(-1 * (var(--head) + var(--s-6) + 34px));
+  width: min(100%, 420px);
+  transform: translate(calc(-50% + var(--px, 0) * 10px), calc(var(--py, 0) * 6px));
+  transition: transform 0.8s var(--ease);
+}
+.v-hero__tag {
+  display: block;
+  width: 100%;
+  height: auto;
+  transform-origin: 50% 0;
+  filter: drop-shadow(0 40px 50px rgba(255, 20, 120, 0.22));
+}
+
+/* L'offre en direct, au pied du héros. */
+.v-offer {
+  position: relative;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-areas:
+    'photo what'
+    'price time'
+    'stock stock';
+  align-items: center;
+  gap: var(--s-3) var(--s-3);
+  padding: var(--s-4) var(--s-4) var(--s-3);
+  background: rgba(18, 18, 22, 0.9);
+  border: 1px solid var(--night-line);
+  border-radius: 20px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8);
+}
+.v-offer__photo {
+  grid-area: photo;
+}
+.v-offer__what {
+  grid-area: what;
+}
+.v-offer__price {
+  grid-area: price;
+}
+.v-offer__time {
+  grid-area: time;
+  justify-self: end;
+}
+.v-offer__stock {
+  grid-area: stock;
+}
+.v-offer__label {
+  position: absolute;
+  top: -10px;
+  left: var(--s-4);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  background: var(--night);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--on-night-3);
+  line-height: 20px;
+}
+.v-offer__live {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pink);
+  box-shadow: 0 0 0 0 rgba(255, 20, 120, 0.6);
+}
+.v-play .v-offer__live {
+  animation: v-pulse 1.8s ease-out infinite;
+}
+@keyframes v-pulse {
+  70% {
+    box-shadow: 0 0 0 8px rgba(255, 20, 120, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 20, 120, 0);
+  }
+}
+.v-offer__photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--night-3);
+}
+.v-offer__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.v-offer__shop {
+  font-size: 13px;
+  color: var(--on-night-3);
+  margin-bottom: 2px;
+}
+.v-offer__title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: 0.005em;
+}
+.v-offer__unit {
+  font-size: 13px;
+  color: var(--on-night-3);
+  margin-top: 4px;
+}
+.v-offer__price {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  white-space: nowrap;
+}
+.v-offer__price strong {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 44px;
+  line-height: 1;
+  color: var(--pink-night);
+}
+.v-offer__price s {
+  font-size: 16px;
+  color: var(--on-night-3);
+}
+.v-offer__time {
+  display: flex;
+  align-items: baseline;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 44px;
+  line-height: 1;
+}
+.v-offer__cell {
+  display: inline-flex;
+  align-items: baseline;
+}
+.v-offer__cell b {
+  display: inline-block;
+  min-width: 1.02em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.v-offer__cell small {
+  font-family: var(--text);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-night-3);
+  margin-left: 2px;
+}
+.v-offer__cell i {
+  font-style: normal;
+  color: var(--night-line);
+  margin: 0 6px;
+}
+.v-offer__stock p {
+  font-size: 14px;
+  color: var(--on-night-2);
+  margin-bottom: 8px;
+}
+.v-offer__stock strong {
+  color: #fff;
+}
+.v-offer__gauge {
+  display: block;
+  height: 6px;
+  border-radius: 6px;
+  background: var(--night-3);
+  overflow: hidden;
+}
+.v-offer__gauge span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--pink-600), var(--pink));
+}
+
+/* Entrée du héros : l'étiquette descend sur sa ficelle et balance avant de se poser ; les lignes du
+   titre montent l'une après l'autre. Puis un balancement très lent, l'air du soir. */
+.v-play .v-hero__tag {
+  animation:
+    v-drop 1.6s var(--ease) both,
+    v-sway 7s ease-in-out 1.6s infinite;
+}
+@keyframes v-drop {
+  0% {
+    transform: translateY(-34%) rotate(6deg);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  55% {
+    transform: translateY(1.5%) rotate(-3.2deg);
+  }
+  78% {
+    transform: translateY(-0.6%) rotate(1.6deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+@keyframes v-sway {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(1.3deg);
+  }
+  70% {
+    transform: rotate(-1.1deg);
+  }
+}
+.v-play .v-line > span {
+  animation: v-rise 0.95s var(--ease) both;
+}
+.v-play .v-line:nth-child(1) > span {
+  animation-delay: 0.1s;
+}
+.v-play .v-line:nth-child(2) > span {
+  animation-delay: 0.18s;
+}
+.v-play .v-line:nth-child(3) > span {
+  animation-delay: 0.26s;
+}
+.v-play .v-line:nth-child(4) > span {
+  animation-delay: 0.34s;
+}
+@keyframes v-rise {
+  from {
+    transform: translateY(108%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.v-play .v-kicker,
+.v-play .v-hero__lead,
+.v-play .v-hero__cta,
+.v-play .v-hero__note,
+.v-play .v-offer {
+  animation: v-fade 0.9s var(--ease) both;
+}
+.v-play .v-kicker {
+  animation-delay: 0.05s;
+}
+.v-play .v-hero__lead {
+  animation-delay: 0.45s;
+}
+.v-play .v-hero__cta {
+  animation-delay: 0.55s;
+}
+.v-play .v-hero__note {
+  animation-delay: 0.62s;
+}
+.v-play .v-offer {
+  animation-delay: 0.8s;
+}
+@keyframes v-fade {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────── bande des catégories */
+
+.v-band {
+  position: relative;
+  overflow: hidden;
+  background: var(--pink);
+  color: #fff;
+  padding: 18px 0;
+}
+.v-band__track {
+  display: flex;
+  width: max-content;
+}
+.v-play .v-band__track {
+  animation: v-marquee 46s linear infinite;
+}
+.v-band:hover .v-band__track {
+  animation-play-state: paused;
+}
+.v-band__row {
+  display: flex;
+  flex: none;
+}
+.v-band__row span {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.v-band__hole {
+  width: 12px;
+  height: 12px;
+  margin: 0 28px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.85);
+}
+@keyframes v-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ────────────────────────────────────────────────────── comment ça marche */
+
+.v-how {
+  background: var(--day);
+  padding: var(--s-9) 0 var(--s-8);
+}
+.v-how__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: end;
+  gap: var(--s-4) var(--s-7);
+  margin-bottom: var(--s-7);
+}
+.v-how__head .v-eyebrow,
+.v-how__head .v-h2 {
+  grid-column: 1;
+}
+.v-how__intro {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  max-width: 42ch;
+}
+.v-how__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: var(--s-7);
+  align-items: start;
+}
+.v-how__stage {
+  position: sticky;
+  top: calc(var(--head) + var(--s-4));
+  height: min(760px, calc(100svh - var(--head) - var(--s-6)));
+}
+/* Une vitrine de nuit : l'étiquette y est éclairée comme dans sa scène. */
+.v-vitrine {
+  position: relative;
+  height: 100%;
+  border-radius: 28px;
+  overflow: hidden;
+  background:
+    radial-gradient(70% 55% at 18% 8%, rgba(255, 168, 112, 0.2), transparent 70%),
+    radial-gradient(50% 50% at 88% 70%, rgba(0, 178, 255, 0.16), transparent 70%), var(--night);
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+}
+.v-vitrine__tag {
+  position: absolute;
+  left: 50%;
+  top: -31%;
+  height: 128%;
+  width: auto;
+  transform: translateX(-50%);
+}
+.v-vitrine__caption {
+  position: absolute;
+  left: var(--s-4);
+  bottom: var(--s-4);
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1.05;
+  color: #fff;
+  max-width: calc(100% - 120px);
+}
+.v-vitrine__caption span {
+  color: var(--pink-night);
+}
+.v-vitrine__dots {
+  position: absolute;
+  right: var(--s-4);
+  bottom: calc(var(--s-4) + 9px);
+  display: flex;
+  gap: 6px;
+}
+.v-vitrine__dots i {
+  width: 22px;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+  transition:
+    background-color 0.3s ease,
+    width 0.3s var(--ease);
+}
+.v-vitrine__dots i.is-on {
+  width: 36px;
+  background: var(--pink);
+}
+.v-how__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.v-how__step {
+  min-height: 72svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--s-6) 0;
+  opacity: 0.32;
+  transition: opacity 0.5s ease;
+}
+.v-how__step.is-on {
+  opacity: 1;
+}
+.v-how__num {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(96px, 11vw, 168px);
+  line-height: 0.8;
+  color: transparent;
+  -webkit-text-stroke: 2px var(--line);
+  margin-bottom: var(--s-4);
+  transition:
+    color 0.5s ease,
+    -webkit-text-stroke-color 0.5s ease;
+}
+.v-how__step.is-on .v-how__num {
+  color: var(--pink);
+  -webkit-text-stroke-color: var(--pink);
+}
+.v-how__step h3 {
+  font-size: clamp(40px, 4.4vw, 64px);
+  margin-bottom: var(--s-3);
+  max-width: 13ch;
+}
+.v-how__step p {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  max-width: 40ch;
+}
+
+/* ─────────────────────────────────────────────────────────────── pour qui */
+
+.v-who {
+  background: var(--paper);
+  padding: var(--s-9) 0;
+}
+.v-who__head {
+  margin-bottom: var(--s-7);
+}
+.v-who__row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: var(--s-4) var(--s-5);
+  padding: var(--s-6) 0;
+  border-top: 2px solid var(--ink);
+}
+.v-who__row:last-child {
+  border-bottom: 2px solid var(--ink);
+}
+.v-who__idx {
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--ink-3);
+  padding-top: 10px;
+}
+.v-who__name {
+  font-size: clamp(56px, 7.6vw, 124px);
+  line-height: 0.84;
+  transition: color 0.3s ease;
+}
+.v-who__row:hover .v-who__name {
+  color: var(--pink);
+}
+.v-who__claim {
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.3;
+  margin-bottom: var(--s-2);
+}
+.v-who__text {
+  color: var(--ink-2);
+  font-size: 17px;
+  line-height: 1.6;
+  margin-bottom: var(--s-3);
+}
+.v-who__points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.v-who__points li {
+  position: relative;
+  padding-left: 26px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.v-who__points li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 14px;
+  height: 2.5px;
+  border-radius: 2px;
+  background: var(--pink);
+}
+
+/* ───────────────────────────────────────────────────────────── commerçants */
+
+.v-pro {
+  background: var(--day);
+  padding: var(--s-9) 0;
+}
+.v-pro__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+  gap: var(--s-7);
+  align-items: center;
+}
+.v-pro__copy .v-h2 {
+  margin-bottom: var(--s-4);
+}
+.v-pro__copy > p:not(.v-eyebrow) {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  max-width: 46ch;
+  margin-bottom: var(--s-3);
+}
+.v-pro__copy .v-btn-dark {
+  margin-top: var(--s-3);
+}
+
+/* La facture sort comme un ticket : bords dentelés, papier, tampon. */
+.v-receipt {
+  margin: 0;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 34px 40px rgba(17, 17, 20, 0.16))
+    drop-shadow(0 3px 6px rgba(17, 17, 20, 0.08));
+}
+.v-receipt__paper {
+  --zz: 9px;
+  position: relative;
+  width: min(100%, 380px);
+  padding: 40px 30px 44px;
+  background: #fff;
+  transform: rotate(2.2deg);
+  -webkit-mask:
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom /
+      calc(2 * var(--zz)) 51% repeat-x,
+    conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top /
+      calc(2 * var(--zz)) 51% repeat-x;
+  mask:
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom /
+      calc(2 * var(--zz)) 51% repeat-x,
+    conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top /
+      calc(2 * var(--zz)) 51% repeat-x;
+}
+.v-receipt__shop {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 34px;
+  line-height: 1;
+  text-transform: uppercase;
+  text-align: center;
+}
+.v-receipt__kind {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 8px 0 20px;
+  padding-bottom: 20px;
+  border-bottom: 1.5px dashed #d4d4dc;
+}
+.v-receipt__lines {
+  margin: 0 0 18px;
+  display: grid;
+  gap: 10px;
+}
+.v-receipt__lines div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 15px;
+}
+.v-receipt__lines dt {
+  color: var(--ink-2);
+}
+.v-receipt__lines div::after {
+  content: '';
+  order: 1;
+  flex: 1;
+  border-bottom: 1.5px dotted #c9c9d2;
+  transform: translateY(-4px);
+}
+.v-receipt__lines dd {
+  order: 2;
+  margin: 0;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.v-receipt__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1.5px dashed #d4d4dc;
+}
+.v-receipt__total span {
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.v-receipt__total strong {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 46px;
+  line-height: 1;
+}
+.v-receipt__foot {
+  margin-top: 18px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  text-align: center;
+}
+.v-receipt__stamp {
+  display: table;
+  margin: 22px auto 0;
+  padding: 6px 14px 4px;
+  border: 3px solid var(--pink);
+  border-radius: 10px;
+  color: var(--pink);
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transform: rotate(-7deg);
+  opacity: 0.9;
+  mix-blend-mode: multiply;
+}
+/* À l'apparition : le ticket sort de l'imprimante, puis le tampon tombe. */
+.v-play .v-receipt.rv {
+  opacity: 1;
+  transform: none;
+}
+.v-play .v-receipt.rv .v-receipt__paper {
+  clip-path: inset(0 0 100% 0);
+  translate: 0 -40px;
+  transition:
+    clip-path 1.2s cubic-bezier(0.5, 0, 0.2, 1),
+    translate 1.2s cubic-bezier(0.5, 0, 0.2, 1);
+}
+.v-play .v-receipt.rv.in .v-receipt__paper {
+  clip-path: inset(0 0 -20px 0);
+  translate: 0 0;
+}
+.v-play .v-receipt.rv .v-receipt__stamp {
+  opacity: 0;
+  scale: 1.6;
+  transition:
+    opacity 0.25s ease 1.25s,
+    scale 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) 1.25s;
+}
+.v-play .v-receipt.rv.in .v-receipt__stamp {
+  opacity: 0.9;
+  scale: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────── le papier */
+
+.v-impact {
+  position: relative;
+  isolation: isolate;
+  background: var(--night);
+  color: var(--on-night);
+  padding: var(--s-9) 0;
+  overflow: hidden;
+}
+.v-impact__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  align-items: end;
+  gap: var(--s-4) var(--s-7);
+  margin-bottom: var(--s-8);
+}
+.v-impact__head .v-eyebrow,
+.v-impact__head .v-h2 {
+  grid-column: 1;
+}
+.v-impact__head .v-h2 {
+  max-width: 15ch;
+}
+.v-impact__head > p:last-child {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--on-night-2);
+  max-width: 40ch;
+}
+.v-impact__stats {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-6) var(--s-7);
+}
+.v-stat {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: var(--s-2);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--night-line);
+}
+.v-stat dt {
+  font-size: 15px;
+  color: var(--on-night-2);
+  max-width: 20ch;
+}
+.v-stat dd {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(56px, 8.4vw, 136px);
+  line-height: 0.88;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.v-stat small {
+  font-size: 0.42em;
+  color: var(--pink-night);
+  margin-left: 0.18em;
+}
+
+/* ───────────────────────────────────────────────────────────────── appel */
+
+.v-cta {
+  background: var(--pink);
+  color: #fff;
+  padding: var(--s-9) 0;
+}
+.v-cta__title {
+  font-size: clamp(56px, 8vw, 128px);
+  line-height: 0.86;
+  max-width: 13ch;
+  margin-bottom: var(--s-4);
+}
+.v-cta__in > p {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.5;
+  max-width: 46ch;
+  margin-bottom: var(--s-5);
+}
+.v-cta__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+/* Pas encore des liens : l'app n'est pas encore sur les stores. Le pointillé le dit. */
+.v-store {
+  display: inline-flex;
+  align-items: center;
+  height: 54px;
+  padding: 0 20px;
+  border-radius: 12px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.7);
+  background: rgba(17, 17, 20, 0.86);
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+}
+
+/* ─────────────────────────────────────────────────────────────────── pied */
+
+.v-foot {
+  background: var(--night);
+  color: var(--on-night-2);
+  padding: var(--s-8) 0 var(--s-5);
+  overflow: hidden;
+}
+.v-foot__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  gap: var(--s-5);
+}
+.v-foot__pitch {
+  max-width: 30ch;
+  font-size: 17px;
+  line-height: 1.55;
+}
+.v-foot h4 {
+  font-family: var(--text);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--on-night-3);
+  margin-bottom: var(--s-3);
+  line-height: 1.2;
+}
+.v-foot nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.v-foot nav a {
+  color: var(--on-night-2);
+  text-decoration: none;
+  font-size: 15px;
+}
+.v-foot nav a:hover {
+  color: #fff;
+}
+.v-foot__mark {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(120px, 25vw, 360px);
+  line-height: 0.78;
+  letter-spacing: -0.01em;
+  color: var(--night-3);
+  margin: var(--s-8) 0 var(--s-4) -0.04em;
+  padding-top: 0.08em;
+  white-space: nowrap;
+  user-select: none;
+}
+.v-foot__legal {
+  font-size: 13px;
+  color: var(--on-night-3);
+}
+
+/* ─────────────────────────────────────────────────────── apparitions (.rv) */
+
+.v-play .rv {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.9s var(--ease),
+    transform 0.9s var(--ease);
+}
+.v-play .rv.in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ────────────────────────────────────────────────────────────── adaptations */
+
+@media (max-width: 900px) {
+  .v-wrap {
+    padding: 0 20px;
+  }
+  .v-nav {
+    display: none;
+  }
+  .v-head__cta {
+    margin-left: auto;
+  }
+  .v-hero {
+    padding-top: calc(var(--head) + var(--s-5));
+  }
+  .v-hero {
+    min-height: 0;
+  }
+  .v-hero__grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-template-areas:
+      'copy'
+      'offer';
+    row-gap: var(--s-6);
+  }
+  /* Sur téléphone, l'étiquette pend derrière le titre, en haut à droite. */
+  .v-hero__stage {
+    position: absolute;
+    inset: 0 0 auto auto;
+    width: 56%;
+    min-height: 0;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    grid-area: auto;
+  }
+  .v-hero__swing {
+    top: -150px;
+    left: 64%;
+    width: 300px;
+  }
+  .v-hero__copy {
+    padding-top: 200px;
+  }
+  .v-hero__title {
+    text-shadow: 0 2px 24px rgba(10, 10, 13, 0.55);
+  }
+  .v-how__head,
+  .v-impact__head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .v-how__intro,
+  .v-impact__head > p:last-child {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .v-how__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .v-how__stage {
+    top: calc(var(--head) + 8px);
+    height: 46svh;
+    z-index: 2;
+  }
+  .v-vitrine {
+    border-radius: 20px;
+  }
+  .v-vitrine__caption {
+    font-size: 20px;
+  }
+  .v-how__step {
+    min-height: 62svh;
+    padding: var(--s-5) 0;
+  }
+  .v-how__num {
+    font-size: 88px;
+  }
+  .v-who__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-3);
+    padding: var(--s-5) 0;
+  }
+  .v-who__idx {
+    padding-top: 0;
+  }
+  .v-pro__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .v-impact__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: var(--s-6);
+  }
+  .v-foot__cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .v-foot__pitch {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .v-wrap {
+    padding: 0 16px;
+  }
+  .v-hero__swing {
+    top: -116px;
+    width: 236px;
+    left: 70%;
+  }
+  .v-hero__copy {
+    padding-top: 168px;
+  }
+  .v-kicker {
+    font-size: 12px;
+    letter-spacing: 0.1em;
+  }
+  .v-hero__lead {
+    font-size: 17px;
+  }
+  .v-offer {
+    grid-template-areas:
+      'photo what'
+      'price price'
+      'time time'
+      'stock stock';
+    padding: var(--s-4) var(--s-3) var(--s-3);
+  }
+  .v-offer__time {
+    justify-self: start;
+  }
+  .v-offer__time,
+  .v-offer__price strong {
+    font-size: 38px;
+  }
+  .v-impact__stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .v-band__row span {
+    font-size: 24px;
+  }
+  .v-receipt__paper {
+    width: 94%;
+    padding: 34px 22px 40px;
+    transform: rotate(1.2deg);
+  }
+  .v-stat dd {
+    font-size: 72px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v .v-hero__tag,
+  .v .v-band__track,
+  .v .v-offer__live {
+    animation: none !important;
+  }
+}

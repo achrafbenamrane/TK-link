@@ -24,6 +24,7 @@ module.exports = defineConfig([
       'reports/**',
       'packs/**', // feature-pack library: parked, opt-in code — not linted until installed
       '**/.next/**', // Next.js build output for `landing/` — generated, never source
+      '**/.next-verify/**', // `NEXT_DIST_DIR=.next-verify npx next build` (landing/README.md)
       'supabase/functions/**', // Deno edge runtime: different globals, different resolver
       'expo-env.d.ts',
       '**/._*', // macOS AppleDouble files on exFAT/network volumes
