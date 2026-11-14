@@ -1,12 +1,13 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
-import { FlatList, Pressable, View } from 'react-native';
+import { useEffect, useMemo } from 'react';
+import { FlatList, Pressable, ScrollView, View } from 'react-native';
 
 import { AppText, Button, EmptyState, Screen } from '@/shared/ui';
 import { useColors } from '@/shared/theme/theme-provider';
 
 import { getDeal } from '../model/catalog';
+import { selectFollowedShops, useFollowsStore } from '../model/follows';
 import type { Deal } from '../model/schema';
 import { selectFavorites, useShopStore } from '../model/store';
 import { CartButton } from './components/cart-button';
@@ -100,6 +101,69 @@ function FavoriteCard({ deal }: { deal: Deal }) {
   );
 }
 
+/**
+ * Les commerces suivis (0026) : leur prochaine vente flash sera signalée. Un appui ouvre la vitrine,
+ * le cœur arrête de suivre.
+ */
+function FollowedShops() {
+  const colors = useColors();
+  const router = useRouter();
+  const shops = useFollowsStore(selectFollowedShops);
+  const loaded = useFollowsStore((s) => s.loaded);
+  const refresh = useFollowsStore((s) => s.refresh);
+  const toggle = useFollowsStore((s) => s.toggle);
+  useEffect(() => {
+    if (!loaded) void refresh();
+  }, [loaded, refresh]);
+
+  if (shops.length === 0) return null;
+  return (
+    <View testID="followed-shops" className="gap-2 pb-4">
+      <View className="px-5">
+        <AppText className="font-sans-bold text-ink">Commerces suivis</AppText>
+        <AppText variant="caption">Leur prochaine vente flash vous sera signalée.</AppText>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerClassName="gap-2 px-5"
+      >
+        {shops.map((shop) => (
+          <Pressable
+            key={shop.shopId}
+            testID={`followed-shop-${shop.shopId}`}
+            accessibilityRole="button"
+            accessibilityLabel={`Ouvrir la vitrine de ${shop.name}`}
+            onPress={() => router.push({ pathname: '/enseigne/[id]', params: { id: shop.shopId } })}
+            className="flex-row items-center gap-2 rounded-pill border border-line bg-surface py-2 pl-3.5 pr-2 active:opacity-80"
+          >
+            <View>
+              <AppText className="font-sans-semibold text-sm text-ink" numberOfLines={1}>
+                {shop.name}
+              </AppText>
+              {shop.area ? (
+                <AppText variant="caption" className="text-ink-faint" numberOfLines={1}>
+                  {shop.area}
+                </AppText>
+              ) : null}
+            </View>
+            <Pressable
+              testID={`followed-shop-unfollow-${shop.shopId}`}
+              accessibilityRole="button"
+              accessibilityLabel={`Ne plus suivre ${shop.name}`}
+              hitSlop={8}
+              onPress={() => void toggle(shop)}
+              className="h-7 w-7 items-center justify-center rounded-pill bg-brand-50"
+            >
+              <Feather name="heart" size={13} color={colors.brand500} />
+            </Pressable>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 export function FavoritesScreen() {
   const colors = useColors();
   const router = useRouter();
@@ -136,6 +200,7 @@ export function FavoritesScreen() {
         columnWrapperStyle={{ gap: 12, paddingHorizontal: 20 }}
         contentContainerClassName="gap-3 pb-28 pt-1"
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={<FollowedShops />}
         ListEmptyComponent={
           <EmptyState
             testID="favorites-empty"

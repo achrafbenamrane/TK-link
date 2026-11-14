@@ -1,10 +1,56 @@
 import {
   deadTokens,
   expoBatches,
+  followMessage,
   isExpoToken,
   orderMessage,
   supportMessage,
 } from '../functions/_shared/push';
+
+describe('followMessage — un commerce suivi publie une vente flash (0026)', () => {
+  const NOW = Date.parse('2026-11-14T16:00:00Z'); // 17:00 à Paris
+  const offer = {
+    id: '11111111-1111-4111-8111-111111111111',
+    shop_id: '22222222-2222-4222-8222-222222222222',
+    title: 'Panier viennoiseries',
+  };
+
+  it('une Flash en ligne : le nom du commerce, l’offre, et le toucher ouvre l’offre', () => {
+    expect(
+      followMessage(
+        { ...offer, audience: 'clients', starts_at: '2026-11-14T16:00:00Z' },
+        'Boulangerie Saint-Cyprien',
+        NOW,
+      ),
+    ).toEqual({
+      to: 'shop_followers',
+      title: 'Boulangerie Saint-Cyprien',
+      body: 'Nouvelle vente flash : Panier viennoiseries',
+      data: { kind: 'offer', id: offer.id },
+    });
+  });
+
+  it('une Flash programmée : l’heure de Paris, et le toucher ouvre la vitrine', () => {
+    expect(
+      followMessage(
+        { ...offer, starts_at: '2026-11-14T17:30:00Z' },
+        'Boulangerie Saint-Cyprien',
+        NOW,
+      ),
+    ).toMatchObject({
+      body: 'Vente flash dès 18:30 : Panier viennoiseries',
+      data: { kind: 'shop', id: offer.shop_id },
+    });
+  });
+
+  it('une offre pro de grossiste ne prévient personne', () => {
+    expect(followMessage({ ...offer, audience: 'commercants' }, 'Grossiste', NOW)).toBeNull();
+  });
+
+  it('sans nom de commerce, un titre neutre', () => {
+    expect(followMessage(offer, '', NOW)?.title).toBe('Nouvelle vente flash');
+  });
+});
 
 /**
  * Les notifications du rapport d’avancement (13/11/2026). Ce qui compte : la bonne personne est

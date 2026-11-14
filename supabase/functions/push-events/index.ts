@@ -1,8 +1,10 @@
-// Envoie les notifications quand une commande change de statut ou que TK LINK répond à une demande.
+// Envoie les notifications : une commande change de statut, TK LINK répond à une demande, un commerce
+// suivi publie une vente flash.
 //
-// Appelée par deux « Database Webhooks » Supabase (tableau de bord → Database → Webhooks) :
-//   - table `flash_orders`, événements INSERT et UPDATE ;
-//   - table `support_messages`, événement INSERT ;
+// Appelée par les déclencheurs de la base (pg_net, migrations 0024 et 0026) :
+//   - table `flash_orders`, changement de statut ;
+//   - table `support_messages`, réponse de TK LINK ;
+//   - table `flash_offers`, Flash client publiée par un commerce suivi ;
 // méthode POST vers cette fonction, avec l'en-tête `x-webhook-secret: <PUSH_WEBHOOK_SECRET>`.
 //
 // Sécurité : pas de jeton Supabase (`verify_jwt = false`) ; la requête est authentifiée par ce
@@ -13,6 +15,7 @@ import {
   deadTokens,
   EXPO_PUSH_URL,
   expoBatches,
+  followMessage,
   orderMessage,
   supportMessage,
 } from '../_shared/push.ts';
@@ -42,7 +45,7 @@ Deno.serve(async (req) => {
 
   const admin = adminClient();
   let message = null;
-  let userId: string | null = null;
+  let userIds: string[] = [];
 
   if (payload.table === 'flash_orders') {
     const r = payload.record as {
@@ -54,14 +57,14 @@ Deno.serve(async (req) => {
       shop_id: string;
     };
     message = orderMessage(r, (payload.old_record ?? null) as { status?: string } | null);
-    if (message?.to === 'customer') userId = r.customer_id;
+    if (message?.to === 'customer') userIds = [r.customer_id];
     if (message?.to === 'shop_owner') {
       const { data } = await admin
         .from('shops')
         .select('owner_id')
         .eq('id', r.shop_id)
         .maybeSingle();
-      userId = data?.owner_id ?? null;
+      if (data?.owner_id) userIds = [data.owner_id as string];
     }
   } else if (payload.table === 'support_messages') {
     const r = payload.record as { ticket_id: string; from_staff: boolean };
@@ -72,13 +75,44 @@ Deno.serve(async (req) => {
         .select('author_id')
         .eq('id', r.ticket_id)
         .maybeSingle();
-      userId = data?.author_id ?? null;
+      if (data?.author_id) userIds = [data.author_id as string];
+    }
+  } else if (payload.table === 'flash_offers') {
+    const r = payload.record as {
+      id: string;
+      shop_id: string;
+      title: string;
+      audience?: string | null;
+      starts_at?: string | null;
+    };
+    const { data: shop } = await admin
+      .from('shops')
+      .select('name, owner_id')
+      .eq('id', r.shop_id)
+      .maybeSingle();
+    message = followMessage(r, (shop?.name as string | undefined) ?? '', Date.now());
+    if (message) {
+      const { data: follows } = await admin
+        .from('shop_follows')
+        .select('user_id')
+        .eq('shop_id', r.shop_id);
+      // Le commerçant qui suivrait sa propre vitrine n'est pas prévenu de sa propre publication.
+      userIds = (follows ?? [])
+        .map((f) => f.user_id as string)
+        .filter((id) => id !== shop?.owner_id);
     }
   }
-  if (!message || !userId) return new Response(null, { status: 200 });
+  if (!message || userIds.length === 0) return new Response(null, { status: 200 });
 
-  const { data: rows } = await admin.from('push_tokens').select('token').eq('user_id', userId);
-  const tokens = (rows ?? []).map((r) => r.token as string);
+  // Les jetons des destinataires, par paquets (une longue liste ne tient pas dans une adresse).
+  const tokens: string[] = [];
+  for (let i = 0; i < userIds.length; i += 200) {
+    const { data: rows } = await admin
+      .from('push_tokens')
+      .select('token')
+      .in('user_id', userIds.slice(i, i + 200));
+    tokens.push(...(rows ?? []).map((row) => row.token as string));
+  }
 
   for (const batch of expoBatches(tokens, message)) {
     const res = await fetch(EXPO_PUSH_URL, {

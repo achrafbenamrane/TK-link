@@ -12,7 +12,12 @@ import { useMerchantStore } from '@/features/merchant';
 import { usePushStore } from '@/features/notifications';
 import { useReceiptsStore } from '@/features/receipts';
 import { useReferralStore } from '@/features/referral';
-import { ProfileScreen, useServerOrdersStore, useShopStore } from '@/features/shop';
+import {
+  ProfileScreen,
+  useFollowsStore,
+  useServerOrdersStore,
+  useShopStore,
+} from '@/features/shop';
 import { useWelcomeStore } from '@/features/welcome';
 import { isDemoBuild } from '@/shared/lib/env';
 import { canPublishOffers, ROLE_LABEL } from '@/shared/lib/roles';
@@ -81,6 +86,8 @@ export function resetLocalData(): void {
   useReceiptsStore.setState({ receipts: [] });
   // Les commandes du serveur relues pour ce compte : le suivant ne doit pas les voir, même un instant.
   useServerOrdersStore.setState({ mine: [], shop: [], mineError: null, shopError: null });
+  // Les commerces suivis par ce compte (0026).
+  useFollowsStore.getState().reset();
 }
 
 export default function ProfilRoute() {

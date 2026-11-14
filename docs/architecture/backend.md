@@ -232,6 +232,19 @@ estimation suit le serveur. Une nouvelle commission vaut pour les réservations 
 déjà faites gardent la leur (`commission_cents`). Les autres réglages de l’onglet restent ceux de la
 démonstration (navigateur).
 
+## Suivre un commerce (0026)
+
+CDC V1.1 (Client, EXIGENCE) : « favoris et alertes ». Le CDC ne dit pas ce qui déclenche une alerte ;
+**arbitrage du 14/11/2026** : le cœur de la VITRINE suit le commerce, et sa prochaine vente flash
+prévient ses abonnés ; le cœur d'une OFFRE reste un favori sur le téléphone. `shop_follows` : chacun
+suit, ne suit plus et relit seulement les siens, vers un commerce validé. À la publication d'une
+Flash CLIENT, un déclencheur appelle `push-events` (même mécanisme que 0024) ; la fonction relit les
+abonnés (sauf le commerçant lui-même) et leurs jetons. Le toucher ouvre l'offre, ou la vitrine si la
+Flash est programmée (« Vente flash dès 18:30 »). Garde technique : une alerte par commerce toutes
+les 30 minutes au plus (`private.shop_alert_log`) — cinq offres d'affilée ne réveillent pas cinq
+fois. Une offre pro de grossiste ne prévient personne. Les abonnements ne sont pas gardés sur le
+téléphone : relus au serveur, effacés à la déconnexion.
+
 ## Notes des commerçants (0025)
 
 CDC V1.1 (Client, VALIDÉ) : après une commande terminée, le client note le commerçant — 1 à 5

@@ -6,12 +6,15 @@
 export const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
 export type PushMessage = {
-  /** Destinataire : l'acheteur, le titulaire du commerce, ou l'auteur d'une demande. */
-  to: 'customer' | 'shop_owner' | 'ticket_author';
+  /**
+   * Destinataire : l'acheteur, le titulaire du commerce, l'auteur d'une demande, ou les abonnés
+   * d'un commerce (0026).
+   */
+  to: 'customer' | 'shop_owner' | 'ticket_author' | 'shop_followers';
   title: string;
   body: string;
   /** Ce que l'app ouvre au toucher. */
-  data: { kind: 'order' | 'merchant_order' | 'support'; id: string };
+  data: { kind: 'order' | 'merchant_order' | 'support' | 'offer' | 'shop'; id: string };
 };
 
 /** `audience` (0023) : `commercants` pour une offre pro — le grossiste livre lui-même. */
@@ -159,6 +162,42 @@ export function supportMessage(record: {
         data: { kind: 'support', id: record.ticket_id },
       }
     : null;
+}
+
+/**
+ * Un commerce suivi publie une vente flash (0026) : ses abonnés sont prévenus. Une Flash déjà en
+ * ligne s'ouvre directement ; une Flash programmée n'est pas encore visible, la notification ouvre
+ * alors la vitrine et dit l'heure (Europe/Paris). Une offre pro de grossiste ne prévient personne.
+ */
+export function followMessage(
+  record: {
+    id: string;
+    shop_id: string;
+    title: string;
+    audience?: string | null;
+    starts_at?: string | null;
+  },
+  shopName: string,
+  nowMs: number,
+): PushMessage | null {
+  if (record.audience && record.audience !== 'clients') return null;
+  const startsMs = record.starts_at ? Date.parse(record.starts_at) : Number.NaN;
+  const later = Number.isFinite(startsMs) && startsMs - nowMs > 60_000;
+  const time = later
+    ? new Date(startsMs).toLocaleTimeString('fr-FR', {
+        timeZone: 'Europe/Paris',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '';
+  return {
+    to: 'shop_followers',
+    title: shopName || 'Nouvelle vente flash',
+    body: later
+      ? `Vente flash dès ${time} : ${record.title}`
+      : `Nouvelle vente flash : ${record.title}`,
+    data: later ? { kind: 'shop', id: record.shop_id } : { kind: 'offer', id: record.id },
+  };
 }
 
 /** Un jeton Expo valide (« ExponentPushToken[…] » ou « ExpoPushToken[…] »). */

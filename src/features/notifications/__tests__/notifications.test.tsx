@@ -65,6 +65,16 @@ describe('le toucher d’une notification', () => {
       params: { id: ORDER },
     });
     expect(routeForPush({ kind: 'merchant_order', id: ORDER })).toBe('/commandes');
+    // Un commerce suivi publie une vente flash (0026) : l'offre en ligne, ou la vitrine d'une
+    // Flash programmée.
+    expect(routeForPush({ kind: 'offer', id: ORDER })).toEqual({
+      pathname: '/produit/[id]',
+      params: { id: ORDER },
+    });
+    expect(routeForPush({ kind: 'shop', id: ORDER })).toEqual({
+      pathname: '/enseigne/[id]',
+      params: { id: ORDER },
+    });
   });
 
   it('une charge inattendue n’ouvre rien', () => {

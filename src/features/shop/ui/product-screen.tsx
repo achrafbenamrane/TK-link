@@ -1,6 +1,6 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,6 +12,7 @@ import { useColors } from '@/shared/theme/theme-provider';
 import { distanceKm } from '../lib/geo';
 import { STOCK_CLASSES, stockAccessibilityLabel, stockBarPct, stockTone } from '../lib/stock';
 import { getDeal, getMerchant } from '../model/catalog';
+import { selectLiveOffers, useLiveFeedStore } from '../model/live';
 import { useShopStore } from '../model/store';
 import { CountdownBlocks } from './components/countdown';
 import { PriceTag } from './components/price-tag';
@@ -33,7 +34,23 @@ export function ProductScreen({ dealId }: Props) {
   const insets = useSafeAreaInsets();
   const [qty, setQty] = useState(1);
 
-  const deal = getDeal(dealId);
+  // Abonné au fil en direct : une offre ouverte depuis une notification (un commerce suivi vient de
+  // la publier) n'est pas encore dans le cache — on relit le fil, puis l'écran se redessine avec elle.
+  const liveOffers = useLiveFeedStore(selectLiveOffers);
+  const refreshLive = useLiveFeedStore((s) => s.refresh);
+  const deal = liveOffers ? getDeal(dealId) : undefined;
+  const [lookedUp, setLookedUp] = useState(false);
+  const missing = !deal;
+  useEffect(() => {
+    if (!missing || lookedUp) return;
+    let alive = true;
+    void refreshLive().finally(() => {
+      if (alive) setLookedUp(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [missing, lookedUp, refreshLive]);
   const merchant = deal ? getMerchant(deal.merchantId) : undefined;
   const addToCart = useShopStore((s) => s.addToCart);
   const toggleFavorite = useShopStore((s) => s.toggleFavorite);
@@ -45,6 +62,9 @@ export function ProductScreen({ dealId }: Props) {
   const goBack = () => (router.canGoBack() ? router.back() : router.push('/'));
 
   if (!deal) {
+    if (!lookedUp) {
+      return <View testID="product-loading" className="flex-1 bg-surface" />;
+    }
     return (
       <View className="flex-1 items-center justify-center gap-3 bg-surface px-8">
         <AppText variant="title">Offre introuvable</AppText>

@@ -8,7 +8,9 @@ import { z } from 'zod';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const PushDataSchema = z.object({
-  kind: z.enum(['order', 'merchant_order', 'support']),
+  // `offer` / `shop` : un commerce suivi publie une vente flash (0026) — l'offre si elle est en
+  // ligne, la vitrine si elle est programmée pour plus tard.
+  kind: z.enum(['order', 'merchant_order', 'support', 'offer', 'shop']),
   id: z.string().regex(UUID),
 });
 export type PushData = z.infer<typeof PushDataSchema>;
@@ -17,6 +19,8 @@ export type PushData = z.infer<typeof PushDataSchema>;
 export type PushRoute =
   | { pathname: '/commande/[id]'; params: { id: string } }
   | { pathname: '/aide/[id]'; params: { id: string } }
+  | { pathname: '/produit/[id]'; params: { id: string } }
+  | { pathname: '/enseigne/[id]'; params: { id: string } }
   | '/commandes';
 
 export function routeForPush(data: unknown): PushRoute | null {
@@ -31,6 +35,10 @@ export function routeForPush(data: unknown): PushRoute | null {
     // Une nouvelle commande pour le commerçant : son écran de service, les commandes reçues.
     case 'merchant_order':
       return '/commandes';
+    case 'offer':
+      return { pathname: '/produit/[id]', params: { id } };
+    case 'shop':
+      return { pathname: '/enseigne/[id]', params: { id } };
   }
 }
 

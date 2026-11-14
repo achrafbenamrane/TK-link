@@ -1,6 +1,6 @@
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, Share, View } from 'react-native';
 
 import { cn } from '@/shared/lib/cn';
@@ -8,11 +8,13 @@ import { AppText, HeaderBackButton, Screen, ThemeToggle } from '@/shared/ui';
 import { ShopVideo } from '@/shared/ui/shop-video';
 import { useColors } from '@/shared/theme/theme-provider';
 
+import { FOLLOW_ERROR } from '../lib/follows-api';
 import { FULFILMENT_LABEL, FULFILMENTS } from '../lib/order-status';
 import { ratingSummary } from '../lib/rating';
 import { STOCK_CLASSES, stockAccessibilityLabel, stockTone } from '../lib/stock';
 import { videoSource } from '../lib/showcase';
 import { DEALS, getMerchant } from '../model/catalog';
+import { selectFollowedShops, useFollowsStore } from '../model/follows';
 import { productImageUri } from '../model/product-images';
 import { liveDeal, selectLiveOffers, useLiveFeedStore } from '../model/live';
 import type { Deal } from '../model/schema';
@@ -176,8 +178,11 @@ export function MerchantDetailScreen({
   const colors = useColors();
   const merchant = getMerchant(merchantId);
   const addToCart = useShopStore((s) => s.addToCart);
-  const favorites = useShopStore((s) => s.favorites);
-  const toggleFavorite = useShopStore((s) => s.toggleFavorite);
+  const followed = useFollowsStore(selectFollowedShops);
+  const followsLoaded = useFollowsStore((s) => s.loaded);
+  const refreshFollows = useFollowsStore((s) => s.refresh);
+  const toggleFollow = useFollowsStore((s) => s.toggle);
+  const [followError, setFollowError] = useState<string | null>(null);
   const [showInfos, setShowInfos] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
@@ -193,9 +198,12 @@ export function MerchantDetailScreen({
     ],
     [liveOffers, merchantId, openedAt],
   );
-  const hero = deals[0];
-  // Les favoris portent sur des OFFRES, pas sur des enseignes.
-  const isFavorite = hero ? favorites.includes(hero.id) : false;
+  // Le cœur de la vitrine SUIT le commerce (0026, arbitrage du 14/11/2026) : sa prochaine vente
+  // flash préviendra. Le cœur d'une offre, lui, reste un favori sur le téléphone.
+  const isFollowing = followed.some((s) => s.shopId === merchantId);
+  useEffect(() => {
+    if (!followsLoaded) void refreshFollows();
+  }, [followsLoaded, refreshFollows]);
 
   if (!merchant) {
     return (
@@ -255,25 +263,44 @@ export function MerchantDetailScreen({
         <View className="flex-row items-center gap-3 pt-2">
           <HeaderBackButton testID="merchant-back" onPress={onBack} />
           <View className="flex-1" />
-          {hero ? (
-            <Pressable
-              testID="merchant-favorite"
-              accessibilityRole="button"
-              accessibilityLabel={
-                isFavorite ? 'Retirer cette offre des favoris' : 'Ajouter cette offre aux favoris'
-              }
-              hitSlop={10}
-              onPress={() => toggleFavorite(hero.id)}
-            >
-              <Feather
-                name="heart"
-                size={20}
-                color={isFavorite ? colors.brand500 : colors.inkMuted}
-              />
-            </Pressable>
-          ) : null}
+          <Pressable
+            testID="merchant-follow"
+            accessibilityRole="button"
+            accessibilityLabel={
+              isFollowing ? `Ne plus suivre ${merchant.name}` : `Suivre ${merchant.name}`
+            }
+            accessibilityState={{ selected: isFollowing }}
+            hitSlop={10}
+            onPress={() => {
+              setFollowError(null);
+              void toggleFollow({
+                shopId: merchant.id,
+                name: merchant.name,
+                area: merchant.area,
+              }).then((res) => {
+                if (!res.ok) setFollowError(FOLLOW_ERROR[res.code]);
+              });
+            }}
+          >
+            <Ionicons
+              name={isFollowing ? 'heart' : 'heart-outline'}
+              size={21}
+              color={isFollowing ? colors.brand500 : colors.inkMuted}
+            />
+          </Pressable>
           <ThemeToggle />
         </View>
+
+        {isFollowing || followError ? (
+          <AppText
+            testID="merchant-follow-note"
+            variant="caption"
+            className={followError ? 'text-danger' : 'text-ink-muted'}
+          >
+            {followError ??
+              'Vous suivez ce commerce : sa prochaine vente flash vous sera signalée.'}
+          </AppText>
+        ) : null}
 
         {/* Identité */}
         <View className="flex-row items-center gap-3.5">

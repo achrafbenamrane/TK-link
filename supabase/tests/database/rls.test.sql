@@ -3,7 +3,7 @@
 -- future migration disables RLS or opens a client write path on entitlements.
 
 begin;
-select plan(182);
+select plan(191);
 
 -- 1) RLS is enabled on EVERY table in the public schema (deny-by-default).
 select ok(
@@ -1622,6 +1622,93 @@ select is(
      from public.shop_ratings(array[current_setting('tklink.rate_shop')::uuid]) r),
   jsonb_build_object('average', 5.0, 'count', 1),
   'the storefront average is public'
+);
+reset role;
+
+-- ─── 0026 : suivre un commerce, alerte à la publication d'une Flash ───
+select set_config('tklink.shop_a2',
+  (select id::text from public.shops where owner_id = '00000000-0000-0000-0000-0000000000a2'), true);
+select set_config('tklink.shop_a5',
+  (select id::text from public.shops where owner_id = '00000000-0000-0000-0000-0000000000a5'), true);
+select set_config('tklink.shop_a6',
+  (select id::text from public.shops where owner_id = '00000000-0000-0000-0000-0000000000a6'), true);
+
+set local role authenticated;
+set local request.jwt.claims to '{sub:00000000-0000-0000-0000-0000000000a1,role:authenticated}';
+select lives_ok(
+  $$ insert into public.shop_follows (user_id, shop_id)
+     values ('00000000-0000-0000-0000-0000000000a1', current_setting('tklink.shop_a2')::uuid) $$,
+  'a customer follows a validated shop'
+);
+select throws_ok(
+  $$ insert into public.shop_follows (user_id, shop_id)
+     values ('00000000-0000-0000-0000-0000000000a2', current_setting('tklink.shop_a5')::uuid) $$,
+  '42501', null, 'nobody follows a shop on someone else''s behalf'
+);
+select throws_ok(
+  $$ insert into public.shop_follows (user_id, shop_id)
+     values ('00000000-0000-0000-0000-0000000000a1', current_setting('tklink.shop_a6')::uuid) $$,
+  '42501', null, 'a shop that is not validated cannot be followed'
+);
+reset role;
+set local role authenticated;
+set local request.jwt.claims to '{sub:00000000-0000-0000-0000-0000000000a2,role:authenticated}';
+select is(
+  (select count(*)::integer from public.shop_follows),
+  0, 'nobody reads someone else''s follows'
+);
+reset role;
+set local request.jwt.claims to '{}';
+
+select set_config('tklink.queued_follow',
+  (select coalesce(max(id), 0)::text from net.http_request_queue), true);
+insert into public.flash_offers
+  (shop_id, audience, title, category, price_cents, old_price_cents, stock_total, stock_left,
+   duration_minutes, ends_at)
+values (current_setting('tklink.shop_a2')::uuid, 'clients', 'Tarte du jour', 'restauration',
+        300, 600, 5, 5, 60, now() + interval '1 hour');
+select is(
+  (select jsonb_build_object(
+            'n', count(*),
+            'table', max(convert_from(q.body, 'UTF8')::jsonb ->> 'table'),
+            'title', max(convert_from(q.body, 'UTF8')::jsonb #>> '{record,title}'))
+     from net.http_request_queue q
+    where q.id > current_setting('tklink.queued_follow')::bigint),
+  jsonb_build_object('n', 1, 'table', 'flash_offers', 'title', 'Tarte du jour'),
+  'a followed shop publishes a Flash: its followers are alerted'
+);
+insert into public.flash_offers
+  (shop_id, audience, title, category, price_cents, old_price_cents, stock_total, stock_left,
+   duration_minutes, ends_at)
+values (current_setting('tklink.shop_a2')::uuid, 'clients', 'Quiche du jour', 'restauration',
+        300, 600, 5, 5, 60, now() + interval '1 hour');
+select is(
+  (select count(*)::integer from net.http_request_queue q
+    where q.id > current_setting('tklink.queued_follow')::bigint),
+  1, 'a second Flash within 30 minutes does not wake followers again'
+);
+insert into public.shop_follows (user_id, shop_id)
+values ('00000000-0000-0000-0000-0000000000a1', current_setting('tklink.shop_a5')::uuid);
+insert into public.flash_offers
+  (shop_id, audience, title, category, price_cents, old_price_cents, stock_total, stock_left,
+   min_qty, duration_minutes, ends_at)
+values (current_setting('tklink.shop_a5')::uuid, 'commercants', 'Farine T55 (sac 25 kg)',
+        'restauration', 1500, 1900, 100, 100, 10, 60, now() + interval '1 hour');
+select is(
+  (select count(*)::integer from net.http_request_queue q
+    where q.id > current_setting('tklink.queued_follow')::bigint),
+  1, 'a wholesaler pro offer alerts nobody'
+);
+set local role authenticated;
+set local request.jwt.claims to '{sub:00000000-0000-0000-0000-0000000000a1,role:authenticated}';
+select lives_ok(
+  $$ delete from public.shop_follows where shop_id = current_setting('tklink.shop_a2')::uuid $$,
+  'the customer unfollows'
+);
+select is(
+  (select count(*)::integer from public.shop_follows
+    where shop_id = current_setting('tklink.shop_a2')::uuid),
+  0, 'and the follow is gone'
 );
 reset role;
 

@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@/shared/testing/render';
+import { fireEvent, render, screen, waitFor } from '@/shared/testing/render';
 
 import { demoShowcase, videoSource } from '../lib/showcase';
 import { DEALS } from '../model/catalog';
+import { useFollowsStore } from '../model/follows';
 import { useShopStore } from '../model/store';
 import { MerchantDetailScreen } from '../ui/merchant-detail-screen';
 
@@ -24,6 +25,7 @@ function mount(over: Partial<Parameters<typeof MerchantDetailScreen>[0]> = {}) {
 
 beforeEach(() => {
   useShopStore.setState({ favorites: [], cart: [] });
+  useFollowsStore.setState({ shops: [], loaded: true });
 });
 
 describe('<MerchantDetailScreen />', () => {
@@ -78,13 +80,19 @@ describe('<MerchantDetailScreen />', () => {
     expect(screen.getByText('Pizzeria familiale')).toBeTruthy();
   });
 
-  it('le cœur agit sur l’OFFRE, jamais sur l’enseigne', () => {
+  // Arbitrage du 14/11/2026 (0026) : le cœur de la VITRINE suit le commerce — sa prochaine vente
+  // flash préviendra ; il ne touche plus aux favoris d'offres (le cœur d'une offre s'en charge).
+  it('le cœur de la vitrine suit le commerce, sans toucher aux favoris d’offres', async () => {
     mount();
-    fireEvent.press(screen.getByTestId('merchant-favorite'));
-    const favs = useShopStore.getState().favorites;
-    // Un id d'enseigne dans cette liste la corromprait.
-    expect(favs).toContain(HERO.id);
-    expect(favs).not.toContain(MID);
+    fireEvent.press(screen.getByTestId('merchant-follow'));
+    await waitFor(() =>
+      expect(useFollowsStore.getState().shops.map((s) => s.shopId)).toEqual([MID]),
+    );
+    expect(screen.getByTestId('merchant-follow-note')).toHaveTextContent(/vous sera signalée/);
+    expect(useShopStore.getState().favorites).toEqual([]);
+    // Et un second appui ne suit plus.
+    fireEvent.press(screen.getByTestId('merchant-follow'));
+    await waitFor(() => expect(useFollowsStore.getState().shops).toEqual([]));
   });
 
   it('reste stable sur une enseigne inconnue', () => {

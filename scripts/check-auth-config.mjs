@@ -305,6 +305,13 @@ const probes = [
     body: { p_shops: [] },
     what: 'les clients ne peuvent pas noter les commerçants, et les vitrines n’ont pas de moyenne',
   },
+  {
+    migration: '0026_shop_follows',
+    path: 'shop_follows?select=shop_id&limit=1',
+    // Table absente : 404 ; présente : refusée à la clé publique (401) — rien n’est lu.
+    missing: (s) => s === 404,
+    what: 'personne ne peut suivre un commerce ni être prévenu de ses ventes flash',
+  },
 ];
 for (const probe of probes) {
   try {
