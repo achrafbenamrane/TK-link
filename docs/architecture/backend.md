@@ -254,7 +254,8 @@ parrainage (règles du client final). L’adresse de livraison est TOUJOURS cell
 `audience` qui n’existe pas encore et répondent « commande introuvable » à toutes les commandes ;
 laissées anciennes après, elles chiffreraient et commanderaient un coursier Uber pour une commande
 B2B. Règle générale : une fonction Edge qui lit une colonne nouvelle se déploie juste après la
-migration qui l’ajoute, dans la même séance.
+migration qui l’ajoute, dans la même séance. Au 14/11/2026, 0023 est appliquée et aucune de ces
+quatre fonctions n’est encore déployée : il suffira de les déployer depuis le code actuel.
 
 ## Parrainage (0019)
 

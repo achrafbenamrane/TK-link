@@ -72,7 +72,14 @@ paiement instantané), facture électronique du grossiste (chantier facturation)
 
 ### Phase 3 — Preuve et docs
 
-- [ ] `npm run verify` ; écrans en démonstration à 360 px ; CUJ B2B ; `backend.md` ; auth:check
+- [x] `npm run verify` ; CUJ-010 ; `backend.md`
+- [x] 0023 appliquée par l’opérateur le 14/11 (SQL Editor, une transaction) ; `auth:check` la voit.
+      La première version était refusée (un `CASE` dans la condition d’un `IF` : le SQL Editor
+      s’arrêtait au premier `THEN`) ; rien n’avait été appliqué. Garde Jest ajouté
+      (`supabase/__tests__/plpgsql-if-case.test.ts`)
+- [ ] Écrans en démonstration à 360 px ; essai à deux téléphones (CUJ-010) après la mise à jour OTA
+- [ ] Le jour où `stripe-payment`, `uber-quote`, `uber-dispatch` et `push-events` se déploient
+      (aucune ne l’est au 14/11), les déployer depuis le code actuel, qui connaît `audience`
 
 ## Risques
 
