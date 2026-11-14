@@ -162,6 +162,9 @@ export default function Page() {
       <main>
         {/* ─────────────────────────────────────────────────────────── héros */}
         <section className="v-hero" id="hero">
+          {/* Les 24 premiers pixels de la page : tant qu'ils sont visibles, l'en-tête reste
+              transparent (motion.jsx, sans écouter le défilement). */}
+          <span className="v-top-sentinel" data-top-sentinel aria-hidden="true" />
           <div className="v-hero__light" aria-hidden="true" />
           <div className="v-wrap v-hero__grid">
             <div className="v-hero__copy">
@@ -201,16 +204,21 @@ export default function Page() {
 
             <div className="v-hero__stage" aria-hidden="true">
               <div className="v-hero__swing" data-parallax>
-                {/* Rendue dans Blender (landing/blender/etiquette.py) : 1000 × 1500, fond transparent. */}
-                <img
-                  className="v-hero__tag"
-                  src="/3d/etiquette.webp"
-                  width="1000"
-                  height="1500"
-                  alt=""
-                  fetchPriority="high"
-                  decoding="async"
-                />
+                {/* Rendue dans Blender (landing/blender/etiquette.py), ombre rose cuite par
+                    blender/ombre.py : 1000 × 1700, fond transparent. La chute est sur l'enveloppe,
+                    le balancement sur l'image : deux animations de transform sur un même élément,
+                    Chrome refuse de les confier à la carte graphique (mesuré). */}
+                <span className="v-hero__drop">
+                  <img
+                    className="v-hero__tag"
+                    src="/3d/etiquette-ombre.webp"
+                    width="1000"
+                    height="1700"
+                    alt=""
+                    fetchPriority="high"
+                    decoding="async"
+                  />
+                </span>
               </div>
             </div>
 

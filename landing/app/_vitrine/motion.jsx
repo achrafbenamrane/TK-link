@@ -17,13 +17,35 @@ export default function Motion() {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     doc.classList.add(reduce ? 'v-still' : 'v-play');
 
+    // L'en-tête se resserre dès qu'on a défilé de 24 px. Un observateur plutôt qu'un écouteur de
+    // défilement : lire window.scrollY à chaque événement forçait le recalcul de la mise en page
+    // (mesuré : le premier coût du défilement sur téléphone).
     const head = document.getElementById('hdr');
+    const top = document.querySelector('[data-top-sentinel]');
+    let topIo;
     const onScroll = () => head?.classList.toggle('is-stuck', window.scrollY > 24);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
+    if (head && top && 'IntersectionObserver' in window) {
+      topIo = new IntersectionObserver(([e]) =>
+        head.classList.toggle('is-stuck', !e.isIntersecting),
+      );
+      topIo.observe(top);
+    } else {
+      onScroll();
+      window.addEventListener('scroll', onScroll, { passive: true });
+    }
 
-    const fmt = (n, d) =>
-      n.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
+    // Un seul formateur par nombre de décimales : toLocaleString(…, options) en recréait un à chaque
+    // image du défilement des chiffres.
+    const formats = new Map();
+    const fmt = (n, d) => {
+      if (!formats.has(d)) {
+        formats.set(
+          d,
+          new Intl.NumberFormat('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d }),
+        );
+      }
+      return formats.get(d).format(n);
+    };
     const countUp = (el) => {
       const target = Number(el.dataset.count);
       const d = Number(el.dataset.decimals || 0);
@@ -80,6 +102,7 @@ export default function Motion() {
     return () => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('pointermove', onMove);
+      if (topIo) topIo.disconnect();
       if (io) io.disconnect();
       if (raf) cancelAnimationFrame(raf);
       doc.classList.remove('v-play', 'v-still');
